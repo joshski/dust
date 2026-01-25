@@ -2,7 +2,7 @@
   "name": "dust",
   "type": "module",
   "bin": {
-    "prompt": "./bin/prompt"
+    "dust": "./bin/dust"
   },
   "scripts": {
     "lint:tasks": "bun scripts/lint-tasks.ts",
