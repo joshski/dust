@@ -1,6 +1,9 @@
 {
   "name": "dust",
   "type": "module",
+  "bin": {
+    "prompt": "./bin/prompt"
+  },
   "scripts": {
     "lint:tasks": "bun scripts/lint-tasks.ts",
     "validate:links": "bun scripts/validate-links.ts",
