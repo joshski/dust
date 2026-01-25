@@ -7,6 +7,7 @@ Dust has a specification and minimal tooling.
 - Specification documented in [README.md](../../README.md)
 - Directory structure for planning artifacts
 - Task linter for validating task file structure (`scripts/lint-tasks.ts`)
+- Unit tests for task linter (`lib/task-linter.test.ts`)
 
 ## Not Yet Implemented
 
