@@ -1,15 +1,15 @@
 # Current Architecture
 
-Dust is currently specification-only. No tooling has been implemented.
+Dust has a specification and minimal tooling.
 
 ## Implemented
 
 - Specification documented in [README.md](../../README.md)
 - Directory structure for planning artifacts
+- Task linter for validating task file structure (`scripts/lint-tasks.ts`)
 
 ## Not Yet Implemented
 
-- Task linter for validating task file structure
 - Link validator for checking relative links
 - Git integration for branch-based task claiming
 - CLI for managing Dust files
