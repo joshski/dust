@@ -27,6 +27,9 @@ Thumbs.db
 *.log
 npm-debug.log*
 
+# Coverage
+coverage/
+
 # Lockfiles (optional - remove if you want to commit lockfiles)
 # bun.lockb
 # package-lock.json
