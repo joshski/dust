@@ -68,6 +68,8 @@ All files are markdown with slug-style names (lowercase, hyphens, no spaces).
 
 ### Working on Tasks
 
+**Run \`dust check\` before starting work** to verify the project is in a good state before making changes.
+
 Run \`dust next\` to find tasks ready to work on. Each task file contains:
 
 - \`## Goals\` - Links to goals this task supports
@@ -78,12 +80,15 @@ A task is **unblocked** when its "Blocked by" section is empty, says "(none)", o
 
 ### Completing a Task
 
+**Run \`dust check\` before committing** to ensure all quality gates pass.
+
 When finishing a task, create a single atomic commit that includes:
 
 1. All implementation changes
 2. Deletion of the completed task file
 3. Updates to any facts that changed
 4. Deletion of any ideas that were fully realized
+5. Updates to any tasks that referenced this one in their "Blocked by" sections
 
 ### Common Workflows
 
