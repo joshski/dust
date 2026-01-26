@@ -7,7 +7,12 @@ set -e  # Exit on first failure
 echo "Running quality checks..."
 echo ""
 
-echo "1. Verifying build is current..."
+echo "1. Linting with biome..."
+bunx biome check .
+echo "   Lint passed."
+
+echo ""
+echo "2. Verifying build is current..."
 BEFORE_HASH=$(cat dist/* 2>/dev/null | sha256sum | cut -d' ' -f1)
 bun run build
 AFTER_HASH=$(cat dist/* 2>/dev/null | sha256sum | cut -d' ' -f1)
@@ -22,11 +27,11 @@ fi
 echo "   Build verified."
 
 echo ""
-echo "2. Running unit tests..."
+echo "3. Running unit tests..."
 bun run test:coverage
 
 echo ""
-echo "3. Type checking..."
+echo "4. Type checking..."
 bunx tsc --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target esnext lib/**/*.ts
 
 echo ""
