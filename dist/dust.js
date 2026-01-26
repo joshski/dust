@@ -307,6 +307,28 @@ async function prompt(ctx, fs, args) {
   return { exitCode: 0 };
 }
 
+// lib/cli/settings.ts
+import { join } from "node:path";
+var DEFAULT_SETTINGS = {
+  binaryPath: "dust"
+};
+async function loadSettings(cwd, fs) {
+  const settingsPath = join(cwd, ".dust", "config", "settings.json");
+  if (!fs.exists(settingsPath)) {
+    return DEFAULT_SETTINGS;
+  }
+  try {
+    const content = await fs.readFile(settingsPath);
+    const parsed = JSON.parse(content);
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed
+    };
+  } catch {
+    return DEFAULT_SETTINGS;
+  }
+}
+
 // lib/cli/main.ts
 var COMMANDS = [
   "init",
@@ -317,13 +339,15 @@ var COMMANDS = [
   "check",
   "help"
 ];
-var HELP_TEXT = `dust - A lightweight planning system for human-AI collaboration
+function generateHelpText(settings) {
+  const bin = settings.binaryPath;
+  return `dust - A lightweight planning system for human-AI collaboration
 
-Usage: dust <command> [options]
+Usage: ${bin} <command> [options]
 
 Commands:
   init              Initialize a new Dust repository
-  prompt <name>     Output a prompt by name (e.g., dust prompt work)
+  prompt <name>     Output a prompt by name (e.g., ${bin} prompt work)
   validate          Run validation checks on .dust/ files
   list [type]       List items (tasks, ideas, goals, facts)
   next              Show tasks ready to work on (not blocked)
@@ -331,13 +355,13 @@ Commands:
   help              Show this help message
 
 Examples:
-  dust init
-  dust prompt work
-  dust validate
-  dust list tasks
-  dust list
-  dust next
-  dust check
+  ${bin} init
+  ${bin} prompt work
+  ${bin} validate
+  ${bin} list tasks
+  ${bin} list
+  ${bin} next
+  ${bin} check
 
 ---
 
@@ -359,9 +383,9 @@ All files are markdown with slug-style names (lowercase, hyphens, no spaces).
 
 ### Working on Tasks
 
-**Run \`dust check\` before starting work** to verify the project is in a good state before making changes.
+**Run \`${bin} check\` before starting work** to verify the project is in a good state before making changes.
 
-Run \`dust next\` to find tasks ready to work on. Each task file contains:
+Run \`${bin} next\` to find tasks ready to work on. Each task file contains:
 
 - \`## Goals\` - Links to goals this task supports
 - \`## Blocked by\` - Tasks that must complete first (empty or "(none)" means ready)
@@ -371,7 +395,7 @@ A task is **unblocked** when its "Blocked by" section is empty, says "(none)", o
 
 ### Completing a Task
 
-**Run \`dust check\` before committing** to ensure all quality gates pass.
+**Run \`${bin} check\` before committing** to ensure all quality gates pass.
 
 When finishing a task, create a single atomic commit that includes:
 
@@ -383,7 +407,7 @@ When finishing a task, create a single atomic commit that includes:
 
 ### Common Workflows
 
-- **"Work on the next task"** - Run \`dust next\`, pick a task, implement it
+- **"Work on the next task"** - Run \`${bin} next\`, pick a task, implement it
 - **"Work on task X"** - Implement \`.dust/tasks/X.md\` directly
 - **"Convert idea Y to tasks"** - Break down \`.dust/ideas/Y.md\` into tasks
 - **"Validate facts"** - Check \`.dust/facts/\` for accuracy against the codebase
@@ -399,13 +423,15 @@ Always run \`dust help\` when you start working in this repository.
 
 This approach keeps agent instructions minimal, ensures agents get current documentation, and reduces maintenance burden.
 `;
+}
+var HELP_TEXT = generateHelpText({ binaryPath: "dust" });
 function isHelpRequest(command) {
   return !command || command === "help" || command === "--help" || command === "-h";
 }
 function isValidCommand(command) {
   return COMMANDS.includes(command);
 }
-async function runCommand(command, commandArgs, ctx, fs, glob) {
+async function runCommand(command, commandArgs, ctx, fs, glob, settings) {
   switch (command) {
     case "init":
       return init(ctx, fs, commandArgs);
@@ -420,7 +446,7 @@ async function runCommand(command, commandArgs, ctx, fs, glob) {
     case "check":
       return check(ctx, fs, commandArgs, defaultProcessRunner, glob);
     case "help":
-      ctx.stdout(HELP_TEXT);
+      ctx.stdout(generateHelpText(settings));
       return { exitCode: 0 };
   }
 }
@@ -428,16 +454,18 @@ async function main(options) {
   const { args, ctx, fs, glob } = options;
   const command = args[0];
   const commandArgs = args.slice(1);
+  const settings = await loadSettings(ctx.cwd, fs);
+  const helpText = generateHelpText(settings);
   if (isHelpRequest(command)) {
-    ctx.stdout(HELP_TEXT);
+    ctx.stdout(helpText);
     return { exitCode: 0 };
   }
   if (!isValidCommand(command)) {
     ctx.stderr(`Unknown command: ${command}`);
-    ctx.stderr(`Run 'dust help' for available commands`);
+    ctx.stderr(`Run '${settings.binaryPath} help' for available commands`);
     return { exitCode: 1 };
   }
-  return runCommand(command, commandArgs, ctx, fs, glob);
+  return runCommand(command, commandArgs, ctx, fs, glob, settings);
 }
 
 // lib/cli/entry.ts

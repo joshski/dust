@@ -10,6 +10,7 @@ import { init } from './init'
 import { list } from './list'
 import { next } from './next'
 import { prompt } from './prompt'
+import { type DustSettings, loadSettings } from './settings'
 import type { CommandContext, CommandResult, FileSystem } from './types'
 import type { GlobScanner } from './validate'
 import { validate } from './validate'
@@ -26,13 +27,15 @@ export const COMMANDS = [
 
 export type Command = (typeof COMMANDS)[number]
 
-export const HELP_TEXT = `dust - A lightweight planning system for human-AI collaboration
+export function generateHelpText(settings: DustSettings): string {
+  const bin = settings.binaryPath
+  return `dust - A lightweight planning system for human-AI collaboration
 
-Usage: dust <command> [options]
+Usage: ${bin} <command> [options]
 
 Commands:
   init              Initialize a new Dust repository
-  prompt <name>     Output a prompt by name (e.g., dust prompt work)
+  prompt <name>     Output a prompt by name (e.g., ${bin} prompt work)
   validate          Run validation checks on .dust/ files
   list [type]       List items (tasks, ideas, goals, facts)
   next              Show tasks ready to work on (not blocked)
@@ -40,13 +43,13 @@ Commands:
   help              Show this help message
 
 Examples:
-  dust init
-  dust prompt work
-  dust validate
-  dust list tasks
-  dust list
-  dust next
-  dust check
+  ${bin} init
+  ${bin} prompt work
+  ${bin} validate
+  ${bin} list tasks
+  ${bin} list
+  ${bin} next
+  ${bin} check
 
 ---
 
@@ -68,9 +71,9 @@ All files are markdown with slug-style names (lowercase, hyphens, no spaces).
 
 ### Working on Tasks
 
-**Run \`dust check\` before starting work** to verify the project is in a good state before making changes.
+**Run \`${bin} check\` before starting work** to verify the project is in a good state before making changes.
 
-Run \`dust next\` to find tasks ready to work on. Each task file contains:
+Run \`${bin} next\` to find tasks ready to work on. Each task file contains:
 
 - \`## Goals\` - Links to goals this task supports
 - \`## Blocked by\` - Tasks that must complete first (empty or "(none)" means ready)
@@ -80,7 +83,7 @@ A task is **unblocked** when its "Blocked by" section is empty, says "(none)", o
 
 ### Completing a Task
 
-**Run \`dust check\` before committing** to ensure all quality gates pass.
+**Run \`${bin} check\` before committing** to ensure all quality gates pass.
 
 When finishing a task, create a single atomic commit that includes:
 
@@ -92,7 +95,7 @@ When finishing a task, create a single atomic commit that includes:
 
 ### Common Workflows
 
-- **"Work on the next task"** - Run \`dust next\`, pick a task, implement it
+- **"Work on the next task"** - Run \`${bin} next\`, pick a task, implement it
 - **"Work on task X"** - Implement \`.dust/tasks/X.md\` directly
 - **"Convert idea Y to tasks"** - Break down \`.dust/ideas/Y.md\` into tasks
 - **"Validate facts"** - Check \`.dust/facts/\` for accuracy against the codebase
@@ -107,6 +110,10 @@ This project uses [dust](https://github.com/joshski/dust) for planning and docum
 
 This approach keeps agent instructions minimal, ensures agents get current documentation, and reduces maintenance burden.
 `
+}
+
+// Default help text for backward compatibility in tests
+export const HELP_TEXT = generateHelpText({ binaryPath: 'dust' })
 
 export interface MainOptions {
   args: string[]
@@ -130,7 +137,8 @@ export async function runCommand(
   commandArgs: string[],
   ctx: CommandContext,
   fs: FileSystem,
-  glob: GlobScanner
+  glob: GlobScanner,
+  settings: DustSettings
 ): Promise<CommandResult> {
   switch (command) {
     case 'init':
@@ -146,7 +154,7 @@ export async function runCommand(
     case 'check':
       return check(ctx, fs, commandArgs, defaultProcessRunner, glob)
     case 'help':
-      ctx.stdout(HELP_TEXT)
+      ctx.stdout(generateHelpText(settings))
       return { exitCode: 0 }
   }
 }
@@ -156,16 +164,19 @@ export async function main(options: MainOptions): Promise<CommandResult> {
   const command = args[0]
   const commandArgs = args.slice(1)
 
+  const settings = await loadSettings(ctx.cwd, fs)
+  const helpText = generateHelpText(settings)
+
   if (isHelpRequest(command)) {
-    ctx.stdout(HELP_TEXT)
+    ctx.stdout(helpText)
     return { exitCode: 0 }
   }
 
   if (!isValidCommand(command)) {
     ctx.stderr(`Unknown command: ${command}`)
-    ctx.stderr(`Run 'dust help' for available commands`)
+    ctx.stderr(`Run '${settings.binaryPath} help' for available commands`)
     return { exitCode: 1 }
   }
 
-  return runCommand(command, commandArgs, ctx, fs, glob)
+  return runCommand(command, commandArgs, ctx, fs, glob, settings)
 }
