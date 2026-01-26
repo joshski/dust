@@ -6,17 +6,20 @@ A lightweight planning system and work tracker optimised for humans working with
 
 ## Structure
 
-The current state and any future plans are documented in markdown files in your repository. Four distinct sets of markdown files represent everything needed to manage complex projects of any kind:
+The current state and any future plans are documented in markdown files in your repository:
 
-`./.dust/goals` - high level “mission statements” that explain why the project exists and what it aims to achieve.
+```
+.dust/
+├── goals/    # Mission statements explaining why the project exists
+├── ideas/    # Brief notes about future tasks (intentionally vague)
+├── tasks/    # Detailed work plans with dependencies and definition of done
+├── facts/    # Current state: design, architecture, rules, invariants
+└── hooks/    # Executable scripts for CLI integration (e.g., quality gates)
+```
 
-`./.dust/ideas` - brief and vague notes about future tasks, intentionally lacking detail - these files may exist far in advance of implementation - and could therefore easily go stale.
+The `goals`, `ideas`, `tasks`, and `facts` directories should be flat (no subdirectories) and contain only markdown files with slug-style names (alphanumeric and hyphens only).
 
-`./.dust/tasks` - detailed and structured plans that describe a single unit of work, including dependencies and a “definition of done”.
-
-`./.dust/facts` - documents that describe the current state of the system such as how it works, its design and architecture, the way it is structured, any rules or invariants.
-
-Each directory should be flat, i.e. have no subdirectories - it should only contain markdown files. Their filenames should correspond to intent (usually a file-system friendly representation of the document title) rather than numbers or codes. Markdown files should have “slug” style naming (alphanumeric and hyphens only).
+The `hooks` directory contains executable scripts that integrate with the `dust` CLI. For example, the `check` hook is run by `dust check` to execute project-defined quality gates.
 
 ## Workflow
 
