@@ -1,5 +1,7 @@
 # Dust
 
+[![CI](https://github.com/joshski/dust/actions/workflows/ci.yml/badge.svg)](https://github.com/joshski/dust/actions/workflows/ci.yml)
+
 A lightweight planning system and work tracker optimised for humans working with AI agents.
 
 ## Structure
