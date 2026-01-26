@@ -8,14 +8,15 @@ echo "Running quality checks..."
 echo ""
 
 echo "1. Verifying build is current..."
+BEFORE_HASH=$(cat dist/* 2>/dev/null | sha256sum | cut -d' ' -f1)
 bun run build
-if ! git diff --quiet dist/; then
+AFTER_HASH=$(cat dist/* 2>/dev/null | sha256sum | cut -d' ' -f1)
+if [ "$BEFORE_HASH" != "$AFTER_HASH" ]; then
   echo ""
-  echo "ERROR: Build output differs from committed files."
-  echo "The dist/ directory has uncommitted changes after running 'bun run build'."
-  echo "This means the TypeScript source and built JavaScript are out of sync."
+  echo "ERROR: Build output differs from existing dist/ files."
+  echo "This means dist/ was out of sync with the TypeScript source."
   echo ""
-  echo "To fix: run 'bun run build' and commit the changes to dist/"
+  echo "The build has now updated dist/. Please include these changes in your commit."
   exit 1
 fi
 echo "   Build verified."

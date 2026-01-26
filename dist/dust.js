@@ -1,0 +1,411 @@
+// lib/cli/entry.ts
+import { existsSync } from "node:fs";
+import { readFile, writeFile, mkdir, readdir } from "node:fs/promises";
+
+// lib/cli/init.ts
+var DUST_DIRECTORIES = ["goals", "ideas", "tasks", "facts"];
+var DEFAULT_GOAL = `# Project Goal
+
+Describe the high-level mission of this project.
+`;
+async function init(ctx, fs, args) {
+  const dustPath = `${ctx.cwd}/.dust`;
+  if (fs.exists(dustPath)) {
+    ctx.stderr("Error: .dust directory already exists");
+    return { exitCode: 1 };
+  }
+  await fs.mkdir(dustPath, { recursive: true });
+  for (const dir of DUST_DIRECTORIES) {
+    await fs.mkdir(`${dustPath}/${dir}`, { recursive: true });
+  }
+  await fs.writeFile(`${dustPath}/goals/project-goal.md`, DEFAULT_GOAL);
+  ctx.stdout("Initialized Dust repository in .dust/");
+  ctx.stdout("Created directories: " + DUST_DIRECTORIES.join(", "));
+  ctx.stdout("Created initial goal: .dust/goals/project-goal.md");
+  return { exitCode: 0 };
+}
+
+// lib/cli/prompt.ts
+async function prompt(ctx, fs, args) {
+  const promptsDir = `${ctx.cwd}/prompts`;
+  if (args.length === 0) {
+    ctx.stderr("Usage: dust prompt <name>");
+    ctx.stderr("Example: dust prompt work");
+    return { exitCode: 1 };
+  }
+  const promptName = args[0];
+  const promptFile = `${promptsDir}/${promptName}.md`;
+  if (!fs.exists(promptFile)) {
+    ctx.stderr(`Error: Prompt '${promptName}' not found`);
+    ctx.stderr("Available prompts:");
+    try {
+      const files = await fs.readdir(promptsDir);
+      const prompts = files.filter((f) => f.endsWith(".md")).map((f) => f.replace(/\.md$/, ""));
+      for (const p of prompts) {
+        ctx.stderr(`  ${p}`);
+      }
+    } catch {
+      ctx.stderr("  (no prompts directory found)");
+    }
+    return { exitCode: 1 };
+  }
+  const content = await fs.readFile(promptFile);
+  ctx.stdout(content);
+  return { exitCode: 0 };
+}
+
+// lib/cli/validate.ts
+import { dirname, resolve } from "node:path";
+var REQUIRED_HEADINGS = [
+  "## Goals",
+  "## Blocked by",
+  "## Definition of done"
+];
+var SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.md$/;
+function validateFilename(filePath) {
+  const filename = filePath.split("/").pop();
+  if (!SLUG_PATTERN.test(filename)) {
+    return {
+      file: filePath,
+      message: `Filename "${filename}" does not match slug-style naming`
+    };
+  }
+  return null;
+}
+function validateTaskHeadings(filePath, content) {
+  const violations = [];
+  for (const heading of REQUIRED_HEADINGS) {
+    if (!content.includes(heading)) {
+      violations.push({
+        file: filePath,
+        message: `Missing required heading: "${heading}"`
+      });
+    }
+  }
+  return violations;
+}
+function validateLinks(filePath, content, fs) {
+  const violations = [];
+  const lines = content.split(`
+`);
+  const fileDir = dirname(filePath);
+  for (let i = 0;i < lines.length; i++) {
+    const line = lines[i];
+    const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
+    let match;
+    while (match = linkPattern.exec(line)) {
+      const linkTarget = match[2];
+      if (linkTarget.startsWith("http://") || linkTarget.startsWith("https://") || linkTarget.startsWith("#")) {
+        continue;
+      }
+      const targetPath = linkTarget.split("#")[0];
+      const resolvedPath = resolve(fileDir, targetPath);
+      if (!fs.exists(resolvedPath)) {
+        violations.push({
+          file: filePath,
+          message: `Broken link: "${linkTarget}"`,
+          line: i + 1
+        });
+      }
+    }
+  }
+  return violations;
+}
+async function validate(ctx, fs, args, glob) {
+  const dustPath = `${ctx.cwd}/.dust`;
+  if (!fs.exists(dustPath)) {
+    ctx.stderr("Error: .dust directory not found");
+    ctx.stderr("Run 'dust init' to initialize a Dust repository");
+    return { exitCode: 1 };
+  }
+  const violations = [];
+  ctx.stdout("Validating links in .dust/...");
+  for await (const file of glob.scan(dustPath)) {
+    if (!file.endsWith(".md"))
+      continue;
+    const filePath = `${dustPath}/${file}`;
+    const content = await fs.readFile(filePath);
+    violations.push(...validateLinks(filePath, content, fs));
+  }
+  const tasksPath = `${dustPath}/tasks`;
+  if (fs.exists(tasksPath)) {
+    ctx.stdout("Validating task files in .dust/tasks/...");
+    for await (const file of glob.scan(tasksPath)) {
+      if (!file.endsWith(".md"))
+        continue;
+      const filePath = `${tasksPath}/${file}`;
+      const content = await fs.readFile(filePath);
+      const filenameViolation = validateFilename(filePath);
+      if (filenameViolation) {
+        violations.push(filenameViolation);
+      }
+      violations.push(...validateTaskHeadings(filePath, content));
+    }
+  }
+  if (violations.length === 0) {
+    ctx.stdout("All validations passed!");
+    return { exitCode: 0 };
+  }
+  ctx.stderr(`Found ${violations.length} violation(s):`);
+  ctx.stderr("");
+  for (const v of violations) {
+    const location = v.line ? `:${v.line}` : "";
+    ctx.stderr(`  ${v.file}${location}`);
+    ctx.stderr(`    ${v.message}`);
+  }
+  return { exitCode: 1 };
+}
+
+// lib/cli/list.ts
+var VALID_TYPES = ["tasks", "ideas", "goals", "facts"];
+function extractTitle(content) {
+  const match = content.match(/^#\s+(.+)$/m);
+  return match ? match[1].trim() : null;
+}
+async function list(ctx, fs, args) {
+  const dustPath = `${ctx.cwd}/.dust`;
+  if (!fs.exists(dustPath)) {
+    ctx.stderr("Error: .dust directory not found");
+    ctx.stderr("Run 'dust init' to initialize a Dust repository");
+    return { exitCode: 1 };
+  }
+  const typesToList = args.length === 0 ? [...VALID_TYPES] : args.filter((a) => VALID_TYPES.includes(a));
+  if (args.length > 0 && typesToList.length === 0) {
+    ctx.stderr(`Invalid type: ${args[0]}`);
+    ctx.stderr(`Valid types: ${VALID_TYPES.join(", ")}`);
+    return { exitCode: 1 };
+  }
+  for (const type of typesToList) {
+    const dirPath = `${dustPath}/${type}`;
+    if (!fs.exists(dirPath)) {
+      continue;
+    }
+    const files = await fs.readdir(dirPath);
+    const mdFiles = files.filter((f) => f.endsWith(".md")).sort();
+    if (mdFiles.length === 0) {
+      continue;
+    }
+    ctx.stdout(`${type}:`);
+    for (const file of mdFiles) {
+      const filePath = `${dirPath}/${file}`;
+      const content = await fs.readFile(filePath);
+      const title = extractTitle(content);
+      const name = file.replace(/\.md$/, "");
+      if (title) {
+        ctx.stdout(`  ${name} - ${title}`);
+      } else {
+        ctx.stdout(`  ${name}`);
+      }
+    }
+    ctx.stdout("");
+  }
+  return { exitCode: 0 };
+}
+
+// lib/cli/next.ts
+function extractTitle2(content) {
+  const match = content.match(/^#\s+(.+)$/m);
+  return match ? match[1].trim() : null;
+}
+function extractBlockedBy(content) {
+  const blockedByMatch = content.match(/^## Blocked by\s*\n([\s\S]*?)(?=\n## |\n*$)/m);
+  if (!blockedByMatch) {
+    return [];
+  }
+  const section = blockedByMatch[1].trim();
+  if (section === "(none)") {
+    return [];
+  }
+  const linkPattern = /\[.*?\]\(([^)]+\.md)\)/g;
+  const blockers = [];
+  let match;
+  while ((match = linkPattern.exec(section)) !== null) {
+    blockers.push(match[1]);
+  }
+  return blockers;
+}
+async function next(ctx, fs, _args) {
+  const dustPath = `${ctx.cwd}/.dust`;
+  if (!fs.exists(dustPath)) {
+    ctx.stderr("Error: .dust directory not found");
+    ctx.stderr("Run 'dust init' to initialize a Dust repository");
+    return { exitCode: 1 };
+  }
+  const tasksPath = `${dustPath}/tasks`;
+  if (!fs.exists(tasksPath)) {
+    return { exitCode: 0 };
+  }
+  const files = await fs.readdir(tasksPath);
+  const mdFiles = files.filter((f) => f.endsWith(".md")).sort();
+  if (mdFiles.length === 0) {
+    return { exitCode: 0 };
+  }
+  const existingTasks = new Set(mdFiles);
+  const unblockedTasks = [];
+  for (const file of mdFiles) {
+    const filePath = `${tasksPath}/${file}`;
+    const content = await fs.readFile(filePath);
+    const blockers = extractBlockedBy(content);
+    const hasIncompleteBlocker = blockers.some((blocker) => existingTasks.has(blocker));
+    if (!hasIncompleteBlocker) {
+      const title = extractTitle2(content);
+      const name = file.replace(/\.md$/, "");
+      unblockedTasks.push({ name, title });
+    }
+  }
+  if (unblockedTasks.length === 0) {
+    return { exitCode: 0 };
+  }
+  ctx.stdout("Next tasks:");
+  for (const task of unblockedTasks) {
+    if (task.title) {
+      ctx.stdout(`  ${task.name} - ${task.title}`);
+    } else {
+      ctx.stdout(`  ${task.name}`);
+    }
+  }
+  return { exitCode: 0 };
+}
+
+// lib/cli/check.ts
+import { spawn } from "node:child_process";
+function createProcessRunner(spawnFn) {
+  return {
+    spawn: (command, args, options) => {
+      return new Promise((resolve2) => {
+        const proc = spawnFn(command, args, options);
+        proc.on("close", (code) => resolve2(code ?? 1));
+        proc.on("error", () => resolve2(1));
+      });
+    }
+  };
+}
+var defaultProcessRunner = createProcessRunner(spawn);
+async function check(ctx, fs, _args, runner = defaultProcessRunner, glob) {
+  if (glob) {
+    const validationResult = await validate(ctx, fs, [], glob);
+    if (validationResult.exitCode !== 0) {
+      return validationResult;
+    }
+    ctx.stdout("");
+  }
+  const hookPath = `${ctx.cwd}/.dust/hooks/check`;
+  if (!fs.exists(hookPath)) {
+    ctx.stderr("Error: No check hook found at .dust/hooks/check");
+    ctx.stderr("");
+    ctx.stderr("To create a check hook:");
+    ctx.stderr("  1. Create the hooks directory: mkdir -p .dust/hooks");
+    ctx.stderr("  2. Create the check script: touch .dust/hooks/check");
+    ctx.stderr("  3. Make it executable: chmod +x .dust/hooks/check");
+    ctx.stderr("  4. Add your quality checks (tests, linting, etc.)");
+    return { exitCode: 1 };
+  }
+  const exitCode = await runner.spawn(hookPath, [], {
+    cwd: ctx.cwd,
+    stdio: "inherit"
+  });
+  return { exitCode };
+}
+
+// lib/cli/main.ts
+var COMMANDS = [
+  "init",
+  "prompt",
+  "validate",
+  "list",
+  "next",
+  "check",
+  "help"
+];
+var HELP_TEXT = `dust - A lightweight planning system for human-AI collaboration
+
+Usage: dust <command> [options]
+
+Commands:
+  init              Initialize a new Dust repository
+  prompt <name>     Output a prompt by name (e.g., dust prompt work)
+  validate          Run validation checks on .dust/ files
+  list [type]       List items (tasks, ideas, goals, facts)
+  next              Show tasks ready to work on (not blocked)
+  check             Run project-defined quality gate hook
+  help              Show this help message
+
+Examples:
+  dust init
+  dust prompt work
+  dust validate
+  dust list tasks
+  dust list
+  dust next
+  dust check
+`;
+function isHelpRequest(command) {
+  return !command || command === "help" || command === "--help" || command === "-h";
+}
+function isValidCommand(command) {
+  return COMMANDS.includes(command);
+}
+async function runCommand(command, commandArgs, ctx, fs, glob) {
+  switch (command) {
+    case "init":
+      return init(ctx, fs, commandArgs);
+    case "prompt":
+      return prompt(ctx, fs, commandArgs);
+    case "validate":
+      return validate(ctx, fs, commandArgs, glob);
+    case "list":
+      return list(ctx, fs, commandArgs);
+    case "next":
+      return next(ctx, fs, commandArgs);
+    case "check":
+      return check(ctx, fs, commandArgs, defaultProcessRunner, glob);
+    case "help":
+      ctx.stdout(HELP_TEXT);
+      return { exitCode: 0 };
+  }
+}
+async function main(options) {
+  const { args, ctx, fs, glob } = options;
+  const command = args[0];
+  const commandArgs = args.slice(1);
+  if (isHelpRequest(command)) {
+    ctx.stdout(HELP_TEXT);
+    return { exitCode: 0 };
+  }
+  if (!isValidCommand(command)) {
+    ctx.stderr(`Unknown command: ${command}`);
+    ctx.stderr(`Run 'dust help' for available commands`);
+    return { exitCode: 1 };
+  }
+  return runCommand(command, commandArgs, ctx, fs, glob);
+}
+
+// lib/cli/entry.ts
+var fs = {
+  exists: existsSync,
+  readFile: (path) => readFile(path, "utf-8"),
+  writeFile: (path, content) => writeFile(path, content, "utf-8"),
+  mkdir: async (path, options) => {
+    await mkdir(path, options);
+  },
+  readdir: (path) => readdir(path)
+};
+var glob = {
+  scan: async function* (dir) {
+    for (const entry of await readdir(dir, { recursive: true })) {
+      if (entry.endsWith(".md"))
+        yield entry;
+    }
+  }
+};
+var result = await main({
+  args: process.argv.slice(2),
+  ctx: {
+    cwd: process.cwd(),
+    stdout: console.log,
+    stderr: console.error
+  },
+  fs,
+  glob
+});
+process.exit(result.exitCode);
