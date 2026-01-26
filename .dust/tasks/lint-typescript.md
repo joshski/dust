@@ -60,3 +60,17 @@ Use the latest version of biome.js with configuration something like this:
 ```
 
 We will need to reformat the code accordingly, and add integrate biome into .dust/hooks/check
+
+## Goals
+
+- [Fast Feedback](../goals/fast-feedback.md)
+
+## Blocked by
+
+(none)
+
+## Definition of done
+
+- Biome.js is installed and configured for TypeScript linting
+- Code is reformatted according to biome configuration
+- Biome check is integrated into .dust/hooks/check
