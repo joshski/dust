@@ -207,4 +207,113 @@ describe("validate command", () => {
     expect(result.exitCode).toBe(1);
     expect(ctx.stderrLines.join("\n")).toContain("violation");
   });
+
+  test("reports filename violations for invalid task filenames", async () => {
+    const ctx = createMockContext();
+    const fs = createMockFs(
+      new Map([
+        [
+          "/project/.dust/tasks/BadFileName.md",
+          `# Task
+## Goals
+## Blocked by
+## Definition of done`,
+        ],
+      ])
+    );
+    const glob = createMockGlob(["/project/.dust/tasks/BadFileName.md"]);
+
+    const result = await validate(ctx, fs, [], glob);
+
+    expect(result.exitCode).toBe(1);
+    expect(ctx.stderrLines.join("\n")).toContain("does not match slug-style");
+  });
+
+  test("skips non-markdown files in glob results", async () => {
+    const ctx = createMockContext();
+    const fs = createMockFs(
+      new Map([
+        ["/project/.dust/goals/goal.md", "# Goal"],
+        ["/project/.dust/tasks/my-task.md", `# Task
+## Goals
+## Blocked by
+## Definition of done`],
+      ])
+    );
+    // Include non-.md files in glob results
+    const glob = createMockGlob([
+      "/project/.dust/goals/goal.md",
+      "/project/.dust/some-file.txt",
+      "/project/.dust/.gitkeep",
+      "/project/.dust/tasks/my-task.md",
+      "/project/.dust/tasks/README",
+    ]);
+
+    const result = await validate(ctx, fs, [], glob);
+
+    expect(result.exitCode).toBe(0);
+    expect(ctx.stdoutLines.join("\n")).toContain("All validations passed");
+  });
+
+  test("displays violations with line numbers correctly", async () => {
+    const ctx = createMockContext();
+    const fs = createMockFs(
+      new Map([
+        ["/project/.dust/tasks/my-task.md", `# Task
+## Goals
+[Broken](../missing.md)
+## Blocked by
+## Definition of done`],
+      ])
+    );
+    const glob = createMockGlob(["/project/.dust/tasks/my-task.md"]);
+
+    await validate(ctx, fs, [], glob);
+
+    // Broken link violations include line numbers
+    const output = ctx.stderrLines.join("\n");
+    expect(output).toContain(":3");
+    expect(output).toContain("Broken link");
+  });
+
+  test("displays violations without line numbers correctly", async () => {
+    const ctx = createMockContext();
+    const fs = createMockFs(
+      new Map([
+        [
+          "/project/.dust/tasks/BadName.md",
+          `# Task
+## Goals
+## Blocked by
+## Definition of done`,
+        ],
+      ])
+    );
+    const glob = createMockGlob(["/project/.dust/tasks/BadName.md"]);
+
+    await validate(ctx, fs, [], glob);
+
+    // Filename violations don't have line numbers
+    const output = ctx.stderrLines.join("\n");
+    expect(output).toContain("BadName.md");
+    expect(output).toContain("does not match slug-style");
+    // Should not have a colon before the message (no line number)
+    expect(output).toMatch(/BadName\.md\n/);
+  });
+
+  test("skips task validation when tasks directory does not exist", async () => {
+    const ctx = createMockContext();
+    // Only goals directory, no tasks directory
+    const fs = createMockFs(
+      new Map([["/project/.dust/goals/goal.md", "# Goal"]])
+    );
+    const glob = createMockGlob(["/project/.dust/goals/goal.md"]);
+
+    const result = await validate(ctx, fs, [], glob);
+
+    expect(result.exitCode).toBe(0);
+    expect(ctx.stdoutLines.join("\n")).toContain("All validations passed");
+    // Should not mention task validation
+    expect(ctx.stdoutLines.join("\n")).not.toContain("tasks");
+  });
 });

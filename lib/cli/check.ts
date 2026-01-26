@@ -5,7 +5,7 @@
  * Forwards the exit code from the hook.
  */
 
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
 import type { CommandContext, CommandResult, FileSystem } from "./types";
 
 export interface ProcessRunner {
@@ -16,15 +16,25 @@ export interface ProcessRunner {
   ) => Promise<number>;
 }
 
-export const defaultProcessRunner: ProcessRunner = {
-  spawn: (command, args, options) => {
-    return new Promise((resolve) => {
-      const proc = spawn(command, args, options);
-      proc.on("close", (code) => resolve(code ?? 1));
-      proc.on("error", () => resolve(1));
-    });
-  },
-};
+export type SpawnFn = (
+  command: string,
+  args: string[],
+  options: { cwd: string; stdio: "inherit" }
+) => ChildProcess;
+
+export function createProcessRunner(spawnFn: SpawnFn): ProcessRunner {
+  return {
+    spawn: (command, args, options) => {
+      return new Promise((resolve) => {
+        const proc = spawnFn(command, args, options);
+        proc.on("close", (code) => resolve(code ?? 1));
+        proc.on("error", () => resolve(1));
+      });
+    },
+  };
+}
+
+export const defaultProcessRunner: ProcessRunner = createProcessRunner(spawn);
 
 export async function check(
   ctx: CommandContext,

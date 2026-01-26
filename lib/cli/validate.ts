@@ -25,7 +25,7 @@ export interface GlobScanner {
 }
 
 export function validateFilename(filePath: string): Violation | null {
-  const filename = filePath.split("/").pop() || "";
+  const filename = filePath.split("/").pop()!;
   if (!SLUG_PATTERN.test(filename)) {
     return {
       file: filePath,
@@ -77,17 +77,14 @@ export function validateLinks(
       }
 
       const targetPath = linkTarget.split("#")[0];
+      const resolvedPath = resolve(fileDir, targetPath);
 
-      if (targetPath) {
-        const resolvedPath = resolve(fileDir, targetPath);
-
-        if (!fs.exists(resolvedPath)) {
-          violations.push({
-            file: filePath,
-            message: `Broken link: "${linkTarget}"`,
-            line: i + 1,
-          });
-        }
+      if (!fs.exists(resolvedPath)) {
+        violations.push({
+          file: filePath,
+          message: `Broken link: "${linkTarget}"`,
+          line: i + 1,
+        });
       }
     }
   }

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { check, type ProcessRunner } from "./check";
+import { EventEmitter } from "node:events";
+import { check, createProcessRunner, type ProcessRunner } from "./check";
 import type { CommandContext, FileSystem } from "./types";
 
 function createMockContext(): CommandContext & {
@@ -87,5 +88,40 @@ describe("check command", () => {
     const output = ctx.stderrLines.join("\n");
     expect(output).toContain("mkdir -p .dust/hooks");
     expect(output).toContain("chmod +x");
+  });
+});
+
+describe("createProcessRunner", () => {
+  test("resolves with exit code from close event", async () => {
+    const mockProc = new EventEmitter();
+    const mockSpawn = () => mockProc as any;
+    const runner = createProcessRunner(mockSpawn);
+
+    const promise = runner.spawn("cmd", [], { cwd: "/", stdio: "inherit" });
+    mockProc.emit("close", 0);
+
+    expect(await promise).toBe(0);
+  });
+
+  test("resolves with 1 when close event has null code", async () => {
+    const mockProc = new EventEmitter();
+    const mockSpawn = () => mockProc as any;
+    const runner = createProcessRunner(mockSpawn);
+
+    const promise = runner.spawn("cmd", [], { cwd: "/", stdio: "inherit" });
+    mockProc.emit("close", null);
+
+    expect(await promise).toBe(1);
+  });
+
+  test("resolves with 1 on error event", async () => {
+    const mockProc = new EventEmitter();
+    const mockSpawn = () => mockProc as any;
+    const runner = createProcessRunner(mockSpawn);
+
+    const promise = runner.spawn("cmd", [], { cwd: "/", stdio: "inherit" });
+    mockProc.emit("error", new Error("spawn failed"));
+
+    expect(await promise).toBe(1);
   });
 });
