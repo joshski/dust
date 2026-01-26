@@ -5,7 +5,7 @@
     "dust": "./dist/dust.js"
   },
   "scripts": {
-    "build": "bun run scripts/build.ts",
+    "build": "bun build lib/cli/entry.ts --target node --outfile dist/dust.js",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
