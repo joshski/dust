@@ -21,6 +21,45 @@ The `goals`, `ideas`, `tasks`, and `facts` directories should be flat (no subdir
 
 The `hooks` directory contains executable scripts that integrate with the `dust` CLI. For example, the `check` hook is run by `dust check` to execute project-defined quality gates.
 
+## CLI Commands
+
+The `dust` CLI provides commands for managing your planning repository:
+
+| Command | Description |
+|---------|-------------|
+| `dust init` | Initialize a new Dust repository with the standard directory structure |
+| `dust prompt <name>` | Output a prompt by name from the `prompts/` directory |
+| `dust validate` | Run validation checks on `.dust/` files (links, task structure, naming) |
+| `dust list [type]` | List items by type (tasks, ideas, goals, facts) or all if no type specified |
+| `dust next` | Show tasks ready to work on (not blocked by other incomplete tasks) |
+| `dust check` | Run `validate` then execute the project's quality gate hook at `.dust/hooks/check` |
+| `dust help` | Show help message with all available commands |
+
+### Examples
+
+```bash
+# Initialize a new project
+dust init
+
+# List all tasks
+dust list tasks
+
+# List everything (tasks, ideas, goals, facts)
+dust list
+
+# Show tasks that are ready to start
+dust next
+
+# Validate all .dust files
+dust validate
+
+# Run quality checks (validation + custom hook)
+dust check
+
+# Output a prompt by name
+dust prompt work
+```
+
 ## Workflow
 
 Dust is designed for successive cycles of human planning (AI-assisted, of course) followed by agent autonomy, followed by human planning, etc.
