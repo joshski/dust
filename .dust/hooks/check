@@ -7,11 +7,25 @@ set -e  # Exit on first failure
 echo "Running quality checks..."
 echo ""
 
-echo "1. Running unit tests..."
+echo "1. Verifying build is current..."
+bun run build
+if ! git diff --quiet dist/; then
+  echo ""
+  echo "ERROR: Build output differs from committed files."
+  echo "The dist/ directory has uncommitted changes after running 'bun run build'."
+  echo "This means the TypeScript source and built JavaScript are out of sync."
+  echo ""
+  echo "To fix: run 'bun run build' and commit the changes to dist/"
+  exit 1
+fi
+echo "   Build verified."
+
+echo ""
+echo "2. Running unit tests..."
 bun run test:coverage
 
 echo ""
-echo "2. Type checking..."
+echo "3. Type checking..."
 bunx tsc --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target esnext lib/**/*.ts
 
 echo ""
