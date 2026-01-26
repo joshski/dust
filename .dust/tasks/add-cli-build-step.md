@@ -11,7 +11,7 @@ This enables the CLI to run on Node.js without requiring TypeScript compilation 
 
 ## Blocked by
 
-- [Replace Bun.Glob with Node.js API](replace-bun-glob-with-node-api.md)
+(none)
 
 ## Definition of done
 

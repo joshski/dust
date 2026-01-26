@@ -8,6 +8,7 @@
  *   prompt <name>     Output a prompt by name
  *   validate          Run validation checks
  *   list [type]       List tasks, ideas, goals, or facts
+ *   next              Show tasks ready to work on (not blocked)
  */
 
 import { existsSync } from "node:fs";
@@ -17,8 +18,9 @@ import { init } from "../lib/cli/init";
 import { prompt } from "../lib/cli/prompt";
 import { validate, type GlobScanner } from "../lib/cli/validate";
 import { list } from "../lib/cli/list";
+import { next } from "../lib/cli/next";
 
-const COMMANDS = ["init", "prompt", "validate", "list", "help"];
+const COMMANDS = ["init", "prompt", "validate", "list", "next", "help"];
 
 const nodeFs: FileSystem = {
   exists: existsSync,
@@ -28,11 +30,17 @@ const nodeFs: FileSystem = {
   readdir: (path: string) => readdir(path),
 };
 
-const bunGlob: GlobScanner = {
-  scan: (dir: string) => {
-    const glob = new Bun.Glob("**/*.md");
-    return glob.scan(dir);
-  },
+async function* scanMarkdownFiles(dir: string): AsyncIterable<string> {
+  const entries = await readdir(dir, { recursive: true });
+  for (const entry of entries) {
+    if (entry.endsWith(".md")) {
+      yield entry;
+    }
+  }
+}
+
+const nodeGlob: GlobScanner = {
+  scan: scanMarkdownFiles,
 };
 
 function createContext(): CommandContext {
@@ -91,7 +99,7 @@ async function main(): Promise<void> {
       result = await prompt(ctx, nodeFs, commandArgs);
       break;
     case "validate":
-      result = await validate(ctx, nodeFs, commandArgs, bunGlob);
+      result = await validate(ctx, nodeFs, commandArgs, nodeGlob);
       break;
     case "list":
       result = await list(ctx, nodeFs, commandArgs);
