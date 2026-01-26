@@ -1,319 +1,326 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test } from 'vitest'
+import type { CommandContext, FileSystem } from './types'
 import {
+  type GlobScanner,
   validate,
   validateFilename,
-  validateTaskHeadings,
   validateLinks,
-  type GlobScanner,
-} from "./validate";
-import type { CommandContext, FileSystem } from "./types";
+  validateTaskHeadings,
+} from './validate'
 
 function createMockContext(): CommandContext & {
-  stdoutLines: string[];
-  stderrLines: string[];
+  stdoutLines: string[]
+  stderrLines: string[]
 } {
-  const stdoutLines: string[] = [];
-  const stderrLines: string[] = [];
+  const stdoutLines: string[] = []
+  const stderrLines: string[] = []
   return {
-    cwd: "/project",
+    cwd: '/project',
     stdout: (msg: string) => stdoutLines.push(msg),
     stderr: (msg: string) => stderrLines.push(msg),
     stdoutLines,
     stderrLines,
-  };
+  }
 }
 
 function createMockFs(files: Map<string, string> = new Map()): FileSystem {
-  const paths = new Set(files.keys());
+  const paths = new Set(files.keys())
   // Also add directory paths
   for (const path of files.keys()) {
-    let dir = path;
-    while (dir.includes("/")) {
-      dir = dir.substring(0, dir.lastIndexOf("/"));
-      if (dir) paths.add(dir);
+    let dir = path
+    while (dir.includes('/')) {
+      dir = dir.substring(0, dir.lastIndexOf('/'))
+      if (dir) paths.add(dir)
     }
   }
 
   return {
     exists: (path: string) => paths.has(path),
-    readFile: async (path: string) => files.get(path) || "",
+    readFile: async (path: string) => files.get(path) || '',
     writeFile: async () => {},
     mkdir: async () => {},
     readdir: async () => [],
-  };
+  }
 }
 
 function createMockGlob(files: string[]): GlobScanner {
   return {
     scan: async function* (dir: string) {
       for (const file of files) {
-        if (file.startsWith(dir + "/")) {
-          yield file.slice(dir.length + 1);
+        if (file.startsWith(`${dir}/`)) {
+          yield file.slice(dir.length + 1)
         }
       }
     },
-  };
+  }
 }
 
-describe("validateFilename", () => {
-  test("accepts valid slug names", () => {
-    expect(validateFilename("my-task.md")).toBeNull();
-    expect(validateFilename("task.md")).toBeNull();
-    expect(validateFilename("task-v2.md")).toBeNull();
-    expect(validateFilename("/path/to/my-task.md")).toBeNull();
-  });
+describe('validateFilename', () => {
+  test('accepts valid slug names', () => {
+    expect(validateFilename('my-task.md')).toBeNull()
+    expect(validateFilename('task.md')).toBeNull()
+    expect(validateFilename('task-v2.md')).toBeNull()
+    expect(validateFilename('/path/to/my-task.md')).toBeNull()
+  })
 
-  test("rejects invalid names", () => {
-    expect(validateFilename("MyTask.md")).not.toBeNull();
-    expect(validateFilename("my_task.md")).not.toBeNull();
-    expect(validateFilename("-task.md")).not.toBeNull();
-    expect(validateFilename("task-.md")).not.toBeNull();
-  });
-});
+  test('rejects invalid names', () => {
+    expect(validateFilename('MyTask.md')).not.toBeNull()
+    expect(validateFilename('my_task.md')).not.toBeNull()
+    expect(validateFilename('-task.md')).not.toBeNull()
+    expect(validateFilename('task-.md')).not.toBeNull()
+  })
+})
 
-describe("validateTaskHeadings", () => {
-  test("returns no violations for valid task", () => {
+describe('validateTaskHeadings', () => {
+  test('returns no violations for valid task', () => {
     const content = `# Task
 ## Goals
 ## Blocked by
-## Definition of done`;
+## Definition of done`
 
-    const violations = validateTaskHeadings("task.md", content);
-    expect(violations).toHaveLength(0);
-  });
+    const violations = validateTaskHeadings('task.md', content)
+    expect(violations).toHaveLength(0)
+  })
 
-  test("reports missing headings", () => {
+  test('reports missing headings', () => {
     const content = `# Task
-## Goals`;
+## Goals`
 
-    const violations = validateTaskHeadings("task.md", content);
-    expect(violations).toHaveLength(2);
-  });
-});
+    const violations = validateTaskHeadings('task.md', content)
+    expect(violations).toHaveLength(2)
+  })
+})
 
-describe("validateLinks", () => {
-  test("returns no violations for valid links", () => {
-    const content = `[Goal](../goals/goal.md)`;
+describe('validateLinks', () => {
+  test('returns no violations for valid links', () => {
+    const content = '[Goal](../goals/goal.md)'
     const fs = createMockFs(
-      new Map([["/project/.dust/goals/goal.md", "content"]])
-    );
+      new Map([['/project/.dust/goals/goal.md', 'content']])
+    )
 
     const violations = validateLinks(
-      "/project/.dust/tasks/task.md",
+      '/project/.dust/tasks/task.md',
       content,
       fs
-    );
-    expect(violations).toHaveLength(0);
-  });
+    )
+    expect(violations).toHaveLength(0)
+  })
 
-  test("reports broken links", () => {
-    const content = `[Missing](../goals/missing.md)`;
-    const fs = createMockFs();
+  test('reports broken links', () => {
+    const content = '[Missing](../goals/missing.md)'
+    const fs = createMockFs()
 
     const violations = validateLinks(
-      "/project/.dust/tasks/task.md",
+      '/project/.dust/tasks/task.md',
       content,
       fs
-    );
-    expect(violations).toHaveLength(1);
-    expect(violations[0].message).toContain("Broken link");
-  });
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('Broken link')
+  })
 
-  test("skips external links", () => {
-    const content = `[External](https://example.com)`;
-    const fs = createMockFs();
+  test('skips external links', () => {
+    const content = '[External](https://example.com)'
+    const fs = createMockFs()
 
     const violations = validateLinks(
-      "/project/.dust/tasks/task.md",
+      '/project/.dust/tasks/task.md',
       content,
       fs
-    );
-    expect(violations).toHaveLength(0);
-  });
+    )
+    expect(violations).toHaveLength(0)
+  })
 
-  test("skips anchor links", () => {
-    const content = `[Section](#section)`;
-    const fs = createMockFs();
+  test('skips anchor links', () => {
+    const content = '[Section](#section)'
+    const fs = createMockFs()
 
     const violations = validateLinks(
-      "/project/.dust/tasks/task.md",
+      '/project/.dust/tasks/task.md',
       content,
       fs
-    );
-    expect(violations).toHaveLength(0);
-  });
+    )
+    expect(violations).toHaveLength(0)
+  })
 
-  test("includes line numbers", () => {
+  test('includes line numbers', () => {
     const content = `Line 1
 Line 2
-[Missing](../goals/missing.md)`;
-    const fs = createMockFs();
+[Missing](../goals/missing.md)`
+    const fs = createMockFs()
 
     const violations = validateLinks(
-      "/project/.dust/tasks/task.md",
+      '/project/.dust/tasks/task.md',
       content,
       fs
-    );
-    expect(violations[0].line).toBe(3);
-  });
-});
+    )
+    expect(violations[0].line).toBe(3)
+  })
+})
 
-describe("validate command", () => {
-  test("fails if .dust not found", async () => {
-    const ctx = createMockContext();
-    const fs = createMockFs();
-    const glob = createMockGlob([]);
+describe('validate command', () => {
+  test('fails if .dust not found', async () => {
+    const ctx = createMockContext()
+    const fs = createMockFs()
+    const glob = createMockGlob([])
 
-    const result = await validate(ctx, fs, [], glob);
+    const result = await validate(ctx, fs, [], glob)
 
-    expect(result.exitCode).toBe(1);
-    expect(ctx.stderrLines.join("\n")).toContain(".dust directory not found");
-  });
+    expect(result.exitCode).toBe(1)
+    expect(ctx.stderrLines.join('\n')).toContain('.dust directory not found')
+  })
 
-  test("passes with valid files", async () => {
-    const ctx = createMockContext();
+  test('passes with valid files', async () => {
+    const ctx = createMockContext()
     const fs = createMockFs(
       new Map([
-        ["/project/.dust/goals/goal.md", "# Goal\nDescription"],
-        ["/project/.dust/tasks/my-task.md", `# Task
+        ['/project/.dust/goals/goal.md', '# Goal\nDescription'],
+        [
+          '/project/.dust/tasks/my-task.md',
+          `# Task
 ## Goals
 [Goal](../goals/goal.md)
 ## Blocked by
-## Definition of done`],
+## Definition of done`,
+        ],
       ])
-    );
+    )
     const glob = createMockGlob([
-      "/project/.dust/goals/goal.md",
-      "/project/.dust/tasks/my-task.md",
-    ]);
+      '/project/.dust/goals/goal.md',
+      '/project/.dust/tasks/my-task.md',
+    ])
 
-    const result = await validate(ctx, fs, [], glob);
+    const result = await validate(ctx, fs, [], glob)
 
-    expect(result.exitCode).toBe(0);
-    expect(ctx.stdoutLines.join("\n")).toContain("All validations passed");
-  });
+    expect(result.exitCode).toBe(0)
+    expect(ctx.stdoutLines.join('\n')).toContain('All validations passed')
+  })
 
-  test("reports violations", async () => {
-    const ctx = createMockContext();
+  test('reports violations', async () => {
+    const ctx = createMockContext()
     const fs = createMockFs(
-      new Map([
-        ["/project/.dust/tasks/my-task.md", "# Task with no headings"],
-      ])
-    );
-    const glob = createMockGlob(["/project/.dust/tasks/my-task.md"]);
+      new Map([['/project/.dust/tasks/my-task.md', '# Task with no headings']])
+    )
+    const glob = createMockGlob(['/project/.dust/tasks/my-task.md'])
 
-    const result = await validate(ctx, fs, [], glob);
+    const result = await validate(ctx, fs, [], glob)
 
-    expect(result.exitCode).toBe(1);
-    expect(ctx.stderrLines.join("\n")).toContain("violation");
-  });
+    expect(result.exitCode).toBe(1)
+    expect(ctx.stderrLines.join('\n')).toContain('violation')
+  })
 
-  test("reports filename violations for invalid task filenames", async () => {
-    const ctx = createMockContext();
+  test('reports filename violations for invalid task filenames', async () => {
+    const ctx = createMockContext()
     const fs = createMockFs(
       new Map([
         [
-          "/project/.dust/tasks/BadFileName.md",
+          '/project/.dust/tasks/BadFileName.md',
           `# Task
 ## Goals
 ## Blocked by
 ## Definition of done`,
         ],
       ])
-    );
-    const glob = createMockGlob(["/project/.dust/tasks/BadFileName.md"]);
+    )
+    const glob = createMockGlob(['/project/.dust/tasks/BadFileName.md'])
 
-    const result = await validate(ctx, fs, [], glob);
+    const result = await validate(ctx, fs, [], glob)
 
-    expect(result.exitCode).toBe(1);
-    expect(ctx.stderrLines.join("\n")).toContain("does not match slug-style");
-  });
+    expect(result.exitCode).toBe(1)
+    expect(ctx.stderrLines.join('\n')).toContain('does not match slug-style')
+  })
 
-  test("skips non-markdown files in glob results", async () => {
-    const ctx = createMockContext();
+  test('skips non-markdown files in glob results', async () => {
+    const ctx = createMockContext()
     const fs = createMockFs(
       new Map([
-        ["/project/.dust/goals/goal.md", "# Goal"],
-        ["/project/.dust/tasks/my-task.md", `# Task
+        ['/project/.dust/goals/goal.md', '# Goal'],
+        [
+          '/project/.dust/tasks/my-task.md',
+          `# Task
 ## Goals
 ## Blocked by
-## Definition of done`],
+## Definition of done`,
+        ],
       ])
-    );
+    )
     // Include non-.md files in glob results
     const glob = createMockGlob([
-      "/project/.dust/goals/goal.md",
-      "/project/.dust/some-file.txt",
-      "/project/.dust/.gitkeep",
-      "/project/.dust/tasks/my-task.md",
-      "/project/.dust/tasks/README",
-    ]);
+      '/project/.dust/goals/goal.md',
+      '/project/.dust/some-file.txt',
+      '/project/.dust/.gitkeep',
+      '/project/.dust/tasks/my-task.md',
+      '/project/.dust/tasks/README',
+    ])
 
-    const result = await validate(ctx, fs, [], glob);
+    const result = await validate(ctx, fs, [], glob)
 
-    expect(result.exitCode).toBe(0);
-    expect(ctx.stdoutLines.join("\n")).toContain("All validations passed");
-  });
+    expect(result.exitCode).toBe(0)
+    expect(ctx.stdoutLines.join('\n')).toContain('All validations passed')
+  })
 
-  test("displays violations with line numbers correctly", async () => {
-    const ctx = createMockContext();
+  test('displays violations with line numbers correctly', async () => {
+    const ctx = createMockContext()
     const fs = createMockFs(
       new Map([
-        ["/project/.dust/tasks/my-task.md", `# Task
+        [
+          '/project/.dust/tasks/my-task.md',
+          `# Task
 ## Goals
 [Broken](../missing.md)
 ## Blocked by
-## Definition of done`],
+## Definition of done`,
+        ],
       ])
-    );
-    const glob = createMockGlob(["/project/.dust/tasks/my-task.md"]);
+    )
+    const glob = createMockGlob(['/project/.dust/tasks/my-task.md'])
 
-    await validate(ctx, fs, [], glob);
+    await validate(ctx, fs, [], glob)
 
     // Broken link violations include line numbers
-    const output = ctx.stderrLines.join("\n");
-    expect(output).toContain(":3");
-    expect(output).toContain("Broken link");
-  });
+    const output = ctx.stderrLines.join('\n')
+    expect(output).toContain(':3')
+    expect(output).toContain('Broken link')
+  })
 
-  test("displays violations without line numbers correctly", async () => {
-    const ctx = createMockContext();
+  test('displays violations without line numbers correctly', async () => {
+    const ctx = createMockContext()
     const fs = createMockFs(
       new Map([
         [
-          "/project/.dust/tasks/BadName.md",
+          '/project/.dust/tasks/BadName.md',
           `# Task
 ## Goals
 ## Blocked by
 ## Definition of done`,
         ],
       ])
-    );
-    const glob = createMockGlob(["/project/.dust/tasks/BadName.md"]);
+    )
+    const glob = createMockGlob(['/project/.dust/tasks/BadName.md'])
 
-    await validate(ctx, fs, [], glob);
+    await validate(ctx, fs, [], glob)
 
     // Filename violations don't have line numbers
-    const output = ctx.stderrLines.join("\n");
-    expect(output).toContain("BadName.md");
-    expect(output).toContain("does not match slug-style");
+    const output = ctx.stderrLines.join('\n')
+    expect(output).toContain('BadName.md')
+    expect(output).toContain('does not match slug-style')
     // Should not have a colon before the message (no line number)
-    expect(output).toMatch(/BadName\.md\n/);
-  });
+    expect(output).toMatch(/BadName\.md\n/)
+  })
 
-  test("skips task validation when tasks directory does not exist", async () => {
-    const ctx = createMockContext();
+  test('skips task validation when tasks directory does not exist', async () => {
+    const ctx = createMockContext()
     // Only goals directory, no tasks directory
     const fs = createMockFs(
-      new Map([["/project/.dust/goals/goal.md", "# Goal"]])
-    );
-    const glob = createMockGlob(["/project/.dust/goals/goal.md"]);
+      new Map([['/project/.dust/goals/goal.md', '# Goal']])
+    )
+    const glob = createMockGlob(['/project/.dust/goals/goal.md'])
 
-    const result = await validate(ctx, fs, [], glob);
+    const result = await validate(ctx, fs, [], glob)
 
-    expect(result.exitCode).toBe(0);
-    expect(ctx.stdoutLines.join("\n")).toContain("All validations passed");
+    expect(result.exitCode).toBe(0)
+    expect(ctx.stdoutLines.join('\n')).toContain('All validations passed')
     // Should not mention task validation
-    expect(ctx.stdoutLines.join("\n")).not.toContain("tasks");
-  });
-});
+    expect(ctx.stdoutLines.join('\n')).not.toContain('tasks')
+  })
+})

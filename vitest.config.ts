@@ -1,11 +1,11 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
     coverage: {
-      provider: "v8",
-      include: ["lib/**/*.ts"],
-      exclude: ["lib/**/entry.ts"],
+      provider: 'v8',
+      include: ['lib/**/*.ts'],
+      exclude: ['lib/**/entry.ts'],
       thresholds: {
         lines: 100,
         functions: 100,
@@ -14,4 +14,4 @@ export default defineConfig({
       },
     },
   },
-});
+})

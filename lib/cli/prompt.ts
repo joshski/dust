@@ -2,46 +2,46 @@
  * dust prompt <name> - Output a prompt by name
  */
 
-import type { CommandContext, CommandResult, FileSystem } from "./types";
+import type { CommandContext, CommandResult, FileSystem } from './types'
 
 export async function prompt(
   ctx: CommandContext,
   fs: FileSystem,
   args: string[]
 ): Promise<CommandResult> {
-  const promptsDir = `${ctx.cwd}/prompts`;
+  const promptsDir = `${ctx.cwd}/prompts`
 
   if (args.length === 0) {
-    ctx.stderr("Usage: dust prompt <name>");
-    ctx.stderr("Example: dust prompt work");
-    return { exitCode: 1 };
+    ctx.stderr('Usage: dust prompt <name>')
+    ctx.stderr('Example: dust prompt work')
+    return { exitCode: 1 }
   }
 
-  const promptName = args[0];
-  const promptFile = `${promptsDir}/${promptName}.md`;
+  const promptName = args[0]
+  const promptFile = `${promptsDir}/${promptName}.md`
 
   if (!fs.exists(promptFile)) {
-    ctx.stderr(`Error: Prompt '${promptName}' not found`);
-    ctx.stderr("Available prompts:");
+    ctx.stderr(`Error: Prompt '${promptName}' not found`)
+    ctx.stderr('Available prompts:')
 
     try {
-      const files = await fs.readdir(promptsDir);
+      const files = await fs.readdir(promptsDir)
       const prompts = files
-        .filter((f) => f.endsWith(".md"))
-        .map((f) => f.replace(/\.md$/, ""));
+        .filter(f => f.endsWith('.md'))
+        .map(f => f.replace(/\.md$/, ''))
 
       for (const p of prompts) {
-        ctx.stderr(`  ${p}`);
+        ctx.stderr(`  ${p}`)
       }
     } catch {
-      ctx.stderr("  (no prompts directory found)");
+      ctx.stderr('  (no prompts directory found)')
     }
 
-    return { exitCode: 1 };
+    return { exitCode: 1 }
   }
 
-  const content = await fs.readFile(promptFile);
-  ctx.stdout(content);
+  const content = await fs.readFile(promptFile)
+  ctx.stdout(content)
 
-  return { exitCode: 0 };
+  return { exitCode: 0 }
 }
