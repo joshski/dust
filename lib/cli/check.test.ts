@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import { EventEmitter } from "node:events";
 import { check, createProcessRunner, type ProcessRunner } from "./check";
 import type { CommandContext, FileSystem } from "./types";
+import type { GlobScanner } from "./validate";
 
 function createMockContext(): CommandContext & {
   stdoutLines: string[];
@@ -38,6 +39,16 @@ function createMockRunner(exitCode: number): ProcessRunner & {
       return exitCode;
     },
     calls,
+  };
+}
+
+function createMockGlob(files: string[]): GlobScanner {
+  return {
+    scan: async function* () {
+      for (const file of files) {
+        yield file;
+      }
+    },
   };
 }
 
@@ -123,5 +134,52 @@ describe("createProcessRunner", () => {
     mockProc.emit("error", new Error("spawn failed"));
 
     expect(await promise).toBe(1);
+  });
+});
+
+describe("check with validation", () => {
+  test("runs validation before hook when glob is provided", async () => {
+    const ctx = createMockContext();
+    const fs = createMockFs(
+      new Set(["/project/.dust", "/project/.dust/hooks/check"])
+    );
+    fs.readFile = async () => "# Test\n## Goals\n## Blocked by\n## Definition of done";
+    const runner = createMockRunner(0);
+    const glob = createMockGlob([]);
+
+    const result = await check(ctx, fs, [], runner, glob);
+
+    expect(result.exitCode).toBe(0);
+    expect(runner.calls).toHaveLength(1);
+    expect(ctx.stdoutLines).toContain("All validations passed!");
+  });
+
+  test("exits early if validation fails", async () => {
+    const ctx = createMockContext();
+    const fs = createMockFs(
+      new Set(["/project/.dust", "/project/.dust/tasks", "/project/.dust/hooks/check"])
+    );
+    // Return a task file with invalid filename (uppercase)
+    fs.readFile = async () => "# Test\n## Goals\n## Blocked by\n## Definition of done";
+    const runner = createMockRunner(0);
+    const glob = createMockGlob(["InvalidName.md"]);
+
+    const result = await check(ctx, fs, [], runner, glob);
+
+    expect(result.exitCode).toBe(1);
+    expect(runner.calls).toHaveLength(0); // Hook should not run
+    expect(ctx.stderrLines.join("\n")).toContain("violation");
+  });
+
+  test("skips validation when glob is not provided", async () => {
+    const ctx = createMockContext();
+    const fs = createMockFs(new Set(["/project/.dust/hooks/check"]));
+    const runner = createMockRunner(0);
+
+    const result = await check(ctx, fs, [], runner);
+
+    expect(result.exitCode).toBe(0);
+    expect(runner.calls).toHaveLength(1);
+    expect(ctx.stdoutLines).not.toContain("All validations passed!");
   });
 });

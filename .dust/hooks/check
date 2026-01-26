@@ -1,5 +1,6 @@
 #!/bin/bash
 # Dust quality gate - runs all checks before committing
+# Note: `dust validate` runs automatically before this hook
 
 set -e  # Exit on first failure
 
@@ -10,11 +11,7 @@ echo "1. Running unit tests..."
 bun run test:coverage
 
 echo ""
-echo "2. Validating .dust files..."
-./bin/dust validate
-
-echo ""
-echo "3. Type checking..."
+echo "2. Type checking..."
 bunx tsc --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target esnext lib/**/*.ts
 
 echo ""
