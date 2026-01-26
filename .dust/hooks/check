@@ -7,7 +7,7 @@ echo "Running quality checks..."
 echo ""
 
 echo "1. Running unit tests..."
-bun test
+bun test --coverage
 
 echo ""
 echo "2. Running task linter..."

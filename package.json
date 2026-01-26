@@ -7,7 +7,8 @@
   "scripts": {
     "lint:tasks": "bun scripts/lint-tasks.ts",
     "validate:links": "bun scripts/validate-links.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "test:coverage": "bun test --coverage"
   },
   "devDependencies": {
     "@types/bun": "^1.3.6"
