@@ -9,7 +9,7 @@ Enforce a minimum code coverage threshold in the repository's check hook.
 
 ## Blocked by
 
-- [Add Coverage Reporting](add-coverage-reporting.md)
+(none)
 
 ## Definition of done
 
