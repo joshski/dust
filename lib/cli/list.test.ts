@@ -138,4 +138,65 @@ describe("list command", () => {
     expect(output).toContain("goals");
     expect(output).toContain("facts");
   });
+
+  test("skips type directories that do not exist", async () => {
+    const ctx = createMockContext();
+    // Only goals directory exists, tasks/ideas/facts do not
+    const fs = createMockFs(
+      new Map([["/project/.dust/goals/my-goal.md", "# My Goal"]])
+    );
+
+    const result = await list(ctx, fs, []);
+
+    expect(result.exitCode).toBe(0);
+    const output = ctx.stdoutLines.join("\n");
+    expect(output).toContain("goals:");
+    expect(output).toContain("my-goal");
+    // Other types should not appear because their directories don't exist
+    expect(output).not.toContain("tasks:");
+    expect(output).not.toContain("ideas:");
+    expect(output).not.toContain("facts:");
+  });
+
+  test("skips type directories with no markdown files", async () => {
+    const ctx = createMockContext();
+    // Create a directory structure where ideas dir exists but has no .md files
+    const files = new Map<string, string>([
+      ["/project/.dust/goals/my-goal.md", "# My Goal"],
+    ]);
+    const paths = new Set(files.keys());
+    // Add directory paths
+    for (const path of files.keys()) {
+      let dir = path;
+      while (dir.includes("/")) {
+        dir = dir.substring(0, dir.lastIndexOf("/"));
+        if (dir) paths.add(dir);
+      }
+    }
+    // Add an empty ideas directory
+    paths.add("/project/.dust/ideas");
+
+    const fs = {
+      exists: (path: string) => paths.has(path),
+      readFile: async (path: string) => files.get(path) || "",
+      writeFile: async () => {},
+      mkdir: async () => {},
+      readdir: async (path: string) => {
+        if (path === "/project/.dust/ideas") return []; // Empty directory
+        const prefix = path + "/";
+        return Array.from(files.keys())
+          .filter((f) => f.startsWith(prefix))
+          .map((f) => f.slice(prefix.length))
+          .filter((f) => !f.includes("/"));
+      },
+    };
+
+    const result = await list(ctx, fs, []);
+
+    expect(result.exitCode).toBe(0);
+    const output = ctx.stdoutLines.join("\n");
+    expect(output).toContain("goals:");
+    // ideas exists but has no .md files, so should not be listed
+    expect(output).not.toContain("ideas:");
+  });
 });

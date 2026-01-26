@@ -86,4 +86,22 @@ describe("prompt command", () => {
     expect(ctx.stderrLines.join("\n")).toContain("work");
     expect(ctx.stderrLines.join("\n")).toContain("review");
   });
+
+  test("shows message when prompts directory does not exist", async () => {
+    const ctx = createMockContext();
+    const fs = {
+      exists: () => false,
+      readFile: async () => "",
+      writeFile: async () => {},
+      mkdir: async () => {},
+      readdir: async () => {
+        throw new Error("ENOENT: no such file or directory");
+      },
+    };
+
+    const result = await prompt(ctx, fs, ["nonexistent"]);
+
+    expect(result.exitCode).toBe(1);
+    expect(ctx.stderrLines.join("\n")).toContain("no prompts directory found");
+  });
 });
