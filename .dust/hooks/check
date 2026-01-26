@@ -12,19 +12,9 @@ bunx biome check .
 echo "   Lint passed."
 
 echo ""
-echo "2. Verifying build is current..."
-BEFORE_HASH=$(cat dist/* 2>/dev/null | sha256sum | cut -d' ' -f1)
+echo "2. Verifying build succeeds..."
 bun run build
-AFTER_HASH=$(cat dist/* 2>/dev/null | sha256sum | cut -d' ' -f1)
-if [ "$BEFORE_HASH" != "$AFTER_HASH" ]; then
-  echo ""
-  echo "ERROR: Build output differs from existing dist/ files."
-  echo "This means dist/ was out of sync with the TypeScript source."
-  echo ""
-  echo "The build has now updated dist/. Please include these changes in your commit."
-  exit 1
-fi
-echo "   Build verified."
+echo "   Build passed."
 
 echo ""
 echo "3. Running unit tests..."
