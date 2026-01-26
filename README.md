@@ -105,19 +105,3 @@ Commits delete tasks, but commit history can be traversed to retrieve the thinki
 A linter can be used for static analysis of task files, and to ensure there are no broken relative links as the result of any changes.
 
 Regular semantic and logic checks are expected to be carried out to ensure ideas have not drifted from reality. This would typically happen after one or more commits, e.g. at the end of a sprint.
-
-## Continuous Integration
-
-A GitHub Actions workflow runs quality checks on all pull requests to the main branch. The workflow executes `dust check`, which runs the project's quality gate hook (`.dust/hooks/check`).
-
-### Recommended Branch Protection
-
-To ensure all changes pass quality checks before merging, configure branch protection rules for the `main` branch:
-
-1. Go to Settings > Branches > Add rule
-2. Set "Branch name pattern" to `main`
-3. Enable "Require status checks to pass before merging"
-4. Select the "Quality Gate" status check
-5. Optionally enable "Require branches to be up to date before merging"
-
-This ensures that no pull request can be merged until the CI checks pass.
