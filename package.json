@@ -5,6 +5,7 @@
     "dust": "./bin/dust"
   },
   "scripts": {
+    "build": "bun run scripts/build.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },
