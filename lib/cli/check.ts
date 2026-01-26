@@ -1,12 +1,13 @@
 /**
  * dust check - Execute project-defined quality gate hook
  *
- * Looks for an executable hook at .dust/hooks/check and runs it.
- * Forwards the exit code from the hook.
+ * Runs `dust validate` automatically, then looks for an executable
+ * hook at .dust/hooks/check and runs it. Forwards the exit code from the hook.
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
 import type { CommandContext, CommandResult, FileSystem } from "./types";
+import { validate, type GlobScanner } from "./validate";
 
 export interface ProcessRunner {
   spawn: (
@@ -40,8 +41,18 @@ export async function check(
   ctx: CommandContext,
   fs: FileSystem,
   _args: string[],
-  runner: ProcessRunner = defaultProcessRunner
+  runner: ProcessRunner = defaultProcessRunner,
+  glob?: GlobScanner
 ): Promise<CommandResult> {
+  // Run validation first if glob scanner is provided
+  if (glob) {
+    const validationResult = await validate(ctx, fs, [], glob);
+    if (validationResult.exitCode !== 0) {
+      return validationResult;
+    }
+    ctx.stdout(""); // Add spacing after validation output
+  }
+
   const hookPath = `${ctx.cwd}/.dust/hooks/check`;
 
   if (!fs.exists(hookPath)) {

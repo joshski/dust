@@ -114,7 +114,7 @@ async function main(): Promise<void> {
       result = await next(ctx, nodeFs, commandArgs);
       break;
     case "check":
-      result = await check(ctx, nodeFs, commandArgs);
+      result = await check(ctx, nodeFs, commandArgs, undefined, nodeGlob);
       break;
     default:
       showHelp();
