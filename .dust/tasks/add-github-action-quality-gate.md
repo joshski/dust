@@ -10,7 +10,7 @@ Create a GitHub Action workflow that runs quality checks on pull requests.
 
 ## Blocked by
 
-- [Add dust check Command](add-dust-check-command.md)
+(none)
 
 ## Definition of done
 

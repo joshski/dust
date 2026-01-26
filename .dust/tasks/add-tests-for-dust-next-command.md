@@ -9,7 +9,7 @@ Add comprehensive tests for the `dust next` command following the test patterns 
 
 ## Blocked by
 
-- [Implement dust next command](implement-dust-next-command.md)
+(none)
 
 ## Definition of done
 

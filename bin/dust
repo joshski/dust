@@ -9,6 +9,7 @@
  *   validate          Run validation checks
  *   list [type]       List tasks, ideas, goals, or facts
  *   next              Show tasks ready to work on (not blocked)
+ *   check             Run project-defined quality gate hook
  */
 
 import { existsSync } from "node:fs";
@@ -19,8 +20,9 @@ import { prompt } from "../lib/cli/prompt";
 import { validate, type GlobScanner } from "../lib/cli/validate";
 import { list } from "../lib/cli/list";
 import { next } from "../lib/cli/next";
+import { check } from "../lib/cli/check";
 
-const COMMANDS = ["init", "prompt", "validate", "list", "next", "help"];
+const COMMANDS = ["init", "prompt", "validate", "list", "next", "check", "help"];
 
 const nodeFs: FileSystem = {
   exists: existsSync,
@@ -62,6 +64,7 @@ Commands:
   validate          Run validation checks on .dust/ files
   list [type]       List items (tasks, ideas, goals, facts)
   next              Show tasks ready to work on (not blocked)
+  check             Run project-defined quality gate hook
   help              Show this help message
 
 Examples:
@@ -71,6 +74,7 @@ Examples:
   dust list tasks
   dust list
   dust next
+  dust check
 `);
 }
 
@@ -108,6 +112,9 @@ async function main(): Promise<void> {
       break;
     case "next":
       result = await next(ctx, nodeFs, commandArgs);
+      break;
+    case "check":
+      result = await check(ctx, nodeFs, commandArgs);
       break;
     default:
       showHelp();

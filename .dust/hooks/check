@@ -1,0 +1,25 @@
+#!/bin/bash
+# Dust quality gate - runs all checks before committing
+
+set -e  # Exit on first failure
+
+echo "Running quality checks..."
+echo ""
+
+echo "1. Running unit tests..."
+bun test
+
+echo ""
+echo "2. Running task linter..."
+bun run lint:tasks
+
+echo ""
+echo "3. Validating links..."
+bun run validate:links
+
+echo ""
+echo "4. Type checking..."
+bunx tsc --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target esnext lib/**/*.ts scripts/*.ts
+
+echo ""
+echo "All checks passed!"

@@ -10,7 +10,6 @@ Enforce a minimum code coverage threshold in the repository's check hook.
 ## Blocked by
 
 - [Add Coverage Reporting](add-coverage-reporting.md)
-- [Add dust check Command](add-dust-check-command.md)
 
 ## Definition of done
 
