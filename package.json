@@ -5,8 +5,6 @@
     "dust": "./bin/dust"
   },
   "scripts": {
-    "lint:tasks": "bun scripts/lint-tasks.ts",
-    "validate:links": "bun scripts/validate-links.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage"
   },

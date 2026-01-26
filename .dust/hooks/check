@@ -10,16 +10,12 @@ echo "1. Running unit tests..."
 bun run test:coverage
 
 echo ""
-echo "2. Running task linter..."
-bun run lint:tasks
+echo "2. Validating .dust files..."
+./bin/dust validate
 
 echo ""
-echo "3. Validating links..."
-bun run validate:links
-
-echo ""
-echo "4. Type checking..."
-bunx tsc --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target esnext lib/**/*.ts scripts/*.ts
+echo "3. Type checking..."
+bunx tsc --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target esnext lib/**/*.ts
 
 echo ""
 echo "All checks passed!"
