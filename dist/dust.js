@@ -338,6 +338,60 @@ Examples:
   dust list
   dust next
   dust check
+
+---
+
+## Agent Guide
+
+This section provides comprehensive guidance for AI agents working with dust.
+
+### Directory Structure
+
+The \`.dust/\` directory contains all planning artifacts:
+
+- **\`.dust/goals/\`** - Mission statements and guiding principles
+- **\`.dust/ideas/\`** - Future feature notes and proposals (intentionally vague)
+- **\`.dust/tasks/\`** - Detailed work plans with dependencies and definitions of done
+- **\`.dust/facts/\`** - Documentation of current system state and architecture
+- **\`.dust/hooks/\`** - Executable scripts for quality gates (e.g., \`check\` hook)
+
+All files are markdown with slug-style names (lowercase, hyphens, no spaces).
+
+### Working on Tasks
+
+Run \`dust next\` to find tasks ready to work on. Each task file contains:
+
+- \`## Goals\` - Links to goals this task supports
+- \`## Blocked by\` - Tasks that must complete first (empty or "(none)" means ready)
+- \`## Definition of done\` - Criteria for completion
+
+A task is **unblocked** when its "Blocked by" section is empty, says "(none)", or all referenced task files have been deleted.
+
+### Completing a Task
+
+When finishing a task, create a single atomic commit that includes:
+
+1. All implementation changes
+2. Deletion of the completed task file
+3. Updates to any facts that changed
+4. Deletion of any ideas that were fully realized
+
+### Common Workflows
+
+- **"Work on the next task"** - Run \`dust next\`, pick a task, implement it
+- **"Work on task X"** - Implement \`.dust/tasks/X.md\` directly
+- **"Convert idea Y to tasks"** - Break down \`.dust/ideas/Y.md\` into tasks
+- **"Validate facts"** - Check \`.dust/facts/\` for accuracy against the codebase
+
+### Configuring Agent Files
+
+Projects using dust should add a minimal pointer to their agent configuration files (CLAUDE.md, AGENTS.md, etc.):
+
+\`\`\`markdown
+This project uses [dust](https://github.com/joshski/dust) for planning and documentation - run \`dust help\` to get started.
+\`\`\`
+
+This approach keeps agent instructions minimal, ensures agents get current documentation, and reduces maintenance burden.
 `;
 function isHelpRequest(command) {
   return !command || command === "help" || command === "--help" || command === "-h";

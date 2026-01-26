@@ -1,3 +1,4 @@
+import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
 import { check, createProcessRunner, type ProcessRunner } from './check'
@@ -105,7 +106,7 @@ describe('check command', () => {
 describe('createProcessRunner', () => {
   test('resolves with exit code from close event', async () => {
     const mockProc = new EventEmitter()
-    const mockSpawn = () => mockProc as any
+    const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createProcessRunner(mockSpawn)
 
     const promise = runner.spawn('cmd', [], { cwd: '/', stdio: 'inherit' })
@@ -116,7 +117,7 @@ describe('createProcessRunner', () => {
 
   test('resolves with 1 when close event has null code', async () => {
     const mockProc = new EventEmitter()
-    const mockSpawn = () => mockProc as any
+    const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createProcessRunner(mockSpawn)
 
     const promise = runner.spawn('cmd', [], { cwd: '/', stdio: 'inherit' })
@@ -127,7 +128,7 @@ describe('createProcessRunner', () => {
 
   test('resolves with 1 on error event', async () => {
     const mockProc = new EventEmitter()
-    const mockSpawn = () => mockProc as any
+    const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createProcessRunner(mockSpawn)
 
     const promise = runner.spawn('cmd', [], { cwd: '/', stdio: 'inherit' })
