@@ -22,7 +22,7 @@ This treats git as the source of truth — if the committed build doesn't match 
 
 ## Blocked by
 
-- [Add CLI Build Step](add-cli-build-step.md)
+(none)
 
 ## Definition of done
 
