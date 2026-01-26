@@ -50,7 +50,7 @@ dust list
 # Show tasks that are ready to start
 dust next
 
-# Validate all .dust files
+# Validate all markdown files under ./.dust
 dust validate
 
 # Run quality checks (validation + custom hook)
@@ -62,15 +62,15 @@ dust prompt work
 
 ## Workflow
 
-Dust is designed for successive cycles of human planning (AI-assisted, of course) followed by agent autonomy, followed by human planning, etc.
+Dust is designed for successive cycles of human planning (AI-assisted, of course) followed by agent autonomy, followed by human planning, and so on.
 
 In order for work to begin, there must be a task. A worker (an AI agent or human) chooses any task to work on. In a team environment, the worker must “claim” the task i.e. let the team know they are working on it. The team can use a version control system (like git) claim the task by making a branch with the same name as the task. If any attempt to claim fails (e.g. a branch with that name already exists) then the agent must choose an alternative task.
 
 When the worker completes their task, they make a single commit that includes the work, but also deletes the task, and removes any references to the task. The commit should often update one or more facts as well.
 
-Tasks are supposed to be small units of work that can be completed quickly and within a single commit, that leaves the system in a reasonable state (e.g. no broken or half-implemented features exposed to end users). If there is any doubt, workers are encouraged to split the task into smaller sub-tasks, and abandon the attempt to finish the ambitious work in one go.
+Tasks should be small units of work that can be completed quickly and result in a single commit that leaves the system in a reasonable state (e.g. no broken or half-implemented features exposed to end users). When in doubt, workers are encouraged to split the task into smaller sub-tasks, and abandon the attempt to finish any ambitious work in one go.
 
-Over time, new ideas emerge, and ideas become more detailed plans. This should be deferred until the last responsible moment. Since humans like control over plans, ideas become plans in the "human-in-the-loop" phase at the start of a sprint.
+Over time, new ideas emerge, and ideas become more detailed plans in the form of "tasks". This should be deferred until the last responsible moment. Since humans like control over plans, ideas become plans in the "human-in-the-loop" phase at the start of a sprint.
 
 ## Tasks
 
