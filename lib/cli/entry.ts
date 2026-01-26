@@ -11,7 +11,9 @@ const fs: FileSystem = {
   exists: existsSync,
   readFile: (path) => readFile(path, "utf-8"),
   writeFile: (path, content) => writeFile(path, content, "utf-8"),
-  mkdir: (path, options) => mkdir(path, options),
+  mkdir: async (path, options) => {
+    await mkdir(path, options);
+  },
   readdir: (path) => readdir(path),
 };
 
