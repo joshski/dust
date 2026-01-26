@@ -12,7 +12,7 @@ import { prompt } from "./prompt";
 import { validate } from "./validate";
 import { list } from "./list";
 import { next } from "./next";
-import { check } from "./check";
+import { check, defaultProcessRunner } from "./check";
 
 export const COMMANDS = [
   "init",
@@ -83,7 +83,7 @@ export async function runCommand(
     case "next":
       return next(ctx, fs, commandArgs);
     case "check":
-      return check(ctx, fs, commandArgs, undefined, glob);
+      return check(ctx, fs, commandArgs, defaultProcessRunner, glob);
     case "help":
       ctx.stdout(HELP_TEXT);
       return { exitCode: 0 };
