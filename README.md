@@ -1,12 +1,12 @@
 # Dust
 
-[![CI](https://github.com/joshski/dust/actions/workflows/ci.yml/badge.svg)](https://github.com/joshski/dust/actions/workflows/ci.yml)
-
 A lightweight planning system and work tracker optimised for humans working with AI agents.
 
-## Structure
+[![CI](https://github.com/joshski/dust/actions/workflows/ci.yml/badge.svg)](https://github.com/joshski/dust/actions/workflows/ci.yml)
 
-The current state and any future plans are documented in markdown files in your repository:
+## Usage
+
+Document your system and any future plans in a [.dust](./.dust) directory in your repository:
 
 ```
 .dust/
