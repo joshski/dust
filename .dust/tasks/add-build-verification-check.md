@@ -4,7 +4,7 @@ Add a build verification step to the check hook that ensures `dist/dust.js` is c
 
 ## Problem
 
-After implementing the build step (see [add-cli-build-step.md](add-cli-build-step.md)), there's no mechanism to verify the build output matches the current source. Someone could modify TypeScript files and forget to rebuild, leaving stale JavaScript in `dist/`.
+After implementing the build step, there's no mechanism to verify the build output matches the current source. Someone could modify TypeScript files and forget to rebuild, leaving stale JavaScript in `dist/`.
 
 ## Solution
 
