@@ -15,6 +15,77 @@ import type { CommandContext, CommandResult, FileSystem } from './types'
 import type { GlobScanner } from './validate'
 import { validate } from './validate'
 
+export interface CommandDefinition {
+  name: string
+  description: string
+  usage: string
+  example: string
+  execute: (
+    ctx: CommandContext,
+    fs: FileSystem,
+    args: string[],
+    glob: GlobScanner,
+    settings: DustSettings
+  ) => Promise<CommandResult>
+}
+
+function createCommandRegistry(
+  helpExecute: CommandDefinition['execute']
+): Record<string, CommandDefinition> {
+  return {
+    init: {
+      name: 'init',
+      description: 'Initialize a new Dust repository',
+      usage: 'init',
+      example: 'init',
+      execute: (ctx, fs, args) => init(ctx, fs, args),
+    },
+    prompt: {
+      name: 'prompt',
+      description: 'Output a prompt by name (e.g., {bin} prompt work)',
+      usage: 'prompt <name>',
+      example: 'prompt work',
+      execute: (ctx, fs, args) => prompt(ctx, fs, args),
+    },
+    validate: {
+      name: 'validate',
+      description: 'Run validation checks on .dust/ files',
+      usage: 'validate',
+      example: 'validate',
+      execute: (ctx, fs, args, glob) => validate(ctx, fs, args, glob),
+    },
+    list: {
+      name: 'list',
+      description: 'List items (tasks, ideas, goals, facts)',
+      usage: 'list [type]',
+      example: 'list tasks',
+      execute: (ctx, fs, args) => list(ctx, fs, args),
+    },
+    next: {
+      name: 'next',
+      description: 'Show tasks ready to work on (not blocked)',
+      usage: 'next',
+      example: 'next',
+      execute: (ctx, fs, args) => next(ctx, fs, args),
+    },
+    check: {
+      name: 'check',
+      description: 'Run project-defined quality gate hook',
+      usage: 'check',
+      example: 'check',
+      execute: (ctx, fs, args, glob) =>
+        check(ctx, fs, args, defaultProcessRunner, glob),
+    },
+    help: {
+      name: 'help',
+      description: 'Show this help message',
+      usage: 'help',
+      example: 'list',
+      execute: helpExecute,
+    },
+  }
+}
+
 export const COMMANDS = [
   'init',
   'prompt',
@@ -27,29 +98,35 @@ export const COMMANDS = [
 
 export type Command = (typeof COMMANDS)[number]
 
-export function generateHelpText(settings: DustSettings): string {
+export function generateHelpText(
+  settings: DustSettings,
+  registry: Record<string, CommandDefinition>
+): string {
   const bin = settings.binaryPath
+
+  const commandLines = COMMANDS.map(name => {
+    const cmd = registry[name]
+    const usage = cmd.usage.padEnd(16)
+    const description = cmd.description.replace('{bin}', bin)
+    return `  ${usage}${description}`
+  }).join('\n')
+
+  const exampleLines = COMMANDS.filter(name => name !== 'help')
+    .map(name => {
+      const cmd = registry[name]
+      return `  ${bin} ${cmd.example}`
+    })
+    .join('\n')
+
   return `dust - A lightweight planning system for human-AI collaboration
 
 Usage: ${bin} <command> [options]
 
 Commands:
-  init              Initialize a new Dust repository
-  prompt <name>     Output a prompt by name (e.g., ${bin} prompt work)
-  validate          Run validation checks on .dust/ files
-  list [type]       List items (tasks, ideas, goals, facts)
-  next              Show tasks ready to work on (not blocked)
-  check             Run project-defined quality gate hook
-  help              Show this help message
+${commandLines}
 
 Examples:
-  ${bin} init
-  ${bin} prompt work
-  ${bin} validate
-  ${bin} list tasks
-  ${bin} list
-  ${bin} next
-  ${bin} check
+${exampleLines}
 
 ---
 
@@ -112,8 +189,26 @@ This approach keeps agent instructions minimal, ensures agents get current docum
 `
 }
 
+// Default registry for backward compatibility
+function defaultHelpExecute(
+  ctx: CommandContext,
+  _fs: FileSystem,
+  _args: string[],
+  _glob: GlobScanner,
+  settings: DustSettings
+): Promise<CommandResult> {
+  const registry = createCommandRegistry(defaultHelpExecute)
+  ctx.stdout(generateHelpText(settings, registry))
+  return Promise.resolve({ exitCode: 0 })
+}
+
+export const defaultRegistry = createCommandRegistry(defaultHelpExecute)
+
 // Default help text for backward compatibility in tests
-export const HELP_TEXT = generateHelpText({ binaryPath: 'dust' })
+export const HELP_TEXT = generateHelpText(
+  { binaryPath: 'dust' },
+  defaultRegistry
+)
 
 export interface MainOptions {
   args: string[]
@@ -140,23 +235,8 @@ export async function runCommand(
   glob: GlobScanner,
   settings: DustSettings
 ): Promise<CommandResult> {
-  switch (command) {
-    case 'init':
-      return init(ctx, fs, commandArgs)
-    case 'prompt':
-      return prompt(ctx, fs, commandArgs)
-    case 'validate':
-      return validate(ctx, fs, commandArgs, glob)
-    case 'list':
-      return list(ctx, fs, commandArgs)
-    case 'next':
-      return next(ctx, fs, commandArgs)
-    case 'check':
-      return check(ctx, fs, commandArgs, defaultProcessRunner, glob)
-    case 'help':
-      ctx.stdout(generateHelpText(settings))
-      return { exitCode: 0 }
-  }
+  const cmd = defaultRegistry[command]
+  return cmd.execute(ctx, fs, commandArgs, glob, settings)
 }
 
 export async function main(options: MainOptions): Promise<CommandResult> {
@@ -165,7 +245,7 @@ export async function main(options: MainOptions): Promise<CommandResult> {
   const commandArgs = args.slice(1)
 
   const settings = await loadSettings(ctx.cwd, fs)
-  const helpText = generateHelpText(settings)
+  const helpText = generateHelpText(settings, defaultRegistry)
 
   if (isHelpRequest(command)) {
     ctx.stdout(helpText)

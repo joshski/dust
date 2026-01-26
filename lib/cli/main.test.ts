@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
   COMMANDS,
+  defaultRegistry,
   generateHelpText,
   HELP_TEXT,
   isHelpRequest,
@@ -333,18 +334,27 @@ describe('HELP_TEXT', () => {
 
 describe('generateHelpText', () => {
   test('uses custom binary path in usage', () => {
-    const helpText = generateHelpText({ binaryPath: 'bin/dust' })
+    const helpText = generateHelpText(
+      { binaryPath: 'bin/dust' },
+      defaultRegistry
+    )
     expect(helpText).toContain('Usage: bin/dust <command>')
   })
 
   test('uses custom binary path in examples', () => {
-    const helpText = generateHelpText({ binaryPath: 'bin/dust' })
+    const helpText = generateHelpText(
+      { binaryPath: 'bin/dust' },
+      defaultRegistry
+    )
     expect(helpText).toContain('bin/dust init')
     expect(helpText).toContain('bin/dust prompt work')
   })
 
   test('uses custom binary path in agent guide', () => {
-    const helpText = generateHelpText({ binaryPath: 'bin/dust' })
+    const helpText = generateHelpText(
+      { binaryPath: 'bin/dust' },
+      defaultRegistry
+    )
     expect(helpText).toContain('Run `bin/dust check` before starting work')
     expect(helpText).toContain('Run `bin/dust next` to find tasks')
   })

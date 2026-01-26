@@ -330,6 +330,59 @@ async function loadSettings(cwd, fs) {
 }
 
 // lib/cli/main.ts
+function createCommandRegistry(helpExecute) {
+  return {
+    init: {
+      name: "init",
+      description: "Initialize a new Dust repository",
+      usage: "init",
+      example: "init",
+      execute: (ctx, fs, args) => init(ctx, fs, args)
+    },
+    prompt: {
+      name: "prompt",
+      description: "Output a prompt by name (e.g., {bin} prompt work)",
+      usage: "prompt <name>",
+      example: "prompt work",
+      execute: (ctx, fs, args) => prompt(ctx, fs, args)
+    },
+    validate: {
+      name: "validate",
+      description: "Run validation checks on .dust/ files",
+      usage: "validate",
+      example: "validate",
+      execute: (ctx, fs, args, glob) => validate(ctx, fs, args, glob)
+    },
+    list: {
+      name: "list",
+      description: "List items (tasks, ideas, goals, facts)",
+      usage: "list [type]",
+      example: "list tasks",
+      execute: (ctx, fs, args) => list(ctx, fs, args)
+    },
+    next: {
+      name: "next",
+      description: "Show tasks ready to work on (not blocked)",
+      usage: "next",
+      example: "next",
+      execute: (ctx, fs, args) => next(ctx, fs, args)
+    },
+    check: {
+      name: "check",
+      description: "Run project-defined quality gate hook",
+      usage: "check",
+      example: "check",
+      execute: (ctx, fs, args, glob) => check(ctx, fs, args, defaultProcessRunner, glob)
+    },
+    help: {
+      name: "help",
+      description: "Show this help message",
+      usage: "help",
+      example: "list",
+      execute: helpExecute
+    }
+  };
+}
 var COMMANDS = [
   "init",
   "prompt",
@@ -339,29 +392,29 @@ var COMMANDS = [
   "check",
   "help"
 ];
-function generateHelpText(settings) {
+function generateHelpText(settings, registry) {
   const bin = settings.binaryPath;
+  const commandLines = COMMANDS.map((name) => {
+    const cmd = registry[name];
+    const usage = cmd.usage.padEnd(16);
+    const description = cmd.description.replace("{bin}", bin);
+    return `  ${usage}${description}`;
+  }).join(`
+`);
+  const exampleLines = COMMANDS.filter((name) => name !== "help").map((name) => {
+    const cmd = registry[name];
+    return `  ${bin} ${cmd.example}`;
+  }).join(`
+`);
   return `dust - A lightweight planning system for human-AI collaboration
 
 Usage: ${bin} <command> [options]
 
 Commands:
-  init              Initialize a new Dust repository
-  prompt <name>     Output a prompt by name (e.g., ${bin} prompt work)
-  validate          Run validation checks on .dust/ files
-  list [type]       List items (tasks, ideas, goals, facts)
-  next              Show tasks ready to work on (not blocked)
-  check             Run project-defined quality gate hook
-  help              Show this help message
+${commandLines}
 
 Examples:
-  ${bin} init
-  ${bin} prompt work
-  ${bin} validate
-  ${bin} list tasks
-  ${bin} list
-  ${bin} next
-  ${bin} check
+${exampleLines}
 
 ---
 
@@ -424,7 +477,13 @@ Always run \`dust help\` when you start working in this repository.
 This approach keeps agent instructions minimal, ensures agents get current documentation, and reduces maintenance burden.
 `;
 }
-var HELP_TEXT = generateHelpText({ binaryPath: "dust" });
+function defaultHelpExecute(ctx, _fs, _args, _glob, settings) {
+  const registry = createCommandRegistry(defaultHelpExecute);
+  ctx.stdout(generateHelpText(settings, registry));
+  return Promise.resolve({ exitCode: 0 });
+}
+var defaultRegistry = createCommandRegistry(defaultHelpExecute);
+var HELP_TEXT = generateHelpText({ binaryPath: "dust" }, defaultRegistry);
 function isHelpRequest(command) {
   return !command || command === "help" || command === "--help" || command === "-h";
 }
@@ -432,30 +491,15 @@ function isValidCommand(command) {
   return COMMANDS.includes(command);
 }
 async function runCommand(command, commandArgs, ctx, fs, glob, settings) {
-  switch (command) {
-    case "init":
-      return init(ctx, fs, commandArgs);
-    case "prompt":
-      return prompt(ctx, fs, commandArgs);
-    case "validate":
-      return validate(ctx, fs, commandArgs, glob);
-    case "list":
-      return list(ctx, fs, commandArgs);
-    case "next":
-      return next(ctx, fs, commandArgs);
-    case "check":
-      return check(ctx, fs, commandArgs, defaultProcessRunner, glob);
-    case "help":
-      ctx.stdout(generateHelpText(settings));
-      return { exitCode: 0 };
-  }
+  const cmd = defaultRegistry[command];
+  return cmd.execute(ctx, fs, commandArgs, glob, settings);
 }
 async function main(options) {
   const { args, ctx, fs, glob } = options;
   const command = args[0];
   const commandArgs = args.slice(1);
   const settings = await loadSettings(ctx.cwd, fs);
-  const helpText = generateHelpText(settings);
+  const helpText = generateHelpText(settings, defaultRegistry);
   if (isHelpRequest(command)) {
     ctx.stdout(helpText);
     return { exitCode: 0 };
