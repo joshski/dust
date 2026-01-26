@@ -1,10 +1,17 @@
 # Test defaultProcessRunner glue code
 
-## Problem
+## Goals
+
+- [Make changes with confidence](../goals/make-changes-with-confidence.md)
+- [Fast feedback](../goals/fast-feedback.md)
+
+## Blocked by
+
+(none)
+
+## Description
 
 `bun test --coverage` shows lines 20-24 in `lib/cli/check.ts` are uncovered. This is the `defaultProcessRunner` implementation that wraps Node's `spawn`.
-
-## Solution
 
 Refactor `defaultProcessRunner` to use a factory function that accepts `spawn` as a dependency:
 
@@ -72,7 +79,9 @@ describe("createProcessRunner", () => {
 });
 ```
 
-This achieves 100% coverage by testing all branches:
-- Normal exit with code
-- Exit with null code (defaults to 1)
-- Error event (returns 1)
+## Definition of done
+
+- `createProcessRunner` factory function exported from `lib/cli/check.ts`
+- `defaultProcessRunner` uses `createProcessRunner(spawn)`
+- Tests cover all branches: normal exit, null exit code, and error event
+- `bun test --coverage` shows 100% line coverage for `lib/cli/check.ts`
