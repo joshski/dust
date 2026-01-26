@@ -2,4 +2,4 @@
 
 This project uses [dust](https://github.com/joshski/dust) (that's this repository!) for planning and documentation.
 
-Always immediately `bin/dust help` when you start working in this repository.
+Always immediately run `bin/dust help` when you start working in this repository.

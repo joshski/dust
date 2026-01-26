@@ -393,7 +393,8 @@ When finishing a task, create a single atomic commit that includes:
 Projects using dust should add a minimal pointer to their agent configuration files (CLAUDE.md, AGENTS.md, etc.):
 
 \`\`\`markdown
-This project uses [dust](https://github.com/joshski/dust) for planning and documentation - run \`dust help\` to get started.
+This project uses [dust](https://github.com/joshski/dust) for planning and documentation.
+Always run \`dust help\` when you start working in this repository.
 \`\`\`
 
 This approach keeps agent instructions minimal, ensures agents get current documentation, and reduces maintenance burden.
