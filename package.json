@@ -2,7 +2,7 @@
   "name": "dust",
   "type": "module",
   "bin": {
-    "dust": "./bin/dust"
+    "dust": "./dist/dust.js"
   },
   "scripts": {
     "build": "bun run scripts/build.ts",
