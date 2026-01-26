@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { check, type ProcessRunner } from "./check";
 import type { CommandContext, FileSystem } from "./types";
 

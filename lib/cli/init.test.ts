@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { init } from "./init";
 import type { CommandContext, FileSystem } from "./types";
 
