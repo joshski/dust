@@ -1,127 +1,36 @@
 #!/usr/bin/env bun
 
-/**
- * dust - Unified CLI for Dust planning system
- *
- * Commands:
- *   init              Initialize a new Dust repository
- *   prompt <name>     Output a prompt by name
- *   validate          Run validation checks
- *   list [type]       List tasks, ideas, goals, or facts
- *   next              Show tasks ready to work on (not blocked)
- *   check             Run project-defined quality gate hook
- */
-
 import { existsSync } from "node:fs";
 import { readFile, writeFile, mkdir, readdir } from "node:fs/promises";
-import type { CommandContext, FileSystem } from "../lib/cli/types";
-import { init } from "../lib/cli/init";
-import { prompt } from "../lib/cli/prompt";
-import { validate, type GlobScanner } from "../lib/cli/validate";
-import { list } from "../lib/cli/list";
-import { next } from "../lib/cli/next";
-import { check } from "../lib/cli/check";
+import { main } from "../lib/cli/main";
+import type { FileSystem } from "../lib/cli/types";
+import type { GlobScanner } from "../lib/cli/validate";
 
-const COMMANDS = ["init", "prompt", "validate", "list", "next", "check", "help"];
-
-const nodeFs: FileSystem = {
+const fs: FileSystem = {
   exists: existsSync,
-  readFile: (path: string) => readFile(path, "utf-8"),
-  writeFile: (path: string, content: string) => writeFile(path, content, "utf-8"),
-  mkdir: (path: string, options?: { recursive?: boolean }) => mkdir(path, options),
-  readdir: (path: string) => readdir(path),
+  readFile: (path) => readFile(path, "utf-8"),
+  writeFile: (path, content) => writeFile(path, content, "utf-8"),
+  mkdir: (path, options) => mkdir(path, options),
+  readdir: (path) => readdir(path),
 };
 
-async function* scanMarkdownFiles(dir: string): AsyncIterable<string> {
-  const entries = await readdir(dir, { recursive: true });
-  for (const entry of entries) {
-    if (entry.endsWith(".md")) {
-      yield entry;
+const glob: GlobScanner = {
+  scan: async function* (dir) {
+    for (const entry of await readdir(dir, { recursive: true })) {
+      if (entry.endsWith(".md")) yield entry;
     }
-  }
-}
-
-const nodeGlob: GlobScanner = {
-  scan: scanMarkdownFiles,
+  },
 };
 
-function createContext(): CommandContext {
-  return {
+const result = await main({
+  args: process.argv.slice(2),
+  ctx: {
     cwd: process.cwd(),
-    stdout: (msg: string) => console.log(msg),
-    stderr: (msg: string) => console.error(msg),
-  };
-}
+    stdout: console.log,
+    stderr: console.error,
+  },
+  fs,
+  glob,
+});
 
-function showHelp(): void {
-  console.log(`dust - A lightweight planning system for human-AI collaboration
-
-Usage: dust <command> [options]
-
-Commands:
-  init              Initialize a new Dust repository
-  prompt <name>     Output a prompt by name (e.g., dust prompt work)
-  validate          Run validation checks on .dust/ files
-  list [type]       List items (tasks, ideas, goals, facts)
-  next              Show tasks ready to work on (not blocked)
-  check             Run project-defined quality gate hook
-  help              Show this help message
-
-Examples:
-  dust init
-  dust prompt work
-  dust validate
-  dust list tasks
-  dust list
-  dust next
-  dust check
-`);
-}
-
-async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  const command = args[0];
-  const commandArgs = args.slice(1);
-  const ctx = createContext();
-
-  if (!command || command === "help" || command === "--help" || command === "-h") {
-    showHelp();
-    process.exit(0);
-  }
-
-  if (!COMMANDS.includes(command)) {
-    console.error(`Unknown command: ${command}`);
-    console.error(`Run 'dust help' for available commands`);
-    process.exit(1);
-  }
-
-  let result;
-
-  switch (command) {
-    case "init":
-      result = await init(ctx, nodeFs, commandArgs);
-      break;
-    case "prompt":
-      result = await prompt(ctx, nodeFs, commandArgs);
-      break;
-    case "validate":
-      result = await validate(ctx, nodeFs, commandArgs, nodeGlob);
-      break;
-    case "list":
-      result = await list(ctx, nodeFs, commandArgs);
-      break;
-    case "next":
-      result = await next(ctx, nodeFs, commandArgs);
-      break;
-    case "check":
-      result = await check(ctx, nodeFs, commandArgs, undefined, nodeGlob);
-      break;
-    default:
-      showHelp();
-      process.exit(0);
-  }
-
-  process.exit(result.exitCode);
-}
-
-main();
+process.exit(result.exitCode);
