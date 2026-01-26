@@ -61,6 +61,7 @@ Commands:
   prompt <name>     Output a prompt by name (e.g., dust prompt work)
   validate          Run validation checks on .dust/ files
   list [type]       List items (tasks, ideas, goals, facts)
+  next              Show tasks ready to work on (not blocked)
   help              Show this help message
 
 Examples:
@@ -69,6 +70,7 @@ Examples:
   dust validate
   dust list tasks
   dust list
+  dust next
 `);
 }
 
@@ -103,6 +105,9 @@ async function main(): Promise<void> {
       break;
     case "list":
       result = await list(ctx, nodeFs, commandArgs);
+      break;
+    case "next":
+      result = await next(ctx, nodeFs, commandArgs);
       break;
     default:
       showHelp();
