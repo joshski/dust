@@ -2,15 +2,11 @@
  * dust list [type] - List tasks, ideas, goals, or facts
  */
 
+import { extractTitle } from '../markdown-utilities'
 import type { CommandDependencies, CommandResult } from '../types'
 
 const VALID_TYPES = ['tasks', 'ideas', 'goals', 'facts'] as const
 type ListType = (typeof VALID_TYPES)[number]
-
-function extractTitle(content: string): string | null {
-  const match = content.match(/^#\s+(.+)$/m)
-  return match ? match[1].trim() : null
-}
 
 export async function list(deps: CommandDependencies): Promise<CommandResult> {
   const { arguments: args, context: ctx, fileSystem: fs } = deps

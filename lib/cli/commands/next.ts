@@ -5,12 +5,8 @@
  * A task is blocked if its "## Blocked by" section references task files that still exist.
  */
 
+import { extractTitle } from '../markdown-utilities'
 import type { CommandDependencies, CommandResult } from '../types'
-
-function extractTitle(content: string): string | null {
-  const match = content.match(/^#\s+(.+)$/m)
-  return match ? match[1].trim() : null
-}
 
 function extractBlockedBy(content: string): string[] {
   // Find the "## Blocked by" section
