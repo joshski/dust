@@ -4,6 +4,4 @@ Dust's internal development scripts use [Bun](https://bun.sh) as the JavaScript/
 
 The library code in `lib/` uses only Node.js-compatible APIs, making it portable across JavaScript runtimes. However, the CLI entry point (`bin/dust`) currently requires Bun to run due to its shebang (`#!/usr/bin/env bun`). The build step compiles the CLI to Node.js-compatible JavaScript (`dist/dust.js`), enabling it to run without Bun installed.
 
-Internal development scripts in `scripts/` may use Bun-specific APIs for convenience.
-
-This is purely for developing Dust itself. Downstream users of Dust are not required to use Bun once a packaged distribution is available. Currently there is no packaged distribution for downstream users.
+This is purely for developing Dust itself. Downstream users install the published npm package (`@joshski/dust`) which includes the compiled `dist/dust.js` and does not require Bun.

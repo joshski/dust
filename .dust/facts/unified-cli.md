@@ -6,7 +6,9 @@ Dust provides a single `dust` command with subcommands for all operations:
 - `dust validate` - Run validation checks on .dust/ files
 - `dust list [type]` - List tasks, ideas, goals, or facts
 - `dust next` - Show tasks ready to work on (not blocked by other tasks)
-- `dust check` - Run project-defined quality gate hook (`.dust/hooks/check`)
+- `dust check` - Run quality gates configured in `.dust/config/settings.json`
+- `dust agent` - Display agent-specific instructions and subcommands
+- `dust help` - Show help text
 
 This follows the familiar pattern of tools like `git` and `docker`, supporting [Easy Adoption](../goals/easy-adoption.md).
 
