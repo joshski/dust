@@ -52,6 +52,16 @@ Don't let that stop you:
 npx dust help
 ```
 
+## AGENTS.md
+
+Add a line like this to your `AGENTS.md` or `CLAUDE.md` file:
+
+```markdown
+Always immediately run `npx dust` agent when you start working in this repository.
+```
+
+In fact, you might find it effective to use that as the _only_ line in those files. Essential documentation should be discoverable by agents.
+
 ## Configuration
 
 Configure hooks into your tools in `./.dust/config/settings.json` e.g.
