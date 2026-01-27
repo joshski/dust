@@ -5,8 +5,8 @@
  * so that bin/dust can be minimal.
  */
 
+import { agent } from './agent'
 import { check, defaultProcessRunner } from './check'
-import { claude } from './claude'
 import { init } from './init'
 import { list } from './list'
 import { next } from './next'
@@ -24,7 +24,7 @@ export const COMMANDS = [
   'list',
   'next',
   'check',
-  'claude',
+  'agent',
   'help',
 ] as const
 
@@ -75,8 +75,8 @@ export async function runCommand(
       return next(ctx, fs, commandArgs)
     case 'check':
       return check(ctx, fs, commandArgs, defaultProcessRunner, glob)
-    case 'claude':
-      return claude(ctx, commandArgs, settings)
+    case 'agent':
+      return agent(ctx, commandArgs, settings)
     case 'help':
       ctx.stdout(generateHelpText(settings))
       return { exitCode: 0 }

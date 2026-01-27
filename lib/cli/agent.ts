@@ -1,5 +1,5 @@
 /**
- * Agent-specific commands for Claude
+ * Agent-specific commands
  *
  * Provides focused, workflow-specific guidance for AI agents.
  */
@@ -8,7 +8,7 @@ import type { DustSettings } from './settings'
 import { loadTemplate } from './templates'
 import type { CommandContext, CommandResult } from './types'
 
-export const CLAUDE_SUBCOMMANDS = [
+export const AGENT_SUBCOMMANDS = [
   'work',
   'tasks',
   'goals',
@@ -16,33 +16,33 @@ export const CLAUDE_SUBCOMMANDS = [
   'help',
 ] as const
 
-export type ClaudeSubcommand = (typeof CLAUDE_SUBCOMMANDS)[number]
+export type AgentSubcommand = (typeof AGENT_SUBCOMMANDS)[number]
 
-function generateClaudeGreeting(settings: DustSettings): string {
-  return loadTemplate('claude-greeting', { bin: settings.binaryPath })
+function generateAgentGreeting(settings: DustSettings): string {
+  return loadTemplate('agent-greeting', { bin: settings.binaryPath })
 }
 
 function generateWorkInstructions(settings: DustSettings): string {
-  return loadTemplate('claude-work', { bin: settings.binaryPath })
+  return loadTemplate('agent-work', { bin: settings.binaryPath })
 }
 
 function generateTasksInstructions(settings: DustSettings): string {
-  return loadTemplate('claude-tasks', { bin: settings.binaryPath })
+  return loadTemplate('agent-tasks', { bin: settings.binaryPath })
 }
 
 function generateGoalsInstructions(settings: DustSettings): string {
-  return loadTemplate('claude-goals', { bin: settings.binaryPath })
+  return loadTemplate('agent-goals', { bin: settings.binaryPath })
 }
 
 function generateIdeasInstructions(settings: DustSettings): string {
-  return loadTemplate('claude-ideas', { bin: settings.binaryPath })
+  return loadTemplate('agent-ideas', { bin: settings.binaryPath })
 }
 
-function generateClaudeHelp(settings: DustSettings): string {
-  return loadTemplate('claude-help', { bin: settings.binaryPath })
+function generateAgentHelp(settings: DustSettings): string {
+  return loadTemplate('agent-help', { bin: settings.binaryPath })
 }
 
-export async function claude(
+export async function agent(
   ctx: CommandContext,
   args: string[],
   settings: DustSettings
@@ -50,7 +50,7 @@ export async function claude(
   const subcommand = args[0]
 
   if (!subcommand) {
-    ctx.stdout(generateClaudeGreeting(settings))
+    ctx.stdout(generateAgentGreeting(settings))
     return { exitCode: 0 }
   }
 
@@ -68,11 +68,11 @@ export async function claude(
       ctx.stdout(generateIdeasInstructions(settings))
       return { exitCode: 0 }
     case 'help':
-      ctx.stdout(generateClaudeHelp(settings))
+      ctx.stdout(generateAgentHelp(settings))
       return { exitCode: 0 }
     default:
       ctx.stderr(`Unknown subcommand: ${subcommand}`)
-      ctx.stderr(`Available: ${CLAUDE_SUBCOMMANDS.join(', ')}`)
+      ctx.stderr(`Available: ${AGENT_SUBCOMMANDS.join(', ')}`)
       return { exitCode: 1 }
   }
 }
