@@ -1,3 +1,12 @@
 {
-  "dustCommand": "bin/dust"
+  "dustCommand": "bin/dust",
+  "checks": [
+    { "name": "lint", "command": "bunx biome check ." },
+    { "name": "build", "command": "bun run build" },
+    { "name": "tests", "command": "bun run test:coverage" },
+    {
+      "name": "typecheck",
+      "command": "bunx tsc --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target esnext lib/**/*.ts"
+    }
+  ]
 }
