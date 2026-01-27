@@ -1,6 +1,6 @@
 {
   "name": "@joshski/dust",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "A lightweight planning system for human-AI collaboration",
   "type": "module",
   "bin": {
