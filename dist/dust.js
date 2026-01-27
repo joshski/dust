@@ -59,6 +59,69 @@ function validateLinks(filePath, content, fs) {
   }
   return violations;
 }
+var SEMANTIC_RULES = [
+  {
+    section: "## Goals",
+    requiredPath: "/.dust/goals/",
+    description: "goal"
+  },
+  {
+    section: "## Blocked by",
+    requiredPath: "/.dust/tasks/",
+    description: "task"
+  }
+];
+function validateSemanticLinks(filePath, content) {
+  const violations = [];
+  const lines = content.split(`
+`);
+  const fileDir = dirname(filePath);
+  let currentSection = null;
+  for (let i = 0;i < lines.length; i++) {
+    const line = lines[i];
+    if (line.startsWith("## ")) {
+      currentSection = line;
+      continue;
+    }
+    const rule = SEMANTIC_RULES.find((r) => r.section === currentSection);
+    if (!rule)
+      continue;
+    const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g;
+    let match = linkPattern.exec(line);
+    while (match) {
+      const linkTarget = match[2];
+      if (linkTarget.startsWith("#")) {
+        violations.push({
+          file: filePath,
+          message: `Link in "${rule.section}" must point to a ${rule.description} file, not an anchor: "${linkTarget}"`,
+          line: i + 1
+        });
+        match = linkPattern.exec(line);
+        continue;
+      }
+      if (linkTarget.startsWith("http://") || linkTarget.startsWith("https://")) {
+        violations.push({
+          file: filePath,
+          message: `Link in "${rule.section}" must point to a ${rule.description} file, not an external URL: "${linkTarget}"`,
+          line: i + 1
+        });
+        match = linkPattern.exec(line);
+        continue;
+      }
+      const targetPath = linkTarget.split("#")[0];
+      const resolvedPath = resolve(fileDir, targetPath);
+      if (!resolvedPath.includes(rule.requiredPath)) {
+        violations.push({
+          file: filePath,
+          message: `Link in "${rule.section}" must point to a ${rule.description} file: "${linkTarget}"`,
+          line: i + 1
+        });
+      }
+      match = linkPattern.exec(line);
+    }
+  }
+  return violations;
+}
 async function validate(ctx, fs, _args, glob) {
   const dustPath = `${ctx.cwd}/.dust`;
   if (!fs.exists(dustPath)) {
@@ -88,6 +151,7 @@ async function validate(ctx, fs, _args, glob) {
         violations.push(filenameViolation);
       }
       violations.push(...validateTaskHeadings(filePath, content));
+      violations.push(...validateSemanticLinks(filePath, content));
     }
   }
   if (violations.length === 0) {
