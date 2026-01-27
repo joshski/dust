@@ -99,7 +99,7 @@ describe('next command', () => {
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Next tasks:')
-    expect(ctx.stdoutLines.join('\n')).toContain('simple-task')
+    expect(ctx.stdoutLines.join('\n')).toContain('.dust/tasks/simple-task.md')
     expect(ctx.stdoutLines.join('\n')).toContain('Simple Task')
   })
 
@@ -119,8 +119,8 @@ describe('next command', () => {
 
     expect(result.exitCode).toBe(0)
     const output = ctx.stdoutLines.join('\n')
-    expect(output).toContain('blocker-task')
-    expect(output).not.toContain('blocked-task')
+    expect(output).toContain('.dust/tasks/blocker-task.md')
+    expect(output).not.toContain('.dust/tasks/blocked-task.md')
   })
 
   test('includes tasks whose blockers are all completed (deleted)', async () => {
@@ -140,7 +140,7 @@ describe('next command', () => {
     expect(result.exitCode).toBe(0)
     const output = ctx.stdoutLines.join('\n')
     expect(output).toContain('Next tasks:')
-    expect(output).toContain('unblocked-task')
+    expect(output).toContain('.dust/tasks/unblocked-task.md')
     expect(output).toContain('Unblocked Task')
   })
 
@@ -160,11 +160,11 @@ describe('next command', () => {
     expect(result.exitCode).toBe(0)
     const output = ctx.stdoutLines.join('\n')
     expect(output).toContain('Next tasks:')
-    expect(output).toContain('ready-task')
+    expect(output).toContain('.dust/tasks/ready-task.md')
     expect(output).toContain('Ready Task')
   })
 
-  test('shows task name without title if no heading exists', async () => {
+  test('shows task path without title if no heading exists', async () => {
     const ctx = createMockContext()
     const fs = createMockFs(
       new Map([
@@ -176,9 +176,9 @@ describe('next command', () => {
 
     expect(result.exitCode).toBe(0)
     const output = ctx.stdoutLines.join('\n')
-    expect(output).toContain('no-title-task')
+    expect(output).toContain('.dust/tasks/no-title-task.md')
     // Should not have a dash separator without title
-    expect(output).not.toContain('no-title-task -')
+    expect(output).not.toContain('.dust/tasks/no-title-task.md -')
   })
 
   test('returns empty when all tasks are blocked', async () => {
@@ -220,9 +220,9 @@ describe('next command', () => {
     expect(result.exitCode).toBe(0)
     const output = ctx.stdoutLines.join('\n')
     // multi-blocked should NOT appear because still-exists.md still exists
-    expect(output).not.toContain('multi-blocked')
+    expect(output).not.toContain('.dust/tasks/multi-blocked.md')
     // still-exists should appear (no blockers)
-    expect(output).toContain('still-exists')
+    expect(output).toContain('.dust/tasks/still-exists.md')
   })
 
   test('lists multiple unblocked tasks sorted alphabetically', async () => {
@@ -239,14 +239,14 @@ describe('next command', () => {
 
     expect(result.exitCode).toBe(0)
     const output = ctx.stdoutLines.join('\n')
-    expect(output).toContain('alpha-task')
-    expect(output).toContain('middle-task')
-    expect(output).toContain('zebra-task')
+    expect(output).toContain('.dust/tasks/alpha-task.md')
+    expect(output).toContain('.dust/tasks/middle-task.md')
+    expect(output).toContain('.dust/tasks/zebra-task.md')
 
     // Verify alphabetical order
-    const alphaIndex = output.indexOf('alpha-task')
-    const middleIndex = output.indexOf('middle-task')
-    const zebraIndex = output.indexOf('zebra-task')
+    const alphaIndex = output.indexOf('.dust/tasks/alpha-task.md')
+    const middleIndex = output.indexOf('.dust/tasks/middle-task.md')
+    const zebraIndex = output.indexOf('.dust/tasks/zebra-task.md')
     expect(alphaIndex).toBeLessThan(middleIndex)
     expect(middleIndex).toBeLessThan(zebraIndex)
   })

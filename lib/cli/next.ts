@@ -72,7 +72,7 @@ export async function next(
   const existingTasks = new Set(mdFiles)
 
   // Find unblocked tasks
-  const unblockedTasks: Array<{ name: string; title: string | null }> = []
+  const unblockedTasks: Array<{ path: string; title: string | null }> = []
 
   for (const file of mdFiles) {
     const filePath = `${tasksPath}/${file}`
@@ -86,8 +86,8 @@ export async function next(
 
     if (!hasIncompleteBlocker) {
       const title = extractTitle(content)
-      const name = file.replace(/\.md$/, '')
-      unblockedTasks.push({ name, title })
+      const relativePath = `.dust/tasks/${file}`
+      unblockedTasks.push({ path: relativePath, title })
     }
   }
 
@@ -98,9 +98,9 @@ export async function next(
   ctx.stdout('Next tasks:')
   for (const task of unblockedTasks) {
     if (task.title) {
-      ctx.stdout(`  ${task.name} - ${task.title}`)
+      ctx.stdout(`  ${task.path} - ${task.title}`)
     } else {
-      ctx.stdout(`  ${task.name}`)
+      ctx.stdout(`  ${task.path}`)
     }
   }
 
