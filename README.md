@@ -10,18 +10,16 @@ Use this to plan a series of tasks that coding agents can perform autonomously.
 
 ## Getting Started
 
-Install dust:
+Install dust using your package manager of choice (`npm` and `bun` officially supported for now):
 
 ```bash
-npm install -g @joshski/dust
+npm install @joshski/dust
 ```
 
 Initialize dust in your repository:
 
 ```bash
 npx dust init
-# or
-bunx dust init
 ```
 
 ## How It Works
@@ -43,3 +41,33 @@ These files are used to facilitate exploration and management of AI agent workfl
 Progress is tracked via changes to markdown files in the `.dust/` directory. The four directories together (`goals/`, `ideas/`, `tasks/`, `facts/`) act as a kanban system for managing work.
 
 The `tasks/` directory acts as a work queue. When a task is completed, the commit typically includes both the code changes and the deletion of the task file—removing work from the queue for subsequent agents.
+
+## CLI
+
+The `dust` CLI is intended to be used primarily by agents, not by humans (except for the `init` command, as mentioned above).
+
+Don't let that stop you:
+
+```bash
+npx dust help
+```
+
+## Configuration
+
+Configure hooks into your tools in `./.dust/config/settings.json` e.g.
+
+```json
+{
+  "dustCommand": "bunx dust",
+  "checks": [
+    { "name": "lint", "command": "bunx biome check ." },
+    { "name": "build", "command": "bun run build" },
+    { "name": "tests", "command": "bun run test:coverage" },
+    { "name": "typecheck", "command": "bunx tsc lib/**/*.ts" }
+  ]
+}
+```
+
+The `dust check` command will run all of the configured checks in parallel and product a very terse (context window-friendly) output unless something fails.
+
+Agents are instructed to run `dust check` before and after any changes, as a way of keeping them on track. It's more important that these commands are comprehensive, than they are fast.
