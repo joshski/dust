@@ -20,22 +20,19 @@ npx dust init
 bunx dust init
 ```
 
-## Usage
+## How It Works
 
-Document your system and any future plans in a [.dust](./.dust) directory in your repository:
+Planning artifacts are stored in a [.dust](./.dust) directory in your repository:
 
 ```
 .dust/
 ├── goals/    # Mission statements explaining why the project exists
 ├── ideas/    # Brief notes about future tasks (intentionally vague)
 ├── tasks/    # Detailed work plans with dependencies and definition of done
-├── facts/    # Current state: design, architecture, rules, invariants
-└── hooks/    # Executable scripts for CLI integration (e.g., quality gates)
+└── facts/    # Current state: design, architecture, rules, invariants
 ```
 
-The `goals`, `ideas`, `tasks`, and `facts` directories should be flat (no subdirectories) and contain only markdown files with slug-style names (alphanumeric and hyphens only).
-
-The `hooks` directory contains executable scripts that integrate with the `dust` CLI. For example, the `check` hook is run by `dust check` to execute project-defined quality gates.
+These directories contain markdown files that capture knowledge of the system as it stands, and act as a workflow system for prioritising and tracking work.
 
 ## CLI Commands
 
