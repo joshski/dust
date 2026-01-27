@@ -8,23 +8,39 @@ Replace the `.dust/hooks/check` script with a declarative "tree of commands" def
 {
   "checks": [
     {
-      "name": "unit tests",
-      "command": "npm test"
+      "name": "format",
+      "command": "prettier --write ."
+    },
+    {
+      "parallel": true,
+      "checks": [
+        {
+          "name": "unit tests",
+          "command": "npm test"
+        },
+        {
+          "name": "lint",
+          "command": "npm run lint"
+        },
+        {
+          "name": "typecheck",
+          "command": "tsc --noEmit"
+        }
+      ]
     },
     {
       "name": "coverage",
       "command": "npm run coverage"
-    },
-    {
-      "name": "lint",
-      "command": "npm run lint"
     }
-  ],
-  "parallel": true
+  ]
 }
 ```
 
-The hierarchy can nest, allowing groups of commands to run in parallel while other groups run serially.
+The hierarchy nests arbitrarily, allowing sequential and parallel execution to be composed:
+
+1. First, run the formatter (which may modify files with `--write`)
+2. Then, run unit tests, lint, and typecheck in parallel (since they're independent)
+3. Finally, run coverage (which might depend on test artifacts)
 
 ## Execution Behavior
 
