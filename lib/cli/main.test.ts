@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
+import type { GlobScanner } from './commands/validate'
 import {
   COMMANDS,
   generateHelpText,
@@ -9,7 +10,6 @@ import {
   runCommand,
 } from './main'
 import type { CommandContext, FileSystem } from './types'
-import type { GlobScanner } from './validate'
 
 function createMockContext(): CommandContext & {
   stdoutLines: string[]

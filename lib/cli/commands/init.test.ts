@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
+import type { CommandContext, FileSystem } from '../types'
 import { init } from './init'
-import type { CommandContext, FileSystem } from './types'
 
 function createMockContext(): CommandContext & {
   stdoutLines: string[]

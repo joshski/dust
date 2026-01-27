@@ -4,9 +4,9 @@
  * Provides focused, workflow-specific guidance for AI agents.
  */
 
-import type { DustSettings } from './settings'
-import { loadTemplate } from './templates'
-import type { CommandContext, CommandResult } from './types'
+import type { DustSettings } from '../settings'
+import { loadTemplate } from '../templates'
+import type { CommandContext, CommandResult } from '../types'
 
 export const AGENT_SUBCOMMANDS = [
   'work',

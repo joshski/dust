@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
+import type { DustSettings } from '../settings'
+import type { CommandContext } from '../types'
 import { AGENT_SUBCOMMANDS, agent } from './agent'
-import type { DustSettings } from './settings'
-import type { CommandContext } from './types'
 
 function createMockContext(): CommandContext & {
   stdoutLines: string[]

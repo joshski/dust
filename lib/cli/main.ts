@@ -5,16 +5,15 @@
  * so that bin/dust can be minimal.
  */
 
-import { agent } from './agent'
-import { check } from './check'
-import { init } from './init'
-import { list } from './list'
-import { next } from './next'
+import { agent } from './commands/agent'
+import { check } from './commands/check'
+import { init } from './commands/init'
+import { list } from './commands/list'
+import { next } from './commands/next'
+import { type GlobScanner, validate } from './commands/validate'
 import { type DustSettings, loadSettings } from './settings'
 import { loadTemplate } from './templates'
 import type { CommandContext, CommandResult, FileSystem } from './types'
-import type { GlobScanner } from './validate'
-import { validate } from './validate'
 
 export const COMMANDS = [
   'init',

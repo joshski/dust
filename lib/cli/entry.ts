@@ -3,9 +3,9 @@
  */
 import { existsSync } from 'node:fs'
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
+import type { GlobScanner } from './commands/validate'
 import { main } from './main'
 import type { FileSystem } from './types'
-import type { GlobScanner } from './validate'
 
 const fs: FileSystem = {
   exists: existsSync,
