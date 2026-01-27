@@ -8,7 +8,7 @@ import {
   detectDustCommand,
 } from '../settings'
 import { loadTemplate } from '../templates'
-import type { CommandContext, CommandResult, FileSystem } from '../types'
+import type { CommandDependencies, CommandResult, FileSystem } from '../types'
 
 const DUST_DIRECTORIES = ['goals', 'ideas', 'tasks', 'facts', 'config']
 
@@ -40,11 +40,8 @@ const USE_DUST_FACT = `# Use dust for planning
 This project uses [dust](https://github.com/joshski/dust) for planning and documentation.
 `
 
-export async function init(
-  ctx: CommandContext,
-  fs: FileSystem,
-  _args: string[]
-): Promise<CommandResult> {
+export async function init(deps: CommandDependencies): Promise<CommandResult> {
+  const { context: ctx, fileSystem: fs } = deps
   const dustPath = `${ctx.cwd}/.dust`
   const dustCommand = detectDustCommand(ctx.cwd, fs)
   const agentInstruction = `Always immediately run \`${dustCommand} agent\` when you start working in this repository.`

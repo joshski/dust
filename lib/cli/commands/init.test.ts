@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import type { CommandContext, FileSystem } from '../types'
+import type {
+  CommandContext,
+  CommandDependencies,
+  FileSystem,
+  GlobScanner,
+} from '../types'
 import { init } from './init'
 
 function createMockContext(): CommandContext & {
@@ -38,6 +43,24 @@ function createMockFs(
   }
 }
 
+function createMockGlob(): GlobScanner {
+  return {
+    scan: async function* () {
+      // Empty by default
+    },
+  }
+}
+
+function createDeps(ctx: CommandContext, fs: FileSystem): CommandDependencies {
+  return {
+    arguments: [],
+    context: ctx,
+    fileSystem: fs,
+    globScanner: createMockGlob(),
+    settings: { dustCommand: 'dust' },
+  }
+}
+
 describe('init command', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
@@ -47,7 +70,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs()
 
-    const result = await init(ctx, fs, [])
+    const result = await init(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     expect(fs.createdDirs).toContain('/project/.dust')
@@ -62,7 +85,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs()
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     expect(
       fs.writtenFiles.has('/project/.dust/facts/use-dust-for-planning.md')
@@ -78,7 +101,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs()
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     expect(ctx.stdoutLines.join('\n')).toContain('Initialized Dust repository')
     expect(ctx.stdoutLines.join('\n')).toContain('Created directories')
@@ -88,7 +111,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs(new Set(['/project/.dust']))
 
-    const result = await init(ctx, fs, [])
+    const result = await init(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('already exists, skipping')
@@ -99,7 +122,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs()
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     expect(fs.writtenFiles.has('/project/CLAUDE.md')).toBe(true)
     const content = fs.writtenFiles.get('/project/CLAUDE.md')
@@ -112,7 +135,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs()
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     expect(fs.writtenFiles.has('/project/AGENTS.md')).toBe(true)
     const content = fs.writtenFiles.get('/project/AGENTS.md')
@@ -125,7 +148,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs(new Set(['/project/CLAUDE.md']))
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     expect(fs.writtenFiles.has('/project/CLAUDE.md')).toBe(false)
     expect(ctx.stdoutLines.join('\n')).toContain(
@@ -139,7 +162,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs(new Set(['/project/AGENTS.md']))
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     expect(fs.writtenFiles.has('/project/AGENTS.md')).toBe(false)
     expect(ctx.stdoutLines.join('\n')).toContain(
@@ -152,7 +175,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs(new Set(['/project/bun.lockb']))
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     const claudeContent = fs.writtenFiles.get('/project/CLAUDE.md')
     expect(claudeContent).toContain('bunx dust agent')
@@ -165,7 +188,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs(new Set(['/project/package.json']))
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     expect(fs.writtenFiles.has('/project/.dust/config/settings.json')).toBe(
       true
@@ -180,7 +203,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs(new Set(['/project/bun.lockb']))
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     const content = fs.writtenFiles.get('/project/.dust/config/settings.json')
     const settings = JSON.parse(content ?? '')
@@ -192,7 +215,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs(new Set(['/project/pnpm-lock.yaml']))
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     const content = fs.writtenFiles.get('/project/.dust/config/settings.json')
     const settings = JSON.parse(content ?? '')
@@ -205,7 +228,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs()
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     const content = fs.writtenFiles.get('/project/.dust/config/settings.json')
     const settings = JSON.parse(content ?? '')
@@ -217,7 +240,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs()
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     expect(ctx.stdoutLines.join('\n')).toContain(
       'Created settings: .dust/config/settings.json'
@@ -228,7 +251,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs(new Set(['/project/pnpm-lock.yaml']))
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     const claudeContent = fs.writtenFiles.get('/project/CLAUDE.md')
     expect(claudeContent).toContain('pnpx dust agent')
@@ -240,7 +263,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs(new Set(['/project/package-lock.json']))
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     const claudeContent = fs.writtenFiles.get('/project/CLAUDE.md')
     expect(claudeContent).toContain('npx dust agent')
@@ -254,7 +277,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs()
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     const claudeContent = fs.writtenFiles.get('/project/CLAUDE.md')
     expect(claudeContent).toContain('bunx dust agent')
@@ -267,7 +290,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs()
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     const output = ctx.stdoutLines.join('\n')
     expect(output).toContain('Commit the changes if you are happy')
@@ -279,7 +302,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs()
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     const output = ctx.stdoutLines.join('\n')
     expect(output).toContain('If this is a new repository')
@@ -292,7 +315,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs()
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     const output = ctx.stdoutLines.join('\n')
     expect(output).toContain('If this is an existing codebase')
@@ -303,7 +326,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs(new Set(['/project/package-lock.json']))
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     const output = ctx.stdoutLines.join('\n')
     expect(output).toContain('> npx claude')
@@ -314,7 +337,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs(new Set(['/project/bun.lockb']))
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     const output = ctx.stdoutLines.join('\n')
     expect(output).toContain('> bunx claude')
@@ -325,7 +348,7 @@ describe('init command', () => {
     const ctx = createMockContext()
     const fs = createMockFs(new Set(['/project/pnpm-lock.yaml']))
 
-    await init(ctx, fs, [])
+    await init(createDeps(ctx, fs))
 
     const output = ctx.stdoutLines.join('\n')
     expect(output).toContain('> pnpx claude')

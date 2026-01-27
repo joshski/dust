@@ -19,3 +19,28 @@ export interface FileSystem {
   mkdir: (path: string, options?: { recursive?: boolean }) => Promise<void>
   readdir: (path: string) => Promise<string[]>
 }
+
+export interface GlobScanner {
+  scan: (dir: string) => AsyncIterable<string>
+}
+
+export interface CheckConfig {
+  name: string
+  command: string
+}
+
+export interface DustSettings {
+  dustCommand: string
+  checks?: CheckConfig[]
+}
+
+/**
+ * Dependencies passed to all CLI commands
+ */
+export interface CommandDependencies {
+  arguments: string[]
+  context: CommandContext
+  fileSystem: FileSystem
+  globScanner: GlobScanner
+  settings: DustSettings
+}

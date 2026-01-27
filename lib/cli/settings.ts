@@ -5,17 +5,10 @@
  */
 
 import { join } from 'node:path'
-import type { FileSystem } from './types'
+import type { CheckConfig, DustSettings, FileSystem } from './types'
 
-export interface CheckConfig {
-  name: string
-  command: string
-}
-
-export interface DustSettings {
-  dustCommand: string
-  checks?: CheckConfig[]
-}
+// Re-export for backwards compatibility
+export type { CheckConfig, DustSettings }
 
 const DEFAULT_SETTINGS: DustSettings = {
   dustCommand: 'npx dust',

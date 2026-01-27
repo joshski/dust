@@ -3,7 +3,15 @@
  */
 
 import { dirname, resolve } from 'node:path'
-import type { CommandContext, CommandResult, FileSystem } from '../types'
+import type {
+  CommandDependencies,
+  CommandResult,
+  FileSystem,
+  GlobScanner,
+} from '../types'
+
+// Re-export for backwards compatibility
+export type { GlobScanner }
 
 const REQUIRED_HEADINGS = ['## Goals', '## Blocked by', '## Definition of done']
 
@@ -13,10 +21,6 @@ export interface Violation {
   file: string
   message: string
   line?: number
-}
-
-export interface GlobScanner {
-  scan: (dir: string) => AsyncIterable<string>
 }
 
 export function validateFilename(filePath: string): Violation | null {
@@ -180,11 +184,9 @@ export function validateSemanticLinks(
 }
 
 export async function validate(
-  ctx: CommandContext,
-  fs: FileSystem,
-  _args: string[],
-  glob: GlobScanner
+  deps: CommandDependencies
 ): Promise<CommandResult> {
+  const { context: ctx, fileSystem: fs, globScanner: glob } = deps
   const dustPath = `${ctx.cwd}/.dust`
 
   if (!fs.exists(dustPath)) {

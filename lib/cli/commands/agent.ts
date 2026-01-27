@@ -4,9 +4,8 @@
  * Provides focused, workflow-specific guidance for AI agents.
  */
 
-import type { DustSettings } from '../settings'
 import { loadTemplate } from '../templates'
-import type { CommandContext, CommandResult } from '../types'
+import type { CommandDependencies, CommandResult, DustSettings } from '../types'
 
 export const AGENT_SUBCOMMANDS = [
   'work',
@@ -42,11 +41,8 @@ function generateAgentHelp(settings: DustSettings): string {
   return loadTemplate('agent-help', { bin: settings.dustCommand })
 }
 
-export async function agent(
-  ctx: CommandContext,
-  args: string[],
-  settings: DustSettings
-): Promise<CommandResult> {
+export async function agent(deps: CommandDependencies): Promise<CommandResult> {
+  const { arguments: args, context: ctx, settings } = deps
   const subcommand = args[0]
 
   if (!subcommand) {
