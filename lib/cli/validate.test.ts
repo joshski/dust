@@ -5,6 +5,7 @@ import {
   validate,
   validateFilename,
   validateLinks,
+  validateSemanticLinks,
   validateTaskHeadings,
 } from './validate'
 
@@ -155,6 +156,135 @@ Line 2
       fs
     )
     expect(violations[0].line).toBe(3)
+  })
+})
+
+describe('validateSemanticLinks', () => {
+  test('returns no violations when Goals link points to goals directory', () => {
+    const content = `# Task
+## Goals
+[Goal](../goals/my-goal.md)
+## Blocked by
+## Definition of done`
+
+    const violations = validateSemanticLinks(
+      '/project/.dust/tasks/task.md',
+      content
+    )
+    expect(violations).toHaveLength(0)
+  })
+
+  test('returns violation when Goals link points to tasks directory', () => {
+    const content = `# Task
+## Goals
+[Task](../tasks/other-task.md)
+## Blocked by
+## Definition of done`
+
+    const violations = validateSemanticLinks(
+      '/project/.dust/tasks/task.md',
+      content
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('## Goals')
+    expect(violations[0].message).toContain('goal file')
+    expect(violations[0].line).toBe(3)
+  })
+
+  test('returns no violations when Blocked by link points to tasks directory', () => {
+    const content = `# Task
+## Goals
+## Blocked by
+[Blocker](../tasks/blocker-task.md)
+## Definition of done`
+
+    const violations = validateSemanticLinks(
+      '/project/.dust/tasks/task.md',
+      content
+    )
+    expect(violations).toHaveLength(0)
+  })
+
+  test('returns violation when Blocked by link points to goals directory', () => {
+    const content = `# Task
+## Goals
+## Blocked by
+[Goal](../goals/my-goal.md)
+## Definition of done`
+
+    const violations = validateSemanticLinks(
+      '/project/.dust/tasks/task.md',
+      content
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('## Blocked by')
+    expect(violations[0].message).toContain('task file')
+    expect(violations[0].line).toBe(4)
+  })
+
+  test('rejects external links in semantic sections', () => {
+    const content = `# Task
+## Goals
+[External](https://example.com)
+## Blocked by
+## Definition of done`
+
+    const violations = validateSemanticLinks(
+      '/project/.dust/tasks/task.md',
+      content
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('## Goals')
+    expect(violations[0].message).toContain('external URL')
+    expect(violations[0].line).toBe(3)
+  })
+
+  test('rejects anchor links in semantic sections', () => {
+    const content = `# Task
+## Goals
+[Section](#section)
+## Blocked by
+## Definition of done`
+
+    const violations = validateSemanticLinks(
+      '/project/.dust/tasks/task.md',
+      content
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('## Goals')
+    expect(violations[0].message).toContain('anchor')
+    expect(violations[0].line).toBe(3)
+  })
+
+  test('ignores links in other sections', () => {
+    const content = `# Task
+## Goals
+## Blocked by
+## Definition of done
+[Any Link](../random/file.md)`
+
+    const violations = validateSemanticLinks(
+      '/project/.dust/tasks/task.md',
+      content
+    )
+    expect(violations).toHaveLength(0)
+  })
+
+  test('handles multiple links in same section', () => {
+    const content = `# Task
+## Goals
+[Goal1](../goals/goal1.md)
+[Goal2](../tasks/wrong.md)
+[Goal3](../goals/goal3.md)
+## Blocked by
+## Definition of done`
+
+    const violations = validateSemanticLinks(
+      '/project/.dust/tasks/task.md',
+      content
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].line).toBe(4)
   })
 })
 
@@ -322,5 +452,63 @@ describe('validate command', () => {
     expect(ctx.stdoutLines.join('\n')).toContain('All validations passed')
     // Should not mention task validation
     expect(ctx.stdoutLines.join('\n')).not.toContain('tasks')
+  })
+
+  test('reports semantic link violations for wrong link type in Goals section', async () => {
+    const ctx = createMockContext()
+    const fs = createMockFs(
+      new Map([
+        ['/project/.dust/goals/goal.md', '# Goal'],
+        ['/project/.dust/tasks/other-task.md', '# Other'],
+        [
+          '/project/.dust/tasks/my-task.md',
+          `# Task
+## Goals
+[Wrong](../tasks/other-task.md)
+## Blocked by
+## Definition of done`,
+        ],
+      ])
+    )
+    const glob = createMockGlob([
+      '/project/.dust/goals/goal.md',
+      '/project/.dust/tasks/my-task.md',
+      '/project/.dust/tasks/other-task.md',
+    ])
+
+    const result = await validate(ctx, fs, [], glob)
+
+    expect(result.exitCode).toBe(1)
+    const output = ctx.stderrLines.join('\n')
+    expect(output).toContain('## Goals')
+    expect(output).toContain('goal file')
+  })
+
+  test('reports semantic link violations for wrong link type in Blocked by section', async () => {
+    const ctx = createMockContext()
+    const fs = createMockFs(
+      new Map([
+        ['/project/.dust/goals/goal.md', '# Goal'],
+        [
+          '/project/.dust/tasks/my-task.md',
+          `# Task
+## Goals
+## Blocked by
+[Wrong](../goals/goal.md)
+## Definition of done`,
+        ],
+      ])
+    )
+    const glob = createMockGlob([
+      '/project/.dust/goals/goal.md',
+      '/project/.dust/tasks/my-task.md',
+    ])
+
+    const result = await validate(ctx, fs, [], glob)
+
+    expect(result.exitCode).toBe(1)
+    const output = ctx.stderrLines.join('\n')
+    expect(output).toContain('## Blocked by')
+    expect(output).toContain('task file')
   })
 })
