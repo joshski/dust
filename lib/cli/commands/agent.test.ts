@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'vitest'
-import type { DustSettings } from '../settings'
-import type { CommandContext } from '../types'
+import type {
+  CommandContext,
+  CommandDependencies,
+  DustSettings,
+  FileSystem,
+  GlobScanner,
+} from '../types'
 import { AGENT_SUBCOMMANDS, agent } from './agent'
 
 function createMockContext(): CommandContext & {
@@ -18,13 +23,45 @@ function createMockContext(): CommandContext & {
   }
 }
 
+function createMockFs(): FileSystem {
+  return {
+    exists: () => false,
+    readFile: async () => '',
+    writeFile: async () => {},
+    mkdir: async () => {},
+    readdir: async () => [],
+  }
+}
+
+function createMockGlob(): GlobScanner {
+  return {
+    scan: async function* () {
+      // Empty by default
+    },
+  }
+}
+
+function createDeps(
+  ctx: CommandContext,
+  args: string[],
+  settings: DustSettings
+): CommandDependencies {
+  return {
+    arguments: args,
+    context: ctx,
+    fileSystem: createMockFs(),
+    globScanner: createMockGlob(),
+    settings,
+  }
+}
+
 const defaultSettings: DustSettings = { dustCommand: 'dust' }
 
 describe('agent command', () => {
   test('outputs greeting with routing instructions when no subcommand', async () => {
     const ctx = createMockContext()
 
-    const result = await agent(ctx, [], defaultSettings)
+    const result = await agent(createDeps(ctx, [], defaultSettings))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Hello Claude')
@@ -38,7 +75,7 @@ describe('agent command', () => {
   test('work subcommand outputs work instructions', async () => {
     const ctx = createMockContext()
 
-    const result = await agent(ctx, ['work'], defaultSettings)
+    const result = await agent(createDeps(ctx, ['work'], defaultSettings))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Work on the Next Task')
@@ -49,7 +86,7 @@ describe('agent command', () => {
   test('tasks subcommand outputs task management instructions', async () => {
     const ctx = createMockContext()
 
-    const result = await agent(ctx, ['tasks'], defaultSettings)
+    const result = await agent(createDeps(ctx, ['tasks'], defaultSettings))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Task Management')
@@ -60,7 +97,7 @@ describe('agent command', () => {
   test('goals subcommand outputs goals instructions', async () => {
     const ctx = createMockContext()
 
-    const result = await agent(ctx, ['goals'], defaultSettings)
+    const result = await agent(createDeps(ctx, ['goals'], defaultSettings))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Understanding Goals')
@@ -71,7 +108,7 @@ describe('agent command', () => {
   test('ideas subcommand outputs ideas instructions', async () => {
     const ctx = createMockContext()
 
-    const result = await agent(ctx, ['ideas'], defaultSettings)
+    const result = await agent(createDeps(ctx, ['ideas'], defaultSettings))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Working with Ideas')
@@ -82,7 +119,7 @@ describe('agent command', () => {
   test('help subcommand outputs agent help', async () => {
     const ctx = createMockContext()
 
-    const result = await agent(ctx, ['help'], defaultSettings)
+    const result = await agent(createDeps(ctx, ['help'], defaultSettings))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Dust Agent Guide')
@@ -93,7 +130,7 @@ describe('agent command', () => {
   test('unknown subcommand returns error', async () => {
     const ctx = createMockContext()
 
-    const result = await agent(ctx, ['unknown'], defaultSettings)
+    const result = await agent(createDeps(ctx, ['unknown'], defaultSettings))
 
     expect(result.exitCode).toBe(1)
     expect(ctx.stderrLines.join('\n')).toContain('Unknown subcommand: unknown')
@@ -104,7 +141,7 @@ describe('agent command', () => {
     const ctx = createMockContext()
     const settings: DustSettings = { dustCommand: 'bin/dust' }
 
-    await agent(ctx, [], settings)
+    await agent(createDeps(ctx, [], settings))
 
     expect(ctx.stdoutLines.join('\n')).toContain('bin/dust agent work')
   })

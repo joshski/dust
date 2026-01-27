@@ -5,7 +5,7 @@
  * A task is blocked if its "## Blocked by" section references task files that still exist.
  */
 
-import type { CommandContext, CommandResult, FileSystem } from '../types'
+import type { CommandDependencies, CommandResult } from '../types'
 
 function extractTitle(content: string): string | null {
   const match = content.match(/^#\s+(.+)$/m)
@@ -41,11 +41,8 @@ function extractBlockedBy(content: string): string[] {
   return blockers
 }
 
-export async function next(
-  ctx: CommandContext,
-  fs: FileSystem,
-  _args: string[]
-): Promise<CommandResult> {
+export async function next(deps: CommandDependencies): Promise<CommandResult> {
+  const { context: ctx, fileSystem: fs } = deps
   const dustPath = `${ctx.cwd}/.dust`
 
   if (!fs.exists(dustPath)) {

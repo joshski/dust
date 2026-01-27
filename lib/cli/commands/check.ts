@@ -6,9 +6,13 @@
  */
 
 import { type ChildProcess, spawn } from 'node:child_process'
-import { type CheckConfig, loadSettings } from '../settings'
-import type { CommandContext, CommandResult, FileSystem } from '../types'
-import { type GlobScanner, validate } from './validate'
+import type {
+  CheckConfig,
+  CommandContext,
+  CommandDependencies,
+  CommandResult,
+} from '../types'
+import { validate } from './validate'
 
 export interface CheckResult {
   name: string
@@ -77,18 +81,20 @@ async function runConfiguredChecks(
 }
 
 async function runValidationCheck(
-  ctx: CommandContext,
-  fs: FileSystem,
-  glob: GlobScanner
+  deps: CommandDependencies
 ): Promise<CheckResult> {
   const outputLines: string[] = []
   const bufferedCtx: CommandContext = {
-    cwd: ctx.cwd,
+    cwd: deps.context.cwd,
     stdout: (msg: string) => outputLines.push(msg),
     stderr: (msg: string) => outputLines.push(msg),
   }
 
-  const result = await validate(bufferedCtx, fs, [], glob)
+  const result = await validate({
+    ...deps,
+    context: bufferedCtx,
+    arguments: [],
+  })
 
   return {
     name: 'validate',
@@ -129,14 +135,10 @@ function displayResults(results: CheckResult[], ctx: CommandContext): number {
 }
 
 export async function check(
-  ctx: CommandContext,
-  fs: FileSystem,
-  _args: string[],
-  glob?: GlobScanner,
+  deps: CommandDependencies,
   bufferedRunner: BufferedProcessRunner = defaultBufferedRunner
 ): Promise<CommandResult> {
-  // Load settings to check for configured checks
-  const settings = await loadSettings(ctx.cwd, fs)
+  const { context: ctx, fileSystem: fs, settings } = deps
 
   if (!settings.checks || settings.checks.length === 0) {
     ctx.stderr('Error: No checks configured in .dust/config/settings.json')
@@ -154,9 +156,10 @@ export async function check(
   // Run built-in and configured checks in parallel
   const checkPromises: Promise<CheckResult | CheckResult[]>[] = []
 
-  // Add validation check if glob scanner is provided
-  if (glob) {
-    checkPromises.push(runValidationCheck(ctx, fs, glob))
+  // Add validation check if .dust directory exists
+  const dustPath = `${ctx.cwd}/.dust`
+  if (fs.exists(dustPath)) {
+    checkPromises.push(runValidationCheck(deps))
   }
 
   // Add configured checks

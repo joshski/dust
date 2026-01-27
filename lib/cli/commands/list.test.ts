@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest'
-import type { CommandContext, FileSystem } from '../types'
+import type {
+  CommandContext,
+  CommandDependencies,
+  FileSystem,
+  GlobScanner,
+} from '../types'
 import { list } from './list'
 
 function createMockContext(): CommandContext & {
@@ -42,12 +47,34 @@ function createMockFs(files: Map<string, string> = new Map()): FileSystem {
   }
 }
 
+function createMockGlob(): GlobScanner {
+  return {
+    scan: async function* () {
+      // Empty by default
+    },
+  }
+}
+
+function createDeps(
+  ctx: CommandContext,
+  fs: FileSystem,
+  args: string[] = []
+): CommandDependencies {
+  return {
+    arguments: args,
+    context: ctx,
+    fileSystem: fs,
+    globScanner: createMockGlob(),
+    settings: { dustCommand: 'dust' },
+  }
+}
+
 describe('list command', () => {
   test('fails if .dust not found', async () => {
     const ctx = createMockContext()
     const fs = createMockFs()
 
-    const result = await list(ctx, fs, [])
+    const result = await list(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(1)
     expect(ctx.stderrLines.join('\n')).toContain('.dust directory not found')
@@ -64,7 +91,7 @@ describe('list command', () => {
       ])
     )
 
-    const result = await list(ctx, fs, [])
+    const result = await list(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     const output = ctx.stdoutLines.join('\n')
@@ -83,7 +110,7 @@ describe('list command', () => {
       ])
     )
 
-    const result = await list(ctx, fs, ['goals'])
+    const result = await list(createDeps(ctx, fs, ['goals']))
 
     expect(result.exitCode).toBe(0)
     const output = ctx.stdoutLines.join('\n')
@@ -97,7 +124,7 @@ describe('list command', () => {
       new Map([['/project/.dust/goals/my-goal.md', '# My Goal Title']])
     )
 
-    await list(ctx, fs, ['goals'])
+    await list(createDeps(ctx, fs, ['goals']))
 
     const output = ctx.stdoutLines.join('\n')
     expect(output).toContain('my-goal')
@@ -110,7 +137,7 @@ describe('list command', () => {
       new Map([['/project/.dust/goals/my-goal.md', 'No heading here']])
     )
 
-    await list(ctx, fs, ['goals'])
+    await list(createDeps(ctx, fs, ['goals']))
 
     const output = ctx.stdoutLines.join('\n')
     expect(output).toContain('my-goal')
@@ -120,7 +147,7 @@ describe('list command', () => {
     const ctx = createMockContext()
     const fs = createMockFs(new Map([['/project/.dust/goals/g.md', '']]))
 
-    const result = await list(ctx, fs, ['invalid'])
+    const result = await list(createDeps(ctx, fs, ['invalid']))
 
     expect(result.exitCode).toBe(1)
     expect(ctx.stderrLines.join('\n')).toContain('Invalid type')
@@ -130,7 +157,7 @@ describe('list command', () => {
     const ctx = createMockContext()
     const fs = createMockFs(new Map([['/project/.dust/goals/g.md', '']]))
 
-    await list(ctx, fs, ['invalid'])
+    await list(createDeps(ctx, fs, ['invalid']))
 
     const output = ctx.stderrLines.join('\n')
     expect(output).toContain('tasks')
@@ -146,7 +173,7 @@ describe('list command', () => {
       new Map([['/project/.dust/goals/my-goal.md', '# My Goal']])
     )
 
-    const result = await list(ctx, fs, [])
+    const result = await list(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     const output = ctx.stdoutLines.join('\n')
@@ -191,7 +218,7 @@ describe('list command', () => {
       },
     }
 
-    const result = await list(ctx, fs, [])
+    const result = await list(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     const output = ctx.stdoutLines.join('\n')

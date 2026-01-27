@@ -10,10 +10,17 @@ import { check } from './commands/check'
 import { init } from './commands/init'
 import { list } from './commands/list'
 import { next } from './commands/next'
-import { type GlobScanner, validate } from './commands/validate'
-import { type DustSettings, loadSettings } from './settings'
+import { validate } from './commands/validate'
+import { loadSettings } from './settings'
 import { loadTemplate } from './templates'
-import type { CommandContext, CommandResult, FileSystem } from './types'
+import type {
+  CommandContext,
+  CommandDependencies,
+  CommandResult,
+  DustSettings,
+  FileSystem,
+  GlobScanner,
+} from './types'
 
 export const COMMANDS = [
   'init',
@@ -53,27 +60,23 @@ export function isValidCommand(command: string): command is Command {
 
 export async function runCommand(
   command: Command,
-  commandArgs: string[],
-  ctx: CommandContext,
-  fs: FileSystem,
-  glob: GlobScanner,
-  settings: DustSettings
+  deps: CommandDependencies
 ): Promise<CommandResult> {
   switch (command) {
     case 'init':
-      return init(ctx, fs, commandArgs)
+      return init(deps)
     case 'validate':
-      return validate(ctx, fs, commandArgs, glob)
+      return validate(deps)
     case 'list':
-      return list(ctx, fs, commandArgs)
+      return list(deps)
     case 'next':
-      return next(ctx, fs, commandArgs)
+      return next(deps)
     case 'check':
-      return check(ctx, fs, commandArgs, glob)
+      return check(deps)
     case 'agent':
-      return agent(ctx, commandArgs, settings)
+      return agent(deps)
     case 'help':
-      ctx.stdout(generateHelpText(settings))
+      deps.context.stdout(generateHelpText(deps.settings))
       return { exitCode: 0 }
   }
 }
@@ -97,5 +100,13 @@ export async function main(options: MainOptions): Promise<CommandResult> {
     return { exitCode: 1 }
   }
 
-  return runCommand(command, commandArgs, ctx, fs, glob, settings)
+  const deps: CommandDependencies = {
+    arguments: commandArgs,
+    context: ctx,
+    fileSystem: fs,
+    globScanner: glob,
+    settings,
+  }
+
+  return runCommand(command, deps)
 }

@@ -1,7 +1,11 @@
 import { describe, expect, test } from 'vitest'
-import type { CommandContext, FileSystem } from '../types'
+import type {
+  CommandContext,
+  CommandDependencies,
+  FileSystem,
+  GlobScanner,
+} from '../types'
 import {
-  type GlobScanner,
   validate,
   validateFilename,
   validateLinks,
@@ -53,6 +57,20 @@ function createMockGlob(files: string[]): GlobScanner {
         }
       }
     },
+  }
+}
+
+function createDeps(
+  ctx: CommandContext,
+  fs: FileSystem,
+  glob: GlobScanner
+): CommandDependencies {
+  return {
+    arguments: [],
+    context: ctx,
+    fileSystem: fs,
+    globScanner: glob,
+    settings: { dustCommand: 'dust' },
   }
 }
 
@@ -294,7 +312,7 @@ describe('validate command', () => {
     const fs = createMockFs()
     const glob = createMockGlob([])
 
-    const result = await validate(ctx, fs, [], glob)
+    const result = await validate(createDeps(ctx, fs, glob))
 
     expect(result.exitCode).toBe(1)
     expect(ctx.stderrLines.join('\n')).toContain('.dust directory not found')
@@ -320,7 +338,7 @@ describe('validate command', () => {
       '/project/.dust/tasks/my-task.md',
     ])
 
-    const result = await validate(ctx, fs, [], glob)
+    const result = await validate(createDeps(ctx, fs, glob))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('All validations passed')
@@ -333,7 +351,7 @@ describe('validate command', () => {
     )
     const glob = createMockGlob(['/project/.dust/tasks/my-task.md'])
 
-    const result = await validate(ctx, fs, [], glob)
+    const result = await validate(createDeps(ctx, fs, glob))
 
     expect(result.exitCode).toBe(1)
     expect(ctx.stderrLines.join('\n')).toContain('violation')
@@ -354,7 +372,7 @@ describe('validate command', () => {
     )
     const glob = createMockGlob(['/project/.dust/tasks/BadFileName.md'])
 
-    const result = await validate(ctx, fs, [], glob)
+    const result = await validate(createDeps(ctx, fs, glob))
 
     expect(result.exitCode).toBe(1)
     expect(ctx.stderrLines.join('\n')).toContain('does not match slug-style')
@@ -383,7 +401,7 @@ describe('validate command', () => {
       '/project/.dust/tasks/README',
     ])
 
-    const result = await validate(ctx, fs, [], glob)
+    const result = await validate(createDeps(ctx, fs, glob))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('All validations passed')
@@ -405,7 +423,7 @@ describe('validate command', () => {
     )
     const glob = createMockGlob(['/project/.dust/tasks/my-task.md'])
 
-    await validate(ctx, fs, [], glob)
+    await validate(createDeps(ctx, fs, glob))
 
     // Broken link violations include line numbers
     const output = ctx.stderrLines.join('\n')
@@ -428,7 +446,7 @@ describe('validate command', () => {
     )
     const glob = createMockGlob(['/project/.dust/tasks/BadName.md'])
 
-    await validate(ctx, fs, [], glob)
+    await validate(createDeps(ctx, fs, glob))
 
     // Filename violations don't have line numbers
     const output = ctx.stderrLines.join('\n')
@@ -446,7 +464,7 @@ describe('validate command', () => {
     )
     const glob = createMockGlob(['/project/.dust/goals/goal.md'])
 
-    const result = await validate(ctx, fs, [], glob)
+    const result = await validate(createDeps(ctx, fs, glob))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('All validations passed')
@@ -476,7 +494,7 @@ describe('validate command', () => {
       '/project/.dust/tasks/other-task.md',
     ])
 
-    const result = await validate(ctx, fs, [], glob)
+    const result = await validate(createDeps(ctx, fs, glob))
 
     expect(result.exitCode).toBe(1)
     const output = ctx.stderrLines.join('\n')
@@ -504,7 +522,7 @@ describe('validate command', () => {
       '/project/.dust/tasks/my-task.md',
     ])
 
-    const result = await validate(ctx, fs, [], glob)
+    const result = await validate(createDeps(ctx, fs, glob))
 
     expect(result.exitCode).toBe(1)
     const output = ctx.stderrLines.join('\n')

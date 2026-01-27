@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import type { GlobScanner } from './commands/validate'
 import {
   COMMANDS,
   generateHelpText,
@@ -9,7 +8,13 @@ import {
   main,
   runCommand,
 } from './main'
-import type { CommandContext, FileSystem } from './types'
+import type {
+  CommandContext,
+  CommandDependencies,
+  DustSettings,
+  FileSystem,
+  GlobScanner,
+} from './types'
 
 function createMockContext(): CommandContext & {
   stdoutLines: string[]
@@ -55,6 +60,22 @@ function createMockGlob(): GlobScanner {
   }
 }
 
+function createDeps(
+  ctx: CommandContext,
+  fs: FileSystem,
+  glob: GlobScanner,
+  args: string[] = [],
+  settings: DustSettings = { dustCommand: 'dust' }
+): CommandDependencies {
+  return {
+    arguments: args,
+    context: ctx,
+    fileSystem: fs,
+    globScanner: glob,
+    settings,
+  }
+}
+
 describe('isHelpRequest', () => {
   test('returns true for undefined command', () => {
     expect(isHelpRequest(undefined)).toBe(true)
@@ -92,15 +113,14 @@ describe('isValidCommand', () => {
   })
 })
 
-const defaultSettings = { dustCommand: 'dust' }
-
 describe('runCommand', () => {
   test('runs help command and outputs help text', async () => {
     const ctx = createMockContext()
     const fs = createMockFs()
     const glob = createMockGlob()
+    const deps = createDeps(ctx, fs, glob)
 
-    const result = await runCommand('help', [], ctx, fs, glob, defaultSettings)
+    const result = await runCommand('help', deps)
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain(
@@ -112,8 +132,9 @@ describe('runCommand', () => {
     const ctx = createMockContext()
     const fs = createMockFs()
     const glob = createMockGlob()
+    const deps = createDeps(ctx, fs, glob)
 
-    const result = await runCommand('init', [], ctx, fs, glob, defaultSettings)
+    const result = await runCommand('init', deps)
 
     expect(result.exitCode).toBe(0)
     expect(fs.createdDirs).toContain('/project/.dust')

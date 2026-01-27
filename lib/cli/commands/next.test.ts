@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest'
-import type { CommandContext, FileSystem } from '../types'
+import type {
+  CommandContext,
+  CommandDependencies,
+  FileSystem,
+  GlobScanner,
+} from '../types'
 import { next } from './next'
 
 function createMockContext(): CommandContext & {
@@ -42,12 +47,30 @@ function createMockFs(files: Map<string, string> = new Map()): FileSystem {
   }
 }
 
+function createMockGlob(): GlobScanner {
+  return {
+    scan: async function* () {
+      // Empty by default
+    },
+  }
+}
+
+function createDeps(ctx: CommandContext, fs: FileSystem): CommandDependencies {
+  return {
+    arguments: [],
+    context: ctx,
+    fileSystem: fs,
+    globScanner: createMockGlob(),
+    settings: { dustCommand: 'dust' },
+  }
+}
+
 describe('next command', () => {
   test('fails if .dust directory not found', async () => {
     const ctx = createMockContext()
     const fs = createMockFs()
 
-    const result = await next(ctx, fs, [])
+    const result = await next(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(1)
     expect(ctx.stderrLines.join('\n')).toContain('.dust directory not found')
@@ -60,7 +83,7 @@ describe('next command', () => {
       new Map([['/project/.dust/goals/goal.md', '# My Goal']])
     )
 
-    const result = await next(ctx, fs, [])
+    const result = await next(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines).toHaveLength(0)
@@ -81,7 +104,7 @@ describe('next command', () => {
       readdir: async () => [] as string[],
     }
 
-    const result = await next(ctx, fs, [])
+    const result = await next(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines).toHaveLength(0)
@@ -95,7 +118,7 @@ describe('next command', () => {
       ])
     )
 
-    const result = await next(ctx, fs, [])
+    const result = await next(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Next tasks:')
@@ -115,7 +138,7 @@ describe('next command', () => {
       ])
     )
 
-    const result = await next(ctx, fs, [])
+    const result = await next(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     const output = ctx.stdoutLines.join('\n')
@@ -135,7 +158,7 @@ describe('next command', () => {
       ])
     )
 
-    const result = await next(ctx, fs, [])
+    const result = await next(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     const output = ctx.stdoutLines.join('\n')
@@ -155,7 +178,7 @@ describe('next command', () => {
       ])
     )
 
-    const result = await next(ctx, fs, [])
+    const result = await next(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     const output = ctx.stdoutLines.join('\n')
@@ -172,7 +195,7 @@ describe('next command', () => {
       ])
     )
 
-    const result = await next(ctx, fs, [])
+    const result = await next(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     const output = ctx.stdoutLines.join('\n')
@@ -196,7 +219,7 @@ describe('next command', () => {
       ])
     )
 
-    const result = await next(ctx, fs, [])
+    const result = await next(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines).toHaveLength(0)
@@ -215,7 +238,7 @@ describe('next command', () => {
       ])
     )
 
-    const result = await next(ctx, fs, [])
+    const result = await next(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     const output = ctx.stdoutLines.join('\n')
@@ -235,7 +258,7 @@ describe('next command', () => {
       ])
     )
 
-    const result = await next(ctx, fs, [])
+    const result = await next(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     const output = ctx.stdoutLines.join('\n')

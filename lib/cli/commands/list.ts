@@ -2,7 +2,7 @@
  * dust list [type] - List tasks, ideas, goals, or facts
  */
 
-import type { CommandContext, CommandResult, FileSystem } from '../types'
+import type { CommandDependencies, CommandResult } from '../types'
 
 const VALID_TYPES = ['tasks', 'ideas', 'goals', 'facts'] as const
 type ListType = (typeof VALID_TYPES)[number]
@@ -12,11 +12,8 @@ function extractTitle(content: string): string | null {
   return match ? match[1].trim() : null
 }
 
-export async function list(
-  ctx: CommandContext,
-  fs: FileSystem,
-  args: string[]
-): Promise<CommandResult> {
+export async function list(deps: CommandDependencies): Promise<CommandResult> {
+  const { arguments: args, context: ctx, fileSystem: fs } = deps
   const dustPath = `${ctx.cwd}/.dust`
 
   if (!fs.exists(dustPath)) {
