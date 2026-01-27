@@ -57,17 +57,20 @@ describe('init command', () => {
     expect(fs.createdDirs).toContain('/project/.dust/facts')
   })
 
-  test('creates initial goal file', async () => {
+  test('creates initial fact file', async () => {
     const ctx = createMockContext()
     const fs = createMockFs()
 
     await init(ctx, fs, [])
 
-    expect(fs.writtenFiles.has('/project/.dust/goals/project-goal.md')).toBe(
-      true
+    expect(
+      fs.writtenFiles.has('/project/.dust/facts/use-dust-for-planning.md')
+    ).toBe(true)
+    const content = fs.writtenFiles.get(
+      '/project/.dust/facts/use-dust-for-planning.md'
     )
-    const content = fs.writtenFiles.get('/project/.dust/goals/project-goal.md')
-    expect(content).toContain('# Project Goal')
+    expect(content).toContain('# Use dust for planning')
+    expect(content).toContain('https://github.com/joshski/dust')
   })
 
   test('outputs success messages', async () => {

@@ -8,9 +8,9 @@ import type { CommandContext, CommandResult, FileSystem } from './types'
 
 const DUST_DIRECTORIES = ['goals', 'ideas', 'tasks', 'facts']
 
-const DEFAULT_GOAL = `# Project Goal
+const USE_DUST_FACT = `# Use dust for planning
 
-Describe the high-level mission of this project.
+This project uses [dust](https://github.com/joshski/dust) for planning and documentation.
 `
 
 export async function init(
@@ -31,11 +31,14 @@ export async function init(
       await fs.mkdir(`${dustPath}/${dir}`, { recursive: true })
     }
 
-    await fs.writeFile(`${dustPath}/goals/project-goal.md`, DEFAULT_GOAL)
+    await fs.writeFile(
+      `${dustPath}/facts/use-dust-for-planning.md`,
+      USE_DUST_FACT
+    )
 
     ctx.stdout('Initialized Dust repository in .dust/')
     ctx.stdout(`Created directories: ${DUST_DIRECTORIES.join(', ')}`)
-    ctx.stdout('Created initial goal: .dust/goals/project-goal.md')
+    ctx.stdout('Created initial fact: .dust/facts/use-dust-for-planning.md')
   }
 
   // Create CLAUDE.md if it doesn't exist
