@@ -52,6 +52,15 @@ Don't let that stop you:
 npx dust help
 ```
 
+## Human UI
+
+Humans can interact with `dust` using their AI agent software of choice, e.g.
+
+```
+> claude "implement the next task" 
+> codex "add task: add coverage reporting"
+```
+
 ## AGENTS.md
 
 Add a line like this to your `AGENTS.md` or `CLAUDE.md` file:
@@ -60,7 +69,9 @@ Add a line like this to your `AGENTS.md` or `CLAUDE.md` file:
 Always immediately run `npx dust` agent when you start working in this repository.
 ```
 
-In fact, you might find it effective to use that as the _only_ line in those files. Essential documentation should be discoverable by agents.
+In fact, you might find it effective to use that as the _only_ line in those files. Essential documentation should be discoverable by agents exploring your `./.dust` directory.
+
+
 
 ## Configuration
 
