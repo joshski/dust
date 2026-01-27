@@ -13,3 +13,18 @@ A task is ready when "Blocked by" is empty or says "(none)".
 **Creating tasks:** Write a new markdown file in `.dust/tasks/` following the format above.
 
 **Completing tasks:** Delete the task file in your commit after implementation.
+
+## Implementing a Task
+
+When implementing a task, follow these steps:
+
+1. Install dependencies first (e.g., `npm install`, `bundle install`)
+2. Run `{{bin}} check` before implementing anything to verify the project is in a good state
+3. Read the task file and understand all requirements in "Definition of done"
+4. Implement the changes, checking off items as you complete them
+5. Run `{{bin}} check` after implementing all changes to verify nothing is broken
+6. Create a single atomic commit that includes:
+   - All implementation changes
+   - Deletion of the completed task file
+   - Updates to any facts that changed
+   - Deletion of any ideas that were fully realized
