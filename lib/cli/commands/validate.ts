@@ -3,6 +3,7 @@
  */
 
 import { dirname, resolve } from 'node:path'
+import { MARKDOWN_LINK_PATTERN } from '../markdown-utilities'
 import type {
   CommandDependencies,
   CommandResult,
@@ -62,7 +63,7 @@ export function validateLinks(
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
-    const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g
+    const linkPattern = new RegExp(MARKDOWN_LINK_PATTERN.source, 'g')
     let match: RegExpExecArray | null = linkPattern.exec(line)
 
     while (match) {
@@ -134,7 +135,7 @@ export function validateSemanticLinks(
     if (!rule) continue
 
     // Find links on this line
-    const linkPattern = /\[([^\]]+)\]\(([^)]+)\)/g
+    const linkPattern = new RegExp(MARKDOWN_LINK_PATTERN.source, 'g')
     let match: RegExpExecArray | null = linkPattern.exec(line)
 
     while (match) {
