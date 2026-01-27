@@ -18,7 +18,7 @@ function createMockContext(): CommandContext & {
   }
 }
 
-const defaultSettings: DustSettings = { binaryPath: 'dust' }
+const defaultSettings: DustSettings = { dustCommand: 'dust' }
 
 describe('agent command', () => {
   test('outputs greeting with routing instructions when no subcommand', async () => {
@@ -102,7 +102,7 @@ describe('agent command', () => {
 
   test('uses custom binary path in output', async () => {
     const ctx = createMockContext()
-    const settings: DustSettings = { binaryPath: 'bin/dust' }
+    const settings: DustSettings = { dustCommand: 'bin/dust' }
 
     await agent(ctx, [], settings)
 

@@ -31,11 +31,11 @@ export const COMMANDS = [
 export type Command = (typeof COMMANDS)[number]
 
 export function generateHelpText(settings: DustSettings): string {
-  return loadTemplate('help', { bin: settings.binaryPath })
+  return loadTemplate('help', { bin: settings.dustCommand })
 }
 
 // Default help text for backward compatibility in tests
-export const HELP_TEXT = generateHelpText({ binaryPath: 'dust' })
+export const HELP_TEXT = generateHelpText({ dustCommand: 'dust' })
 
 export interface MainOptions {
   args: string[]
@@ -98,7 +98,7 @@ export async function main(options: MainOptions): Promise<CommandResult> {
 
   if (!isValidCommand(command)) {
     ctx.stderr(`Unknown command: ${command}`)
-    ctx.stderr(`Run '${settings.binaryPath} help' for available commands`)
+    ctx.stderr(`Run '${settings.dustCommand} help' for available commands`)
     return { exitCode: 1 }
   }
 
