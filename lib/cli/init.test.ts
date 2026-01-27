@@ -167,9 +167,11 @@ describe('init command', () => {
 
     await init(ctx, fs, [])
 
-    expect(fs.writtenFiles.has('/project/.dust/config/settings.json')).toBe(true)
+    expect(fs.writtenFiles.has('/project/.dust/config/settings.json')).toBe(
+      true
+    )
     const content = fs.writtenFiles.get('/project/.dust/config/settings.json')
-    const settings = JSON.parse(content!)
+    const settings = JSON.parse(content ?? '')
     expect(settings.dustCommand).toBe('npx dust')
     expect(settings.checks).toEqual([{ name: 'test', command: 'npm test' }])
   })
@@ -181,7 +183,7 @@ describe('init command', () => {
     await init(ctx, fs, [])
 
     const content = fs.writtenFiles.get('/project/.dust/config/settings.json')
-    const settings = JSON.parse(content!)
+    const settings = JSON.parse(content ?? '')
     expect(settings.dustCommand).toBe('bunx dust')
     expect(settings.checks).toEqual([{ name: 'test', command: 'bun test' }])
   })
@@ -193,7 +195,7 @@ describe('init command', () => {
     await init(ctx, fs, [])
 
     const content = fs.writtenFiles.get('/project/.dust/config/settings.json')
-    const settings = JSON.parse(content!)
+    const settings = JSON.parse(content ?? '')
     expect(settings.dustCommand).toBe('pnpx dust')
     expect(settings.checks).toEqual([{ name: 'test', command: 'pnpm test' }])
   })
@@ -206,7 +208,7 @@ describe('init command', () => {
     await init(ctx, fs, [])
 
     const content = fs.writtenFiles.get('/project/.dust/config/settings.json')
-    const settings = JSON.parse(content!)
+    const settings = JSON.parse(content ?? '')
     expect(settings.dustCommand).toBe('npx dust')
     expect(settings.checks).toEqual([])
   })
@@ -217,7 +219,9 @@ describe('init command', () => {
 
     await init(ctx, fs, [])
 
-    expect(ctx.stdoutLines.join('\n')).toContain('Created settings: .dust/config/settings.json')
+    expect(ctx.stdoutLines.join('\n')).toContain(
+      'Created settings: .dust/config/settings.json'
+    )
   })
 
   test('uses pnpx when pnpm-lock.yaml exists', async () => {

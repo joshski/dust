@@ -2,7 +2,11 @@
  * dust init - Initialize a new Dust repository
  */
 
-import { detectDustCommand, type DustSettings, type CheckConfig } from './settings'
+import {
+  type CheckConfig,
+  type DustSettings,
+  detectDustCommand,
+} from './settings'
 import { loadTemplate } from './templates'
 import type { CommandContext, CommandResult, FileSystem } from './types'
 
@@ -21,7 +25,10 @@ function generateSettings(cwd: string, fs: FileSystem): DustSettings {
     checks.push({ name: 'test', command: 'bun test' })
   } else if (fs.exists(`${cwd}/pnpm-lock.yaml`)) {
     checks.push({ name: 'test', command: 'pnpm test' })
-  } else if (fs.exists(`${cwd}/package-lock.json`) || fs.exists(`${cwd}/package.json`)) {
+  } else if (
+    fs.exists(`${cwd}/package-lock.json`) ||
+    fs.exists(`${cwd}/package.json`)
+  ) {
     checks.push({ name: 'test', command: 'npm test' })
   }
 
@@ -60,7 +67,7 @@ export async function init(
     const settings = generateSettings(ctx.cwd, fs)
     await fs.writeFile(
       `${dustPath}/config/settings.json`,
-      JSON.stringify(settings, null, 2) + '\n'
+      `${JSON.stringify(settings, null, 2)}\n`
     )
 
     ctx.stdout('Initialized Dust repository in .dust/')
