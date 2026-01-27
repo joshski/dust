@@ -240,18 +240,6 @@ describe('main', () => {
     expect(fs.createdDirs).toContain('/project/.dust')
   })
 
-  test('routes prompt command correctly', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/.dust/prompts']))
-    const glob = createMockGlob()
-
-    const result = await main({ args: ['prompt', 'work'], ctx, fs, glob })
-
-    // Will fail because prompt file doesn't exist, but proves routing works
-    expect(result.exitCode).toBe(1)
-    expect(ctx.stderrLines.join('\n')).toContain('Prompt')
-  })
-
   test('routes list command correctly', async () => {
     const ctx = createMockContext()
     const fs = createMockFs(new Set(['/project/.dust']))
@@ -322,7 +310,6 @@ describe('main', () => {
 describe('COMMANDS', () => {
   test('contains expected commands', () => {
     expect(COMMANDS).toContain('init')
-    expect(COMMANDS).toContain('prompt')
     expect(COMMANDS).toContain('validate')
     expect(COMMANDS).toContain('list')
     expect(COMMANDS).toContain('next')
@@ -339,7 +326,6 @@ describe('HELP_TEXT', () => {
 
   test('documents all commands', () => {
     expect(HELP_TEXT).toContain('init')
-    expect(HELP_TEXT).toContain('prompt')
     expect(HELP_TEXT).toContain('validate')
     expect(HELP_TEXT).toContain('list')
     expect(HELP_TEXT).toContain('next')
@@ -351,7 +337,6 @@ describe('HELP_TEXT', () => {
   test('contains examples', () => {
     expect(HELP_TEXT).toContain('Examples:')
     expect(HELP_TEXT).toContain('dust init')
-    expect(HELP_TEXT).toContain('dust prompt work')
   })
 })
 
@@ -364,7 +349,6 @@ describe('generateHelpText', () => {
   test('uses custom binary path in examples', () => {
     const helpText = generateHelpText({ dustCommand: 'bin/dust' })
     expect(helpText).toContain('bin/dust init')
-    expect(helpText).toContain('bin/dust prompt work')
   })
 
   test('uses custom binary path in agent guide', () => {

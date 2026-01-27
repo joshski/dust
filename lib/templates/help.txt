@@ -4,7 +4,6 @@ Usage: {{bin}} <command> [options]
 
 Commands:
   init              Initialize a new Dust repository
-  prompt <name>     Output a prompt by name (e.g., {{bin}} prompt work)
   validate          Run validation checks on .dust/ files
   list [type]       List items (tasks, ideas, goals, facts)
   next              Show tasks ready to work on (not blocked)
@@ -14,7 +13,6 @@ Commands:
 
 Examples:
   {{bin}} init
-  {{bin}} prompt work
   {{bin}} validate
   {{bin}} list tasks
   {{bin}} list

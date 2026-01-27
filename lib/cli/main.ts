@@ -10,7 +10,6 @@ import { check } from './check'
 import { init } from './init'
 import { list } from './list'
 import { next } from './next'
-import { prompt } from './prompt'
 import { type DustSettings, loadSettings } from './settings'
 import { loadTemplate } from './templates'
 import type { CommandContext, CommandResult, FileSystem } from './types'
@@ -19,7 +18,6 @@ import { validate } from './validate'
 
 export const COMMANDS = [
   'init',
-  'prompt',
   'validate',
   'list',
   'next',
@@ -65,8 +63,6 @@ export async function runCommand(
   switch (command) {
     case 'init':
       return init(ctx, fs, commandArgs)
-    case 'prompt':
-      return prompt(ctx, fs, commandArgs)
     case 'validate':
       return validate(ctx, fs, commandArgs, glob)
     case 'list':

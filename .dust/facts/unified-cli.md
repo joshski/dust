@@ -3,7 +3,6 @@
 Dust provides a single `dust` command with subcommands for all operations:
 
 - `dust init` - Initialize a new Dust repository
-- `dust prompt <name>` - Output a prompt by name
 - `dust validate` - Run validation checks on .dust/ files
 - `dust list [type]` - List tasks, ideas, goals, or facts
 - `dust next` - Show tasks ready to work on (not blocked by other tasks)
