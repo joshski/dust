@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { CLAUDE_SUBCOMMANDS, claude } from './claude'
+import { AGENT_SUBCOMMANDS, agent } from './agent'
 import type { DustSettings } from './settings'
 import type { CommandContext } from './types'
 
@@ -20,25 +20,25 @@ function createMockContext(): CommandContext & {
 
 const defaultSettings: DustSettings = { binaryPath: 'dust' }
 
-describe('claude command', () => {
+describe('agent command', () => {
   test('outputs greeting with routing instructions when no subcommand', async () => {
     const ctx = createMockContext()
 
-    const result = await claude(ctx, [], defaultSettings)
+    const result = await agent(ctx, [], defaultSettings)
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Hello Claude')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust claude work')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust claude tasks')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust claude goals')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust claude ideas')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust claude help')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust agent work')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust agent tasks')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust agent goals')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust agent ideas')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust agent help')
   })
 
   test('work subcommand outputs work instructions', async () => {
     const ctx = createMockContext()
 
-    const result = await claude(ctx, ['work'], defaultSettings)
+    const result = await agent(ctx, ['work'], defaultSettings)
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Work on the Next Task')
@@ -49,7 +49,7 @@ describe('claude command', () => {
   test('tasks subcommand outputs task management instructions', async () => {
     const ctx = createMockContext()
 
-    const result = await claude(ctx, ['tasks'], defaultSettings)
+    const result = await agent(ctx, ['tasks'], defaultSettings)
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Task Management')
@@ -60,7 +60,7 @@ describe('claude command', () => {
   test('goals subcommand outputs goals instructions', async () => {
     const ctx = createMockContext()
 
-    const result = await claude(ctx, ['goals'], defaultSettings)
+    const result = await agent(ctx, ['goals'], defaultSettings)
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Understanding Goals')
@@ -71,7 +71,7 @@ describe('claude command', () => {
   test('ideas subcommand outputs ideas instructions', async () => {
     const ctx = createMockContext()
 
-    const result = await claude(ctx, ['ideas'], defaultSettings)
+    const result = await agent(ctx, ['ideas'], defaultSettings)
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Working with Ideas')
@@ -82,7 +82,7 @@ describe('claude command', () => {
   test('help subcommand outputs agent help', async () => {
     const ctx = createMockContext()
 
-    const result = await claude(ctx, ['help'], defaultSettings)
+    const result = await agent(ctx, ['help'], defaultSettings)
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Dust Agent Guide')
@@ -93,7 +93,7 @@ describe('claude command', () => {
   test('unknown subcommand returns error', async () => {
     const ctx = createMockContext()
 
-    const result = await claude(ctx, ['unknown'], defaultSettings)
+    const result = await agent(ctx, ['unknown'], defaultSettings)
 
     expect(result.exitCode).toBe(1)
     expect(ctx.stderrLines.join('\n')).toContain('Unknown subcommand: unknown')
@@ -104,17 +104,17 @@ describe('claude command', () => {
     const ctx = createMockContext()
     const settings: DustSettings = { binaryPath: 'bin/dust' }
 
-    await claude(ctx, [], settings)
+    await agent(ctx, [], settings)
 
-    expect(ctx.stdoutLines.join('\n')).toContain('bin/dust claude work')
+    expect(ctx.stdoutLines.join('\n')).toContain('bin/dust agent work')
   })
 
-  test('CLAUDE_SUBCOMMANDS contains expected commands', () => {
-    expect(CLAUDE_SUBCOMMANDS).toContain('work')
-    expect(CLAUDE_SUBCOMMANDS).toContain('tasks')
-    expect(CLAUDE_SUBCOMMANDS).toContain('goals')
-    expect(CLAUDE_SUBCOMMANDS).toContain('ideas')
-    expect(CLAUDE_SUBCOMMANDS).toContain('help')
-    expect(CLAUDE_SUBCOMMANDS.length).toBe(5)
+  test('AGENT_SUBCOMMANDS contains expected commands', () => {
+    expect(AGENT_SUBCOMMANDS).toContain('work')
+    expect(AGENT_SUBCOMMANDS).toContain('tasks')
+    expect(AGENT_SUBCOMMANDS).toContain('goals')
+    expect(AGENT_SUBCOMMANDS).toContain('ideas')
+    expect(AGENT_SUBCOMMANDS).toContain('help')
+    expect(AGENT_SUBCOMMANDS.length).toBe(5)
   })
 })

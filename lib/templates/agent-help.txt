@@ -17,7 +17,7 @@ Dust is a lightweight planning system. The `.dust/` directory contains:
 **Workflow:** Pick a task, implement it, delete the task file, commit atomically.
 
 For focused guidance, run:
-- `{{bin}} claude work` - Work on the next task
-- `{{bin}} claude tasks` - Task management
-- `{{bin}} claude goals` - Understanding goals
-- `{{bin}} claude ideas` - Working with ideas
+- `{{bin}} agent work` - Work on the next task
+- `{{bin}} agent tasks` - Task management
+- `{{bin}} agent goals` - Understanding goals
+- `{{bin}} agent ideas` - Working with ideas

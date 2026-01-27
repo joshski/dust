@@ -9,7 +9,7 @@ Commands:
   list [type]       List items (tasks, ideas, goals, facts)
   next              Show tasks ready to work on (not blocked)
   check             Run project-defined quality gate hook
-  claude [cmd]      Agent-specific guidance (work, tasks, goals, ideas, help)
+  agent [cmd]       Agent-specific guidance (work, tasks, goals, ideas, help)
   help              Show this help message
 
 Examples:
@@ -20,7 +20,7 @@ Examples:
   {{bin}} list
   {{bin}} next
   {{bin}} check
-  {{bin}} claude work
+  {{bin}} agent work
 
 ---
 
