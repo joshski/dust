@@ -1,6 +1,6 @@
 # Dust
 
-A lightweight planning system and work tracker for humans working with AI agents.
+A lightweight workflow tool for humans working with AI agents.
 
 [![CI](https://github.com/joshski/dust/actions/workflows/ci.yml/badge.svg)](https://github.com/joshski/dust/actions/workflows/ci.yml)
 
