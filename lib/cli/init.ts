@@ -65,5 +65,23 @@ export async function init(
     ctx.stdout('Created AGENTS.md with agent instructions')
   }
 
+  // Show helpful suggestions for next steps
+  const runner = dustCommand.split(' ')[0]
+  ctx.stdout('')
+  ctx.stdout('Commit the changes if you are happy, then get planning!')
+  ctx.stdout('')
+  ctx.stdout(
+    'If this is a new repository, you can start adding ideas or tasks right away:'
+  )
+  ctx.stdout(`> ${runner} claude "Idea: friendly UI for non-technical users"`)
+  ctx.stdout(`> ${runner} codex "Task: set up code coverage"`)
+  ctx.stdout('')
+  ctx.stdout(
+    'If this is an existing codebase, you might want to backfill goals and facts:'
+  )
+  ctx.stdout(
+    `> ${runner} claude "Add goals and facts based on the code in this repository"`
+  )
+
   return { exitCode: 0 }
 }

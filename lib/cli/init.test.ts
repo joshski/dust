@@ -196,4 +196,74 @@ describe('init command', () => {
     const agentsContent = fs.writtenFiles.get('/project/AGENTS.md')
     expect(agentsContent).toContain('bunx dust agent')
   })
+
+  test('outputs suggestions for next steps', async () => {
+    vi.stubEnv('BUN_INSTALL', '')
+    const ctx = createMockContext()
+    const fs = createMockFs()
+
+    await init(ctx, fs, [])
+
+    const output = ctx.stdoutLines.join('\n')
+    expect(output).toContain('Commit the changes if you are happy')
+    expect(output).toContain('get planning!')
+  })
+
+  test('suggestions include examples for new repositories', async () => {
+    vi.stubEnv('BUN_INSTALL', '')
+    const ctx = createMockContext()
+    const fs = createMockFs()
+
+    await init(ctx, fs, [])
+
+    const output = ctx.stdoutLines.join('\n')
+    expect(output).toContain('If this is a new repository')
+    expect(output).toContain('Idea:')
+    expect(output).toContain('Task:')
+  })
+
+  test('suggestions include examples for existing codebases', async () => {
+    vi.stubEnv('BUN_INSTALL', '')
+    const ctx = createMockContext()
+    const fs = createMockFs()
+
+    await init(ctx, fs, [])
+
+    const output = ctx.stdoutLines.join('\n')
+    expect(output).toContain('If this is an existing codebase')
+    expect(output).toContain('goals and facts')
+  })
+
+  test('suggestions use npx runner when package-lock.json exists', async () => {
+    const ctx = createMockContext()
+    const fs = createMockFs(new Set(['/project/package-lock.json']))
+
+    await init(ctx, fs, [])
+
+    const output = ctx.stdoutLines.join('\n')
+    expect(output).toContain('> npx claude')
+    expect(output).toContain('> npx codex')
+  })
+
+  test('suggestions use bunx runner when bun.lockb exists', async () => {
+    const ctx = createMockContext()
+    const fs = createMockFs(new Set(['/project/bun.lockb']))
+
+    await init(ctx, fs, [])
+
+    const output = ctx.stdoutLines.join('\n')
+    expect(output).toContain('> bunx claude')
+    expect(output).toContain('> bunx codex')
+  })
+
+  test('suggestions use pnpx runner when pnpm-lock.yaml exists', async () => {
+    const ctx = createMockContext()
+    const fs = createMockFs(new Set(['/project/pnpm-lock.yaml']))
+
+    await init(ctx, fs, [])
+
+    const output = ctx.stdoutLines.join('\n')
+    expect(output).toContain('> pnpx claude')
+    expect(output).toContain('> pnpx codex')
+  })
 })
