@@ -18,28 +18,8 @@ export const AGENT_SUBCOMMANDS = [
 
 export type AgentSubcommand = (typeof AGENT_SUBCOMMANDS)[number]
 
-function generateAgentGreeting(settings: DustSettings): string {
-  return loadTemplate('agent-greeting', { bin: settings.dustCommand })
-}
-
-function generateWorkInstructions(settings: DustSettings): string {
-  return loadTemplate('agent-work', { bin: settings.dustCommand })
-}
-
-function generateTasksInstructions(settings: DustSettings): string {
-  return loadTemplate('agent-tasks', { bin: settings.dustCommand })
-}
-
-function generateGoalsInstructions(settings: DustSettings): string {
-  return loadTemplate('agent-goals', { bin: settings.dustCommand })
-}
-
-function generateIdeasInstructions(settings: DustSettings): string {
-  return loadTemplate('agent-ideas', { bin: settings.dustCommand })
-}
-
-function generateAgentHelp(settings: DustSettings): string {
-  return loadTemplate('agent-help', { bin: settings.dustCommand })
+function templateVariables(settings: DustSettings) {
+  return { bin: settings.dustCommand }
 }
 
 export async function agent(
@@ -48,27 +28,28 @@ export async function agent(
   settings: DustSettings
 ): Promise<CommandResult> {
   const subcommand = args[0]
+  const vars = templateVariables(settings)
 
   if (!subcommand) {
-    ctx.stdout(generateAgentGreeting(settings))
+    ctx.stdout(loadTemplate('agent-greeting', vars))
     return { exitCode: 0 }
   }
 
   switch (subcommand) {
     case 'work':
-      ctx.stdout(generateWorkInstructions(settings))
+      ctx.stdout(loadTemplate('agent-work', vars))
       return { exitCode: 0 }
     case 'tasks':
-      ctx.stdout(generateTasksInstructions(settings))
+      ctx.stdout(loadTemplate('agent-tasks', vars))
       return { exitCode: 0 }
     case 'goals':
-      ctx.stdout(generateGoalsInstructions(settings))
+      ctx.stdout(loadTemplate('agent-goals', vars))
       return { exitCode: 0 }
     case 'ideas':
-      ctx.stdout(generateIdeasInstructions(settings))
+      ctx.stdout(loadTemplate('agent-ideas', vars))
       return { exitCode: 0 }
     case 'help':
-      ctx.stdout(generateAgentHelp(settings))
+      ctx.stdout(loadTemplate('agent-help', vars))
       return { exitCode: 0 }
     default:
       ctx.stderr(`Unknown subcommand: ${subcommand}`)
