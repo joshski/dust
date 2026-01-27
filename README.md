@@ -89,6 +89,6 @@ Configure hooks into your tools in `./.dust/config/settings.json` e.g.
 }
 ```
 
-The `dust check` command will run all of the configured checks in parallel and product a very terse (context window-friendly) output unless something fails.
+The `dust check` command will run all of the configured checks in parallel and produce a very terse (context window-friendly) output unless one or more of the checks fail.
 
 Agents are instructed to run `dust check` before and after any changes, as a way of keeping them on track. It's more important that these commands are comprehensive, than they are fast.
