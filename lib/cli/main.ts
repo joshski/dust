@@ -6,7 +6,7 @@
  */
 
 import { agent } from './agent'
-import { check, defaultProcessRunner } from './check'
+import { check } from './check'
 import { init } from './init'
 import { list } from './list'
 import { next } from './next'
@@ -74,7 +74,7 @@ export async function runCommand(
     case 'next':
       return next(ctx, fs, commandArgs)
     case 'check':
-      return check(ctx, fs, commandArgs, defaultProcessRunner, glob)
+      return check(ctx, fs, commandArgs, glob)
     case 'agent':
       return agent(ctx, commandArgs, settings)
     case 'help':

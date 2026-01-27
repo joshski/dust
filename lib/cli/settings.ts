@@ -7,8 +7,14 @@
 import { join } from 'node:path'
 import type { FileSystem } from './types'
 
+export interface CheckConfig {
+  name: string
+  command: string
+}
+
 export interface DustSettings {
   dustCommand: string
+  checks?: CheckConfig[]
 }
 
 const DEFAULT_SETTINGS: DustSettings = {

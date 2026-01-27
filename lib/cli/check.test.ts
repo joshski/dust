@@ -1,7 +1,11 @@
 import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
-import { check, createProcessRunner, type ProcessRunner } from './check'
+import {
+  type BufferedProcessRunner,
+  check,
+  createBufferedRunner,
+} from './check'
 import type { CommandContext, FileSystem } from './types'
 import type { GlobScanner } from './validate'
 
@@ -20,24 +24,30 @@ function createMockContext(): CommandContext & {
   }
 }
 
-function createMockFs(existingPaths: Set<string> = new Set()): FileSystem {
+function createMockFs(
+  existingPaths: Set<string> = new Set(),
+  fileContents: Record<string, string> = {}
+): FileSystem {
   return {
     exists: (path: string) => existingPaths.has(path),
-    readFile: async () => '',
+    readFile: async (path: string) => fileContents[path] ?? '',
     writeFile: async () => {},
     mkdir: async () => {},
     readdir: async () => [],
   }
 }
 
-function createMockRunner(exitCode: number): ProcessRunner & {
-  calls: Array<{ command: string; args: string[]; cwd: string }>
+function createMockBufferedRunner(
+  results: Record<string, { exitCode: number; output: string }>
+): BufferedProcessRunner & {
+  calls: Array<{ command: string; cwd: string; startTime: number }>
 } {
-  const calls: Array<{ command: string; args: string[]; cwd: string }> = []
+  const calls: Array<{ command: string; cwd: string; startTime: number }> = []
   return {
-    spawn: async (command, args, options) => {
-      calls.push({ command, args, cwd: options.cwd })
-      return exitCode
+    run: async (command, cwd) => {
+      const startTime = Date.now()
+      calls.push({ command, cwd, startTime })
+      return results[command] ?? { exitCode: 0, output: '' }
     },
     calls,
   }
@@ -53,140 +63,395 @@ function createMockGlob(files: string[]): GlobScanner {
   }
 }
 
-describe('check command', () => {
-  test('executes hook and returns its exit code on success', async () => {
+describe('check command with checks configuration', () => {
+  test('runs configured checks in parallel', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/.dust/hooks/check']))
-    const runner = createMockRunner(0)
+    const settingsContent = JSON.stringify({
+      checks: [
+        { name: 'lint', command: 'npm run lint' },
+        { name: 'test', command: 'npm test' },
+        { name: 'build', command: 'npm run build' },
+      ],
+    })
+    const fs = createMockFs(new Set(['/project/.dust/config/settings.json']), {
+      '/project/.dust/config/settings.json': settingsContent,
+    })
+    const bufferedRunner = createMockBufferedRunner({
+      'npm run lint': { exitCode: 0, output: '' },
+      'npm test': { exitCode: 0, output: '' },
+      'npm run build': { exitCode: 0, output: '' },
+    })
 
-    const result = await check(ctx, fs, [], runner)
+    const result = await check(ctx, fs, [], undefined, bufferedRunner)
 
     expect(result.exitCode).toBe(0)
-    expect(runner.calls).toHaveLength(1)
-    expect(runner.calls[0].command).toBe('/project/.dust/hooks/check')
-    expect(runner.calls[0].cwd).toBe('/project')
+    expect(bufferedRunner.calls).toHaveLength(3)
+    // Verify all commands were called (order may vary due to parallel execution)
+    const commands = bufferedRunner.calls.map(c => c.command)
+    expect(commands).toContain('npm run lint')
+    expect(commands).toContain('npm test')
+    expect(commands).toContain('npm run build')
   })
 
-  test('forwards non-zero exit code from hook', async () => {
+  test('displays pass status for each check', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/.dust/hooks/check']))
-    const runner = createMockRunner(1)
+    const settingsContent = JSON.stringify({
+      checks: [
+        { name: 'lint', command: 'npm run lint' },
+        { name: 'test', command: 'npm test' },
+      ],
+    })
+    const fs = createMockFs(new Set(['/project/.dust/config/settings.json']), {
+      '/project/.dust/config/settings.json': settingsContent,
+    })
+    const bufferedRunner = createMockBufferedRunner({
+      'npm run lint': { exitCode: 0, output: '' },
+      'npm test': { exitCode: 0, output: '' },
+    })
 
-    const result = await check(ctx, fs, [], runner)
+    await check(ctx, fs, [], undefined, bufferedRunner)
+
+    expect(ctx.stdoutLines).toContain('✓ lint')
+    expect(ctx.stdoutLines).toContain('✓ test')
+    expect(ctx.stdoutLines).toContain('2/2 checks passed')
+  })
+
+  test('displays failure status and output for failing checks', async () => {
+    const ctx = createMockContext()
+    const settingsContent = JSON.stringify({
+      checks: [
+        { name: 'lint', command: 'npm run lint' },
+        { name: 'test', command: 'npm test' },
+      ],
+    })
+    const fs = createMockFs(new Set(['/project/.dust/config/settings.json']), {
+      '/project/.dust/config/settings.json': settingsContent,
+    })
+    const bufferedRunner = createMockBufferedRunner({
+      'npm run lint': { exitCode: 0, output: '' },
+      'npm test': { exitCode: 1, output: 'Test failed: expected 1 to equal 2' },
+    })
+
+    const result = await check(ctx, fs, [], undefined, bufferedRunner)
 
     expect(result.exitCode).toBe(1)
+    expect(ctx.stdoutLines).toContain('✓ lint')
+    expect(ctx.stdoutLines).toContain('✗ test')
+    expect(ctx.stdoutLines).toContain('> npm test')
+    expect(ctx.stdoutLines.join('\n')).toContain(
+      'Test failed: expected 1 to equal 2'
+    )
+    expect(ctx.stdoutLines).toContain('1/2 checks passed')
   })
 
-  test('returns error if hook does not exist', async () => {
+  test('suppresses output for passing checks', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs() // No hook file
-    const runner = createMockRunner(0)
+    const settingsContent = JSON.stringify({
+      checks: [{ name: 'lint', command: 'npm run lint' }],
+    })
+    const fs = createMockFs(new Set(['/project/.dust/config/settings.json']), {
+      '/project/.dust/config/settings.json': settingsContent,
+    })
+    const bufferedRunner = createMockBufferedRunner({
+      'npm run lint': { exitCode: 0, output: 'All files passed linting!' },
+    })
 
-    const result = await check(ctx, fs, [], runner)
+    await check(ctx, fs, [], undefined, bufferedRunner)
+
+    const output = ctx.stdoutLines.join('\n')
+    expect(output).not.toContain('All files passed linting!')
+    expect(output).not.toContain('> npm run lint')
+  })
+
+  test('shows command before output for failed checks', async () => {
+    const ctx = createMockContext()
+    const settingsContent = JSON.stringify({
+      checks: [{ name: 'typecheck', command: 'bunx tsc --noEmit' }],
+    })
+    const fs = createMockFs(new Set(['/project/.dust/config/settings.json']), {
+      '/project/.dust/config/settings.json': settingsContent,
+    })
+    const bufferedRunner = createMockBufferedRunner({
+      'bunx tsc --noEmit': {
+        exitCode: 1,
+        output: 'error TS2322: Type mismatch',
+      },
+    })
+
+    await check(ctx, fs, [], undefined, bufferedRunner)
+
+    const output = ctx.stdoutLines.join('\n')
+    const commandIndex = output.indexOf('> bunx tsc --noEmit')
+    const outputIndex = output.indexOf('error TS2322')
+    expect(commandIndex).toBeLessThan(outputIndex)
+  })
+
+  test('handles multiple failing checks', async () => {
+    const ctx = createMockContext()
+    const settingsContent = JSON.stringify({
+      checks: [
+        { name: 'lint', command: 'npm run lint' },
+        { name: 'test', command: 'npm test' },
+        { name: 'build', command: 'npm run build' },
+      ],
+    })
+    const fs = createMockFs(new Set(['/project/.dust/config/settings.json']), {
+      '/project/.dust/config/settings.json': settingsContent,
+    })
+    const bufferedRunner = createMockBufferedRunner({
+      'npm run lint': { exitCode: 1, output: 'Lint error' },
+      'npm test': { exitCode: 0, output: '' },
+      'npm run build': { exitCode: 1, output: 'Build failed' },
+    })
+
+    const result = await check(ctx, fs, [], undefined, bufferedRunner)
 
     expect(result.exitCode).toBe(1)
-    expect(ctx.stderrLines.join('\n')).toContain('No check hook found')
-    expect(ctx.stderrLines.join('\n')).toContain('.dust/hooks/check')
-    expect(runner.calls).toHaveLength(0)
+    expect(ctx.stdoutLines).toContain('✗ lint')
+    expect(ctx.stdoutLines).toContain('✓ test')
+    expect(ctx.stdoutLines).toContain('✗ build')
+    expect(ctx.stdoutLines).toContain('1/3 checks passed')
+    expect(ctx.stdoutLines.join('\n')).toContain('> npm run lint')
+    expect(ctx.stdoutLines.join('\n')).toContain('> npm run build')
   })
 
-  test('shows helpful instructions when hook is missing', async () => {
+  test('handles failed check with empty output', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs()
-    const runner = createMockRunner(0)
+    const settingsContent = JSON.stringify({
+      checks: [{ name: 'silent-fail', command: 'exit 1' }],
+    })
+    const fs = createMockFs(new Set(['/project/.dust/config/settings.json']), {
+      '/project/.dust/config/settings.json': settingsContent,
+    })
+    const bufferedRunner = createMockBufferedRunner({
+      'exit 1': { exitCode: 1, output: '' },
+    })
 
-    await check(ctx, fs, [], runner)
+    const result = await check(ctx, fs, [], undefined, bufferedRunner)
 
-    const output = ctx.stderrLines.join('\n')
-    expect(output).toContain('mkdir -p .dust/hooks')
-    expect(output).toContain('chmod +x')
+    expect(result.exitCode).toBe(1)
+    expect(ctx.stdoutLines).toContain('✗ silent-fail')
+    expect(ctx.stdoutLines).toContain('> exit 1')
+    expect(ctx.stdoutLines).toContain('0/1 checks passed')
   })
 })
 
-describe('createProcessRunner', () => {
-  test('resolves with exit code from close event', async () => {
-    const mockProc = new EventEmitter()
-    const mockSpawn = () => mockProc as unknown as ChildProcess
-    const runner = createProcessRunner(mockSpawn)
+describe('check command when no checks configured', () => {
+  test('returns error when no checks configured', async () => {
+    const ctx = createMockContext()
+    const settingsContent = JSON.stringify({ dustCommand: 'npx dust' })
+    const fs = createMockFs(new Set(['/project/.dust/config/settings.json']), {
+      '/project/.dust/config/settings.json': settingsContent,
+    })
+    const bufferedRunner = createMockBufferedRunner({})
 
-    const promise = runner.spawn('cmd', [], { cwd: '/', stdio: 'inherit' })
+    const result = await check(ctx, fs, [], undefined, bufferedRunner)
+
+    expect(result.exitCode).toBe(1)
+    expect(ctx.stderrLines.join('\n')).toContain('No checks configured')
+    expect(bufferedRunner.calls).toHaveLength(0)
+  })
+
+  test('returns error when checks array is empty', async () => {
+    const ctx = createMockContext()
+    const settingsContent = JSON.stringify({ checks: [] })
+    const fs = createMockFs(new Set(['/project/.dust/config/settings.json']), {
+      '/project/.dust/config/settings.json': settingsContent,
+    })
+    const bufferedRunner = createMockBufferedRunner({})
+
+    const result = await check(ctx, fs, [], undefined, bufferedRunner)
+
+    expect(result.exitCode).toBe(1)
+    expect(ctx.stderrLines.join('\n')).toContain('No checks configured')
+  })
+
+  test('shows helpful instructions when no checks configured', async () => {
+    const ctx = createMockContext()
+    const fs = createMockFs()
+    const bufferedRunner = createMockBufferedRunner({})
+
+    await check(ctx, fs, [], undefined, bufferedRunner)
+
+    const output = ctx.stderrLines.join('\n')
+    expect(output).toContain('settings.json')
+    expect(output).toContain('"checks"')
+  })
+})
+
+describe('createBufferedRunner', () => {
+  test('captures stdout and stderr', async () => {
+    const mockProc = new EventEmitter() as EventEmitter & {
+      stdout: EventEmitter
+      stderr: EventEmitter
+    }
+    mockProc.stdout = new EventEmitter()
+    mockProc.stderr = new EventEmitter()
+
+    const mockSpawn = () => mockProc as unknown as ChildProcess
+    const runner = createBufferedRunner(mockSpawn)
+
+    const promise = runner.run('cmd', '/')
+    mockProc.stdout.emit('data', Buffer.from('stdout output\n'))
+    mockProc.stderr.emit('data', Buffer.from('stderr output\n'))
     mockProc.emit('close', 0)
 
-    expect(await promise).toBe(0)
+    const result = await promise
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toBe('stdout output\nstderr output\n')
+  })
+
+  test('resolves with exit code from close event', async () => {
+    const mockProc = new EventEmitter() as EventEmitter & {
+      stdout: EventEmitter
+      stderr: EventEmitter
+    }
+    mockProc.stdout = new EventEmitter()
+    mockProc.stderr = new EventEmitter()
+
+    const mockSpawn = () => mockProc as unknown as ChildProcess
+    const runner = createBufferedRunner(mockSpawn)
+
+    const promise = runner.run('cmd', '/')
+    mockProc.emit('close', 42)
+
+    const result = await promise
+    expect(result.exitCode).toBe(42)
   })
 
   test('resolves with 1 when close event has null code', async () => {
-    const mockProc = new EventEmitter()
-    const mockSpawn = () => mockProc as unknown as ChildProcess
-    const runner = createProcessRunner(mockSpawn)
+    const mockProc = new EventEmitter() as EventEmitter & {
+      stdout: EventEmitter
+      stderr: EventEmitter
+    }
+    mockProc.stdout = new EventEmitter()
+    mockProc.stderr = new EventEmitter()
 
-    const promise = runner.spawn('cmd', [], { cwd: '/', stdio: 'inherit' })
+    const mockSpawn = () => mockProc as unknown as ChildProcess
+    const runner = createBufferedRunner(mockSpawn)
+
+    const promise = runner.run('cmd', '/')
     mockProc.emit('close', null)
 
-    expect(await promise).toBe(1)
+    const result = await promise
+    expect(result.exitCode).toBe(1)
   })
 
-  test('resolves with 1 on error event', async () => {
-    const mockProc = new EventEmitter()
-    const mockSpawn = () => mockProc as unknown as ChildProcess
-    const runner = createProcessRunner(mockSpawn)
+  test('resolves with 1 on error', async () => {
+    const mockProc = new EventEmitter() as EventEmitter & {
+      stdout: EventEmitter
+      stderr: EventEmitter
+    }
+    mockProc.stdout = new EventEmitter()
+    mockProc.stderr = new EventEmitter()
 
-    const promise = runner.spawn('cmd', [], { cwd: '/', stdio: 'inherit' })
+    const mockSpawn = () => mockProc as unknown as ChildProcess
+    const runner = createBufferedRunner(mockSpawn)
+
+    const promise = runner.run('cmd', '/')
     mockProc.emit('error', new Error('spawn failed'))
 
-    expect(await promise).toBe(1)
+    const result = await promise
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toBe('spawn failed')
+  })
+
+  test('handles null stdout and stderr gracefully', async () => {
+    const mockProc = new EventEmitter() as EventEmitter & {
+      stdout: null
+      stderr: null
+    }
+    mockProc.stdout = null
+    mockProc.stderr = null
+
+    const mockSpawn = () => mockProc as unknown as ChildProcess
+    const runner = createBufferedRunner(mockSpawn)
+
+    const promise = runner.run('cmd', '/')
+    mockProc.emit('close', 0)
+
+    const result = await promise
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toBe('')
   })
 })
 
 describe('check with validation', () => {
-  test('runs validation before hook when glob is provided', async () => {
+  test('runs validation before checks when glob is provided', async () => {
     const ctx = createMockContext()
+    const settingsContent = JSON.stringify({
+      checks: [{ name: 'lint', command: 'npm run lint' }],
+    })
     const fs = createMockFs(
-      new Set(['/project/.dust', '/project/.dust/hooks/check'])
+      new Set(['/project/.dust', '/project/.dust/config/settings.json']),
+      { '/project/.dust/config/settings.json': settingsContent }
     )
-    fs.readFile = async () =>
-      '# Test\n## Goals\n## Blocked by\n## Definition of done'
-    const runner = createMockRunner(0)
+    fs.readFile = async (path: string) => {
+      if (path === '/project/.dust/config/settings.json') {
+        return settingsContent
+      }
+      return '# Test\n## Goals\n## Blocked by\n## Definition of done'
+    }
+    const bufferedRunner = createMockBufferedRunner({
+      'npm run lint': { exitCode: 0, output: '' },
+    })
     const glob = createMockGlob([])
 
-    const result = await check(ctx, fs, [], runner, glob)
+    const result = await check(ctx, fs, [], glob, bufferedRunner)
 
     expect(result.exitCode).toBe(0)
-    expect(runner.calls).toHaveLength(1)
+    expect(bufferedRunner.calls).toHaveLength(1)
     expect(ctx.stdoutLines).toContain('All validations passed!')
   })
 
   test('exits early if validation fails', async () => {
     const ctx = createMockContext()
+    const settingsContent = JSON.stringify({
+      checks: [{ name: 'lint', command: 'npm run lint' }],
+    })
     const fs = createMockFs(
       new Set([
         '/project/.dust',
         '/project/.dust/tasks',
-        '/project/.dust/hooks/check',
-      ])
+        '/project/.dust/config/settings.json',
+      ]),
+      { '/project/.dust/config/settings.json': settingsContent }
     )
     // Return a task file with invalid filename (uppercase)
-    fs.readFile = async () =>
-      '# Test\n## Goals\n## Blocked by\n## Definition of done'
-    const runner = createMockRunner(0)
+    fs.readFile = async (path: string) => {
+      if (path === '/project/.dust/config/settings.json') {
+        return settingsContent
+      }
+      return '# Test\n## Goals\n## Blocked by\n## Definition of done'
+    }
+    const bufferedRunner = createMockBufferedRunner({
+      'npm run lint': { exitCode: 0, output: '' },
+    })
     const glob = createMockGlob(['InvalidName.md'])
 
-    const result = await check(ctx, fs, [], runner, glob)
+    const result = await check(ctx, fs, [], glob, bufferedRunner)
 
     expect(result.exitCode).toBe(1)
-    expect(runner.calls).toHaveLength(0) // Hook should not run
+    expect(bufferedRunner.calls).toHaveLength(0) // Checks should not run
     expect(ctx.stderrLines.join('\n')).toContain('violation')
   })
 
   test('skips validation when glob is not provided', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/.dust/hooks/check']))
-    const runner = createMockRunner(0)
+    const settingsContent = JSON.stringify({
+      checks: [{ name: 'lint', command: 'npm run lint' }],
+    })
+    const fs = createMockFs(new Set(['/project/.dust/config/settings.json']), {
+      '/project/.dust/config/settings.json': settingsContent,
+    })
+    const bufferedRunner = createMockBufferedRunner({
+      'npm run lint': { exitCode: 0, output: '' },
+    })
 
-    const result = await check(ctx, fs, [], runner)
+    const result = await check(ctx, fs, [], undefined, bufferedRunner)
 
     expect(result.exitCode).toBe(0)
-    expect(runner.calls).toHaveLength(1)
+    expect(bufferedRunner.calls).toHaveLength(1)
     expect(ctx.stdoutLines).not.toContain('All validations passed!')
   })
 })
