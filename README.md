@@ -4,6 +4,10 @@ A lightweight planning system and work tracker optimised for humans working with
 
 [![CI](https://github.com/joshski/dust/actions/workflows/ci.yml/badge.svg)](https://github.com/joshski/dust/actions/workflows/ci.yml)
 
+## Why Would I Use This?
+
+Use this to plan a series of tasks that coding agents can perform autonomously.
+
 ## Getting Started
 
 Install dust:
