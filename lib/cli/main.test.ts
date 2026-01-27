@@ -310,7 +310,7 @@ describe('main', () => {
     const result = await main({ args: ['agent'], ctx, fs, glob })
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('Hello Claude')
+    expect(ctx.stdoutLines.join('\n')).toContain('Hello Agent')
   })
 
   test('passes command args to subcommands', async () => {

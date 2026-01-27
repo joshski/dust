@@ -64,7 +64,7 @@ describe('agent command', () => {
     const result = await agent(createDeps(ctx, [], defaultSettings))
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('Hello Claude')
+    expect(ctx.stdoutLines.join('\n')).toContain('Hello Agent')
     expect(ctx.stdoutLines.join('\n')).toContain('dust agent work')
     expect(ctx.stdoutLines.join('\n')).toContain('dust agent tasks')
     expect(ctx.stdoutLines.join('\n')).toContain('dust agent goals')
