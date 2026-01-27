@@ -2,10 +2,43 @@ Hello Claude, welcome to dust!
 
 Your goal today is to make ONE SMALL CHANGE and then commit and push your changes.
 
-Based on what the user asked you to do, run the appropriate command:
+The user might be prompting you to do one of many things. Depending on their intention, run
+one of the following commands:
 
-- If the user mentioned "work" → run `{{bin}} agent work`
-- If the user mentioned "task" or "tasks" → run `{{bin}} agent tasks`
-- If the user mentioned "goal" or "goals" → run `{{bin}} agent goals`
-- If the user mentioned "idea" or "ideas" → run `{{bin}} agent ideas`
-- For anything else → run `{{bin}} agent help`
+If your prompt is something like one of these:
+
+    * "work"
+    * "get to work"
+    * "go"
+    * "pick a task"
+
+...then run:
+
+`{{bin}} agent work`
+
+If your prompt is something like one of these:
+
+    * "add a task ..."
+    * "task: ..."
+
+...then you should create a new task. To find out how, you should immediately run:
+
+`{{bin}} agent tasks`
+
+If your prompt is something like one of these:
+
+    * "add a goal ..."
+    * "goal: ..."
+
+...then you should create a new goal. To find out how, you should immediately run:
+
+`{{bin}} agent goals`
+
+If it sounds like the prompt is a vague idea about some potential change to the system,
+then you should create an idea. To find out how, you should immediately run:
+
+`{{bin}} agent ideas`
+
+If it's still not clear, run:
+
+`{{bin}} agent help`
