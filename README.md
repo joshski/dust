@@ -42,6 +42,15 @@ Progress is tracked via changes to markdown files in the `.dust/` directory. The
 
 The `tasks/` directory acts as a work queue. When a task is completed, the commit typically includes both the code changes and the deletion of the task file—removing work from the queue for subsequent agents.
 
+Humans primarily interact with `dust` using their AI coding agent of choice, e.g.
+
+```
+> claude "implement the next task"
+> claude "get to work!"
+> codex "add task: coverage reporting"
+> codex "goal: cross-platform compatibility"
+```
+
 ## Agent CLI
 
 The `dust` CLI is intended to be used primarily by agents, not by humans (except for the `init` command, as mentioned above).
@@ -50,15 +59,6 @@ Don't let that stop you:
 
 ```bash
 npx dust help
-```
-
-## Human UI
-
-Humans primarily interact with `dust` using their AI coding agent of choice, e.g.
-
-```
-> claude "implement the next task" 
-> codex "add task: add coverage reporting"
 ```
 
 ## AGENTS.md
