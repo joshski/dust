@@ -351,9 +351,8 @@ describe('generateHelpText', () => {
     expect(helpText).toContain('bin/dust init')
   })
 
-  test('uses custom binary path in agent guide', () => {
+  test('uses custom binary path in agent pointer', () => {
     const helpText = generateHelpText({ dustCommand: 'bin/dust' })
-    expect(helpText).toContain('Run `bin/dust check` before starting work')
-    expect(helpText).toContain('Run `bin/dust next` to find tasks')
+    expect(helpText).toContain('run `bin/dust agent`')
   })
 })
