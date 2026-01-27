@@ -1,0 +1,11 @@
+Hello Claude, welcome to dust!
+
+Your goal today is to make ONE SMALL CHANGE and then commit and push your changes.
+
+Based on what the user asked you to do, run the appropriate command:
+
+- If the user mentioned "work" → run `{{bin}} claude work`
+- If the user mentioned "task" or "tasks" → run `{{bin}} claude tasks`
+- If the user mentioned "goal" or "goals" → run `{{bin}} claude goals`
+- If the user mentioned "idea" or "ideas" → run `{{bin}} claude ideas`
+- For anything else → run `{{bin}} claude help`

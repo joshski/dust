@@ -1,0 +1,9 @@
+## Understanding Goals
+
+**List goals:** `{{bin}} list goals`
+
+Goals live in `.dust/goals/` as markdown files. They define the project's guiding principles and priorities.
+
+Goals are linked from tasks to show which principles each task supports. When working on a task, you can read its linked goals for context on why the work matters.
+
+Goals are stable—they rarely change. Tasks come and go, but goals persist.
