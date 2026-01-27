@@ -63,7 +63,7 @@ Configure hooks into your tools in `./.dust/config/settings.json` e.g.
     { "name": "lint", "command": "bunx biome check ." },
     { "name": "build", "command": "bun run build" },
     { "name": "tests", "command": "bun run test:coverage" },
-    { "name": "typecheck", "command": "bunx tsc lib/**/*.ts" }
+    { "name": "typecheck", "command": "bunx tsc --noEmit lib/**/*.ts" }
   ]
 }
 ```
