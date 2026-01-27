@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
+import type { CommandContext, FileSystem } from '../types'
 import { list } from './list'
-import type { CommandContext, FileSystem } from './types'
 
 function createMockContext(): CommandContext & {
   stdoutLines: string[]

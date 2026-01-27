@@ -6,8 +6,8 @@
  */
 
 import { type ChildProcess, spawn } from 'node:child_process'
-import { type CheckConfig, loadSettings } from './settings'
-import type { CommandContext, CommandResult, FileSystem } from './types'
+import { type CheckConfig, loadSettings } from '../settings'
+import type { CommandContext, CommandResult, FileSystem } from '../types'
 import { type GlobScanner, validate } from './validate'
 
 export interface CheckResult {

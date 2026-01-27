@@ -6,9 +6,9 @@ import {
   type CheckConfig,
   type DustSettings,
   detectDustCommand,
-} from './settings'
-import { loadTemplate } from './templates'
-import type { CommandContext, CommandResult, FileSystem } from './types'
+} from '../settings'
+import { loadTemplate } from '../templates'
+import type { CommandContext, CommandResult, FileSystem } from '../types'
 
 const DUST_DIRECTORIES = ['goals', 'ideas', 'tasks', 'facts', 'config']
 

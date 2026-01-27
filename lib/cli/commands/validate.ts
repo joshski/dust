@@ -3,7 +3,7 @@
  */
 
 import { dirname, resolve } from 'node:path'
-import type { CommandContext, CommandResult, FileSystem } from './types'
+import type { CommandContext, CommandResult, FileSystem } from '../types'
 
 const REQUIRED_HEADINGS = ['## Goals', '## Blocked by', '## Definition of done']
 

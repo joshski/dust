@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import type { CommandContext, FileSystem } from './types'
+import type { CommandContext, FileSystem } from '../types'
 import {
   type GlobScanner,
   validate,

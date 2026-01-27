@@ -5,7 +5,7 @@
  * A task is blocked if its "## Blocked by" section references task files that still exist.
  */
 
-import type { CommandContext, CommandResult, FileSystem } from './types'
+import type { CommandContext, CommandResult, FileSystem } from '../types'
 
 function extractTitle(content: string): string | null {
   const match = content.match(/^#\s+(.+)$/m)

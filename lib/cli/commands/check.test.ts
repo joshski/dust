@@ -1,12 +1,12 @@
 import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
+import type { CommandContext, FileSystem } from '../types'
 import {
   type BufferedProcessRunner,
   check,
   createBufferedRunner,
 } from './check'
-import type { CommandContext, FileSystem } from './types'
 import type { GlobScanner } from './validate'
 
 function createMockContext(): CommandContext & {

@@ -2,7 +2,7 @@
  * dust list [type] - List tasks, ideas, goals, or facts
  */
 
-import type { CommandContext, CommandResult, FileSystem } from './types'
+import type { CommandContext, CommandResult, FileSystem } from '../types'
 
 const VALID_TYPES = ['tasks', 'ideas', 'goals', 'facts'] as const
 type ListType = (typeof VALID_TYPES)[number]
