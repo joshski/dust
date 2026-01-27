@@ -377,7 +377,7 @@ describe('createBufferedRunner', () => {
 })
 
 describe('check with validation', () => {
-  test('runs validation before checks when glob is provided', async () => {
+  test('runs validation in parallel with configured checks', async () => {
     const ctx = createMockContext()
     const settingsContent = JSON.stringify({
       checks: [{ name: 'lint', command: 'npm run lint' }],
@@ -401,10 +401,13 @@ describe('check with validation', () => {
 
     expect(result.exitCode).toBe(0)
     expect(bufferedRunner.calls).toHaveLength(1)
-    expect(ctx.stdoutLines).toContain('All validations passed!')
+    // Validation is now shown as a check result
+    expect(ctx.stdoutLines).toContain('✓ validate')
+    expect(ctx.stdoutLines).toContain('✓ lint')
+    expect(ctx.stdoutLines).toContain('2/2 checks passed')
   })
 
-  test('exits early if validation fails', async () => {
+  test('fails overall if validation fails', async () => {
     const ctx = createMockContext()
     const settingsContent = JSON.stringify({
       checks: [{ name: 'lint', command: 'npm run lint' }],
@@ -432,8 +435,11 @@ describe('check with validation', () => {
     const result = await check(ctx, fs, [], glob, bufferedRunner)
 
     expect(result.exitCode).toBe(1)
-    expect(bufferedRunner.calls).toHaveLength(0) // Checks should not run
-    expect(ctx.stderrLines.join('\n')).toContain('violation')
+    // Checks now run in parallel, so lint still runs
+    expect(bufferedRunner.calls).toHaveLength(1)
+    expect(ctx.stdoutLines).toContain('✗ validate')
+    expect(ctx.stdoutLines).toContain('✓ lint')
+    expect(ctx.stdoutLines).toContain('1/2 checks passed')
   })
 
   test('skips validation when glob is not provided', async () => {
@@ -452,6 +458,8 @@ describe('check with validation', () => {
 
     expect(result.exitCode).toBe(0)
     expect(bufferedRunner.calls).toHaveLength(1)
-    expect(ctx.stdoutLines).not.toContain('All validations passed!')
+    // No validation check in results when glob not provided
+    expect(ctx.stdoutLines).not.toContain('✓ validate')
+    expect(ctx.stdoutLines).toContain('1/1 checks passed')
   })
 })

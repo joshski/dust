@@ -1,7 +1,7 @@
 /**
  * dust check - Execute project-defined quality gate checks
  *
- * Runs `dust validate` automatically, then executes checks from settings.json
+ * Runs `dust validate` and executes checks from settings.json
  * in parallel with buffered output.
  */
 
@@ -15,6 +15,7 @@ export interface CheckResult {
   command: string
   exitCode: number
   output: string
+  isBuiltIn?: boolean
 }
 
 export interface BufferedProcessRunner {
@@ -58,7 +59,7 @@ export function createBufferedRunner(spawnFn: SpawnFn): BufferedProcessRunner {
 export const defaultBufferedRunner: BufferedProcessRunner =
   createBufferedRunner(spawn)
 
-async function runChecks(
+async function runConfiguredChecks(
   checks: CheckConfig[],
   cwd: string,
   runner: BufferedProcessRunner
@@ -73,6 +74,29 @@ async function runChecks(
     }
   })
   return Promise.all(promises)
+}
+
+async function runValidationCheck(
+  ctx: CommandContext,
+  fs: FileSystem,
+  glob: GlobScanner
+): Promise<CheckResult> {
+  const outputLines: string[] = []
+  const bufferedCtx: CommandContext = {
+    cwd: ctx.cwd,
+    stdout: (msg: string) => outputLines.push(msg),
+    stderr: (msg: string) => outputLines.push(msg),
+  }
+
+  const result = await validate(bufferedCtx, fs, [], glob)
+
+  return {
+    name: 'validate',
+    command: 'dust validate',
+    exitCode: result.exitCode,
+    output: outputLines.join('\n'),
+    isBuiltIn: true,
+  }
 }
 
 function displayResults(results: CheckResult[], ctx: CommandContext): number {
@@ -111,15 +135,6 @@ export async function check(
   glob?: GlobScanner,
   bufferedRunner: BufferedProcessRunner = defaultBufferedRunner
 ): Promise<CommandResult> {
-  // Run validation first if glob scanner is provided
-  if (glob) {
-    const validationResult = await validate(ctx, fs, [], glob)
-    if (validationResult.exitCode !== 0) {
-      return validationResult
-    }
-    ctx.stdout('') // Add spacing after validation output
-  }
-
   // Load settings to check for configured checks
   const settings = await loadSettings(ctx.cwd, fs)
 
@@ -136,8 +151,31 @@ export async function check(
     return { exitCode: 1 }
   }
 
-  // Run configured checks in parallel
-  const results = await runChecks(settings.checks, ctx.cwd, bufferedRunner)
+  // Run built-in and configured checks in parallel
+  const checkPromises: Promise<CheckResult | CheckResult[]>[] = []
+
+  // Add validation check if glob scanner is provided
+  if (glob) {
+    checkPromises.push(runValidationCheck(ctx, fs, glob))
+  }
+
+  // Add configured checks
+  checkPromises.push(
+    runConfiguredChecks(settings.checks, ctx.cwd, bufferedRunner)
+  )
+
+  const promiseResults = await Promise.all(checkPromises)
+
+  // Flatten results, maintaining order: built-in checks first, then configured checks
+  const results: CheckResult[] = []
+  for (const result of promiseResults) {
+    if (Array.isArray(result)) {
+      results.push(...result)
+    } else {
+      results.push(result)
+    }
+  }
+
   const exitCode = displayResults(results, ctx)
   return { exitCode }
 }
