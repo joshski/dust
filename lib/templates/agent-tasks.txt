@@ -1,18 +1,7 @@
-## Task Management
+# Task Management
 
-**List tasks:** `{{bin}} list tasks`
+**List all tasks:** `{{bin}} list tasks`
 **Find ready tasks:** `{{bin}} next`
-
-Tasks live in `.dust/tasks/` as markdown files. Each task has:
-- `## Goals` - Links to goals this task supports
-- `## Blocked by` - Tasks that must complete first
-- `## Definition of done` - Checklist of completion criteria
-
-A task is ready when "Blocked by" is empty or says "(none)".
-
-**Creating tasks:** Write a new markdown file in `.dust/tasks/` following the format above.
-
-**Completing tasks:** Delete the task file in your commit after implementation.
 
 ## Implementing a Task
 
@@ -29,14 +18,31 @@ When implementing a task, follow these steps:
    - Updates to any facts that changed
    - Deletion of any ideas that were fully realized
 
-## Adding a Task
+## Adding a Task from scratch
 
 To add a new task, follow these steps:
 
 1. Create a new markdown file in `.dust/tasks/` with a descriptive kebab-case name (e.g., `add-user-authentication.md`)
 2. Add a title as the first line using an H1 heading (e.g., `# Add user authentication`)
-3. Write a brief description of what needs to be done
+3. Write a comprehensive description of what needs to be done with technical details and references to relevant files
 4. Add a `## Goals` section with links to relevant goals this task supports (e.g., `- [Goal Name](../goals/goal-name.md)`)
 5. Add a `## Blocked by` section listing any tasks that must complete first, or `(none)` if there are no blockers
 6. Add a `## Definition of done` section with a checklist of completion criteria using `- [ ]` for each item
 7. Run `{{bin}} validate` to catch any issues with the task format
+8. Create a single atomic commit with a message in the format "Add task: <title>"
+
+## Converting an Idea into a Task (fleshing out an idea)
+
+To add a new task, follow these steps:
+
+1. Create a new markdown file in `.dust/tasks/` with a descriptive kebab-case name (e.g., `add-user-authentication.md`)
+2. Add a title as the first line using an H1 heading (e.g., `# Add user authentication`)
+3. Write a comprehensive description of what needs to be done with technical details and references to relevant files
+4. Add a `## Goals` section with links to relevant goals this task supports (e.g., `- [Goal Name](../goals/goal-name.md)`)
+5. Add a `## Blocked by` section listing any tasks that must complete first, or `(none)` if there are no blockers
+6. Add a `## Definition of done` section with a checklist of completion criteria using `- [ ]` for each item
+7. Run `{{bin}} validate` to catch any issues with the task format or regressions
+8. Create a single atomic commit with the message "Add task: <title>" that includes:
+   - All implementation changes
+   - Deletion of the idea file
+   - Updates to any facts that changed
