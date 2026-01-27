@@ -28,3 +28,15 @@ When implementing a task, follow these steps:
    - Deletion of the completed task file
    - Updates to any facts that changed
    - Deletion of any ideas that were fully realized
+
+## Adding a Task
+
+To add a new task, follow these steps:
+
+1. Create a new markdown file in `.dust/tasks/` with a descriptive kebab-case name (e.g., `add-user-authentication.md`)
+2. Add a title as the first line using an H1 heading (e.g., `# Add user authentication`)
+3. Write a brief description of what needs to be done
+4. Add a `## Goals` section with links to relevant goals this task supports (e.g., `- [Goal Name](../goals/goal-name.md)`)
+5. Add a `## Blocked by` section listing any tasks that must complete first, or `(none)` if there are no blockers
+6. Add a `## Definition of done` section with a checklist of completion criteria using `- [ ]` for each item
+7. Run `{{bin}} validate` to catch any issues with the task format
