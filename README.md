@@ -4,6 +4,22 @@ A lightweight planning system and work tracker optimised for humans working with
 
 [![CI](https://github.com/joshski/dust/actions/workflows/ci.yml/badge.svg)](https://github.com/joshski/dust/actions/workflows/ci.yml)
 
+## Getting Started
+
+Install dust:
+
+```bash
+npm install -g @joshski/dust
+```
+
+Initialize dust in your repository:
+
+```bash
+npx dust init
+# or
+bunx dust init
+```
+
 ## Usage
 
 Document your system and any future plans in a [.dust](./.dust) directory in your repository:
