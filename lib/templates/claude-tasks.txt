@@ -1,0 +1,15 @@
+## Task Management
+
+**List tasks:** `{{bin}} list tasks`
+**Find ready tasks:** `{{bin}} next`
+
+Tasks live in `.dust/tasks/` as markdown files. Each task has:
+- `## Goals` - Links to goals this task supports
+- `## Blocked by` - Tasks that must complete first
+- `## Definition of done` - Checklist of completion criteria
+
+A task is ready when "Blocked by" is empty or says "(none)".
+
+**Creating tasks:** Write a new markdown file in `.dust/tasks/` following the format above.
+
+**Completing tasks:** Delete the task file in your commit after implementation.

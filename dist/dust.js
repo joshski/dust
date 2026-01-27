@@ -143,6 +143,21 @@ async function check(ctx, fs, _args, runner = defaultProcessRunner, glob) {
   return { exitCode };
 }
 
+// lib/cli/templates.ts
+import { readFileSync } from "node:fs";
+import { dirname as dirname2, join } from "node:path";
+import { fileURLToPath } from "node:url";
+var __dirname2 = dirname2(fileURLToPath(import.meta.url));
+var templatesDir = join(__dirname2, "../templates");
+function loadTemplate(name, variables = {}) {
+  const templatePath = join(templatesDir, `${name}.txt`);
+  let content = readFileSync(templatePath, "utf-8");
+  for (const [key, value] of Object.entries(variables)) {
+    content = content.replaceAll(`{{${key}}}`, value);
+  }
+  return content;
+}
+
 // lib/cli/claude.ts
 var CLAUDE_SUBCOMMANDS = [
   "work",
@@ -152,115 +167,22 @@ var CLAUDE_SUBCOMMANDS = [
   "help"
 ];
 function generateClaudeGreeting(settings) {
-  const bin = settings.binaryPath;
-  return `Hello Claude, welcome to dust!
-
-Your goal today is to make ONE SMALL CHANGE and then commit and push your changes.
-
-Based on what the user asked you to do, run the appropriate command:
-
-- If the user mentioned "work" → run \`${bin} claude work\`
-- If the user mentioned "task" or "tasks" → run \`${bin} claude tasks\`
-- If the user mentioned "goal" or "goals" → run \`${bin} claude goals\`
-- If the user mentioned "idea" or "ideas" → run \`${bin} claude ideas\`
-- For anything else → run \`${bin} claude help\`
-`;
+  return loadTemplate("claude-greeting", { bin: settings.binaryPath });
 }
 function generateWorkInstructions(settings) {
-  const bin = settings.binaryPath;
-  return `## Work on the Next Task
-
-Follow these steps:
-
-1. Run \`${bin} check\` to verify the project is in a good state
-2. Run \`${bin} next\` to see available tasks
-3. Pick ONE task and read its file to understand the requirements
-4. Implement the task, checking off items in "Definition of done"
-5. Run \`${bin} check\` before committing
-6. Create a single atomic commit that includes:
-   - All implementation changes
-   - Deletion of the completed task file
-   - Updates to any facts that changed
-   - Deletion of any ideas that were fully realized
-
-Keep your change small and focused. One task, one commit.
-`;
+  return loadTemplate("claude-work", { bin: settings.binaryPath });
 }
 function generateTasksInstructions(settings) {
-  const bin = settings.binaryPath;
-  return `## Task Management
-
-**List tasks:** \`${bin} list tasks\`
-**Find ready tasks:** \`${bin} next\`
-
-Tasks live in \`.dust/tasks/\` as markdown files. Each task has:
-- \`## Goals\` - Links to goals this task supports
-- \`## Blocked by\` - Tasks that must complete first
-- \`## Definition of done\` - Checklist of completion criteria
-
-A task is ready when "Blocked by" is empty or says "(none)".
-
-**Creating tasks:** Write a new markdown file in \`.dust/tasks/\` following the format above.
-
-**Completing tasks:** Delete the task file in your commit after implementation.
-`;
+  return loadTemplate("claude-tasks", { bin: settings.binaryPath });
 }
 function generateGoalsInstructions(settings) {
-  const bin = settings.binaryPath;
-  return `## Understanding Goals
-
-**List goals:** \`${bin} list goals\`
-
-Goals live in \`.dust/goals/\` as markdown files. They define the project's guiding principles and priorities.
-
-Goals are linked from tasks to show which principles each task supports. When working on a task, you can read its linked goals for context on why the work matters.
-
-Goals are stable—they rarely change. Tasks come and go, but goals persist.
-`;
+  return loadTemplate("claude-goals", { bin: settings.binaryPath });
 }
 function generateIdeasInstructions(settings) {
-  const bin = settings.binaryPath;
-  return `## Working with Ideas
-
-**List ideas:** \`${bin} list ideas\`
-
-Ideas live in \`.dust/ideas/\` as markdown files. They are intentionally vague proposals for future work.
-
-**Converting an idea to tasks:**
-1. Read the idea file to understand the proposal
-2. Break it down into concrete, actionable tasks
-3. Create task files in \`.dust/tasks/\` with clear definitions of done
-4. Delete the idea file once it's fully captured in tasks
-
-Ideas are cheap to create and easy to discard. Not every idea becomes a task.
-`;
+  return loadTemplate("claude-ideas", { bin: settings.binaryPath });
 }
 function generateClaudeHelp(settings) {
-  const bin = settings.binaryPath;
-  return `## Dust Agent Guide
-
-Dust is a lightweight planning system. The \`.dust/\` directory contains:
-
-- **goals/** - Guiding principles (stable, rarely change)
-- **ideas/** - Vague proposals (convert to tasks when ready)
-- **tasks/** - Actionable work with definitions of done
-- **facts/** - Documentation of current system state
-- **hooks/** - Quality gate scripts
-
-**Key commands:**
-- \`${bin} check\` - Run quality gates (do this before and after work)
-- \`${bin} next\` - Show tasks ready to work on
-- \`${bin} list [type]\` - List artifacts (tasks, ideas, goals, facts)
-- \`${bin} validate\` - Check .dust/ files for errors
-
-**Workflow:** Pick a task, implement it, delete the task file, commit atomically.
-
-For focused guidance, run:
-- \`${bin} claude work\` - Work on the next task
-- \`${bin} claude tasks\` - Task management
-- \`${bin} claude goals\` - Understanding goals
-- \`${bin} claude ideas\` - Working with ideas
-`;
+  return loadTemplate("claude-help", { bin: settings.binaryPath });
 }
 async function claude(ctx, args, settings) {
   const subcommand = args[0];
@@ -456,12 +378,12 @@ async function prompt(ctx, fs, args) {
 }
 
 // lib/cli/settings.ts
-import { join } from "node:path";
+import { join as join2 } from "node:path";
 var DEFAULT_SETTINGS = {
   binaryPath: "dust"
 };
 async function loadSettings(cwd, fs) {
-  const settingsPath = join(cwd, ".dust", "config", "settings.json");
+  const settingsPath = join2(cwd, ".dust", "config", "settings.json");
   if (!fs.exists(settingsPath)) {
     return DEFAULT_SETTINGS;
   }
@@ -489,91 +411,7 @@ var COMMANDS = [
   "help"
 ];
 function generateHelpText(settings) {
-  const bin = settings.binaryPath;
-  return `dust - A lightweight planning system for human-AI collaboration
-
-Usage: ${bin} <command> [options]
-
-Commands:
-  init              Initialize a new Dust repository
-  prompt <name>     Output a prompt by name (e.g., ${bin} prompt work)
-  validate          Run validation checks on .dust/ files
-  list [type]       List items (tasks, ideas, goals, facts)
-  next              Show tasks ready to work on (not blocked)
-  check             Run project-defined quality gate hook
-  claude [cmd]      Agent-specific guidance (work, tasks, goals, ideas, help)
-  help              Show this help message
-
-Examples:
-  ${bin} init
-  ${bin} prompt work
-  ${bin} validate
-  ${bin} list tasks
-  ${bin} list
-  ${bin} next
-  ${bin} check
-  ${bin} claude work
-
----
-
-## Agent Guide
-
-This section provides comprehensive guidance for AI agents working with dust.
-
-### Directory Structure
-
-The \`.dust/\` directory contains all planning artifacts:
-
-- **\`.dust/goals/\`** - Mission statements and guiding principles
-- **\`.dust/ideas/\`** - Future feature notes and proposals (intentionally vague)
-- **\`.dust/tasks/\`** - Detailed work plans with dependencies and definitions of done
-- **\`.dust/facts/\`** - Documentation of current system state and architecture
-- **\`.dust/hooks/\`** - Executable scripts for quality gates (e.g., \`check\` hook)
-
-All files are markdown with slug-style names (lowercase, hyphens, no spaces).
-
-### Working on Tasks
-
-**Run \`${bin} check\` before starting work** to verify the project is in a good state before making changes.
-
-Run \`${bin} next\` to find tasks ready to work on. Each task file contains:
-
-- \`## Goals\` - Links to goals this task supports
-- \`## Blocked by\` - Tasks that must complete first (empty or "(none)" means ready)
-- \`## Definition of done\` - Criteria for completion
-
-A task is **unblocked** when its "Blocked by" section is empty, says "(none)", or all referenced task files have been deleted.
-
-### Completing a Task
-
-**Run \`${bin} check\` before committing** to ensure all quality gates pass.
-
-When finishing a task, create a single atomic commit that includes:
-
-1. All implementation changes
-2. Deletion of the completed task file
-3. Updates to any facts that changed
-4. Deletion of any ideas that were fully realized
-5. Updates to any tasks that referenced this one in their "Blocked by" sections
-
-### Common Workflows
-
-- **"Work on the next task"** - Run \`${bin} next\`, pick a task, implement it
-- **"Work on task X"** - Implement \`.dust/tasks/X.md\` directly
-- **"Convert idea Y to tasks"** - Break down \`.dust/ideas/Y.md\` into tasks
-- **"Validate facts"** - Check \`.dust/facts/\` for accuracy against the codebase
-
-### Configuring Agent Files
-
-Projects using dust should add a minimal pointer to their agent configuration files (CLAUDE.md, AGENTS.md, etc.):
-
-\`\`\`markdown
-This project uses [dust](https://github.com/joshski/dust) for planning and documentation.
-Always run \`dust help\` when you start working in this repository.
-\`\`\`
-
-This approach keeps agent instructions minimal, ensures agents get current documentation, and reduces maintenance burden.
-`;
+  return loadTemplate("help", { bin: settings.binaryPath });
 }
 var HELP_TEXT = generateHelpText({ binaryPath: "dust" });
 function isHelpRequest(command) {
