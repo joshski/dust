@@ -6,6 +6,7 @@
  */
 
 import { check, defaultProcessRunner } from './check'
+import { claude } from './claude'
 import { init } from './init'
 import { list } from './list'
 import { next } from './next'
@@ -22,6 +23,7 @@ export const COMMANDS = [
   'list',
   'next',
   'check',
+  'claude',
   'help',
 ] as const
 
@@ -40,6 +42,7 @@ Commands:
   list [type]       List items (tasks, ideas, goals, facts)
   next              Show tasks ready to work on (not blocked)
   check             Run project-defined quality gate hook
+  claude [cmd]      Agent-specific guidance (work, tasks, goals, ideas, help)
   help              Show this help message
 
 Examples:
@@ -50,6 +53,7 @@ Examples:
   ${bin} list
   ${bin} next
   ${bin} check
+  ${bin} claude work
 
 ---
 
@@ -153,6 +157,8 @@ export async function runCommand(
       return next(ctx, fs, commandArgs)
     case 'check':
       return check(ctx, fs, commandArgs, defaultProcessRunner, glob)
+    case 'claude':
+      return claude(ctx, commandArgs, settings)
     case 'help':
       ctx.stdout(generateHelpText(settings))
       return { exitCode: 0 }

@@ -282,6 +282,17 @@ describe('main', () => {
     expect(typeof result.exitCode).toBe('number')
   })
 
+  test('routes claude command correctly', async () => {
+    const ctx = createMockContext()
+    const fs = createMockFs(new Set(['/project/.dust']))
+    const glob = createMockGlob()
+
+    const result = await main({ args: ['claude'], ctx, fs, glob })
+
+    expect(result.exitCode).toBe(0)
+    expect(ctx.stdoutLines.join('\n')).toContain('Hello Claude')
+  })
+
   test('passes command args to subcommands', async () => {
     const ctx = createMockContext()
     // Invalid type should cause the list command to report an error
@@ -305,6 +316,7 @@ describe('COMMANDS', () => {
     expect(COMMANDS).toContain('list')
     expect(COMMANDS).toContain('next')
     expect(COMMANDS).toContain('check')
+    expect(COMMANDS).toContain('claude')
     expect(COMMANDS).toContain('help')
   })
 })
@@ -321,6 +333,7 @@ describe('HELP_TEXT', () => {
     expect(HELP_TEXT).toContain('list')
     expect(HELP_TEXT).toContain('next')
     expect(HELP_TEXT).toContain('check')
+    expect(HELP_TEXT).toContain('claude')
     expect(HELP_TEXT).toContain('help')
   })
 
