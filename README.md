@@ -51,6 +51,8 @@ Humans primarily interact with `dust` using their AI coding agent of choice, e.g
 > codex "goal: cross-platform compatibility"
 ```
 
+Agents discover everything they need to know to interpret human prompts using the `dust` CLI.
+
 ## Agent CLI
 
 The `dust` CLI is intended to be used primarily by agents, not by humans (except for the `init` command, as mentioned above).
@@ -70,8 +72,6 @@ Always immediately run `npx dust agent` when you start working in this repositor
 ```
 
 In fact, you might find it effective to use that as the _only_ line in those files. Essential documentation should be discoverable by agents exploring your `./.dust` directory.
-
-
 
 ## Configuration
 
