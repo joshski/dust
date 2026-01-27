@@ -1,4 +1,4 @@
-Hello Claude, welcome to dust!
+Hello Agent, welcome to dust!
 
 Your goal today is to make ONE SMALL CHANGE and then commit and push your changes.
 
