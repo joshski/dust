@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import { init } from './init'
 import type { CommandContext, FileSystem } from './types'
 
@@ -39,6 +39,10 @@ function createMockFs(
 }
 
 describe('init command', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   test('creates .dust directory structure', async () => {
     const ctx = createMockContext()
     const fs = createMockFs()
@@ -87,6 +91,7 @@ describe('init command', () => {
   })
 
   test('creates CLAUDE.md with agent instructions', async () => {
+    vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFs()
 
@@ -99,6 +104,7 @@ describe('init command', () => {
   })
 
   test('creates AGENTS.md with agent instructions', async () => {
+    vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFs()
 
@@ -111,6 +117,7 @@ describe('init command', () => {
   })
 
   test('warns when CLAUDE.md already exists', async () => {
+    vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFs(new Set(['/project/CLAUDE.md']))
 
@@ -124,6 +131,7 @@ describe('init command', () => {
   })
 
   test('warns when AGENTS.md already exists', async () => {
+    vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFs(new Set(['/project/AGENTS.md']))
 
@@ -160,12 +168,20 @@ describe('init command', () => {
     expect(agentsContent).toContain('pnpx dust agent')
   })
 
-  test('uses bunx when running under bun runtime', async () => {
-    const originalBun = process.versions.bun
-    vi.stubGlobal('process', {
-      ...process,
-      versions: { ...process.versions, bun: '1.0.0' },
-    })
+  test('uses npx when package-lock.json exists', async () => {
+    const ctx = createMockContext()
+    const fs = createMockFs(new Set(['/project/package-lock.json']))
+
+    await init(ctx, fs, [])
+
+    const claudeContent = fs.writtenFiles.get('/project/CLAUDE.md')
+    expect(claudeContent).toContain('npx dust agent')
+    const agentsContent = fs.writtenFiles.get('/project/AGENTS.md')
+    expect(agentsContent).toContain('npx dust agent')
+  })
+
+  test('uses bunx when BUN_INSTALL env var is set and no lockfiles', async () => {
+    vi.stubEnv('BUN_INSTALL', '/home/user/.bun')
 
     const ctx = createMockContext()
     const fs = createMockFs()
@@ -174,11 +190,7 @@ describe('init command', () => {
 
     const claudeContent = fs.writtenFiles.get('/project/CLAUDE.md')
     expect(claudeContent).toContain('bunx dust agent')
-
-    vi.stubGlobal('process', {
-      ...process,
-      versions: { ...process.versions, bun: originalBun },
-    })
-    vi.unstubAllGlobals()
+    const agentsContent = fs.writtenFiles.get('/project/AGENTS.md')
+    expect(agentsContent).toContain('bunx dust agent')
   })
 })

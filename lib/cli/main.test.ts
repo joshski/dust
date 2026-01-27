@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import {
   COMMANDS,
   generateHelpText,
@@ -92,7 +92,7 @@ describe('isValidCommand', () => {
   })
 })
 
-const defaultSettings = { binaryPath: 'dust' }
+const defaultSettings = { dustCommand: 'dust' }
 
 describe('runCommand', () => {
   test('runs help command and outputs help text', async () => {
@@ -121,7 +121,12 @@ describe('runCommand', () => {
 })
 
 describe('main', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   test('shows help when no command provided', async () => {
+    vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFs()
     const glob = createMockGlob()
@@ -129,7 +134,10 @@ describe('main', () => {
     const result = await main({ args: [], ctx, fs, glob })
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain(HELP_TEXT)
+    expect(ctx.stdoutLines.join('\n')).toContain(
+      'dust - A lightweight planning system'
+    )
+    expect(ctx.stdoutLines.join('\n')).toContain('Usage: npx dust <command>')
   })
 
   test('shows help for help command', async () => {
@@ -146,6 +154,7 @@ describe('main', () => {
   })
 
   test('shows help for --help flag', async () => {
+    vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFs()
     const glob = createMockGlob()
@@ -153,10 +162,11 @@ describe('main', () => {
     const result = await main({ args: ['--help'], ctx, fs, glob })
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('Usage: dust <command>')
+    expect(ctx.stdoutLines.join('\n')).toContain('Usage: npx dust <command>')
   })
 
   test('shows help for -h flag', async () => {
+    vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFs()
     const glob = createMockGlob()
@@ -164,10 +174,11 @@ describe('main', () => {
     const result = await main({ args: ['-h'], ctx, fs, glob })
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('Usage: dust <command>')
+    expect(ctx.stdoutLines.join('\n')).toContain('Usage: npx dust <command>')
   })
 
   test('returns error for unknown command', async () => {
+    vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFs()
     const glob = createMockGlob()
@@ -177,7 +188,7 @@ describe('main', () => {
     expect(result.exitCode).toBe(1)
     expect(ctx.stderrLines.join('\n')).toContain('Unknown command: unknown')
     expect(ctx.stderrLines.join('\n')).toContain(
-      "Run 'dust help' for available commands"
+      "Run 'npx dust help' for available commands"
     )
   })
 
@@ -187,7 +198,7 @@ describe('main', () => {
     // Override readFile to return custom settings
     fs.readFile = async (path: string) => {
       if (path === '/project/.dust/config/settings.json') {
-        return '{"binaryPath": "bin/dust"}'
+        return '{"dustCommand": "bin/dust"}'
       }
       return ''
     }
@@ -204,7 +215,7 @@ describe('main', () => {
     const fs = createMockFs(new Set(['/project/.dust/config/settings.json']))
     fs.readFile = async (path: string) => {
       if (path === '/project/.dust/config/settings.json') {
-        return '{"binaryPath": "bin/dust"}'
+        return '{"dustCommand": "bin/dust"}'
       }
       return ''
     }
@@ -346,18 +357,18 @@ describe('HELP_TEXT', () => {
 
 describe('generateHelpText', () => {
   test('uses custom binary path in usage', () => {
-    const helpText = generateHelpText({ binaryPath: 'bin/dust' })
+    const helpText = generateHelpText({ dustCommand: 'bin/dust' })
     expect(helpText).toContain('Usage: bin/dust <command>')
   })
 
   test('uses custom binary path in examples', () => {
-    const helpText = generateHelpText({ binaryPath: 'bin/dust' })
+    const helpText = generateHelpText({ dustCommand: 'bin/dust' })
     expect(helpText).toContain('bin/dust init')
     expect(helpText).toContain('bin/dust prompt work')
   })
 
   test('uses custom binary path in agent guide', () => {
-    const helpText = generateHelpText({ binaryPath: 'bin/dust' })
+    const helpText = generateHelpText({ dustCommand: 'bin/dust' })
     expect(helpText).toContain('Run `bin/dust check` before starting work')
     expect(helpText).toContain('Run `bin/dust next` to find tasks')
   })

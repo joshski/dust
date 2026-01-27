@@ -19,27 +19,27 @@ export const AGENT_SUBCOMMANDS = [
 export type AgentSubcommand = (typeof AGENT_SUBCOMMANDS)[number]
 
 function generateAgentGreeting(settings: DustSettings): string {
-  return loadTemplate('agent-greeting', { bin: settings.binaryPath })
+  return loadTemplate('agent-greeting', { bin: settings.dustCommand })
 }
 
 function generateWorkInstructions(settings: DustSettings): string {
-  return loadTemplate('agent-work', { bin: settings.binaryPath })
+  return loadTemplate('agent-work', { bin: settings.dustCommand })
 }
 
 function generateTasksInstructions(settings: DustSettings): string {
-  return loadTemplate('agent-tasks', { bin: settings.binaryPath })
+  return loadTemplate('agent-tasks', { bin: settings.dustCommand })
 }
 
 function generateGoalsInstructions(settings: DustSettings): string {
-  return loadTemplate('agent-goals', { bin: settings.binaryPath })
+  return loadTemplate('agent-goals', { bin: settings.dustCommand })
 }
 
 function generateIdeasInstructions(settings: DustSettings): string {
-  return loadTemplate('agent-ideas', { bin: settings.binaryPath })
+  return loadTemplate('agent-ideas', { bin: settings.dustCommand })
 }
 
 function generateAgentHelp(settings: DustSettings): string {
-  return loadTemplate('agent-help', { bin: settings.binaryPath })
+  return loadTemplate('agent-help', { bin: settings.dustCommand })
 }
 
 export async function agent(
