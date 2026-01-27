@@ -1,9 +1,27 @@
 {
-  "name": "dust",
+  "name": "@joshski/dust",
+  "version": "0.1.1",
+  "description": "A lightweight planning system for human-AI collaboration",
   "type": "module",
   "bin": {
     "dust": "./dist/dust.js"
   },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joshski/dust.git"
+  },
+  "keywords": [
+    "ai",
+    "planning",
+    "collaboration",
+    "cli"
+  ],
+  "author": "joshski",
+  "license": "MIT",
   "scripts": {
     "build": "bun build lib/cli/entry.ts --target node --outfile dist/dust.js",
     "test": "vitest run",
