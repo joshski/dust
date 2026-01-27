@@ -22,7 +22,7 @@ bunx dust init
 
 ## How It Works
 
-Planning artifacts are stored in a [.dust](./.dust) directory in your repository:
+The [.dust](./.dust) directory in your repository contains 4 sets of markdown files:
 
 ```
 .dust/
@@ -32,7 +32,7 @@ Planning artifacts are stored in a [.dust](./.dust) directory in your repository
 └── facts/    # Current state: design, architecture, rules, invariants
 ```
 
-These directories contain markdown files that capture knowledge of the system as it stands, and act as a workflow system for prioritising and tracking work.
+These files are used to facilitate exploration and management of AI agent workflow.
 
 ## CLI Commands
 
