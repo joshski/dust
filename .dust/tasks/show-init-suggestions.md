@@ -9,7 +9,7 @@ Commit the changes if you are happy, then get planning!
 
 If this is a new repository, you can start adding ideas or tasks right away:
 > claude "Idea: friendly UI for non-technical users"
-> claude "Task: set up code coverage"
+> codex "Task: set up code coverage"
 
 If this is an existing codebase, you might want to backfill goals and facts:
 > claude "Add goals and facts based on the code in this repository"
