@@ -55,6 +55,7 @@ describe('init command', () => {
     expect(fs.createdDirs).toContain('/project/.dust/ideas')
     expect(fs.createdDirs).toContain('/project/.dust/tasks')
     expect(fs.createdDirs).toContain('/project/.dust/facts')
+    expect(fs.createdDirs).toContain('/project/.dust/config')
   })
 
   test('creates initial fact file', async () => {
@@ -157,6 +158,66 @@ describe('init command', () => {
     expect(claudeContent).toContain('bunx dust agent')
     const agentsContent = fs.writtenFiles.get('/project/AGENTS.md')
     expect(agentsContent).toContain('bunx dust agent')
+  })
+
+  test('creates settings.json with npm test for Node.js projects', async () => {
+    vi.stubEnv('BUN_INSTALL', '')
+    const ctx = createMockContext()
+    const fs = createMockFs(new Set(['/project/package.json']))
+
+    await init(ctx, fs, [])
+
+    expect(fs.writtenFiles.has('/project/.dust/config/settings.json')).toBe(true)
+    const content = fs.writtenFiles.get('/project/.dust/config/settings.json')
+    const settings = JSON.parse(content!)
+    expect(settings.dustCommand).toBe('npx dust')
+    expect(settings.checks).toEqual([{ name: 'test', command: 'npm test' }])
+  })
+
+  test('creates settings.json with bun test for Bun projects', async () => {
+    const ctx = createMockContext()
+    const fs = createMockFs(new Set(['/project/bun.lockb']))
+
+    await init(ctx, fs, [])
+
+    const content = fs.writtenFiles.get('/project/.dust/config/settings.json')
+    const settings = JSON.parse(content!)
+    expect(settings.dustCommand).toBe('bunx dust')
+    expect(settings.checks).toEqual([{ name: 'test', command: 'bun test' }])
+  })
+
+  test('creates settings.json with pnpm test for pnpm projects', async () => {
+    const ctx = createMockContext()
+    const fs = createMockFs(new Set(['/project/pnpm-lock.yaml']))
+
+    await init(ctx, fs, [])
+
+    const content = fs.writtenFiles.get('/project/.dust/config/settings.json')
+    const settings = JSON.parse(content!)
+    expect(settings.dustCommand).toBe('pnpx dust')
+    expect(settings.checks).toEqual([{ name: 'test', command: 'pnpm test' }])
+  })
+
+  test('creates settings.json with empty checks for non-Node projects', async () => {
+    vi.stubEnv('BUN_INSTALL', '')
+    const ctx = createMockContext()
+    const fs = createMockFs()
+
+    await init(ctx, fs, [])
+
+    const content = fs.writtenFiles.get('/project/.dust/config/settings.json')
+    const settings = JSON.parse(content!)
+    expect(settings.dustCommand).toBe('npx dust')
+    expect(settings.checks).toEqual([])
+  })
+
+  test('outputs settings creation message', async () => {
+    const ctx = createMockContext()
+    const fs = createMockFs()
+
+    await init(ctx, fs, [])
+
+    expect(ctx.stdoutLines.join('\n')).toContain('Created settings: .dust/config/settings.json')
   })
 
   test('uses pnpx when pnpm-lock.yaml exists', async () => {

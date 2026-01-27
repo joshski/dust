@@ -2,11 +2,31 @@
  * dust init - Initialize a new Dust repository
  */
 
-import { detectDustCommand } from './settings'
+import { detectDustCommand, type DustSettings, type CheckConfig } from './settings'
 import { loadTemplate } from './templates'
 import type { CommandContext, CommandResult, FileSystem } from './types'
 
-const DUST_DIRECTORIES = ['goals', 'ideas', 'tasks', 'facts']
+const DUST_DIRECTORIES = ['goals', 'ideas', 'tasks', 'facts', 'config']
+
+/**
+ * Generates starter settings based on detected project type.
+ * Returns settings with appropriate dustCommand and checks.
+ */
+function generateSettings(cwd: string, fs: FileSystem): DustSettings {
+  const dustCommand = detectDustCommand(cwd, fs)
+  const checks: CheckConfig[] = []
+
+  // Detect project type and add appropriate test check
+  if (fs.exists(`${cwd}/bun.lockb`)) {
+    checks.push({ name: 'test', command: 'bun test' })
+  } else if (fs.exists(`${cwd}/pnpm-lock.yaml`)) {
+    checks.push({ name: 'test', command: 'pnpm test' })
+  } else if (fs.exists(`${cwd}/package-lock.json`) || fs.exists(`${cwd}/package.json`)) {
+    checks.push({ name: 'test', command: 'npm test' })
+  }
+
+  return { dustCommand, checks }
+}
 
 const USE_DUST_FACT = `# Use dust for planning
 
@@ -36,9 +56,17 @@ export async function init(
       USE_DUST_FACT
     )
 
+    // Generate and write settings.json
+    const settings = generateSettings(ctx.cwd, fs)
+    await fs.writeFile(
+      `${dustPath}/config/settings.json`,
+      JSON.stringify(settings, null, 2) + '\n'
+    )
+
     ctx.stdout('Initialized Dust repository in .dust/')
     ctx.stdout(`Created directories: ${DUST_DIRECTORIES.join(', ')}`)
     ctx.stdout('Created initial fact: .dust/facts/use-dust-for-planning.md')
+    ctx.stdout('Created settings: .dust/config/settings.json')
   }
 
   // Create CLAUDE.md if it doesn't exist
