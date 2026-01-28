@@ -1,5 +1,6 @@
 {
   "dustCommand": "bin/dust",
+  "installDependenciesHint": "Run `bun install`",
   "checks": [
     {
       "name": "lint",

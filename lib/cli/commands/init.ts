@@ -19,20 +19,24 @@ const DUST_DIRECTORIES = ['goals', 'ideas', 'tasks', 'facts', 'config']
 function generateSettings(cwd: string, fs: FileSystem): DustSettings {
   const dustCommand = detectDustCommand(cwd, fs)
   const checks: CheckConfig[] = []
+  let installDependenciesHint = 'Install any dependencies'
 
   // Detect project type and add appropriate test check
   if (fs.exists(`${cwd}/bun.lockb`)) {
     checks.push({ name: 'test', command: 'bun test' })
+    installDependenciesHint = 'Run `bun install`'
   } else if (fs.exists(`${cwd}/pnpm-lock.yaml`)) {
     checks.push({ name: 'test', command: 'pnpm test' })
+    installDependenciesHint = 'Run `pnpm install`'
   } else if (
     fs.exists(`${cwd}/package-lock.json`) ||
     fs.exists(`${cwd}/package.json`)
   ) {
     checks.push({ name: 'test', command: 'npm test' })
+    installDependenciesHint = 'Run `npm install`'
   }
 
-  return { dustCommand, checks }
+  return { dustCommand, checks, installDependenciesHint }
 }
 
 const USE_DUST_FACT = `# Use dust for planning

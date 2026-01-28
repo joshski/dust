@@ -12,6 +12,7 @@ export type { CheckConfig, DustSettings }
 
 const DEFAULT_SETTINGS: DustSettings = {
   dustCommand: 'npx dust',
+  installDependenciesHint: 'Install any dependencies',
 }
 
 /**

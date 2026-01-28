@@ -7,7 +7,7 @@
 
 When implementing a task, follow these steps:
 
-1. Install dependencies if this is a fresh checkout
+1. {{installDependenciesHint}} if this is a fresh checkout
 2. Run `{{bin}} check` before implementing anything to verify the project is in a working state
 3. Read the task file and understand all requirements in "Definition of done"
 4. Implement the changes, checking off items as you complete them
