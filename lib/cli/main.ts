@@ -21,17 +21,24 @@ import type {
   GlobScanner,
 } from './types'
 
-export const COMMANDS = [
-  'init',
-  'validate',
-  'list',
-  'next',
-  'check',
-  'agent',
-  'help',
-] as const
+/**
+ * Command registry maps command names to their handler functions.
+ * Adding a new command only requires adding an entry here.
+ */
+export const commandRegistry = {
+  init,
+  validate,
+  list,
+  next,
+  check,
+  agent,
+  help,
+}
 
-export type Command = (typeof COMMANDS)[number]
+export type Command = keyof typeof commandRegistry
+
+// Derive COMMANDS array from registry keys for backward compatibility
+export const COMMANDS = Object.keys(commandRegistry) as Command[]
 
 // Re-export for backward compatibility
 export { generateHelpText }
@@ -53,29 +60,14 @@ export function isHelpRequest(command: string | undefined): boolean {
 }
 
 export function isValidCommand(command: string): command is Command {
-  return COMMANDS.includes(command as Command)
+  return command in commandRegistry
 }
 
 export async function runCommand(
   command: Command,
   deps: CommandDependencies
 ): Promise<CommandResult> {
-  switch (command) {
-    case 'init':
-      return init(deps)
-    case 'validate':
-      return validate(deps)
-    case 'list':
-      return list(deps)
-    case 'next':
-      return next(deps)
-    case 'check':
-      return check(deps)
-    case 'agent':
-      return agent(deps)
-    case 'help':
-      return help(deps)
-  }
+  return commandRegistry[command](deps)
 }
 
 export async function main(options: MainOptions): Promise<CommandResult> {
