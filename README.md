@@ -75,7 +75,7 @@ In fact, you might find it effective to use that as the _only_ line in those fil
 
 ## Configuration
 
-Configure hooks into your tools in `./.dust/config/settings.json` e.g.
+Configure dust in `./.dust/config/settings.json` e.g.
 
 ```json
 {

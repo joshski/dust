@@ -6,7 +6,6 @@ Dust is a lightweight planning system. The `.dust/` directory contains:
 - **ideas/** - Vague proposals (convert to tasks when ready)
 - **tasks/** - Actionable work with definitions of done
 - **facts/** - Documentation of current system state
-- **hooks/** - Quality gate scripts
 
 **Key commands:**
 - `{{bin}} check` - Run quality gates (do this before and after work)
