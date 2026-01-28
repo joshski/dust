@@ -91,4 +91,39 @@ Configure hooks into your tools in `./.dust/config/settings.json` e.g.
 
 The `dust check` command will run all of the configured checks in parallel and produce a very terse (context window-friendly) output unless one or more of the checks fail.
 
+### Check Failure Hints
+
+Add optional `hints` to help agents recover from check failures:
+
+```json
+{
+  "checks": [
+    {
+      "name": "build",
+      "command": "npm run build",
+      "hints": [
+        "Run `npm install` if this is a fresh checkout",
+        "Check for TypeScript errors in the files you modified"
+      ]
+    }
+  ]
+}
+```
+
+When a check fails, hints are displayed after the error output:
+
+```
+✓ validate
+✗ build
+
+> npm run build
+error TS2307: Cannot find module 'lodash'...
+
+Hints for fixing 'build':
+  - Run `npm install` if this is a fresh checkout
+  - Check for TypeScript errors in the files you modified
+
+1/2 checks passed
+```
+
 Agents are instructed to run `dust check` before and after any changes, as a way of keeping them on track. It's more important that these commands are comprehensive, than they are fast.
