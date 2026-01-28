@@ -115,7 +115,7 @@ describe('agent command', () => {
     )
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('Working with Ideas')
+    expect(ctx.stdoutLines.join('\n')).toContain('Adding a New Idea')
     expect(ctx.stdoutLines.join('\n')).toContain('dust list ideas')
     expect(ctx.stdoutLines.join('\n')).toContain('.dust/ideas/')
   })

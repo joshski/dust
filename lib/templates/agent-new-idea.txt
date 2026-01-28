@@ -1,14 +1,10 @@
-## Working with Ideas
+## Adding a New Idea
 
-**List ideas:** `{{bin}} list ideas`
+Follow these steps:
 
-Ideas live in `.dust/ideas/` as markdown files. They are intentionally vague proposals for future work.
-
-**Creating an idea:**
-1. Create a new markdown file in `.dust/ideas/` with a descriptive kebab-case name
-2. Write a brief description of the potential change or improvement
-3. Commit the idea file
-
-Ideas are cheap to create and easy to discard. Not every idea becomes a task.
-
-**Note:** When tasks are created via `{{bin}} agent new task`, the agent will automatically check all existing ideas and may delete or update them if they overlap with the new task.
+1. Run `{{bin}} list ideas` to see all existing ideas and avoid duplicates
+2. Create a new markdown file in `.dust/ideas/` with a descriptive kebab-case name (e.g., `improve-error-messages.md`)
+3. Add a title as the first line using an H1 heading (e.g., `# Improve error messages`)
+4. Write a brief description of the potential change or improvement
+5. Run `{{bin}} validate` to catch any issues with the idea file format
+6. Create a single atomic commit with a message in the format "Add idea: <title>"
