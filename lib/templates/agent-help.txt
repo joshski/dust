@@ -17,10 +17,11 @@ Dust is a lightweight planning system. The `.dust/` directory contains:
 **Workflow:** Pick a task, implement it, delete the task file, commit atomically.
 
 For focused guidance, run:
-- `{{bin}} agent work` - Work on the next task
-- `{{bin}} agent tasks` - Task management
-- `{{bin}} agent goals` - Understanding goals
-- `{{bin}} agent ideas` - Working with ideas
+- `{{bin}} agent work` - Pick the next task to work on
+- `{{bin}} agent implement` - Implement a task
+- `{{bin}} agent task` - Create a new task
+- `{{bin}} agent goal` - Understanding goals
+- `{{bin}} agent idea` - Working with ideas
 
 ### Configuring Agent Files
 

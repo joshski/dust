@@ -36,9 +36,10 @@ describe('agent command', () => {
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Hello Agent')
     expect(ctx.stdoutLines.join('\n')).toContain('dust agent work')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust agent tasks')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust agent goals')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust agent ideas')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust agent implement')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust agent task')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust agent goal')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust agent idea')
     expect(ctx.stdoutLines.join('\n')).toContain('dust agent help')
   })
 
@@ -48,26 +49,36 @@ describe('agent command', () => {
     const result = await agent(createDeps(ctx, ['work'], defaultSettings))
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('Work on the Next Task')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust check')
+    expect(ctx.stdoutLines.join('\n')).toContain('Pick a Task')
     expect(ctx.stdoutLines.join('\n')).toContain('dust next')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust agent implement')
   })
 
-  test('tasks subcommand outputs task management instructions', async () => {
+  test('implement subcommand outputs implementation instructions', async () => {
     const ctx = createMockContext()
 
-    const result = await agent(createDeps(ctx, ['tasks'], defaultSettings))
+    const result = await agent(createDeps(ctx, ['implement'], defaultSettings))
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('Task Management')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust list tasks')
+    expect(ctx.stdoutLines.join('\n')).toContain('Implement a Task')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust check')
+  })
+
+  test('task subcommand outputs task creation instructions', async () => {
+    const ctx = createMockContext()
+
+    const result = await agent(createDeps(ctx, ['task'], defaultSettings))
+
+    expect(result.exitCode).toBe(0)
+    expect(ctx.stdoutLines.join('\n')).toContain('Adding a New Task')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust list ideas')
     expect(ctx.stdoutLines.join('\n')).toContain('.dust/tasks/')
   })
 
-  test('goals subcommand outputs goals instructions', async () => {
+  test('goal subcommand outputs goals instructions', async () => {
     const ctx = createMockContext()
 
-    const result = await agent(createDeps(ctx, ['goals'], defaultSettings))
+    const result = await agent(createDeps(ctx, ['goal'], defaultSettings))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Understanding Goals')
@@ -75,10 +86,10 @@ describe('agent command', () => {
     expect(ctx.stdoutLines.join('\n')).toContain('.dust/goals/')
   })
 
-  test('ideas subcommand outputs ideas instructions', async () => {
+  test('idea subcommand outputs ideas instructions', async () => {
     const ctx = createMockContext()
 
-    const result = await agent(createDeps(ctx, ['ideas'], defaultSettings))
+    const result = await agent(createDeps(ctx, ['idea'], defaultSettings))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Working with Ideas')
@@ -118,10 +129,11 @@ describe('agent command', () => {
 
   test('AGENT_SUBCOMMANDS contains expected commands', () => {
     expect(AGENT_SUBCOMMANDS).toContain('work')
-    expect(AGENT_SUBCOMMANDS).toContain('tasks')
-    expect(AGENT_SUBCOMMANDS).toContain('goals')
-    expect(AGENT_SUBCOMMANDS).toContain('ideas')
+    expect(AGENT_SUBCOMMANDS).toContain('implement')
+    expect(AGENT_SUBCOMMANDS).toContain('task')
+    expect(AGENT_SUBCOMMANDS).toContain('goal')
+    expect(AGENT_SUBCOMMANDS).toContain('idea')
     expect(AGENT_SUBCOMMANDS).toContain('help')
-    expect(AGENT_SUBCOMMANDS.length).toBe(5)
+    expect(AGENT_SUBCOMMANDS.length).toBe(6)
   })
 })

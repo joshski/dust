@@ -1,0 +1,14 @@
+## Implement a Task
+
+Follow these steps:
+
+1. Run `{{bin}} check` to verify the project is in a good state
+2. Implement the task
+3. Run `{{bin}} check` before committing
+4. Create a single atomic commit that includes:
+   - All implementation changes
+   - Deletion of the completed task file
+   - Updates to any facts that changed
+   - Deletion of any ideas that were fully realized
+
+Keep your change small and focused. One task, one commit.

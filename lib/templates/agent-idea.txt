@@ -1,0 +1,14 @@
+## Working with Ideas
+
+**List ideas:** `{{bin}} list ideas`
+
+Ideas live in `.dust/ideas/` as markdown files. They are intentionally vague proposals for future work.
+
+**Creating an idea:**
+1. Create a new markdown file in `.dust/ideas/` with a descriptive kebab-case name
+2. Write a brief description of the potential change or improvement
+3. Commit the idea file
+
+Ideas are cheap to create and easy to discard. Not every idea becomes a task.
+
+**Note:** When tasks are created via `{{bin}} agent task`, the agent will automatically check all existing ideas and may delete or update them if they overlap with the new task.

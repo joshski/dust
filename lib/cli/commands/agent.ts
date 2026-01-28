@@ -9,9 +9,10 @@ import type { CommandDependencies, CommandResult, DustSettings } from '../types'
 
 export const AGENT_SUBCOMMANDS = [
   'work',
-  'tasks',
-  'goals',
-  'ideas',
+  'implement',
+  'task',
+  'goal',
+  'idea',
   'help',
 ] as const
 
@@ -39,14 +40,17 @@ export async function agent(deps: CommandDependencies): Promise<CommandResult> {
     case 'work':
       ctx.stdout(loadTemplate('agent-work', vars))
       return { exitCode: 0 }
-    case 'tasks':
-      ctx.stdout(loadTemplate('agent-tasks', vars))
+    case 'implement':
+      ctx.stdout(loadTemplate('agent-implement', vars))
       return { exitCode: 0 }
-    case 'goals':
-      ctx.stdout(loadTemplate('agent-goals', vars))
+    case 'task':
+      ctx.stdout(loadTemplate('agent-task', vars))
       return { exitCode: 0 }
-    case 'ideas':
-      ctx.stdout(loadTemplate('agent-ideas', vars))
+    case 'goal':
+      ctx.stdout(loadTemplate('agent-goal', vars))
+      return { exitCode: 0 }
+    case 'idea':
+      ctx.stdout(loadTemplate('agent-idea', vars))
       return { exitCode: 0 }
     case 'help':
       ctx.stdout(loadTemplate('agent-help', vars))
