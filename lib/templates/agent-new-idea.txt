@@ -11,4 +11,4 @@ Ideas live in `.dust/ideas/` as markdown files. They are intentionally vague pro
 
 Ideas are cheap to create and easy to discard. Not every idea becomes a task.
 
-**Note:** When tasks are created via `{{bin}} agent task`, the agent will automatically check all existing ideas and may delete or update them if they overlap with the new task.
+**Note:** When tasks are created via `{{bin}} agent new task`, the agent will automatically check all existing ideas and may delete or update them if they overlap with the new task.

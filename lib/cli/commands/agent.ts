@@ -2,17 +2,19 @@
  * Agent-specific commands
  *
  * Provides focused, workflow-specific guidance for AI agents.
+ * Commands use verb-noun patterns for clarity (e.g., "new task", "implement task").
  */
 
 import { loadTemplate } from '../templates'
 import type { CommandDependencies, CommandResult, DustSettings } from '../types'
 
 export const AGENT_SUBCOMMANDS = [
-  'work',
-  'implement',
-  'task',
-  'goal',
-  'idea',
+  'new task',
+  'new goal',
+  'new idea',
+  'implement task',
+  'understand goal',
+  'pick task',
   'help',
 ] as const
 
@@ -28,32 +30,42 @@ function templateVariables(settings: DustSettings) {
 
 export async function agent(deps: CommandDependencies): Promise<CommandResult> {
   const { arguments: args, context: ctx, settings } = deps
-  const subcommand = args[0]
+  const verb = args[0]
+  const noun = args[1]
   const vars = templateVariables(settings)
 
-  if (!subcommand) {
+  if (!verb) {
     ctx.stdout(loadTemplate('agent-greeting', vars))
     return { exitCode: 0 }
   }
 
+  // Single-word command: help
+  if (verb === 'help' && !noun) {
+    ctx.stdout(loadTemplate('agent-help', vars))
+    return { exitCode: 0 }
+  }
+
+  // Two-word commands: verb + noun
+  const subcommand = noun ? `${verb} ${noun}` : verb
+
   switch (subcommand) {
-    case 'work':
-      ctx.stdout(loadTemplate('agent-work', vars))
+    case 'new task':
+      ctx.stdout(loadTemplate('agent-new-task', vars))
       return { exitCode: 0 }
-    case 'implement':
-      ctx.stdout(loadTemplate('agent-implement', vars))
+    case 'new goal':
+      ctx.stdout(loadTemplate('agent-new-goal', vars))
       return { exitCode: 0 }
-    case 'task':
-      ctx.stdout(loadTemplate('agent-task', vars))
+    case 'new idea':
+      ctx.stdout(loadTemplate('agent-new-idea', vars))
       return { exitCode: 0 }
-    case 'goal':
-      ctx.stdout(loadTemplate('agent-goal', vars))
+    case 'implement task':
+      ctx.stdout(loadTemplate('agent-implement-task', vars))
       return { exitCode: 0 }
-    case 'idea':
-      ctx.stdout(loadTemplate('agent-idea', vars))
+    case 'understand goal':
+      ctx.stdout(loadTemplate('agent-understand-goal', vars))
       return { exitCode: 0 }
-    case 'help':
-      ctx.stdout(loadTemplate('agent-help', vars))
+    case 'pick task':
+      ctx.stdout(loadTemplate('agent-pick-task', vars))
       return { exitCode: 0 }
     default:
       ctx.stderr(`Unknown subcommand: ${subcommand}`)

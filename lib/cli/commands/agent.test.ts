@@ -35,39 +35,45 @@ describe('agent command', () => {
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Hello Agent')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust agent work')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust agent implement')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust agent task')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust agent goal')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust agent idea')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust agent pick task')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust agent implement task')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust agent new task')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust agent new goal')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust agent new idea')
     expect(ctx.stdoutLines.join('\n')).toContain('dust agent help')
   })
 
-  test('work subcommand outputs work instructions', async () => {
+  test('pick task subcommand outputs work instructions', async () => {
     const ctx = createMockContext()
 
-    const result = await agent(createDeps(ctx, ['work'], defaultSettings))
+    const result = await agent(
+      createDeps(ctx, ['pick', 'task'], defaultSettings)
+    )
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Pick a Task')
     expect(ctx.stdoutLines.join('\n')).toContain('dust next')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust agent implement')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust agent implement task')
   })
 
-  test('implement subcommand outputs implementation instructions', async () => {
+  test('implement task subcommand outputs implementation instructions', async () => {
     const ctx = createMockContext()
 
-    const result = await agent(createDeps(ctx, ['implement'], defaultSettings))
+    const result = await agent(
+      createDeps(ctx, ['implement', 'task'], defaultSettings)
+    )
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Implement a Task')
     expect(ctx.stdoutLines.join('\n')).toContain('dust check')
   })
 
-  test('task subcommand outputs task creation instructions', async () => {
+  test('new task subcommand outputs task creation instructions', async () => {
     const ctx = createMockContext()
 
-    const result = await agent(createDeps(ctx, ['task'], defaultSettings))
+    const result = await agent(
+      createDeps(ctx, ['new', 'task'], defaultSettings)
+    )
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Adding a New Task')
@@ -75,10 +81,25 @@ describe('agent command', () => {
     expect(ctx.stdoutLines.join('\n')).toContain('.dust/tasks/')
   })
 
-  test('goal subcommand outputs goals instructions', async () => {
+  test('new goal subcommand outputs goal creation instructions', async () => {
     const ctx = createMockContext()
 
-    const result = await agent(createDeps(ctx, ['goal'], defaultSettings))
+    const result = await agent(
+      createDeps(ctx, ['new', 'goal'], defaultSettings)
+    )
+
+    expect(result.exitCode).toBe(0)
+    expect(ctx.stdoutLines.join('\n')).toContain('Adding a New Goal')
+    expect(ctx.stdoutLines.join('\n')).toContain('dust list goals')
+    expect(ctx.stdoutLines.join('\n')).toContain('.dust/goals/')
+  })
+
+  test('understand goal subcommand outputs goals instructions', async () => {
+    const ctx = createMockContext()
+
+    const result = await agent(
+      createDeps(ctx, ['understand', 'goal'], defaultSettings)
+    )
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Understanding Goals')
@@ -86,10 +107,12 @@ describe('agent command', () => {
     expect(ctx.stdoutLines.join('\n')).toContain('.dust/goals/')
   })
 
-  test('idea subcommand outputs ideas instructions', async () => {
+  test('new idea subcommand outputs ideas instructions', async () => {
     const ctx = createMockContext()
 
-    const result = await agent(createDeps(ctx, ['idea'], defaultSettings))
+    const result = await agent(
+      createDeps(ctx, ['new', 'idea'], defaultSettings)
+    )
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Working with Ideas')
@@ -118,22 +141,37 @@ describe('agent command', () => {
     expect(ctx.stderrLines.join('\n')).toContain('Available:')
   })
 
+  test('unknown verb-noun combination returns error', async () => {
+    const ctx = createMockContext()
+
+    const result = await agent(
+      createDeps(ctx, ['new', 'unknown'], defaultSettings)
+    )
+
+    expect(result.exitCode).toBe(1)
+    expect(ctx.stderrLines.join('\n')).toContain(
+      'Unknown subcommand: new unknown'
+    )
+    expect(ctx.stderrLines.join('\n')).toContain('Available:')
+  })
+
   test('uses custom binary path in output', async () => {
     const ctx = createMockContext()
     const settings: DustSettings = { dustCommand: 'bin/dust' }
 
     await agent(createDeps(ctx, [], settings))
 
-    expect(ctx.stdoutLines.join('\n')).toContain('bin/dust agent work')
+    expect(ctx.stdoutLines.join('\n')).toContain('bin/dust agent pick task')
   })
 
   test('AGENT_SUBCOMMANDS contains expected commands', () => {
-    expect(AGENT_SUBCOMMANDS).toContain('work')
-    expect(AGENT_SUBCOMMANDS).toContain('implement')
-    expect(AGENT_SUBCOMMANDS).toContain('task')
-    expect(AGENT_SUBCOMMANDS).toContain('goal')
-    expect(AGENT_SUBCOMMANDS).toContain('idea')
+    expect(AGENT_SUBCOMMANDS).toContain('new task')
+    expect(AGENT_SUBCOMMANDS).toContain('new goal')
+    expect(AGENT_SUBCOMMANDS).toContain('new idea')
+    expect(AGENT_SUBCOMMANDS).toContain('implement task')
+    expect(AGENT_SUBCOMMANDS).toContain('understand goal')
+    expect(AGENT_SUBCOMMANDS).toContain('pick task')
     expect(AGENT_SUBCOMMANDS).toContain('help')
-    expect(AGENT_SUBCOMMANDS.length).toBe(6)
+    expect(AGENT_SUBCOMMANDS.length).toBe(7)
   })
 })
