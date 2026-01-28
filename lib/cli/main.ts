@@ -7,17 +7,16 @@
 
 import { agent } from './commands/agent'
 import { check } from './commands/check'
+import { generateHelpText, help } from './commands/help'
 import { init } from './commands/init'
 import { list } from './commands/list'
 import { next } from './commands/next'
 import { validate } from './commands/validate'
 import { loadSettings } from './settings'
-import { loadTemplate } from './templates'
 import type {
   CommandContext,
   CommandDependencies,
   CommandResult,
-  DustSettings,
   FileSystem,
   GlobScanner,
 } from './types'
@@ -34,9 +33,8 @@ export const COMMANDS = [
 
 export type Command = (typeof COMMANDS)[number]
 
-export function generateHelpText(settings: DustSettings): string {
-  return loadTemplate('help', { bin: settings.dustCommand })
-}
+// Re-export for backward compatibility
+export { generateHelpText }
 
 // Default help text for backward compatibility in tests
 export const HELP_TEXT = generateHelpText({ dustCommand: 'dust' })
@@ -76,8 +74,7 @@ export async function runCommand(
     case 'agent':
       return agent(deps)
     case 'help':
-      deps.context.stdout(generateHelpText(deps.settings))
-      return { exitCode: 0 }
+      return help(deps)
   }
 }
 
