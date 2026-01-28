@@ -18,7 +18,11 @@ export const AGENT_SUBCOMMANDS = [
 export type AgentSubcommand = (typeof AGENT_SUBCOMMANDS)[number]
 
 function templateVariables(settings: DustSettings) {
-  return { bin: settings.dustCommand }
+  return {
+    bin: settings.dustCommand,
+    installDependenciesHint:
+      settings.installDependenciesHint || 'Install any dependencies',
+  }
 }
 
 export async function agent(deps: CommandDependencies): Promise<CommandResult> {
