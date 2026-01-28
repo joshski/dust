@@ -13,7 +13,7 @@ export const AGENT_SUBCOMMANDS = [
   'new goal',
   'new idea',
   'implement task',
-  'understand goal',
+  'understand goals',
   'pick task',
   'help',
 ] as const
@@ -61,8 +61,8 @@ export async function agent(deps: CommandDependencies): Promise<CommandResult> {
     case 'implement task':
       ctx.stdout(loadTemplate('agent-implement-task', vars))
       return { exitCode: 0 }
-    case 'understand goal':
-      ctx.stdout(loadTemplate('agent-understand-goal', vars))
+    case 'understand goals':
+      ctx.stdout(loadTemplate('agent-understand-goals', vars))
       return { exitCode: 0 }
     case 'pick task':
       ctx.stdout(loadTemplate('agent-pick-task', vars))

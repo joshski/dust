@@ -94,11 +94,11 @@ describe('agent command', () => {
     expect(ctx.stdoutLines.join('\n')).toContain('.dust/goals/')
   })
 
-  test('understand goal subcommand outputs goals instructions', async () => {
+  test('understand goals subcommand outputs goals instructions', async () => {
     const ctx = createMockContext()
 
     const result = await agent(
-      createDeps(ctx, ['understand', 'goal'], defaultSettings)
+      createDeps(ctx, ['understand', 'goals'], defaultSettings)
     )
 
     expect(result.exitCode).toBe(0)
@@ -169,7 +169,7 @@ describe('agent command', () => {
     expect(AGENT_SUBCOMMANDS).toContain('new goal')
     expect(AGENT_SUBCOMMANDS).toContain('new idea')
     expect(AGENT_SUBCOMMANDS).toContain('implement task')
-    expect(AGENT_SUBCOMMANDS).toContain('understand goal')
+    expect(AGENT_SUBCOMMANDS).toContain('understand goals')
     expect(AGENT_SUBCOMMANDS).toContain('pick task')
     expect(AGENT_SUBCOMMANDS).toContain('help')
     expect(AGENT_SUBCOMMANDS.length).toBe(7)
