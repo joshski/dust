@@ -19,11 +19,19 @@
       ]
     },
     {
-      "name": "tests",
+      "name": "tests (vitest)",
       "command": "bun run test:coverage",
       "hints": [
         "Run `bun run test` to see detailed test output",
         "Check if new code needs corresponding tests"
+      ]
+    },
+    {
+      "name": "tests (bun)",
+      "command": "bun test",
+      "hints": [
+        "Tests must work with both Vitest and Bun runtimes",
+        "Avoid using Vitest-specific APIs like vi.stubEnv - use cross-runtime helpers in test-utilities.ts"
       ]
     },
     {

@@ -1,15 +1,17 @@
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test } from 'vitest'
 import {
   createMockContext,
   createMockFileSystem,
   createMockGlobScanner,
+  restoreEnv,
+  stubEnv,
 } from '../test-utilities'
 import type { CommandDependencies } from '../types'
 import { init } from './init'
 
 describe('init command', () => {
   afterEach(() => {
-    vi.unstubAllGlobals()
+    restoreEnv()
   })
 
   test('creates .dust directory structure', async () => {
@@ -94,7 +96,7 @@ describe('init command', () => {
   })
 
   test('creates CLAUDE.md with agent instructions', async () => {
-    vi.stubEnv('BUN_INSTALL', '')
+    stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFileSystem()
     const deps: CommandDependencies = {
@@ -114,7 +116,7 @@ describe('init command', () => {
   })
 
   test('creates AGENTS.md with agent instructions', async () => {
-    vi.stubEnv('BUN_INSTALL', '')
+    stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFileSystem()
     const deps: CommandDependencies = {
@@ -134,7 +136,7 @@ describe('init command', () => {
   })
 
   test('warns when CLAUDE.md already exists', async () => {
-    vi.stubEnv('BUN_INSTALL', '')
+    stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFileSystem({
       existingPaths: new Set(['/project/CLAUDE.md']),
@@ -157,7 +159,7 @@ describe('init command', () => {
   })
 
   test('warns when AGENTS.md already exists', async () => {
-    vi.stubEnv('BUN_INSTALL', '')
+    stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFileSystem({
       existingPaths: new Set(['/project/AGENTS.md']),
@@ -201,7 +203,7 @@ describe('init command', () => {
   })
 
   test('creates settings.json with npm test for Node.js projects', async () => {
-    vi.stubEnv('BUN_INSTALL', '')
+    stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFileSystem({
       existingPaths: new Set(['/project/package.json']),
@@ -268,7 +270,7 @@ describe('init command', () => {
   })
 
   test('creates settings.json with empty checks for non-Node projects', async () => {
-    vi.stubEnv('BUN_INSTALL', '')
+    stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFileSystem()
     const deps: CommandDependencies = {
@@ -348,7 +350,7 @@ describe('init command', () => {
   })
 
   test('uses bunx when BUN_INSTALL env var is set and no lockfiles', async () => {
-    vi.stubEnv('BUN_INSTALL', '/home/user/.bun')
+    stubEnv('BUN_INSTALL', '/home/user/.bun')
 
     const ctx = createMockContext()
     const fs = createMockFileSystem()
@@ -369,7 +371,7 @@ describe('init command', () => {
   })
 
   test('outputs suggestions for next steps', async () => {
-    vi.stubEnv('BUN_INSTALL', '')
+    stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFileSystem()
     const deps: CommandDependencies = {
@@ -388,7 +390,7 @@ describe('init command', () => {
   })
 
   test('suggestions include examples for new repositories', async () => {
-    vi.stubEnv('BUN_INSTALL', '')
+    stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFileSystem()
     const deps: CommandDependencies = {
@@ -408,7 +410,7 @@ describe('init command', () => {
   })
 
   test('suggestions include examples for existing codebases', async () => {
-    vi.stubEnv('BUN_INSTALL', '')
+    stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFileSystem()
     const deps: CommandDependencies = {

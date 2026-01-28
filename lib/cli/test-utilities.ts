@@ -5,6 +5,37 @@
 import type { CommandContext, FileSystem, GlobScanner } from './types'
 
 /**
+ * Cross-runtime environment variable stubbing.
+ * Works with both Vitest and Bun test runners.
+ */
+const originalEnvValues = new Map<string, string | undefined>()
+
+/**
+ * Stub an environment variable with a temporary value.
+ * Call restoreEnv() to restore original values.
+ */
+export function stubEnv(name: string, value: string): void {
+  if (!originalEnvValues.has(name)) {
+    originalEnvValues.set(name, process.env[name])
+  }
+  process.env[name] = value
+}
+
+/**
+ * Restore all stubbed environment variables to their original values.
+ */
+export function restoreEnv(): void {
+  for (const [name, originalValue] of originalEnvValues) {
+    if (originalValue === undefined) {
+      delete process.env[name]
+    } else {
+      process.env[name] = originalValue
+    }
+  }
+  originalEnvValues.clear()
+}
+
+/**
  * Extended context with captured output lines for assertions
  */
 export interface MockContext extends CommandContext {
