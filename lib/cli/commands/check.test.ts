@@ -214,6 +214,85 @@ describe('check command with checks configuration', () => {
     expect(ctx.stdoutLines).toContain('> exit 1')
     expect(ctx.stdoutLines).toContain('0/1 checks passed')
   })
+
+  test('displays hints for failed check when configured', async () => {
+    const ctx = createMockContext()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [
+        {
+          name: 'build',
+          command: 'npm run build',
+          hints: [
+            'Run `npm install` if this is a fresh checkout',
+            'Check for TypeScript errors in the files you modified',
+          ],
+        },
+      ],
+    }
+    const fs = createMockFileSystem()
+    const bufferedRunner = createMockBufferedRunner({
+      'npm run build': {
+        exitCode: 1,
+        output: 'error TS2307: Cannot find module',
+      },
+    })
+
+    const result = await check(createDeps(ctx, fs, settings), bufferedRunner)
+
+    expect(result.exitCode).toBe(1)
+    const output = ctx.stdoutLines.join('\n')
+    expect(output).toContain("Hints for fixing 'build':")
+    expect(output).toContain(
+      '  - Run `npm install` if this is a fresh checkout'
+    )
+    expect(output).toContain(
+      '  - Check for TypeScript errors in the files you modified'
+    )
+  })
+
+  test('does not display hints when check passes', async () => {
+    const ctx = createMockContext()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [
+        {
+          name: 'build',
+          command: 'npm run build',
+          hints: ['This hint should not appear'],
+        },
+      ],
+    }
+    const fs = createMockFileSystem()
+    const bufferedRunner = createMockBufferedRunner({
+      'npm run build': { exitCode: 0, output: '' },
+    })
+
+    const result = await check(createDeps(ctx, fs, settings), bufferedRunner)
+
+    expect(result.exitCode).toBe(0)
+    const output = ctx.stdoutLines.join('\n')
+    expect(output).not.toContain('Hints for fixing')
+    expect(output).not.toContain('This hint should not appear')
+  })
+
+  test('does not display hints section when no hints configured', async () => {
+    const ctx = createMockContext()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [{ name: 'test', command: 'npm test' }],
+    }
+    const fs = createMockFileSystem()
+    const bufferedRunner = createMockBufferedRunner({
+      'npm test': { exitCode: 1, output: 'Test failed' },
+    })
+
+    const result = await check(createDeps(ctx, fs, settings), bufferedRunner)
+
+    expect(result.exitCode).toBe(1)
+    const output = ctx.stdoutLines.join('\n')
+    expect(output).not.toContain('Hints for fixing')
+  })
 })
 
 describe('check command when no checks configured', () => {

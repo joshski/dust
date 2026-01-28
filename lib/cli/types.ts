@@ -27,6 +27,7 @@ export interface GlobScanner {
 export interface CheckConfig {
   name: string
   command: string
+  hints?: string[]
 }
 
 export interface DustSettings {

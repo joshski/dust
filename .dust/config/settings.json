@@ -1,12 +1,37 @@
 {
   "dustCommand": "bin/dust",
   "checks": [
-    { "name": "lint", "command": "bunx biome check ." },
-    { "name": "build", "command": "bun run build" },
-    { "name": "tests", "command": "bun run test:coverage" },
+    {
+      "name": "lint",
+      "command": "bunx biome check .",
+      "hints": [
+        "Run `bunx biome check . --write` to auto-fix lint errors",
+        "Check biome.json for rule configurations"
+      ]
+    },
+    {
+      "name": "build",
+      "command": "bun run build",
+      "hints": [
+        "Run `bun install` if this is a fresh checkout",
+        "Check for TypeScript errors in the files you modified"
+      ]
+    },
+    {
+      "name": "tests",
+      "command": "bun run test:coverage",
+      "hints": [
+        "Run `bun run test` to see detailed test output",
+        "Check if new code needs corresponding tests"
+      ]
+    },
     {
       "name": "typecheck",
-      "command": "bunx tsc --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target esnext lib/**/*.ts"
+      "command": "bunx tsc --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target esnext lib/**/*.ts",
+      "hints": [
+        "Check type definitions in the files you modified",
+        "Ensure all imports have proper type declarations"
+      ]
     }
   ]
 }

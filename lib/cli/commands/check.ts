@@ -20,6 +20,7 @@ export interface CheckResult {
   exitCode: number
   output: string
   isBuiltIn?: boolean
+  hints?: string[]
 }
 
 export interface BufferedProcessRunner {
@@ -75,6 +76,7 @@ async function runConfiguredChecks(
       command: check.command,
       exitCode,
       output,
+      hints: check.hints,
     }
   })
   return Promise.all(promises)
@@ -124,6 +126,13 @@ function displayResults(results: CheckResult[], ctx: CommandContext): number {
     ctx.stdout(`> ${result.command}`)
     if (result.output.trim()) {
       ctx.stdout(result.output.trimEnd())
+    }
+    if (result.hints && result.hints.length > 0) {
+      ctx.stdout('')
+      ctx.stdout(`Hints for fixing '${result.name}':`)
+      for (const hint of result.hints) {
+        ctx.stdout(`  - ${hint}`)
+      }
     }
   }
 
