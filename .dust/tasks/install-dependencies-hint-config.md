@@ -1,13 +1,13 @@
-# Add freshCheckoutHint configuration setting
+# Add installDependenciesHint configuration setting
 
 The task instructions currently say "Install dependencies if this is a fresh checkout" but agents have no way to know what command to run.
 
-Add a `freshCheckoutHint` configuration setting that:
+Add a `installDependenciesHint` configuration setting that:
 - Is injected into the task instructions template
-- Defaults to "Check .dust/facts/ for setup instructions" on `dust init`
+- Defaults to "Install any dependencies" on `dust init`
 - Allows projects to customize with their specific install command
 
-The template line would become: `{{freshCheckoutHint}} if this is a fresh checkout`
+The template line would become: `{{installDependenciesHint}} if this is a fresh checkout`
 
 ## Goals
 
@@ -19,7 +19,7 @@ The template line would become: `{{freshCheckoutHint}} if this is a fresh checko
 
 ## Definition of done
 
-- [ ] Add `freshCheckoutHint` to the config schema
+- [ ] Add `installDependenciesHint` to the config schema
 - [ ] Set default value in `dust init`
-- [ ] Update `lib/templates/agent-tasks.txt` to use `{{freshCheckoutHint}} if this is a fresh checkout`
+- [ ] Update `lib/templates/agent-tasks.txt` to use `{{installDependenciesHint}} if this is a fresh checkout`
 - [ ] All tests pass
