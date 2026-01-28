@@ -74,9 +74,10 @@ describe('check command with checks configuration', () => {
     expect(bufferedRunner.calls).toHaveLength(3)
     // Verify all commands were called (order may vary due to parallel execution)
     const commands = bufferedRunner.calls.map(c => c.command)
-    expect(commands).toContain('npm run lint')
-    expect(commands).toContain('npm test')
-    expect(commands).toContain('npm run build')
+    expect(commands).toHaveLength(3)
+    expect(new Set(commands)).toEqual(
+      new Set(['npm run lint', 'npm test', 'npm run build'])
+    )
   })
 
   test('displays pass status for each check', async () => {
@@ -96,9 +97,12 @@ describe('check command with checks configuration', () => {
 
     await check(createDeps(ctx, fs, settings), bufferedRunner)
 
-    expect(ctx.stdoutLines).toContain('✓ lint')
-    expect(ctx.stdoutLines).toContain('✓ test')
-    expect(ctx.stdoutLines).toContain('2/2 checks passed')
+    expect(ctx.stdoutLines).toEqual([
+      '✓ lint',
+      '✓ test',
+      '',
+      '2/2 checks passed',
+    ])
   })
 
   test('displays failure status and output for failing checks', async () => {

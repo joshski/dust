@@ -28,12 +28,14 @@ describe('init command', () => {
     const result = await init(deps)
 
     expect(result.exitCode).toBe(0)
-    expect(fs.createdDirs).toContain('/project/.dust')
-    expect(fs.createdDirs).toContain('/project/.dust/goals')
-    expect(fs.createdDirs).toContain('/project/.dust/ideas')
-    expect(fs.createdDirs).toContain('/project/.dust/tasks')
-    expect(fs.createdDirs).toContain('/project/.dust/facts')
-    expect(fs.createdDirs).toContain('/project/.dust/config')
+    expect(fs.createdDirs).toEqual([
+      '/project/.dust',
+      '/project/.dust/goals',
+      '/project/.dust/ideas',
+      '/project/.dust/tasks',
+      '/project/.dust/facts',
+      '/project/.dust/config',
+    ])
   })
 
   test('creates initial fact file', async () => {

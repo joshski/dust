@@ -309,13 +309,15 @@ describe('main', () => {
 
 describe('COMMANDS', () => {
   test('contains expected commands', () => {
-    expect(COMMANDS).toContain('init')
-    expect(COMMANDS).toContain('validate')
-    expect(COMMANDS).toContain('list')
-    expect(COMMANDS).toContain('next')
-    expect(COMMANDS).toContain('check')
-    expect(COMMANDS).toContain('agent')
-    expect(COMMANDS).toContain('help')
+    expect(COMMANDS).toEqual([
+      'init',
+      'validate',
+      'list',
+      'next',
+      'check',
+      'agent',
+      'help',
+    ])
   })
 })
 

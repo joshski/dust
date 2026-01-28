@@ -165,13 +165,14 @@ describe('agent command', () => {
   })
 
   test('AGENT_SUBCOMMANDS contains expected commands', () => {
-    expect(AGENT_SUBCOMMANDS).toContain('new task')
-    expect(AGENT_SUBCOMMANDS).toContain('new goal')
-    expect(AGENT_SUBCOMMANDS).toContain('new idea')
-    expect(AGENT_SUBCOMMANDS).toContain('implement task')
-    expect(AGENT_SUBCOMMANDS).toContain('understand goals')
-    expect(AGENT_SUBCOMMANDS).toContain('pick task')
-    expect(AGENT_SUBCOMMANDS).toContain('help')
-    expect(AGENT_SUBCOMMANDS.length).toBe(7)
+    expect(AGENT_SUBCOMMANDS).toEqual([
+      'new task',
+      'new goal',
+      'new idea',
+      'implement task',
+      'understand goals',
+      'pick task',
+      'help',
+    ])
   })
 })
