@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test } from 'vitest'
 import {
   COMMANDS,
   generateHelpText,
@@ -12,6 +12,8 @@ import {
   createMockContext,
   createMockFileSystem,
   createMockGlobScanner,
+  restoreEnv,
+  stubEnv,
 } from './test-utilities'
 import type {
   CommandContext,
@@ -104,11 +106,11 @@ describe('runCommand', () => {
 
 describe('main', () => {
   afterEach(() => {
-    vi.unstubAllGlobals()
+    restoreEnv()
   })
 
   test('shows help when no command provided', async () => {
-    vi.stubEnv('BUN_INSTALL', '')
+    stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFileSystem()
     const glob = createMockGlobScanner()
@@ -136,7 +138,7 @@ describe('main', () => {
   })
 
   test('shows help for --help flag', async () => {
-    vi.stubEnv('BUN_INSTALL', '')
+    stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFileSystem()
     const glob = createMockGlobScanner()
@@ -148,7 +150,7 @@ describe('main', () => {
   })
 
   test('shows help for -h flag', async () => {
-    vi.stubEnv('BUN_INSTALL', '')
+    stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFileSystem()
     const glob = createMockGlobScanner()
@@ -160,7 +162,7 @@ describe('main', () => {
   })
 
   test('returns error for unknown command', async () => {
-    vi.stubEnv('BUN_INSTALL', '')
+    stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
     const fs = createMockFileSystem()
     const glob = createMockGlobScanner()
