@@ -4,10 +4,15 @@ The `agent-tasks.txt` template currently handles three distinct activities: impl
 
 Split into focused commands that each do one thing:
 - `agent work` - implement a task (already exists, no change)
-- `agent add-task` - create a task from scratch
-- `agent flesh-out` - convert an idea into a task
+- `agent task` - create a task (whether from scratch or inspired by an existing idea)
 
-Also optimize `agent-greeting.txt` to be a scannable "pick one" decision table rather than verbose example phrases. The greeting should acknowledge that users may use extremely terse prompts like "work" or "flesh out <idea-name>".
+When creating a task, the agent must check all existing ideas to determine if any should be:
+- **Deleted** - if the new task fully covers the idea
+- **Updated** - if the idea's scope changes as a result of the task
+
+This eliminates the need for separate "add-task" and "flesh-out" commands. Users simply say "Task: ..." and the agent handles idea cleanup automatically.
+
+Also optimize `agent-greeting.txt` to be a scannable numbered list (not a table) that makes it clear the agent should choose ONE option. The greeting should acknowledge that users may use terse prompts like "work" or "task: ...".
 
 ## Goals
 
@@ -20,12 +25,11 @@ Also optimize `agent-greeting.txt` to be a scannable "pick one" decision table r
 
 ## Definition of done
 
-- [ ] Create `agent-add-task.txt` with instructions for creating a task from scratch
-- [ ] Create `agent-flesh-out.txt` with instructions for converting an idea to a task
+- [ ] Create `agent-task.txt` with instructions for creating a task, including checking all ideas for deletion/update
 - [ ] Remove "Implementing a Task" and "Converting an Idea" sections from `agent-tasks.txt` (or remove the file entirely if only listing remains)
-- [ ] Update `agent-greeting.txt` to a compact table format routing to the new commands
-- [ ] Greeting explicitly handles terse prompts (e.g., "work", "flesh out <idea-name>")
-- [ ] Update `agent-ideas.txt` to reference `agent flesh-out` instead of `agent tasks`
-- [ ] Update `agent-help.txt` to list the new commands
-- [ ] Add new subcommands to the CLI (`add-task`, `flesh-out`)
+- [ ] Update `agent-greeting.txt` to a numbered list format that clearly indicates "choose ONE"
+- [ ] Greeting explicitly handles terse prompts (e.g., "work", "task: ...")
+- [ ] Update `agent-ideas.txt` to explain that ideas may be auto-deleted/updated when tasks are created
+- [ ] Update `agent-help.txt` to list the new command
+- [ ] Add `task` subcommand to the CLI
 - [ ] All tests pass
