@@ -11,7 +11,7 @@ By making it an object or class with methods corresponding to the names of the c
 
 ## Blocked by
 
-- [Extract help command to its own file](extract-help-command.md)
+(none)
 
 ## Definition of done
 
