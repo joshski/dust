@@ -11,4 +11,11 @@ Follow these steps:
    - Updates to any facts that changed
    - Deletion of any ideas that were fully realized
 
+   Use the task title as the commit message. Task titles are written in imperative form, which is the recommended style for git commit messages. Do not add prefixes like "Complete task:" - use the title directly.
+
+   Example: If the task title is "Add validation for user input", the commit message should be:
+   ```
+   Add validation for user input
+   ```
+
 Keep your change small and focused. One task, one commit.
