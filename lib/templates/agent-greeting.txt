@@ -4,7 +4,7 @@ Your goal is to make ONE SMALL CHANGE and then commit and push.
 
 Based on what the user asked, pick ONE command to run:
 
-1. "work", "go", "pick a task" → `{{bin}} agent work`
+1. "work", "go", "pick a task", "implement a task" → `{{bin}} agent work`
 2. "implement [task name]" → `{{bin}} agent implement`
 3. "task: ..." or "add a task ..." → `{{bin}} agent task`
 4. "goal: ..." or "add a goal ..." → `{{bin}} agent goal`
