@@ -1,65 +1,11 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import type {
-  CommandContext,
-  CommandDependencies,
-  FileSystem,
-  GlobScanner,
-} from '../types'
+import {
+  createMockContext,
+  createMockFileSystem,
+  createMockGlobScanner,
+} from '../test-utilities'
+import type { CommandDependencies } from '../types'
 import { init } from './init'
-
-function createMockContext(): CommandContext & {
-  stdoutLines: string[]
-  stderrLines: string[]
-} {
-  const stdoutLines: string[] = []
-  const stderrLines: string[] = []
-  return {
-    cwd: '/project',
-    stdout: (msg: string) => stdoutLines.push(msg),
-    stderr: (msg: string) => stderrLines.push(msg),
-    stdoutLines,
-    stderrLines,
-  }
-}
-
-function createMockFs(
-  existingPaths: Set<string> = new Set()
-): FileSystem & { createdDirs: string[]; writtenFiles: Map<string, string> } {
-  const createdDirs: string[] = []
-  const writtenFiles = new Map<string, string>()
-
-  return {
-    exists: (path: string) => existingPaths.has(path),
-    readFile: async () => '',
-    writeFile: async (path: string, content: string) => {
-      writtenFiles.set(path, content)
-    },
-    mkdir: async (path: string) => {
-      createdDirs.push(path)
-    },
-    readdir: async () => [],
-    createdDirs,
-    writtenFiles,
-  }
-}
-
-function createMockGlob(): GlobScanner {
-  return {
-    scan: async function* () {
-      // Empty by default
-    },
-  }
-}
-
-function createDeps(ctx: CommandContext, fs: FileSystem): CommandDependencies {
-  return {
-    arguments: [],
-    context: ctx,
-    fileSystem: fs,
-    globScanner: createMockGlob(),
-    settings: { dustCommand: 'dust' },
-  }
-}
 
 describe('init command', () => {
   afterEach(() => {
@@ -68,9 +14,16 @@ describe('init command', () => {
 
   test('creates .dust directory structure', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs()
+    const fs = createMockFileSystem()
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    const result = await init(createDeps(ctx, fs))
+    const result = await init(deps)
 
     expect(result.exitCode).toBe(0)
     expect(fs.createdDirs).toContain('/project/.dust')
@@ -83,9 +36,16 @@ describe('init command', () => {
 
   test('creates initial fact file', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs()
+    const fs = createMockFileSystem()
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     expect(
       fs.writtenFiles.has('/project/.dust/facts/use-dust-for-planning.md')
@@ -99,9 +59,16 @@ describe('init command', () => {
 
   test('outputs success messages', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs()
+    const fs = createMockFileSystem()
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     expect(ctx.stdoutLines.join('\n')).toContain('Initialized Dust repository')
     expect(ctx.stdoutLines.join('\n')).toContain('Created directories')
@@ -109,9 +76,18 @@ describe('init command', () => {
 
   test('shows notification when .dust already exists', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/.dust']))
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/.dust']),
+    })
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    const result = await init(createDeps(ctx, fs))
+    const result = await init(deps)
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('already exists, skipping')
@@ -120,9 +96,16 @@ describe('init command', () => {
   test('creates CLAUDE.md with agent instructions', async () => {
     vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
-    const fs = createMockFs()
+    const fs = createMockFileSystem()
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     expect(fs.writtenFiles.has('/project/CLAUDE.md')).toBe(true)
     const content = fs.writtenFiles.get('/project/CLAUDE.md')
@@ -133,9 +116,16 @@ describe('init command', () => {
   test('creates AGENTS.md with agent instructions', async () => {
     vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
-    const fs = createMockFs()
+    const fs = createMockFileSystem()
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     expect(fs.writtenFiles.has('/project/AGENTS.md')).toBe(true)
     const content = fs.writtenFiles.get('/project/AGENTS.md')
@@ -146,9 +136,18 @@ describe('init command', () => {
   test('warns when CLAUDE.md already exists', async () => {
     vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/CLAUDE.md']))
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/CLAUDE.md']),
+    })
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     expect(fs.writtenFiles.has('/project/CLAUDE.md')).toBe(false)
     expect(ctx.stdoutLines.join('\n')).toContain(
@@ -160,9 +159,18 @@ describe('init command', () => {
   test('warns when AGENTS.md already exists', async () => {
     vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/AGENTS.md']))
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/AGENTS.md']),
+    })
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     expect(fs.writtenFiles.has('/project/AGENTS.md')).toBe(false)
     expect(ctx.stdoutLines.join('\n')).toContain(
@@ -173,9 +181,18 @@ describe('init command', () => {
 
   test('uses bunx when bun.lockb exists', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/bun.lockb']))
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/bun.lockb']),
+    })
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     const claudeContent = fs.writtenFiles.get('/project/CLAUDE.md')
     expect(claudeContent).toContain('bunx dust agent')
@@ -186,9 +203,18 @@ describe('init command', () => {
   test('creates settings.json with npm test for Node.js projects', async () => {
     vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/package.json']))
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/package.json']),
+    })
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     expect(fs.writtenFiles.has('/project/.dust/config/settings.json')).toBe(
       true
@@ -201,9 +227,18 @@ describe('init command', () => {
 
   test('creates settings.json with bun test for Bun projects', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/bun.lockb']))
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/bun.lockb']),
+    })
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     const content = fs.writtenFiles.get('/project/.dust/config/settings.json')
     const settings = JSON.parse(content ?? '')
@@ -213,9 +248,18 @@ describe('init command', () => {
 
   test('creates settings.json with pnpm test for pnpm projects', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/pnpm-lock.yaml']))
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/pnpm-lock.yaml']),
+    })
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     const content = fs.writtenFiles.get('/project/.dust/config/settings.json')
     const settings = JSON.parse(content ?? '')
@@ -226,9 +270,16 @@ describe('init command', () => {
   test('creates settings.json with empty checks for non-Node projects', async () => {
     vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
-    const fs = createMockFs()
+    const fs = createMockFileSystem()
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     const content = fs.writtenFiles.get('/project/.dust/config/settings.json')
     const settings = JSON.parse(content ?? '')
@@ -238,9 +289,16 @@ describe('init command', () => {
 
   test('outputs settings creation message', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs()
+    const fs = createMockFileSystem()
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     expect(ctx.stdoutLines.join('\n')).toContain(
       'Created settings: .dust/config/settings.json'
@@ -249,9 +307,18 @@ describe('init command', () => {
 
   test('uses pnpx when pnpm-lock.yaml exists', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/pnpm-lock.yaml']))
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/pnpm-lock.yaml']),
+    })
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     const claudeContent = fs.writtenFiles.get('/project/CLAUDE.md')
     expect(claudeContent).toContain('pnpx dust agent')
@@ -261,9 +328,18 @@ describe('init command', () => {
 
   test('uses npx when package-lock.json exists', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/package-lock.json']))
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/package-lock.json']),
+    })
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     const claudeContent = fs.writtenFiles.get('/project/CLAUDE.md')
     expect(claudeContent).toContain('npx dust agent')
@@ -275,9 +351,16 @@ describe('init command', () => {
     vi.stubEnv('BUN_INSTALL', '/home/user/.bun')
 
     const ctx = createMockContext()
-    const fs = createMockFs()
+    const fs = createMockFileSystem()
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     const claudeContent = fs.writtenFiles.get('/project/CLAUDE.md')
     expect(claudeContent).toContain('bunx dust agent')
@@ -288,9 +371,16 @@ describe('init command', () => {
   test('outputs suggestions for next steps', async () => {
     vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
-    const fs = createMockFs()
+    const fs = createMockFileSystem()
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     const output = ctx.stdoutLines.join('\n')
     expect(output).toContain('Commit the changes if you are happy')
@@ -300,9 +390,16 @@ describe('init command', () => {
   test('suggestions include examples for new repositories', async () => {
     vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
-    const fs = createMockFs()
+    const fs = createMockFileSystem()
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     const output = ctx.stdoutLines.join('\n')
     expect(output).toContain('If this is a new repository')
@@ -313,9 +410,16 @@ describe('init command', () => {
   test('suggestions include examples for existing codebases', async () => {
     vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
-    const fs = createMockFs()
+    const fs = createMockFileSystem()
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     const output = ctx.stdoutLines.join('\n')
     expect(output).toContain('If this is an existing codebase')
@@ -324,9 +428,18 @@ describe('init command', () => {
 
   test('suggestions use npx runner when package-lock.json exists', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/package-lock.json']))
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/package-lock.json']),
+    })
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     const output = ctx.stdoutLines.join('\n')
     expect(output).toContain('> npx claude')
@@ -335,9 +448,18 @@ describe('init command', () => {
 
   test('suggestions use bunx runner when bun.lockb exists', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/bun.lockb']))
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/bun.lockb']),
+    })
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     const output = ctx.stdoutLines.join('\n')
     expect(output).toContain('> bunx claude')
@@ -346,9 +468,18 @@ describe('init command', () => {
 
   test('suggestions use pnpx runner when pnpm-lock.yaml exists', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/pnpm-lock.yaml']))
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/pnpm-lock.yaml']),
+    })
+    const deps: CommandDependencies = {
+      arguments: [],
+      context: ctx,
+      fileSystem: fs,
+      globScanner: createMockGlobScanner(),
+      settings: { dustCommand: 'dust' },
+    }
 
-    await init(createDeps(ctx, fs))
+    await init(deps)
 
     const output = ctx.stdoutLines.join('\n')
     expect(output).toContain('> pnpx claude')

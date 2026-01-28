@@ -8,6 +8,11 @@ import {
   main,
   runCommand,
 } from './main'
+import {
+  createMockContext,
+  createMockFileSystem,
+  createMockGlobScanner,
+} from './test-utilities'
 import type {
   CommandContext,
   CommandDependencies,
@@ -15,50 +20,6 @@ import type {
   FileSystem,
   GlobScanner,
 } from './types'
-
-function createMockContext(): CommandContext & {
-  stdoutLines: string[]
-  stderrLines: string[]
-} {
-  const stdoutLines: string[] = []
-  const stderrLines: string[] = []
-  return {
-    cwd: '/project',
-    stdout: (msg: string) => stdoutLines.push(msg),
-    stderr: (msg: string) => stderrLines.push(msg),
-    stdoutLines,
-    stderrLines,
-  }
-}
-
-function createMockFs(
-  existingPaths: Set<string> = new Set()
-): FileSystem & { createdDirs: string[]; writtenFiles: Map<string, string> } {
-  const createdDirs: string[] = []
-  const writtenFiles = new Map<string, string>()
-
-  return {
-    exists: (path: string) => existingPaths.has(path),
-    readFile: async () => '',
-    writeFile: async (path: string, content: string) => {
-      writtenFiles.set(path, content)
-    },
-    mkdir: async (path: string) => {
-      createdDirs.push(path)
-    },
-    readdir: async () => [],
-    createdDirs,
-    writtenFiles,
-  }
-}
-
-function createMockGlob(): GlobScanner {
-  return {
-    scan: async function* () {
-      // Empty by default
-    },
-  }
-}
 
 function createDeps(
   ctx: CommandContext,
@@ -116,8 +77,8 @@ describe('isValidCommand', () => {
 describe('runCommand', () => {
   test('runs help command and outputs help text', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs()
-    const glob = createMockGlob()
+    const fs = createMockFileSystem()
+    const glob = createMockGlobScanner()
     const deps = createDeps(ctx, fs, glob)
 
     const result = await runCommand('help', deps)
@@ -130,8 +91,8 @@ describe('runCommand', () => {
 
   test('runs init command', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs()
-    const glob = createMockGlob()
+    const fs = createMockFileSystem()
+    const glob = createMockGlobScanner()
     const deps = createDeps(ctx, fs, glob)
 
     const result = await runCommand('init', deps)
@@ -149,8 +110,8 @@ describe('main', () => {
   test('shows help when no command provided', async () => {
     vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
-    const fs = createMockFs()
-    const glob = createMockGlob()
+    const fs = createMockFileSystem()
+    const glob = createMockGlobScanner()
 
     const result = await main({ args: [], ctx, fs, glob })
 
@@ -163,8 +124,8 @@ describe('main', () => {
 
   test('shows help for help command', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs()
-    const glob = createMockGlob()
+    const fs = createMockFileSystem()
+    const glob = createMockGlobScanner()
 
     const result = await main({ args: ['help'], ctx, fs, glob })
 
@@ -177,8 +138,8 @@ describe('main', () => {
   test('shows help for --help flag', async () => {
     vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
-    const fs = createMockFs()
-    const glob = createMockGlob()
+    const fs = createMockFileSystem()
+    const glob = createMockGlobScanner()
 
     const result = await main({ args: ['--help'], ctx, fs, glob })
 
@@ -189,8 +150,8 @@ describe('main', () => {
   test('shows help for -h flag', async () => {
     vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
-    const fs = createMockFs()
-    const glob = createMockGlob()
+    const fs = createMockFileSystem()
+    const glob = createMockGlobScanner()
 
     const result = await main({ args: ['-h'], ctx, fs, glob })
 
@@ -201,8 +162,8 @@ describe('main', () => {
   test('returns error for unknown command', async () => {
     vi.stubEnv('BUN_INSTALL', '')
     const ctx = createMockContext()
-    const fs = createMockFs()
-    const glob = createMockGlob()
+    const fs = createMockFileSystem()
+    const glob = createMockGlobScanner()
 
     const result = await main({ args: ['unknown'], ctx, fs, glob })
 
@@ -215,7 +176,9 @@ describe('main', () => {
 
   test('uses custom binary path from settings for help', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/.dust/config/settings.json']))
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/.dust/config/settings.json']),
+    })
     // Override readFile to return custom settings
     fs.readFile = async (path: string) => {
       if (path === '/project/.dust/config/settings.json') {
@@ -223,7 +186,7 @@ describe('main', () => {
       }
       return ''
     }
-    const glob = createMockGlob()
+    const glob = createMockGlobScanner()
 
     const result = await main({ args: ['help'], ctx, fs, glob })
 
@@ -233,14 +196,16 @@ describe('main', () => {
 
   test('uses custom binary path from settings for unknown command error', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/.dust/config/settings.json']))
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/.dust/config/settings.json']),
+    })
     fs.readFile = async (path: string) => {
       if (path === '/project/.dust/config/settings.json') {
         return '{"dustCommand": "bin/dust"}'
       }
       return ''
     }
-    const glob = createMockGlob()
+    const glob = createMockGlobScanner()
 
     const result = await main({ args: ['unknown'], ctx, fs, glob })
 
@@ -252,8 +217,8 @@ describe('main', () => {
 
   test('routes init command correctly', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs()
-    const glob = createMockGlob()
+    const fs = createMockFileSystem()
+    const glob = createMockGlobScanner()
 
     const result = await main({ args: ['init'], ctx, fs, glob })
 
@@ -263,8 +228,10 @@ describe('main', () => {
 
   test('routes list command correctly', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/.dust']))
-    const glob = createMockGlob()
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/.dust']),
+    })
+    const glob = createMockGlobScanner()
 
     const result = await main({ args: ['list'], ctx, fs, glob })
 
@@ -273,8 +240,10 @@ describe('main', () => {
 
   test('routes validate command correctly', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/.dust']))
-    const glob = createMockGlob()
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/.dust']),
+    })
+    const glob = createMockGlobScanner()
 
     const result = await main({ args: ['validate'], ctx, fs, glob })
 
@@ -283,8 +252,10 @@ describe('main', () => {
 
   test('routes next command correctly', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/.dust', '/project/.dust/tasks']))
-    const glob = createMockGlob()
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/.dust', '/project/.dust/tasks']),
+    })
+    const glob = createMockGlobScanner()
 
     const result = await main({ args: ['next'], ctx, fs, glob })
 
@@ -293,8 +264,10 @@ describe('main', () => {
 
   test('routes check command correctly', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/.dust']))
-    const glob = createMockGlob()
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/.dust']),
+    })
+    const glob = createMockGlobScanner()
 
     const result = await main({ args: ['check'], ctx, fs, glob })
 
@@ -304,8 +277,10 @@ describe('main', () => {
 
   test('routes agent command correctly', async () => {
     const ctx = createMockContext()
-    const fs = createMockFs(new Set(['/project/.dust']))
-    const glob = createMockGlob()
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/.dust']),
+    })
+    const glob = createMockGlobScanner()
 
     const result = await main({ args: ['agent'], ctx, fs, glob })
 
@@ -316,8 +291,10 @@ describe('main', () => {
   test('passes command args to subcommands', async () => {
     const ctx = createMockContext()
     // Invalid type should cause the list command to report an error
-    const fs = createMockFs(new Set(['/project/.dust']))
-    const glob = createMockGlob()
+    const fs = createMockFileSystem({
+      existingPaths: new Set(['/project/.dust']),
+    })
+    const glob = createMockGlobScanner()
 
     const result = await main({ args: ['list', 'invalid-type'], ctx, fs, glob })
 

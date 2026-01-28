@@ -1,45 +1,15 @@
 import { describe, expect, test } from 'vitest'
+import {
+  createMockContext,
+  createMockFileSystem,
+  createMockGlobScanner,
+} from '../test-utilities'
 import type {
   CommandContext,
   CommandDependencies,
   DustSettings,
-  FileSystem,
-  GlobScanner,
 } from '../types'
 import { AGENT_SUBCOMMANDS, agent } from './agent'
-
-function createMockContext(): CommandContext & {
-  stdoutLines: string[]
-  stderrLines: string[]
-} {
-  const stdoutLines: string[] = []
-  const stderrLines: string[] = []
-  return {
-    cwd: '/project',
-    stdout: (msg: string) => stdoutLines.push(msg),
-    stderr: (msg: string) => stderrLines.push(msg),
-    stdoutLines,
-    stderrLines,
-  }
-}
-
-function createMockFs(): FileSystem {
-  return {
-    exists: () => false,
-    readFile: async () => '',
-    writeFile: async () => {},
-    mkdir: async () => {},
-    readdir: async () => [],
-  }
-}
-
-function createMockGlob(): GlobScanner {
-  return {
-    scan: async function* () {
-      // Empty by default
-    },
-  }
-}
 
 function createDeps(
   ctx: CommandContext,
@@ -49,8 +19,8 @@ function createDeps(
   return {
     arguments: args,
     context: ctx,
-    fileSystem: createMockFs(),
-    globScanner: createMockGlob(),
+    fileSystem: createMockFileSystem(),
+    globScanner: createMockGlobScanner(),
     settings,
   }
 }
