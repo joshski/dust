@@ -11,15 +11,25 @@ When assertions are comprehensive, test failures provide better feedback. Instea
 Collapse multiple partial assertions into one comprehensive assertion:
 
 ```javascript
-// Avoid
+// Avoid: multiple partial assertions
 expect(array).toContain('apples')
 expect(array).toContain('oranges')
 
-// Prefer
+// Avoid: assertions in a loop (still multiple assertions)
+for (const item of ['apples', 'oranges']) {
+  expect(array).toContain(item)
+}
+
+// Avoid: partial matchers that don't verify the complete state
+expect(array).toEqual(expect.arrayContaining(['apples', 'oranges']))
+expect(array).toHaveLength(2)
+
+// Prefer: one assertion that verifies the exact expected value
 expect(array).toEqual(['apples', 'oranges'])
 ```
 
 The comprehensive form:
+- Is a single assertion, not multiple assertions or loops
 - Verifies the complete expected state, not just fragments
 - Provides full context on failure (showing what _is_ present, not just what's missing)
 - Makes the test's intent clearer by showing the expected outcome in one place
