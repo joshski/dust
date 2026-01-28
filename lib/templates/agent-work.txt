@@ -5,7 +5,7 @@ Follow these steps:
 1. Run `{{bin}} check` to verify the project is in a good state
 2. Run `{{bin}} next` to see available tasks
 3. Pick ONE task and read its file to understand the requirements
-4. Implement the task, checking off items in "Definition of done"
+4. Implement the task
 5. Run `{{bin}} check` before committing
 6. Create a single atomic commit that includes:
    - All implementation changes
