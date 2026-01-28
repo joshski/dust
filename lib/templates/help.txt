@@ -20,4 +20,4 @@ Examples:
   {{bin}} check
   {{bin}} agent work
 
-For AI agent guidance, run `{{bin}} agent`.
+If you are an AI agent, run `{{bin}} agent` now!
