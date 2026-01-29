@@ -316,6 +316,7 @@ describe('COMMANDS', () => {
       'next',
       'check',
       'agent',
+      'loop',
       'help',
     ])
   })

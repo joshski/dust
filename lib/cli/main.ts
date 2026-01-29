@@ -10,6 +10,7 @@ import { check } from './commands/check'
 import { generateHelpText, help } from './commands/help'
 import { init } from './commands/init'
 import { list } from './commands/list'
+import { loop } from './commands/loop'
 import { next } from './commands/next'
 import { validate } from './commands/validate'
 import { loadSettings } from './settings'
@@ -32,6 +33,7 @@ export const commandRegistry = {
   next,
   check,
   agent,
+  loop,
   help,
 }
 

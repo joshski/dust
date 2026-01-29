@@ -9,6 +9,7 @@ Commands:
   next              Show tasks ready to work on (not blocked)
   check             Run project-defined quality gate hook
   agent [cmd]       Agent-specific guidance (work, tasks, goals, ideas, help)
+  loop              Run continuous Claude iteration on tasks
   help              Show this help message
 
 Examples:
