@@ -5,8 +5,8 @@ Follow these steps:
 1. {{installDependenciesHint}} (unless already installed)
 2. Run `{{bin}} check` to verify the project is in a good state
 3. Implement the task
-4. Run `{{bin}} check` before committing
-5. Create a single atomic commit that includes:
+{{#unless hooksInstalled}}4. Run `{{bin}} check` before committing
+5.{{/unless}}{{#if hooksInstalled}}4.{{/if}} Create a single atomic commit that includes:
    - All implementation changes
    - Deletion of the completed task file
    - Updates to any facts that changed
@@ -19,6 +19,6 @@ Follow these steps:
    Add validation for user input
    ```
 
-6. Push your commit to the remote repository
+{{#unless hooksInstalled}}6.{{/unless}}{{#if hooksInstalled}}5.{{/if}} Push your commit to the remote repository
 
 Keep your change small and focused. One task, one commit.
