@@ -1,9 +1,8 @@
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
 import {
-  createMockContext,
-  createMockFileSystem,
-  createMockGlobScanner,
+  createContextEmulator,
+  createFileSystemEmulator,
 } from '../test-utilities'
 import type { CommandDependencies } from '../types'
 import {
@@ -18,13 +17,13 @@ import {
 function createDeps(
   files: Map<string, string> = new Map()
 ): CommandDependencies {
-  const ctx = createMockContext()
-  const fs = createMockFileSystem({ files })
+  const ctx = createContextEmulator()
+  const fs = createFileSystemEmulator({ files })
   return {
     arguments: [],
     context: ctx,
     fileSystem: fs,
-    globScanner: createMockGlobScanner(),
+    globScanner: fs,
     settings: { dustCommand: 'dust' },
   }
 }
@@ -149,7 +148,7 @@ describe('runOneIteration', () => {
 
   test('logs git pull failures', async () => {
     const deps = createDeps()
-    const ctx = deps.context as ReturnType<typeof createMockContext>
+    const ctx = deps.context as ReturnType<typeof createContextEmulator>
     const loopDeps: LoopDependencies = {
       spawn: () => {
         const proc = new EventEmitter() as ReturnType<typeof createMockSpawn>
@@ -223,7 +222,7 @@ describe('runOneIteration', () => {
       ['/project/.dust/tasks/task.md', '# Task\n\n## Blocked by\n\n(none)'],
     ])
     const deps = createDeps(files)
-    const ctx = deps.context as ReturnType<typeof createMockContext>
+    const ctx = deps.context as ReturnType<typeof createContextEmulator>
     const loopDeps: LoopDependencies = {
       spawn: createMockSpawn(),
       run: async () => {
@@ -243,7 +242,7 @@ describe('runOneIteration', () => {
       ['/project/.dust/tasks/task.md', '# Task\n\n## Blocked by\n\n(none)'],
     ])
     const deps = createDeps(files)
-    const ctx = deps.context as ReturnType<typeof createMockContext>
+    const ctx = deps.context as ReturnType<typeof createContextEmulator>
     const loopDeps: LoopDependencies = {
       spawn: createMockSpawn(),
       run: async () => {
@@ -261,7 +260,7 @@ describe('runOneIteration', () => {
 describe('loop', () => {
   test('outputs startup message', async () => {
     const deps = createDeps()
-    const ctx = deps.context as ReturnType<typeof createMockContext>
+    const ctx = deps.context as ReturnType<typeof createContextEmulator>
     const loopDeps: LoopDependencies = {
       spawn: createMockSpawn(),
       run: async () => {},

@@ -1,30 +1,30 @@
 import { describe, expect, test } from 'vitest'
 import {
-  createMockContext,
-  createMockFileSystem,
-  createMockGlobScanner,
+  createContextEmulator,
+  createFileSystemEmulator,
+  type FileSystemEmulator,
 } from '../test-utilities'
-import type { CommandContext, CommandDependencies, FileSystem } from '../types'
+import type { CommandContext, CommandDependencies } from '../types'
 import { list } from './list'
 
 function createDeps(
   ctx: CommandContext,
-  fs: FileSystem,
+  fs: FileSystemEmulator,
   args: string[] = []
 ): CommandDependencies {
   return {
     arguments: args,
     context: ctx,
     fileSystem: fs,
-    globScanner: createMockGlobScanner(),
+    globScanner: fs,
     settings: { dustCommand: 'dust' },
   }
 }
 
 describe('list command', () => {
   test('fails if .dust not found', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
 
     const result = await list(createDeps(ctx, fs))
 
@@ -33,8 +33,8 @@ describe('list command', () => {
   })
 
   test('lists all types when no argument given', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([
         ['/project/.dust/goals/goal.md', '# My Goal'],
         ['/project/.dust/ideas/idea.md', '# My Idea'],
@@ -54,8 +54,8 @@ describe('list command', () => {
   })
 
   test('lists only specified type', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([
         ['/project/.dust/goals/goal.md', '# My Goal'],
         ['/project/.dust/ideas/idea.md', '# My Idea'],
@@ -71,8 +71,8 @@ describe('list command', () => {
   })
 
   test('shows file name and title', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([['/project/.dust/goals/my-goal.md', '# My Goal Title']]),
     })
 
@@ -84,8 +84,8 @@ describe('list command', () => {
   })
 
   test('shows only file name if no title', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([['/project/.dust/goals/my-goal.md', 'No heading here']]),
     })
 
@@ -96,8 +96,8 @@ describe('list command', () => {
   })
 
   test('rejects invalid type', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([['/project/.dust/goals/g.md', '']]),
     })
 
@@ -108,8 +108,8 @@ describe('list command', () => {
   })
 
   test('shows valid types on error', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([['/project/.dust/goals/g.md', '']]),
     })
 
@@ -123,9 +123,9 @@ describe('list command', () => {
   })
 
   test('skips type directories that do not exist', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     // Only goals directory exists, tasks/ideas/facts do not
-    const fs = createMockFileSystem({
+    const fs = createFileSystemEmulator({
       files: new Map([['/project/.dust/goals/my-goal.md', '# My Goal']]),
     })
 
@@ -142,8 +142,8 @@ describe('list command', () => {
   })
 
   test('skips type directories with no markdown files', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([['/project/.dust/goals/my-goal.md', '# My Goal']]),
       existingPaths: new Set(['/project/.dust/ideas']),
     })

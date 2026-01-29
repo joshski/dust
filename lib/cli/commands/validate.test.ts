@@ -1,15 +1,10 @@
 import { describe, expect, test } from 'vitest'
 import {
-  createMockContext,
-  createMockFileSystem,
-  createMockGlobScanner,
+  createContextEmulator,
+  createFileSystemEmulator,
+  type FileSystemEmulator,
 } from '../test-utilities'
-import type {
-  CommandContext,
-  CommandDependencies,
-  FileSystem,
-  GlobScanner,
-} from '../types'
+import type { CommandContext, CommandDependencies } from '../types'
 import {
   validate,
   validateFilename,
@@ -20,14 +15,13 @@ import {
 
 function createDeps(
   ctx: CommandContext,
-  fs: FileSystem,
-  glob: GlobScanner
+  fs: FileSystemEmulator
 ): CommandDependencies {
   return {
     arguments: [],
     context: ctx,
     fileSystem: fs,
-    globScanner: glob,
+    globScanner: fs,
     settings: { dustCommand: 'dust' },
   }
 }
@@ -71,7 +65,7 @@ describe('validateTaskHeadings', () => {
 describe('validateLinks', () => {
   test('returns no violations for valid links', () => {
     const content = '[Goal](../goals/goal.md)'
-    const fs = createMockFileSystem({
+    const fs = createFileSystemEmulator({
       files: new Map([['/project/.dust/goals/goal.md', 'content']]),
     })
 
@@ -85,7 +79,7 @@ describe('validateLinks', () => {
 
   test('reports broken links', () => {
     const content = '[Missing](../goals/missing.md)'
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
 
     const violations = validateLinks(
       '/project/.dust/tasks/task.md',
@@ -98,7 +92,7 @@ describe('validateLinks', () => {
 
   test('skips external links', () => {
     const content = '[External](https://example.com)'
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
 
     const violations = validateLinks(
       '/project/.dust/tasks/task.md',
@@ -110,7 +104,7 @@ describe('validateLinks', () => {
 
   test('skips anchor links', () => {
     const content = '[Section](#section)'
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
 
     const violations = validateLinks(
       '/project/.dust/tasks/task.md',
@@ -124,7 +118,7 @@ describe('validateLinks', () => {
     const content = `Line 1
 Line 2
 [Missing](../goals/missing.md)`
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
 
     const violations = validateLinks(
       '/project/.dust/tasks/task.md',
@@ -266,19 +260,18 @@ describe('validateSemanticLinks', () => {
 
 describe('validate command', () => {
   test('fails if .dust not found', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
-    const glob = createMockGlobScanner([])
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
 
-    const result = await validate(createDeps(ctx, fs, glob))
+    const result = await validate(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(1)
     expect(ctx.stderrLines.join('\n')).toContain('.dust directory not found')
   })
 
   test('passes with valid files', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([
         ['/project/.dust/goals/goal.md', '# Goal\nDescription'],
         [
@@ -291,35 +284,30 @@ describe('validate command', () => {
         ],
       ]),
     })
-    const glob = createMockGlobScanner([
-      '/project/.dust/goals/goal.md',
-      '/project/.dust/tasks/my-task.md',
-    ])
 
-    const result = await validate(createDeps(ctx, fs, glob))
+    const result = await validate(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('All validations passed')
   })
 
   test('reports violations', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([
         ['/project/.dust/tasks/my-task.md', '# Task with no headings'],
       ]),
     })
-    const glob = createMockGlobScanner(['/project/.dust/tasks/my-task.md'])
 
-    const result = await validate(createDeps(ctx, fs, glob))
+    const result = await validate(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(1)
     expect(ctx.stderrLines.join('\n')).toContain('violation')
   })
 
   test('reports filename violations for invalid task filenames', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([
         [
           '/project/.dust/tasks/BadFileName.md',
@@ -330,17 +318,17 @@ describe('validate command', () => {
         ],
       ]),
     })
-    const glob = createMockGlobScanner(['/project/.dust/tasks/BadFileName.md'])
 
-    const result = await validate(createDeps(ctx, fs, glob))
+    const result = await validate(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(1)
     expect(ctx.stderrLines.join('\n')).toContain('does not match slug-style')
   })
 
   test('skips non-markdown files in glob results', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    // Include non-.md files in the file system - they should be skipped during validation
+    const fs = createFileSystemEmulator({
       files: new Map([
         ['/project/.dust/goals/goal.md', '# Goal'],
         [
@@ -350,26 +338,21 @@ describe('validate command', () => {
 ## Blocked by
 ## Definition of done`,
         ],
+        ['/project/.dust/some-file.txt', ''],
+        ['/project/.dust/.gitkeep', ''],
+        ['/project/.dust/tasks/README', ''],
       ]),
     })
-    // Include non-.md files in glob results
-    const glob = createMockGlobScanner([
-      '/project/.dust/goals/goal.md',
-      '/project/.dust/some-file.txt',
-      '/project/.dust/.gitkeep',
-      '/project/.dust/tasks/my-task.md',
-      '/project/.dust/tasks/README',
-    ])
 
-    const result = await validate(createDeps(ctx, fs, glob))
+    const result = await validate(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('All validations passed')
   })
 
   test('displays violations with line numbers correctly', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([
         [
           '/project/.dust/tasks/my-task.md',
@@ -381,9 +364,8 @@ describe('validate command', () => {
         ],
       ]),
     })
-    const glob = createMockGlobScanner(['/project/.dust/tasks/my-task.md'])
 
-    await validate(createDeps(ctx, fs, glob))
+    await validate(createDeps(ctx, fs))
 
     // Broken link violations include line numbers
     const output = ctx.stderrLines.join('\n')
@@ -392,8 +374,8 @@ describe('validate command', () => {
   })
 
   test('displays violations without line numbers correctly', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([
         [
           '/project/.dust/tasks/BadName.md',
@@ -404,9 +386,8 @@ describe('validate command', () => {
         ],
       ]),
     })
-    const glob = createMockGlobScanner(['/project/.dust/tasks/BadName.md'])
 
-    await validate(createDeps(ctx, fs, glob))
+    await validate(createDeps(ctx, fs))
 
     // Filename violations don't have line numbers
     const output = ctx.stderrLines.join('\n')
@@ -417,14 +398,13 @@ describe('validate command', () => {
   })
 
   test('skips task validation when tasks directory does not exist', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     // Only goals directory, no tasks directory
-    const fs = createMockFileSystem({
+    const fs = createFileSystemEmulator({
       files: new Map([['/project/.dust/goals/goal.md', '# Goal']]),
     })
-    const glob = createMockGlobScanner(['/project/.dust/goals/goal.md'])
 
-    const result = await validate(createDeps(ctx, fs, glob))
+    const result = await validate(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('All validations passed')
@@ -433,8 +413,8 @@ describe('validate command', () => {
   })
 
   test('reports semantic link violations for wrong link type in Goals section', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([
         ['/project/.dust/goals/goal.md', '# Goal'],
         ['/project/.dust/tasks/other-task.md', '# Other'],
@@ -448,13 +428,8 @@ describe('validate command', () => {
         ],
       ]),
     })
-    const glob = createMockGlobScanner([
-      '/project/.dust/goals/goal.md',
-      '/project/.dust/tasks/my-task.md',
-      '/project/.dust/tasks/other-task.md',
-    ])
 
-    const result = await validate(createDeps(ctx, fs, glob))
+    const result = await validate(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(1)
     const output = ctx.stderrLines.join('\n')
@@ -463,8 +438,8 @@ describe('validate command', () => {
   })
 
   test('reports semantic link violations for wrong link type in Blocked by section', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([
         ['/project/.dust/goals/goal.md', '# Goal'],
         [
@@ -477,12 +452,8 @@ describe('validate command', () => {
         ],
       ]),
     })
-    const glob = createMockGlobScanner([
-      '/project/.dust/goals/goal.md',
-      '/project/.dust/tasks/my-task.md',
-    ])
 
-    const result = await validate(createDeps(ctx, fs, glob))
+    const result = await validate(createDeps(ctx, fs))
 
     expect(result.exitCode).toBe(1)
     const output = ctx.stderrLines.join('\n')
