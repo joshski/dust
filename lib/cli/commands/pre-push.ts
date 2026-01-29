@@ -8,7 +8,7 @@ import type { CommandDependencies, CommandResult } from '../types'
 import { check } from './check'
 
 export async function prePush(
-  deps: CommandDependencies
+  dependencies: CommandDependencies
 ): Promise<CommandResult> {
-  return check(deps)
+  return check(dependencies)
 }

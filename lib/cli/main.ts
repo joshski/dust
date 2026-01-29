@@ -4,7 +4,7 @@
  * This module contains all the command routing, help text, and adapter setup
  * so that bin/dust can be minimal.
  *
- * Command resolution works by joining args with hyphens and looking up in the registry.
+ * Command resolution works by joining arguments with hyphens and looking up in the registry.
  * For example, `dust agent new task` resolves to `agent-new-task` in the registry.
  */
 
@@ -74,9 +74,9 @@ export { generateHelpText }
 export const HELP_TEXT = generateHelpText({ dustCommand: 'dust' })
 
 export interface MainOptions {
-  args: string[]
-  ctx: CommandContext
-  fs: FileSystem
+  commandArguments: string[]
+  context: CommandContext
+  fileSystem: FileSystem
   glob: GlobScanner
 }
 
@@ -92,60 +92,60 @@ export function isValidCommand(command: string): command is Command {
 
 export async function runCommand(
   command: Command,
-  deps: CommandDependencies
+  dependencies: CommandDependencies
 ): Promise<CommandResult> {
-  return commandRegistry[command](deps)
+  return commandRegistry[command](dependencies)
 }
 
 /**
- * Resolves command args to a hyphenated command name.
+ * Resolves command arguments to a hyphenated command name.
  * Tries progressively longer command chains until it finds a match.
  *
- * For example, with args ['agent', 'new', 'task', 'extra']:
+ * For example, with commandArguments ['agent', 'new', 'task', 'extra']:
  * - Tries 'agent-new-task-extra' -> not found
  * - Tries 'agent-new-task' -> found! Returns { command: 'agent-new-task', remaining: ['extra'] }
  */
-function resolveCommand(args: string[]): {
+function resolveCommand(commandArguments: string[]): {
   command: string | null
   remaining: string[]
 } {
   // Try progressively shorter command chains
-  for (let i = args.length; i > 0; i--) {
-    const candidate = args.slice(0, i).join('-')
+  for (let i = commandArguments.length; i > 0; i--) {
+    const candidate = commandArguments.slice(0, i).join('-')
     if (candidate in commandRegistry) {
-      return { command: candidate, remaining: args.slice(i) }
+      return { command: candidate, remaining: commandArguments.slice(i) }
     }
   }
 
-  return { command: null, remaining: args }
+  return { command: null, remaining: commandArguments }
 }
 
 export async function main(options: MainOptions): Promise<CommandResult> {
-  const { args, ctx, fs, glob } = options
+  const { commandArguments, context, fileSystem, glob } = options
 
-  const settings = await loadSettings(ctx.cwd, fs)
+  const settings = await loadSettings(context.cwd, fileSystem)
   const helpText = generateHelpText(settings)
 
-  if (isHelpRequest(args[0])) {
-    ctx.stdout(helpText)
+  if (isHelpRequest(commandArguments[0])) {
+    context.stdout(helpText)
     return { exitCode: 0 }
   }
 
-  const { command, remaining } = resolveCommand(args)
+  const { command, remaining } = resolveCommand(commandArguments)
 
   if (!command || !isValidCommand(command)) {
-    ctx.stderr(`Unknown command: ${args.join(' ')}`)
-    ctx.stderr(`Run '${settings.dustCommand} help' for available commands`)
+    context.stderr(`Unknown command: ${commandArguments.join(' ')}`)
+    context.stderr(`Run '${settings.dustCommand} help' for available commands`)
     return { exitCode: 1 }
   }
 
-  const deps: CommandDependencies = {
+  const dependencies: CommandDependencies = {
     arguments: remaining,
-    context: ctx,
-    fileSystem: fs,
+    context,
+    fileSystem,
     globScanner: glob,
     settings,
   }
 
-  return runCommand(command, deps)
+  return runCommand(command, dependencies)
 }

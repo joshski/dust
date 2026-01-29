@@ -55,7 +55,7 @@ export function validateTaskHeadings(
 export function validateLinks(
   filePath: string,
   content: string,
-  fs: FileSystem
+  fileSystem: FileSystem
 ): Violation[] {
   const violations: Violation[] = []
   const lines = content.split('\n')
@@ -77,7 +77,7 @@ export function validateLinks(
         const targetPath = linkTarget.split('#')[0]
         const resolvedPath = resolve(fileDir, targetPath)
 
-        if (!fs.exists(resolvedPath)) {
+        if (!fileSystem.exists(resolvedPath)) {
           violations.push({
             file: filePath,
             message: `Broken link: "${linkTarget}"`,
@@ -185,40 +185,40 @@ export function validateSemanticLinks(
 }
 
 export async function validate(
-  deps: CommandDependencies
+  dependencies: CommandDependencies
 ): Promise<CommandResult> {
-  const { context: ctx, fileSystem: fs, globScanner: glob } = deps
-  const dustPath = `${ctx.cwd}/.dust`
+  const { context, fileSystem, globScanner: glob } = dependencies
+  const dustPath = `${context.cwd}/.dust`
 
-  if (!fs.exists(dustPath)) {
-    ctx.stderr('Error: .dust directory not found')
-    ctx.stderr("Run 'dust init' to initialize a Dust repository")
+  if (!fileSystem.exists(dustPath)) {
+    context.stderr('Error: .dust directory not found')
+    context.stderr("Run 'dust init' to initialize a Dust repository")
     return { exitCode: 1 }
   }
 
   const violations: Violation[] = []
 
   // Validate all markdown files for links
-  ctx.stdout('Validating links in .dust/...')
+  context.stdout('Validating links in .dust/...')
 
   for await (const file of glob.scan(dustPath)) {
     if (!file.endsWith('.md')) continue
 
     const filePath = `${dustPath}/${file}`
-    const content = await fs.readFile(filePath)
-    violations.push(...validateLinks(filePath, content, fs))
+    const content = await fileSystem.readFile(filePath)
+    violations.push(...validateLinks(filePath, content, fileSystem))
   }
 
   // Validate task files specifically
   const tasksPath = `${dustPath}/tasks`
-  if (fs.exists(tasksPath)) {
-    ctx.stdout('Validating task files in .dust/tasks/...')
+  if (fileSystem.exists(tasksPath)) {
+    context.stdout('Validating task files in .dust/tasks/...')
 
     for await (const file of glob.scan(tasksPath)) {
       if (!file.endsWith('.md')) continue
 
       const filePath = `${tasksPath}/${file}`
-      const content = await fs.readFile(filePath)
+      const content = await fileSystem.readFile(filePath)
 
       const filenameViolation = validateFilename(filePath)
       if (filenameViolation) {
@@ -231,17 +231,17 @@ export async function validate(
   }
 
   if (violations.length === 0) {
-    ctx.stdout('All validations passed!')
+    context.stdout('All validations passed!')
     return { exitCode: 0 }
   }
 
-  ctx.stderr(`Found ${violations.length} violation(s):`)
-  ctx.stderr('')
+  context.stderr(`Found ${violations.length} violation(s):`)
+  context.stderr('')
 
   for (const v of violations) {
     const location = v.line ? `:${v.line}` : ''
-    ctx.stderr(`  ${v.file}${location}`)
-    ctx.stderr(`    ${v.message}`)
+    context.stderr(`  ${v.file}${location}`)
+    context.stderr(`    ${v.message}`)
   }
 
   return { exitCode: 1 }

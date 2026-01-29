@@ -51,7 +51,7 @@ function removeDustSection(content: string): string {
 
 export function createHooksManager(
   cwd: string,
-  fs: FileSystem,
+  fileSystem: FileSystem,
   settings: DustSettings
 ): HooksManager {
   const gitDir = join(cwd, '.git')
@@ -59,14 +59,14 @@ export function createHooksManager(
   const prePushPath = join(hooksDir, 'pre-push')
 
   return {
-    isGitRepo: () => fs.exists(gitDir),
+    isGitRepo: () => fileSystem.exists(gitDir),
 
     isHookInstalled: async () => {
-      if (!fs.exists(prePushPath)) {
+      if (!fileSystem.exists(prePushPath)) {
         return false
       }
       try {
-        const content = await fs.readFile(prePushPath)
+        const content = await fileSystem.readFile(prePushPath)
         return content.includes(DUST_HOOK_START)
       } catch {
         return false
@@ -75,16 +75,16 @@ export function createHooksManager(
 
     installHook: async () => {
       // Ensure hooks directory exists
-      if (!fs.exists(hooksDir)) {
-        await fs.mkdir(hooksDir, { recursive: true })
+      if (!fileSystem.exists(hooksDir)) {
+        await fileSystem.mkdir(hooksDir, { recursive: true })
       }
 
       const hookContent = generateHookContent(settings.dustCommand)
       let finalContent: string
 
-      if (fs.exists(prePushPath)) {
+      if (fileSystem.exists(prePushPath)) {
         // Append to existing hook
-        const existingContent = await fs.readFile(prePushPath)
+        const existingContent = await fileSystem.readFile(prePushPath)
         if (existingContent.includes(DUST_HOOK_START)) {
           // Already installed, update it
           const withoutDust = removeDustSection(existingContent)
@@ -100,16 +100,16 @@ export function createHooksManager(
         finalContent = `#!/bin/sh\n\n${hookContent}\n`
       }
 
-      await fs.writeFile(prePushPath, finalContent)
-      await fs.chmod(prePushPath, 0o755)
+      await fileSystem.writeFile(prePushPath, finalContent)
+      await fileSystem.chmod(prePushPath, 0o755)
     },
 
     getHookBinaryPath: async () => {
-      if (!fs.exists(prePushPath)) {
+      if (!fileSystem.exists(prePushPath)) {
         return null
       }
       try {
-        const content = await fs.readFile(prePushPath)
+        const content = await fileSystem.readFile(prePushPath)
         const dustSection = extractDustSection(content)
         if (!dustSection) {
           return null
@@ -123,10 +123,10 @@ export function createHooksManager(
     },
 
     updateHookBinaryPath: async (newPath: string) => {
-      if (!fs.exists(prePushPath)) {
+      if (!fileSystem.exists(prePushPath)) {
         return
       }
-      const content = await fs.readFile(prePushPath)
+      const content = await fileSystem.readFile(prePushPath)
       const dustSection = extractDustSection(content)
       if (!dustSection) {
         return
@@ -136,8 +136,8 @@ export function createHooksManager(
       const finalContent = withoutDust
         ? `${withoutDust}\n\n${newHookContent}\n`
         : `#!/bin/sh\n\n${newHookContent}\n`
-      await fs.writeFile(prePushPath, finalContent)
-      await fs.chmod(prePushPath, 0o755)
+      await fileSystem.writeFile(prePushPath, finalContent)
+      await fileSystem.chmod(prePushPath, 0o755)
     },
   }
 }

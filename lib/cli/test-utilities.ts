@@ -210,7 +210,7 @@ export const defaultTestSettings: DustSettings = { dustCommand: 'dust' }
  * Creates command dependencies for testing, with captured output for assertions.
  *
  * @param settings - Optional DustSettings override
- * @returns Object with context (for assertions) and deps (for command invocation)
+ * @returns Object with context (for assertions) and dependencies (for command invocation)
  */
 export function createCommandDependencies(
   settings: DustSettings = defaultTestSettings

@@ -9,13 +9,13 @@ import type { CommandDependencies, CommandResult } from '../types'
 import { manageGitHooks, templateVariables } from './agent-shared'
 
 export async function agentPickTask(
-  deps: CommandDependencies
+  dependencies: CommandDependencies
 ): Promise<CommandResult> {
-  const { context: ctx, settings } = deps
+  const { context, settings } = dependencies
 
-  const hooksInstalled = await manageGitHooks(deps)
+  const hooksInstalled = await manageGitHooks(dependencies)
   const vars = templateVariables(settings, hooksInstalled)
 
-  ctx.stdout(loadTemplate('agent-pick-task', vars))
+  context.stdout(loadTemplate('agent-pick-task', vars))
   return { exitCode: 0 }
 }

@@ -7,6 +7,8 @@ import {
   spawnClaudeCode,
 } from './spawn-claude-code'
 
+type EventListener = (...values: unknown[]) => void
+
 function createMockDependencies(
   lines: string[],
   exitCode: number | null = 0,
@@ -14,10 +16,10 @@ function createMockDependencies(
 ): EventSourceDependencies {
   return {
     spawn: (() => {
-      const listeners: Record<string, ((...args: unknown[]) => void)[]> = {}
+      const listeners: Record<string, EventListener[]> = {}
       return {
         stdout: {},
-        on(event: string, listener: (...args: unknown[]) => void) {
+        on(event: string, listener: EventListener) {
           listeners[event] = listeners[event] || []
           listeners[event].push(listener)
           if (event === 'close' && !errorToThrow) {
@@ -111,14 +113,14 @@ describe('spawnClaudeCode', () => {
   })
 
   test('passes options as CLI arguments', async () => {
-    let capturedArgs: string[] = []
+    let capturedArguments: string[] = []
 
     const dependencies: EventSourceDependencies = {
-      spawn: ((_cmd: string, args: string[]) => {
-        capturedArgs = args
+      spawn: ((_cmd: string, spawnArguments: string[]) => {
+        capturedArguments = spawnArguments
         return {
           stdout: {},
-          on(event: string, listener: (...args: unknown[]) => void) {
+          on(event: string, listener: EventListener) {
             if (event === 'close') setTimeout(() => listener(0), 0)
             return this
           },
@@ -145,30 +147,30 @@ describe('spawnClaudeCode', () => {
       // consume
     }
 
-    expect(capturedArgs).toContain('-p')
-    expect(capturedArgs).toContain('my prompt')
-    expect(capturedArgs).toContain('--max-turns')
-    expect(capturedArgs).toContain('5')
-    expect(capturedArgs).toContain('--model')
-    expect(capturedArgs).toContain('claude-3')
-    expect(capturedArgs).toContain('--allowedTools')
-    expect(capturedArgs).toContain('Read')
-    expect(capturedArgs).toContain('Write')
-    expect(capturedArgs).toContain('--system-prompt')
-    expect(capturedArgs).toContain('Be helpful')
-    expect(capturedArgs).toContain('--session-id')
-    expect(capturedArgs).toContain('sess-123')
+    expect(capturedArguments).toContain('-p')
+    expect(capturedArguments).toContain('my prompt')
+    expect(capturedArguments).toContain('--max-turns')
+    expect(capturedArguments).toContain('5')
+    expect(capturedArguments).toContain('--model')
+    expect(capturedArguments).toContain('claude-3')
+    expect(capturedArguments).toContain('--allowedTools')
+    expect(capturedArguments).toContain('Read')
+    expect(capturedArguments).toContain('Write')
+    expect(capturedArguments).toContain('--system-prompt')
+    expect(capturedArguments).toContain('Be helpful')
+    expect(capturedArguments).toContain('--session-id')
+    expect(capturedArguments).toContain('sess-123')
   })
 
   test('passes dangerously-skip-permissions flag when enabled', async () => {
-    let capturedArgs: string[] = []
+    let capturedArguments: string[] = []
 
     const dependencies: EventSourceDependencies = {
-      spawn: ((_cmd: string, args: string[]) => {
-        capturedArgs = args
+      spawn: ((_cmd: string, spawnArguments: string[]) => {
+        capturedArguments = spawnArguments
         return {
           stdout: {},
-          on(event: string, listener: (...args: unknown[]) => void) {
+          on(event: string, listener: EventListener) {
             if (event === 'close') setTimeout(() => listener(0), 0)
             return this
           },
@@ -189,7 +191,7 @@ describe('spawnClaudeCode', () => {
       // consume
     }
 
-    expect(capturedArgs).toContain('--dangerously-skip-permissions')
+    expect(capturedArguments).toContain('--dangerously-skip-permissions')
   })
 
   test('handles process error', async () => {

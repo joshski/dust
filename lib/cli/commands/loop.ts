@@ -60,83 +60,83 @@ export async function gitPull(
 }
 
 export async function hasAvailableTasks(
-  deps: CommandDependencies
+  dependencies: CommandDependencies
 ): Promise<boolean> {
   let hasOutput = false
-  const captureCtx = {
-    ...deps.context,
+  const captureContext = {
+    ...dependencies.context,
     stdout: () => {
       hasOutput = true
     },
   }
-  await next({ ...deps, context: captureCtx })
+  await next({ ...dependencies, context: captureContext })
   return hasOutput
 }
 
 export type IterationResult = 'no_tasks' | 'ran_claude' | 'claude_error'
 
 export async function runOneIteration(
-  deps: CommandDependencies,
-  loopDeps: LoopDependencies
+  dependencies: CommandDependencies,
+  loopDependencies: LoopDependencies
 ): Promise<IterationResult> {
-  const { context: ctx } = deps
-  const { spawn, run } = loopDeps
+  const { context } = dependencies
+  const { spawn, run } = loopDependencies
 
   // Step 1: Sync with remote
-  ctx.stdout('Syncing with remote...')
-  const pullResult = await gitPull(ctx.cwd, spawn)
+  context.stdout('Syncing with remote...')
+  const pullResult = await gitPull(context.cwd, spawn)
   if (!pullResult.success) {
-    ctx.stdout(`Note: git pull skipped (${pullResult.message})`)
+    context.stdout(`Note: git pull skipped (${pullResult.message})`)
   }
 
   // Step 2: Check for available tasks
-  ctx.stdout('Checking for available tasks...')
-  const hasTasks = await hasAvailableTasks(deps)
+  context.stdout('Checking for available tasks...')
+  const hasTasks = await hasAvailableTasks(dependencies)
 
   if (!hasTasks) {
-    ctx.stdout('No tasks available. Sleeping...')
-    ctx.stdout('')
+    context.stdout('No tasks available. Sleeping...')
+    context.stdout('')
     return 'no_tasks'
   }
 
   // Step 3: Invoke Claude Code
-  ctx.stdout('Found task(s). Starting Claude...')
-  ctx.stdout('')
+  context.stdout('Found task(s). Starting Claude...')
+  context.stdout('')
 
   try {
-    await run('go', { cwd: ctx.cwd, dangerouslySkipPermissions: true })
-    ctx.stdout('')
-    ctx.stdout('Claude session complete. Continuing loop...')
-    ctx.stdout('')
+    await run('go', { cwd: context.cwd, dangerouslySkipPermissions: true })
+    context.stdout('')
+    context.stdout('Claude session complete. Continuing loop...')
+    context.stdout('')
     return 'ran_claude'
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    ctx.stderr(`Claude exited with error: ${message}`)
-    ctx.stdout('')
-    ctx.stdout('Claude session complete. Continuing loop...')
-    ctx.stdout('')
+    context.stderr(`Claude exited with error: ${message}`)
+    context.stdout('')
+    context.stdout('Claude session complete. Continuing loop...')
+    context.stdout('')
     return 'claude_error'
   }
 }
 
 export async function loop(
-  deps: CommandDependencies,
-  loopDeps: LoopDependencies = createDefaultDependencies()
+  dependencies: CommandDependencies,
+  loopDependencies: LoopDependencies = createDefaultDependencies()
 ): Promise<CommandResult> {
-  const { context: ctx } = deps
+  const { context } = dependencies
 
-  ctx.stdout(
+  context.stdout(
     'WARNING: This command skips all permission checks. Only use in a sandbox environment!'
   )
-  ctx.stdout('')
-  ctx.stdout('Starting dust loop...')
-  ctx.stdout('Press Ctrl+C to stop')
-  ctx.stdout('')
+  context.stdout('')
+  context.stdout('Starting dust loop...')
+  context.stdout('Press Ctrl+C to stop')
+  context.stdout('')
 
   while (true) {
-    const result = await runOneIteration(deps, loopDeps)
+    const result = await runOneIteration(dependencies, loopDependencies)
     if (result === 'no_tasks') {
-      await loopDeps.sleep(SLEEP_INTERVAL_MS)
+      await loopDependencies.sleep(SLEEP_INTERVAL_MS)
     }
   }
 }

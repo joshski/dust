@@ -35,18 +35,18 @@ describe('createFileSystem', () => {
   test('exists delegates to existsSync', () => {
     const files = new Map([['/test.txt', 'content']])
     const primitives = createFsPrimitives(files)
-    const fs = createFileSystem(primitives)
+    const fileSystem = createFileSystem(primitives)
 
-    expect(fs.exists('/test.txt')).toBe(true)
-    expect(fs.exists('/missing.txt')).toBe(false)
+    expect(fileSystem.exists('/test.txt')).toBe(true)
+    expect(fileSystem.exists('/missing.txt')).toBe(false)
   })
 
   test('readFile delegates with utf-8 encoding', async () => {
     const files = new Map([['/test.txt', 'hello world']])
     const primitives = createFsPrimitives(files)
-    const fs = createFileSystem(primitives)
+    const fileSystem = createFileSystem(primitives)
 
-    const content = await fs.readFile('/test.txt')
+    const content = await fileSystem.readFile('/test.txt')
     expect(content).toBe('hello world')
   })
 
@@ -61,9 +61,9 @@ describe('createFileSystem', () => {
       writtenContent = content
       writtenEncoding = encoding
     }
-    const fs = createFileSystem(primitives)
+    const fileSystem = createFileSystem(primitives)
 
-    await fs.writeFile('/out.txt', 'test content')
+    await fileSystem.writeFile('/out.txt', 'test content')
 
     expect(writtenPath).toBe('/out.txt')
     expect(writtenContent).toBe('test content')
@@ -80,9 +80,9 @@ describe('createFileSystem', () => {
       mkdirOptions = options
       return undefined
     }
-    const fs = createFileSystem(primitives)
+    const fileSystem = createFileSystem(primitives)
 
-    await fs.mkdir('/new/dir', { recursive: true })
+    await fileSystem.mkdir('/new/dir', { recursive: true })
 
     expect(mkdirPath).toBe('/new/dir')
     expect(mkdirOptions).toEqual({ recursive: true })
@@ -94,9 +94,9 @@ describe('createFileSystem', () => {
       ['/dir/b.txt', ''],
     ])
     const primitives = createFsPrimitives(files)
-    const fs = createFileSystem(primitives)
+    const fileSystem = createFileSystem(primitives)
 
-    const entries = await fs.readdir('/dir')
+    const entries = await fileSystem.readdir('/dir')
 
     expect(entries).toEqual(['a.txt', 'b.txt'])
   })
@@ -110,9 +110,9 @@ describe('createFileSystem', () => {
       chmodPath = path
       chmodMode = mode
     }
-    const fs = createFileSystem(primitives)
+    const fileSystem = createFileSystem(primitives)
 
-    await fs.chmod('/test.sh', 0o755)
+    await fileSystem.chmod('/test.sh', 0o755)
 
     expect(chmodPath).toBe('/test.sh')
     expect(chmodMode).toBe(0o755)

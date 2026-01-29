@@ -13,15 +13,15 @@ import {
   validateTaskHeadings,
 } from './validate'
 
-function createDeps(
-  ctx: CommandContext,
-  fs: FileSystemEmulator
+function createDependencies(
+  context: CommandContext,
+  fileSystem: FileSystemEmulator
 ): CommandDependencies {
   return {
     arguments: [],
-    context: ctx,
-    fileSystem: fs,
-    globScanner: fs,
+    context,
+    fileSystem,
+    globScanner: fileSystem,
     settings: { dustCommand: 'dust' },
   }
 }
@@ -65,7 +65,7 @@ describe('validateTaskHeadings', () => {
 describe('validateLinks', () => {
   test('returns no violations for valid links', () => {
     const content = '[Goal](../goals/goal.md)'
-    const fs = createFileSystemEmulator({
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           goals: { 'goal.md': 'content' },
@@ -76,19 +76,19 @@ describe('validateLinks', () => {
     const violations = validateLinks(
       '/project/.dust/tasks/task.md',
       content,
-      fs
+      fileSystem
     )
     expect(violations).toHaveLength(0)
   })
 
   test('reports broken links', () => {
     const content = '[Missing](../goals/missing.md)'
-    const fs = createFileSystemEmulator()
+    const fileSystem = createFileSystemEmulator()
 
     const violations = validateLinks(
       '/project/.dust/tasks/task.md',
       content,
-      fs
+      fileSystem
     )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('Broken link')
@@ -96,24 +96,24 @@ describe('validateLinks', () => {
 
   test('skips external links', () => {
     const content = '[External](https://example.com)'
-    const fs = createFileSystemEmulator()
+    const fileSystem = createFileSystemEmulator()
 
     const violations = validateLinks(
       '/project/.dust/tasks/task.md',
       content,
-      fs
+      fileSystem
     )
     expect(violations).toHaveLength(0)
   })
 
   test('skips anchor links', () => {
     const content = '[Section](#section)'
-    const fs = createFileSystemEmulator()
+    const fileSystem = createFileSystemEmulator()
 
     const violations = validateLinks(
       '/project/.dust/tasks/task.md',
       content,
-      fs
+      fileSystem
     )
     expect(violations).toHaveLength(0)
   })
@@ -122,12 +122,12 @@ describe('validateLinks', () => {
     const content = `Line 1
 Line 2
 [Missing](../goals/missing.md)`
-    const fs = createFileSystemEmulator()
+    const fileSystem = createFileSystemEmulator()
 
     const violations = validateLinks(
       '/project/.dust/tasks/task.md',
       content,
-      fs
+      fileSystem
     )
     expect(violations[0].line).toBe(3)
   })
@@ -264,18 +264,20 @@ describe('validateSemanticLinks', () => {
 
 describe('validate command', () => {
   test('fails if .dust not found', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator()
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
 
-    const result = await validate(createDeps(ctx, fs))
+    const result = await validate(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(1)
-    expect(ctx.stderrLines.join('\n')).toContain('.dust directory not found')
+    expect(context.stderrLines.join('\n')).toContain(
+      '.dust directory not found'
+    )
   })
 
   test('passes with valid files', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           goals: { 'goal.md': '# Goal\nDescription' },
@@ -290,15 +292,15 @@ describe('validate command', () => {
       },
     })
 
-    const result = await validate(createDeps(ctx, fs))
+    const result = await validate(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('All validations passed')
+    expect(context.stdoutLines.join('\n')).toContain('All validations passed')
   })
 
   test('reports violations', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           tasks: { 'my-task.md': '# Task with no headings' },
@@ -306,15 +308,15 @@ describe('validate command', () => {
       },
     })
 
-    const result = await validate(createDeps(ctx, fs))
+    const result = await validate(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(1)
-    expect(ctx.stderrLines.join('\n')).toContain('violation')
+    expect(context.stderrLines.join('\n')).toContain('violation')
   })
 
   test('reports filename violations for invalid task filenames', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           tasks: {
@@ -327,16 +329,18 @@ describe('validate command', () => {
       },
     })
 
-    const result = await validate(createDeps(ctx, fs))
+    const result = await validate(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(1)
-    expect(ctx.stderrLines.join('\n')).toContain('does not match slug-style')
+    expect(context.stderrLines.join('\n')).toContain(
+      'does not match slug-style'
+    )
   })
 
   test('skips non-markdown files in glob results', async () => {
-    const ctx = createContextEmulator()
+    const context = createContextEmulator()
     // Include non-.md files in the file system - they should be skipped during validation
-    const fs = createFileSystemEmulator({
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           goals: { 'goal.md': '# Goal' },
@@ -353,15 +357,15 @@ describe('validate command', () => {
       },
     })
 
-    const result = await validate(createDeps(ctx, fs))
+    const result = await validate(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('All validations passed')
+    expect(context.stdoutLines.join('\n')).toContain('All validations passed')
   })
 
   test('displays violations with line numbers correctly', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           tasks: {
@@ -375,17 +379,17 @@ describe('validate command', () => {
       },
     })
 
-    await validate(createDeps(ctx, fs))
+    await validate(createDependencies(context, fileSystem))
 
     // Broken link violations include line numbers
-    const output = ctx.stderrLines.join('\n')
+    const output = context.stderrLines.join('\n')
     expect(output).toContain(':3')
     expect(output).toContain('Broken link')
   })
 
   test('displays violations without line numbers correctly', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           tasks: {
@@ -398,10 +402,10 @@ describe('validate command', () => {
       },
     })
 
-    await validate(createDeps(ctx, fs))
+    await validate(createDependencies(context, fileSystem))
 
     // Filename violations don't have line numbers
-    const output = ctx.stderrLines.join('\n')
+    const output = context.stderrLines.join('\n')
     expect(output).toContain('BadName.md')
     expect(output).toContain('does not match slug-style')
     // Should not have a colon before the message (no line number)
@@ -409,9 +413,9 @@ describe('validate command', () => {
   })
 
   test('skips task validation when tasks directory does not exist', async () => {
-    const ctx = createContextEmulator()
+    const context = createContextEmulator()
     // Only goals directory, no tasks directory
-    const fs = createFileSystemEmulator({
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           goals: { 'goal.md': '# Goal' },
@@ -419,17 +423,17 @@ describe('validate command', () => {
       },
     })
 
-    const result = await validate(createDeps(ctx, fs))
+    const result = await validate(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('All validations passed')
+    expect(context.stdoutLines.join('\n')).toContain('All validations passed')
     // Should not mention task validation
-    expect(ctx.stdoutLines.join('\n')).not.toContain('tasks')
+    expect(context.stdoutLines.join('\n')).not.toContain('tasks')
   })
 
   test('reports semantic link violations for wrong link type in Goals section', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           goals: { 'goal.md': '# Goal' },
@@ -445,17 +449,17 @@ describe('validate command', () => {
       },
     })
 
-    const result = await validate(createDeps(ctx, fs))
+    const result = await validate(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(1)
-    const output = ctx.stderrLines.join('\n')
+    const output = context.stderrLines.join('\n')
     expect(output).toContain('## Goals')
     expect(output).toContain('goal file')
   })
 
   test('reports semantic link violations for wrong link type in Blocked by section', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           goals: { 'goal.md': '# Goal' },
@@ -470,10 +474,10 @@ describe('validate command', () => {
       },
     })
 
-    const result = await validate(createDeps(ctx, fs))
+    const result = await validate(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(1)
-    const output = ctx.stderrLines.join('\n')
+    const output = context.stderrLines.join('\n')
     expect(output).toContain('## Blocked by')
     expect(output).toContain('task file')
   })

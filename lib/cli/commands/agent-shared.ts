@@ -28,10 +28,10 @@ export function templateVariables(
  * Returns whether hooks are installed.
  */
 export async function manageGitHooks(
-  deps: CommandDependencies
+  dependencies: CommandDependencies
 ): Promise<boolean> {
-  const { context: ctx, fileSystem: fs, settings } = deps
-  const hooks = createHooksManager(ctx.cwd, fs, settings)
+  const { context, fileSystem, settings } = dependencies
+  const hooks = createHooksManager(context.cwd, fileSystem, settings)
 
   // Skip if not a git repo
   if (!hooks.isGitRepo()) {

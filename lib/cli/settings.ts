@@ -26,18 +26,21 @@ const DEFAULT_SETTINGS: DustSettings = {
  */
 export function detectInstallDependenciesHint(
   cwd: string,
-  fs: FileSystem
+  fileSystem: FileSystem
 ): string {
-  if (fs.exists(join(cwd, 'bun.lockb')) || fs.exists(join(cwd, 'bun.lock'))) {
+  if (
+    fileSystem.exists(join(cwd, 'bun.lockb')) ||
+    fileSystem.exists(join(cwd, 'bun.lock'))
+  ) {
     return 'Run `bun install`'
   }
-  if (fs.exists(join(cwd, 'pnpm-lock.yaml'))) {
+  if (fileSystem.exists(join(cwd, 'pnpm-lock.yaml'))) {
     return 'Run `pnpm install`'
   }
-  if (fs.exists(join(cwd, 'package-lock.json'))) {
+  if (fileSystem.exists(join(cwd, 'package-lock.json'))) {
     return 'Run `npm install`'
   }
-  if (fs.exists(join(cwd, 'yarn.lock'))) {
+  if (fileSystem.exists(join(cwd, 'yarn.lock'))) {
     return 'Run `yarn install`'
   }
   return 'Install any dependencies'
@@ -52,14 +55,14 @@ export function detectInstallDependenciesHint(
  * 4. No lockfile + BUN_INSTALL env var set → bunx dust
  * 5. Default → npx dust
  */
-export function detectDustCommand(cwd: string, fs: FileSystem): string {
-  if (fs.exists(join(cwd, 'bun.lockb'))) {
+export function detectDustCommand(cwd: string, fileSystem: FileSystem): string {
+  if (fileSystem.exists(join(cwd, 'bun.lockb'))) {
     return 'bunx dust'
   }
-  if (fs.exists(join(cwd, 'pnpm-lock.yaml'))) {
+  if (fileSystem.exists(join(cwd, 'pnpm-lock.yaml'))) {
     return 'pnpx dust'
   }
-  if (fs.exists(join(cwd, 'package-lock.json'))) {
+  if (fileSystem.exists(join(cwd, 'package-lock.json'))) {
     return 'npx dust'
   }
   if (process.env.BUN_INSTALL) {
@@ -70,19 +73,19 @@ export function detectDustCommand(cwd: string, fs: FileSystem): string {
 
 export async function loadSettings(
   cwd: string,
-  fs: FileSystem
+  fileSystem: FileSystem
 ): Promise<DustSettings> {
   const settingsPath = join(cwd, '.dust', 'config', 'settings.json')
 
-  if (!fs.exists(settingsPath)) {
+  if (!fileSystem.exists(settingsPath)) {
     return {
-      dustCommand: detectDustCommand(cwd, fs),
-      installDependenciesHint: detectInstallDependenciesHint(cwd, fs),
+      dustCommand: detectDustCommand(cwd, fileSystem),
+      installDependenciesHint: detectInstallDependenciesHint(cwd, fileSystem),
     }
   }
 
   try {
-    const content = await fs.readFile(settingsPath)
+    const content = await fileSystem.readFile(settingsPath)
     const parsed = JSON.parse(content)
     const result: DustSettings = {
       ...DEFAULT_SETTINGS,
@@ -90,17 +93,20 @@ export async function loadSettings(
     }
     // Auto-detect dustCommand if not explicitly set
     if (!parsed.dustCommand) {
-      result.dustCommand = detectDustCommand(cwd, fs)
+      result.dustCommand = detectDustCommand(cwd, fileSystem)
     }
     // Auto-detect installDependenciesHint if not explicitly set
     if (!parsed.installDependenciesHint) {
-      result.installDependenciesHint = detectInstallDependenciesHint(cwd, fs)
+      result.installDependenciesHint = detectInstallDependenciesHint(
+        cwd,
+        fileSystem
+      )
     }
     return result
   } catch {
     return {
-      dustCommand: detectDustCommand(cwd, fs),
-      installDependenciesHint: detectInstallDependenciesHint(cwd, fs),
+      dustCommand: detectDustCommand(cwd, fileSystem),
+      installDependenciesHint: detectInstallDependenciesHint(cwd, fileSystem),
     }
   }
 }

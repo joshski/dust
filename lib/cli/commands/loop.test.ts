@@ -14,16 +14,16 @@ import {
   runOneIteration,
 } from './loop'
 
-function createDeps(
+function createDependencies(
   tree: Parameters<typeof createFileSystemEmulator>[0] = {}
 ): CommandDependencies {
-  const ctx = createContextEmulator()
-  const fs = createFileSystemEmulator(tree)
+  const context = createContextEmulator()
+  const fileSystem = createFileSystemEmulator(tree)
   return {
     arguments: [],
-    context: ctx,
-    fileSystem: fs,
-    globScanner: fs,
+    context,
+    fileSystem,
+    globScanner: fileSystem,
     settings: { dustCommand: 'dust' },
   }
 }
@@ -49,16 +49,16 @@ class LoopBreaker extends Error {
 
 describe('createDefaultDependencies', () => {
   test('returns object with spawn, run, and sleep functions', () => {
-    const deps = createDefaultDependencies()
-    expect(typeof deps.spawn).toBe('function')
-    expect(typeof deps.run).toBe('function')
-    expect(typeof deps.sleep).toBe('function')
+    const loopDependencies = createDefaultDependencies()
+    expect(typeof loopDependencies.spawn).toBe('function')
+    expect(typeof loopDependencies.run).toBe('function')
+    expect(typeof loopDependencies.sleep).toBe('function')
   })
 
   test('sleep function resolves after given time', async () => {
-    const deps = createDefaultDependencies()
+    const loopDependencies = createDefaultDependencies()
     // Use 0ms to avoid actual delay in tests
-    await expect(deps.sleep(0)).resolves.toBeUndefined()
+    await expect(loopDependencies.sleep(0)).resolves.toBeUndefined()
   })
 })
 
@@ -114,27 +114,27 @@ describe('gitPull', () => {
 
 describe('hasAvailableTasks', () => {
   test('returns false when no tasks exist', async () => {
-    const deps = createDeps()
-    const result = await hasAvailableTasks(deps)
+    const dependencies = createDependencies()
+    const result = await hasAvailableTasks(dependencies)
     expect(result).toBe(false)
   })
 
   test('returns true when tasks exist', async () => {
-    const deps = createDeps({
+    const dependencies = createDependencies({
       project: {
         '.dust': {
           tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
         },
       },
     })
-    const result = await hasAvailableTasks(deps)
+    const result = await hasAvailableTasks(dependencies)
     expect(result).toBe(true)
   })
 })
 
 describe('runOneIteration', () => {
   test('syncs with git pull', async () => {
-    const deps = createDeps()
+    const dependencies = createDependencies()
     let pullCalled = false
     const loopDeps: LoopDependencies = {
       spawn: () => {
@@ -145,13 +145,15 @@ describe('runOneIteration', () => {
       sleep: async () => {},
     }
 
-    await runOneIteration(deps, loopDeps)
+    await runOneIteration(dependencies, loopDeps)
     expect(pullCalled).toBe(true)
   })
 
   test('logs git pull failures', async () => {
-    const deps = createDeps()
-    const ctx = deps.context as ReturnType<typeof createContextEmulator>
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
     const loopDeps: LoopDependencies = {
       spawn: () => {
         const proc = new EventEmitter() as ReturnType<typeof createMockSpawn>
@@ -167,24 +169,24 @@ describe('runOneIteration', () => {
       sleep: async () => {},
     }
 
-    await runOneIteration(deps, loopDeps)
-    expect(ctx.stdoutLines.join('\n')).toContain('git pull skipped')
+    await runOneIteration(dependencies, loopDeps)
+    expect(context.stdoutLines.join('\n')).toContain('git pull skipped')
   })
 
   test('returns no_tasks when no tasks available', async () => {
-    const deps = createDeps()
+    const dependencies = createDependencies()
     const loopDeps: LoopDependencies = {
       spawn: createMockSpawn(),
       run: async () => {},
       sleep: async () => {},
     }
 
-    const result = await runOneIteration(deps, loopDeps)
+    const result = await runOneIteration(dependencies, loopDeps)
     expect(result).toBe('no_tasks')
   })
 
   test('invokes Claude when tasks are available', async () => {
-    const deps = createDeps({
+    const dependencies = createDependencies({
       project: {
         '.dust': {
           tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
@@ -200,13 +202,13 @@ describe('runOneIteration', () => {
       sleep: async () => {},
     }
 
-    const result = await runOneIteration(deps, loopDeps)
+    const result = await runOneIteration(dependencies, loopDeps)
     expect(claudeCalled).toBe(true)
     expect(result).toBe('ran_claude')
   })
 
   test('passes correct cwd to Claude run', async () => {
-    const deps = createDeps({
+    const dependencies = createDependencies({
       project: {
         '.dust': {
           tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
@@ -222,19 +224,21 @@ describe('runOneIteration', () => {
       sleep: async () => {},
     }
 
-    await runOneIteration(deps, loopDeps)
+    await runOneIteration(dependencies, loopDeps)
     expect(capturedCwd).toBe('/project')
   })
 
   test('handles Claude errors gracefully', async () => {
-    const deps = createDeps({
+    const dependencies = createDependencies({
       project: {
         '.dust': {
           tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
         },
       },
     })
-    const ctx = deps.context as ReturnType<typeof createContextEmulator>
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
     const loopDeps: LoopDependencies = {
       spawn: createMockSpawn(),
       run: async () => {
@@ -243,21 +247,23 @@ describe('runOneIteration', () => {
       sleep: async () => {},
     }
 
-    const result = await runOneIteration(deps, loopDeps)
+    const result = await runOneIteration(dependencies, loopDeps)
     expect(result).toBe('claude_error')
-    expect(ctx.stderrLines.join('\n')).toContain('Claude exited with error')
-    expect(ctx.stderrLines.join('\n')).toContain('Claude crashed')
+    expect(context.stderrLines.join('\n')).toContain('Claude exited with error')
+    expect(context.stderrLines.join('\n')).toContain('Claude crashed')
   })
 
   test('handles non-Error throws from Claude', async () => {
-    const deps = createDeps({
+    const dependencies = createDependencies({
       project: {
         '.dust': {
           tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
         },
       },
     })
-    const ctx = deps.context as ReturnType<typeof createContextEmulator>
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
     const loopDeps: LoopDependencies = {
       spawn: createMockSpawn(),
       run: async () => {
@@ -266,16 +272,18 @@ describe('runOneIteration', () => {
       sleep: async () => {},
     }
 
-    const result = await runOneIteration(deps, loopDeps)
+    const result = await runOneIteration(dependencies, loopDeps)
     expect(result).toBe('claude_error')
-    expect(ctx.stderrLines.join('\n')).toContain('string error')
+    expect(context.stderrLines.join('\n')).toContain('string error')
   })
 })
 
 describe('loop', () => {
   test('outputs startup message', async () => {
-    const deps = createDeps()
-    const ctx = deps.context as ReturnType<typeof createContextEmulator>
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
     const loopDeps: LoopDependencies = {
       spawn: createMockSpawn(),
       run: async () => {},
@@ -285,17 +293,17 @@ describe('loop', () => {
     }
 
     try {
-      await loop(deps, loopDeps)
+      await loop(dependencies, loopDeps)
     } catch (e) {
       if (!(e instanceof LoopBreaker)) throw e
     }
 
-    expect(ctx.stdoutLines.join('\n')).toContain('Starting dust loop')
-    expect(ctx.stdoutLines.join('\n')).toContain('Ctrl+C')
+    expect(context.stdoutLines.join('\n')).toContain('Starting dust loop')
+    expect(context.stdoutLines.join('\n')).toContain('Ctrl+C')
   })
 
   test('sleeps when no tasks available', async () => {
-    const deps = createDeps()
+    const dependencies = createDependencies()
     let sleepCalled = false
     const loopDeps: LoopDependencies = {
       spawn: createMockSpawn(),
@@ -307,7 +315,7 @@ describe('loop', () => {
     }
 
     try {
-      await loop(deps, loopDeps)
+      await loop(dependencies, loopDeps)
     } catch (e) {
       if (!(e instanceof LoopBreaker)) throw e
     }
@@ -316,14 +324,16 @@ describe('loop', () => {
   })
 
   test('does not sleep when tasks are available', async () => {
-    const deps = createDeps({
+    const dependencies = createDependencies({
       project: {
         '.dust': {
           tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
         },
       },
     })
-    const fs = deps.fileSystem as ReturnType<typeof createFileSystemEmulator>
+    const fileSystem = dependencies.fileSystem as ReturnType<
+      typeof createFileSystemEmulator
+    >
     let sleepCalled = false
     let runCount = 0
     const loopDeps: LoopDependencies = {
@@ -332,7 +342,7 @@ describe('loop', () => {
         runCount++
         if (runCount >= 1) {
           // Clear tasks by deleting from the emulator's internal files map
-          fs.files.delete('/project/.dust/tasks/task.md')
+          fileSystem.files.delete('/project/.dust/tasks/task.md')
         }
       },
       sleep: async () => {
@@ -342,7 +352,7 @@ describe('loop', () => {
     }
 
     try {
-      await loop(deps, loopDeps)
+      await loop(dependencies, loopDeps)
     } catch (e) {
       if (!(e instanceof LoopBreaker)) throw e
     }

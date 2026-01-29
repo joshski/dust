@@ -1,5 +1,6 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.3.13/schema.json",
+  "plugins": ["./biome/no-abbreviated-names.grit"],
   "files": {
     "ignoreUnknown": false,
     "includes": ["**", "!node_modules", "!dist", "!coverage"]

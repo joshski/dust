@@ -17,17 +17,17 @@ import {
 } from './test-utilities'
 import type { CommandContext, CommandDependencies, DustSettings } from './types'
 
-function createDeps(
-  ctx: CommandContext,
-  fs: FileSystemEmulator,
-  args: string[] = [],
+function createDependencies(
+  context: CommandContext,
+  fileSystem: FileSystemEmulator,
+  commandArguments: string[] = [],
   settings: DustSettings = { dustCommand: 'dust' }
 ): CommandDependencies {
   return {
-    arguments: args,
-    context: ctx,
-    fileSystem: fs,
-    globScanner: fs,
+    arguments: commandArguments,
+    context,
+    fileSystem,
+    globScanner: fileSystem,
     settings,
   }
 }
@@ -71,27 +71,27 @@ describe('isValidCommand', () => {
 
 describe('runCommand', () => {
   test('runs help command and outputs help text', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator()
-    const deps = createDeps(ctx, fs)
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
+    const dependencies = createDependencies(context, fileSystem)
 
-    const result = await runCommand('help', deps)
+    const result = await runCommand('help', dependencies)
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain(
+    expect(context.stdoutLines.join('\n')).toContain(
       'dust - A lightweight planning system'
     )
   })
 
   test('runs init command', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator()
-    const deps = createDeps(ctx, fs)
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
+    const dependencies = createDependencies(context, fileSystem)
 
-    const result = await runCommand('init', deps)
+    const result = await runCommand('init', dependencies)
 
     expect(result.exitCode).toBe(0)
-    expect(fs.createdDirs).toContain('/project/.dust')
+    expect(fileSystem.createdDirs).toContain('/project/.dust')
   })
 })
 
@@ -102,69 +102,100 @@ describe('main', () => {
 
   test('shows help when no command provided', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator()
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
 
-    const result = await main({ args: [], ctx, fs, glob: fs })
+    const result = await main({
+      commandArguments: [],
+      context,
+      fileSystem,
+      glob: fileSystem,
+    })
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain(
+    expect(context.stdoutLines.join('\n')).toContain(
       'dust - A lightweight planning system'
     )
-    expect(ctx.stdoutLines.join('\n')).toContain('Usage: npx dust <command>')
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Usage: npx dust <command>'
+    )
   })
 
   test('shows help for help command', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator()
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
 
-    const result = await main({ args: ['help'], ctx, fs, glob: fs })
+    const result = await main({
+      commandArguments: ['help'],
+      context,
+      fileSystem,
+      glob: fileSystem,
+    })
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain(
+    expect(context.stdoutLines.join('\n')).toContain(
       'dust - A lightweight planning system'
     )
   })
 
   test('shows help for --help flag', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator()
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
 
-    const result = await main({ args: ['--help'], ctx, fs, glob: fs })
+    const result = await main({
+      commandArguments: ['--help'],
+      context,
+      fileSystem,
+      glob: fileSystem,
+    })
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('Usage: npx dust <command>')
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Usage: npx dust <command>'
+    )
   })
 
   test('shows help for -h flag', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator()
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
 
-    const result = await main({ args: ['-h'], ctx, fs, glob: fs })
+    const result = await main({
+      commandArguments: ['-h'],
+      context,
+      fileSystem,
+      glob: fileSystem,
+    })
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('Usage: npx dust <command>')
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Usage: npx dust <command>'
+    )
   })
 
   test('returns error for unknown command', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator()
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
 
-    const result = await main({ args: ['unknown'], ctx, fs, glob: fs })
+    const result = await main({
+      commandArguments: ['unknown'],
+      context,
+      fileSystem,
+      glob: fileSystem,
+    })
 
     expect(result.exitCode).toBe(1)
-    expect(ctx.stderrLines.join('\n')).toContain('Unknown command: unknown')
-    expect(ctx.stderrLines.join('\n')).toContain(
+    expect(context.stderrLines.join('\n')).toContain('Unknown command: unknown')
+    expect(context.stderrLines.join('\n')).toContain(
       "Run 'npx dust help' for available commands"
     )
   })
 
   test('uses custom binary path from settings for help', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           config: {
@@ -174,15 +205,22 @@ describe('main', () => {
       },
     })
 
-    const result = await main({ args: ['help'], ctx, fs, glob: fs })
+    const result = await main({
+      commandArguments: ['help'],
+      context,
+      fileSystem,
+      glob: fileSystem,
+    })
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('Usage: bin/dust <command>')
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Usage: bin/dust <command>'
+    )
   })
 
   test('uses custom binary path from settings for unknown command error', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           config: {
@@ -192,98 +230,135 @@ describe('main', () => {
       },
     })
 
-    const result = await main({ args: ['unknown'], ctx, fs, glob: fs })
+    const result = await main({
+      commandArguments: ['unknown'],
+      context,
+      fileSystem,
+      glob: fileSystem,
+    })
 
     expect(result.exitCode).toBe(1)
-    expect(ctx.stderrLines.join('\n')).toContain(
+    expect(context.stderrLines.join('\n')).toContain(
       "Run 'bin/dust help' for available commands"
     )
   })
 
   test('routes init command correctly', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator()
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
 
-    const result = await main({ args: ['init'], ctx, fs, glob: fs })
+    const result = await main({
+      commandArguments: ['init'],
+      context,
+      fileSystem,
+      glob: fileSystem,
+    })
 
     expect(result.exitCode).toBe(0)
-    expect(fs.createdDirs).toContain('/project/.dust')
+    expect(fileSystem.createdDirs).toContain('/project/.dust')
   })
 
   test('routes list command correctly', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: { '.dust': {} },
     })
 
-    const result = await main({ args: ['list'], ctx, fs, glob: fs })
+    const result = await main({
+      commandArguments: ['list'],
+      context,
+      fileSystem,
+      glob: fileSystem,
+    })
 
     expect(result.exitCode).toBe(0)
   })
 
   test('routes validate command correctly', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: { '.dust': {} },
     })
 
-    const result = await main({ args: ['validate'], ctx, fs, glob: fs })
+    const result = await main({
+      commandArguments: ['validate'],
+      context,
+      fileSystem,
+      glob: fileSystem,
+    })
 
     expect(result.exitCode).toBe(0)
   })
 
   test('routes next command correctly', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: { '.dust': { tasks: {} } },
     })
 
-    const result = await main({ args: ['next'], ctx, fs, glob: fs })
+    const result = await main({
+      commandArguments: ['next'],
+      context,
+      fileSystem,
+      glob: fileSystem,
+    })
 
     expect(result.exitCode).toBe(0)
   })
 
   test('routes check command correctly', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: { '.dust': {} },
     })
 
-    const result = await main({ args: ['check'], ctx, fs, glob: fs })
+    const result = await main({
+      commandArguments: ['check'],
+      context,
+      fileSystem,
+      glob: fileSystem,
+    })
 
     // check command runs validate first, which should pass with empty .dust
     expect(typeof result.exitCode).toBe('number')
   })
 
   test('routes agent command correctly', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
-      project: { '.dust': {} },
-    })
-
-    const result = await main({ args: ['agent'], ctx, fs, glob: fs })
-
-    expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('Hello Agent')
-  })
-
-  test('passes command args to subcommands', async () => {
-    const ctx = createContextEmulator()
-    // Invalid type should cause the list command to report an error
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: { '.dust': {} },
     })
 
     const result = await main({
-      args: ['list', 'invalid-type'],
-      ctx,
-      fs,
-      glob: fs,
+      commandArguments: ['agent'],
+      context,
+      fileSystem,
+      glob: fileSystem,
+    })
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain('Hello Agent')
+  })
+
+  test('passes command args to subcommands', async () => {
+    const context = createContextEmulator()
+    // Invalid type should cause the list command to report an error
+    const fileSystem = createFileSystemEmulator({
+      project: { '.dust': {} },
+    })
+
+    const result = await main({
+      commandArguments: ['list', 'invalid-type'],
+      context,
+      fileSystem,
+      glob: fileSystem,
     })
 
     expect(result.exitCode).toBe(1)
     expect(
-      ctx.stderrLines.some(line => line.includes('Invalid type: invalid-type'))
+      context.stderrLines.some(line =>
+        line.includes('Invalid type: invalid-type')
+      )
     ).toBe(true)
   })
 })
@@ -305,74 +380,74 @@ describe('COMMANDS', () => {
 
 describe('hyphenated command routing', () => {
   test('routes agent new task correctly', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: { '.dust': {} },
     })
 
     const result = await main({
-      args: ['agent', 'new', 'task'],
-      ctx,
-      fs,
-      glob: fs,
+      commandArguments: ['agent', 'new', 'task'],
+      context,
+      fileSystem,
+      glob: fileSystem,
     })
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('Adding a New Task')
+    expect(context.stdoutLines.join('\n')).toContain('Adding a New Task')
   })
 
   test('routes agent help correctly', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: { '.dust': {} },
     })
 
     const result = await main({
-      args: ['agent', 'help'],
-      ctx,
-      fs,
-      glob: fs,
+      commandArguments: ['agent', 'help'],
+      context,
+      fileSystem,
+      glob: fileSystem,
     })
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('Dust Agent Guide')
+    expect(context.stdoutLines.join('\n')).toContain('Dust Agent Guide')
   })
 
   test('routes pre push correctly', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: { '.dust': {} },
     })
 
     const result = await main({
-      args: ['pre', 'push'],
-      ctx,
-      fs,
-      glob: fs,
+      commandArguments: ['pre', 'push'],
+      context,
+      fileSystem,
+      glob: fileSystem,
     })
 
     // pre push runs check, which should fail without checks configured
     expect(result.exitCode).toBe(1)
-    expect(ctx.stderrLines.join('\n')).toContain('No checks configured')
+    expect(context.stderrLines.join('\n')).toContain('No checks configured')
   })
 
   test('routes unknown multi-word command to error', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: { '.dust': {} },
     })
 
     const result = await main({
-      args: ['agent', 'unknown', 'subcommand'],
-      ctx,
-      fs,
-      glob: fs,
+      commandArguments: ['agent', 'unknown', 'subcommand'],
+      context,
+      fileSystem,
+      glob: fileSystem,
     })
 
     // Should fall back to 'agent' command since 'agent-unknown-subcommand' doesn't exist
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('Hello Agent')
+    expect(context.stdoutLines.join('\n')).toContain('Hello Agent')
   })
 })
 

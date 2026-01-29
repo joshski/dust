@@ -32,7 +32,7 @@ export interface BufferedProcessRunner {
 
 export type SpawnFn = (
   command: string,
-  args: string[],
+  commandArguments: string[],
   options: { cwd: string; shell?: boolean }
 ) => ChildProcess
 
@@ -53,8 +53,8 @@ export function createBufferedRunner(spawnFn: SpawnFn): BufferedProcessRunner {
         proc.on('close', code => {
           resolve({ exitCode: code ?? 1, output: chunks.join('') })
         })
-        proc.on('error', err => {
-          resolve({ exitCode: 1, output: err.message })
+        proc.on('error', error => {
+          resolve({ exitCode: 1, output: error.message })
         })
       })
     },
@@ -83,18 +83,18 @@ async function runConfiguredChecks(
 }
 
 async function runValidationCheck(
-  deps: CommandDependencies
+  dependencies: CommandDependencies
 ): Promise<CheckResult> {
   const outputLines: string[] = []
-  const bufferedCtx: CommandContext = {
-    cwd: deps.context.cwd,
+  const bufferedContext: CommandContext = {
+    cwd: dependencies.context.cwd,
     stdout: (msg: string) => outputLines.push(msg),
     stderr: (msg: string) => outputLines.push(msg),
   }
 
   const result = await validate({
-    ...deps,
-    context: bufferedCtx,
+    ...dependencies,
+    context: bufferedContext,
     arguments: [],
   })
 
@@ -107,58 +107,61 @@ async function runValidationCheck(
   }
 }
 
-function displayResults(results: CheckResult[], ctx: CommandContext): number {
+function displayResults(
+  results: CheckResult[],
+  context: CommandContext
+): number {
   const passed = results.filter(r => r.exitCode === 0)
   const failed = results.filter(r => r.exitCode !== 0)
 
   // Display pass/fail status for each check
   for (const result of results) {
     if (result.exitCode === 0) {
-      ctx.stdout(`✓ ${result.name}`)
+      context.stdout(`✓ ${result.name}`)
     } else {
-      ctx.stdout(`✗ ${result.name}`)
+      context.stdout(`✗ ${result.name}`)
     }
   }
 
   // Display failed command outputs
   for (const result of failed) {
-    ctx.stdout('')
-    ctx.stdout(`> ${result.command}`)
+    context.stdout('')
+    context.stdout(`> ${result.command}`)
     if (result.output.trim()) {
-      ctx.stdout(result.output.trimEnd())
+      context.stdout(result.output.trimEnd())
     }
     if (result.hints && result.hints.length > 0) {
-      ctx.stdout('')
-      ctx.stdout(`Hints for fixing '${result.name}':`)
+      context.stdout('')
+      context.stdout(`Hints for fixing '${result.name}':`)
       for (const hint of result.hints) {
-        ctx.stdout(`  - ${hint}`)
+        context.stdout(`  - ${hint}`)
       }
     }
   }
 
   // Display summary
-  ctx.stdout('')
-  ctx.stdout(`${passed.length}/${results.length} checks passed`)
+  context.stdout('')
+  context.stdout(`${passed.length}/${results.length} checks passed`)
 
   return failed.length > 0 ? 1 : 0
 }
 
 export async function check(
-  deps: CommandDependencies,
+  dependencies: CommandDependencies,
   bufferedRunner: BufferedProcessRunner = defaultBufferedRunner
 ): Promise<CommandResult> {
-  const { context: ctx, fileSystem: fs, settings } = deps
+  const { context, fileSystem, settings } = dependencies
 
   if (!settings.checks || settings.checks.length === 0) {
-    ctx.stderr('Error: No checks configured in .dust/config/settings.json')
-    ctx.stderr('')
-    ctx.stderr('Add checks to your settings.json:')
-    ctx.stderr('  {')
-    ctx.stderr('    "checks": [')
-    ctx.stderr('      { "name": "lint", "command": "npm run lint" },')
-    ctx.stderr('      { "name": "test", "command": "npm test" }')
-    ctx.stderr('    ]')
-    ctx.stderr('  }')
+    context.stderr('Error: No checks configured in .dust/config/settings.json')
+    context.stderr('')
+    context.stderr('Add checks to your settings.json:')
+    context.stderr('  {')
+    context.stderr('    "checks": [')
+    context.stderr('      { "name": "lint", "command": "npm run lint" },')
+    context.stderr('      { "name": "test", "command": "npm test" }')
+    context.stderr('    ]')
+    context.stderr('  }')
     return { exitCode: 1 }
   }
 
@@ -166,14 +169,14 @@ export async function check(
   const checkPromises: Promise<CheckResult | CheckResult[]>[] = []
 
   // Add validation check if .dust directory exists
-  const dustPath = `${ctx.cwd}/.dust`
-  if (fs.exists(dustPath)) {
-    checkPromises.push(runValidationCheck(deps))
+  const dustPath = `${context.cwd}/.dust`
+  if (fileSystem.exists(dustPath)) {
+    checkPromises.push(runValidationCheck(dependencies))
   }
 
   // Add configured checks
   checkPromises.push(
-    runConfiguredChecks(settings.checks, ctx.cwd, bufferedRunner)
+    runConfiguredChecks(settings.checks, context.cwd, bufferedRunner)
   )
 
   const promiseResults = await Promise.all(checkPromises)
@@ -188,6 +191,6 @@ export async function check(
     }
   }
 
-  const exitCode = displayResults(results, ctx)
+  const exitCode = displayResults(results, context)
   return { exitCode }
 }

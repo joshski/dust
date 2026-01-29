@@ -11,18 +11,18 @@ import type {
 } from '../types'
 import { agent } from './agent'
 
-function createDeps(
-  ctx: CommandContext,
-  args: string[],
+function createDependencies(
+  context: CommandContext,
+  commandArguments: string[],
   settings: DustSettings,
-  fsOverride?: FileSystemEmulator
+  fileSystemOverride?: FileSystemEmulator
 ): CommandDependencies {
-  const fs = fsOverride || createFileSystemEmulator()
+  const fileSystem = fileSystemOverride || createFileSystemEmulator()
   return {
-    arguments: args,
-    context: ctx,
-    fileSystem: fs,
-    globScanner: fs,
+    arguments: commandArguments,
+    context,
+    fileSystem,
+    globScanner: fileSystem,
     settings,
   }
 }
@@ -31,58 +31,66 @@ const defaultSettings: DustSettings = { dustCommand: 'dust' }
 
 describe('agent command', () => {
   test('outputs greeting with routing instructions', async () => {
-    const ctx = createContextEmulator()
+    const context = createContextEmulator()
 
-    const result = await agent(createDeps(ctx, [], defaultSettings))
+    const result = await agent(createDependencies(context, [], defaultSettings))
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('Hello Agent')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust agent pick task')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust agent implement task')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust agent new task')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust agent new goal')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust agent new idea')
-    expect(ctx.stdoutLines.join('\n')).toContain('dust agent help')
+    expect(context.stdoutLines.join('\n')).toContain('Hello Agent')
+    expect(context.stdoutLines.join('\n')).toContain('dust agent pick task')
+    expect(context.stdoutLines.join('\n')).toContain(
+      'dust agent implement task'
+    )
+    expect(context.stdoutLines.join('\n')).toContain('dust agent new task')
+    expect(context.stdoutLines.join('\n')).toContain('dust agent new goal')
+    expect(context.stdoutLines.join('\n')).toContain('dust agent new idea')
+    expect(context.stdoutLines.join('\n')).toContain('dust agent help')
   })
 
   test('uses custom binary path in output', async () => {
-    const ctx = createContextEmulator()
+    const context = createContextEmulator()
     const settings: DustSettings = { dustCommand: 'bin/dust' }
 
-    await agent(createDeps(ctx, [], settings))
+    await agent(createDependencies(context, [], settings))
 
-    expect(ctx.stdoutLines.join('\n')).toContain('bin/dust agent pick task')
+    expect(context.stdoutLines.join('\n')).toContain('bin/dust agent pick task')
   })
 })
 
 describe('git hooks management', () => {
   test('installs hooks when git repo exists and hooks not installed', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: { '.git': { hooks: {} } },
     })
 
-    await agent(createDeps(ctx, [], defaultSettings, fs))
+    await agent(createDependencies(context, [], defaultSettings, fileSystem))
 
     // Hook file should be created
-    expect(fs.writtenFiles.has('/project/.git/hooks/pre-push')).toBe(true)
-    const hookContent = fs.writtenFiles.get('/project/.git/hooks/pre-push')
+    expect(fileSystem.writtenFiles.has('/project/.git/hooks/pre-push')).toBe(
+      true
+    )
+    const hookContent = fileSystem.writtenFiles.get(
+      '/project/.git/hooks/pre-push'
+    )
     expect(hookContent).toContain('dust pre push')
   })
 
   test('does not install hooks when not a git repo', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator()
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
 
-    await agent(createDeps(ctx, [], defaultSettings, fs))
+    await agent(createDependencies(context, [], defaultSettings, fileSystem))
 
     // No hook file should be created
-    expect(fs.writtenFiles.has('/project/.git/hooks/pre-push')).toBe(false)
+    expect(fileSystem.writtenFiles.has('/project/.git/hooks/pre-push')).toBe(
+      false
+    )
   })
 
   test('updates binary path when hook installed with different path', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.git': {
           hooks: {
@@ -94,17 +102,19 @@ describe('git hooks management', () => {
     })
     const settings: DustSettings = { dustCommand: 'new/path' }
 
-    await agent(createDeps(ctx, [], settings, fs))
+    await agent(createDependencies(context, [], settings, fileSystem))
 
     // Hook should be updated with new path
-    const hookContent = fs.writtenFiles.get('/project/.git/hooks/pre-push')
+    const hookContent = fileSystem.writtenFiles.get(
+      '/project/.git/hooks/pre-push'
+    )
     expect(hookContent).toContain('new/path pre push')
     expect(hookContent).not.toContain('old/path')
   })
 
   test('does not update hook when binary path matches settings', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.git': {
           hooks: {
@@ -115,9 +125,11 @@ describe('git hooks management', () => {
       },
     })
 
-    await agent(createDeps(ctx, [], defaultSettings, fs))
+    await agent(createDependencies(context, [], defaultSettings, fileSystem))
 
     // Hook should not be updated (paths match)
-    expect(fs.writtenFiles.has('/project/.git/hooks/pre-push')).toBe(false)
+    expect(fileSystem.writtenFiles.has('/project/.git/hooks/pre-push')).toBe(
+      false
+    )
   })
 })

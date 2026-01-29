@@ -1,0 +1,58 @@
+language js
+
+or {
+  `ctx` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'ctx'. Use 'context' instead.")
+  },
+  `deps` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'deps'. Use 'dependencies' instead.")
+  },
+  `fs` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'fs'. Use 'fileSystem' instead.")
+  },
+  `args` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'args'. Use 'arguments' instead.")
+  },
+  `req` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'req'. Use 'request' instead.")
+  },
+  `res` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'res'. Use 'response' instead.")
+  },
+  `err` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'err'. Use 'error' instead.")
+  },
+  `cb` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'cb'. Use 'callback' instead.")
+  },
+  `fn` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'fn'. Use a descriptive name instead.")
+  },
+  `opts` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'opts'. Use 'options' instead.")
+  },
+  `params` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'params'. Use 'parameters' instead.")
+  },
+  `obj` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'obj'. Use a descriptive name instead.")
+  },
+  `val` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'val'. Use 'value' instead.")
+  },
+  `idx` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'idx'. Use 'index' instead.")
+  },
+  `len` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'len'. Use 'length' instead.")
+  },
+  `tmp` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'tmp'. Use a descriptive name instead.")
+  },
+  `str` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'str'. Use 'string' or a descriptive name instead.")
+  },
+  `num` where {
+    register_diagnostic(span=$match, message="Avoid abbreviated name 'num'. Use 'number' or a descriptive name instead.")
+  }
+}

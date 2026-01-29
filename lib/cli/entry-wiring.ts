@@ -83,17 +83,17 @@ export async function wireEntry(
   processPrimitives: ProcessPrimitives,
   consolePrimitives: ConsolePrimitives
 ): Promise<void> {
-  const fs = createFileSystem(fsPrimitives)
+  const fileSystem = createFileSystem(fsPrimitives)
   const glob = createGlobScanner(fsPrimitives.readdir)
 
   const result = await main({
-    args: processPrimitives.argv.slice(2),
-    ctx: {
+    commandArguments: processPrimitives.argv.slice(2),
+    context: {
       cwd: processPrimitives.cwd(),
       stdout: consolePrimitives.log,
       stderr: consolePrimitives.error,
     },
-    fs,
+    fileSystem,
     glob,
   })
 

@@ -22,7 +22,7 @@ function createMockContext(): CommandContext & {
   }
 }
 
-function createMockFs(): FileSystem {
+function createMockFileSystem(): FileSystem {
   return {
     exists: () => false,
     readFile: async () => '',
@@ -40,14 +40,14 @@ function createMockGlob(): GlobScanner {
   }
 }
 
-function createDeps(
-  ctx: CommandContext,
+function createDependencies(
+  context: CommandContext,
   dustCommand = 'dust'
 ): CommandDependencies {
   return {
     arguments: [],
-    context: ctx,
-    fileSystem: createMockFs(),
+    context,
+    fileSystem: createMockFileSystem(),
     globScanner: createMockGlob(),
     settings: { dustCommand },
   }
@@ -55,28 +55,28 @@ function createDeps(
 
 describe('help command', () => {
   test('returns exit code 0', async () => {
-    const ctx = createMockContext()
+    const context = createMockContext()
 
-    const result = await help(createDeps(ctx))
+    const result = await help(createDependencies(context))
 
     expect(result.exitCode).toBe(0)
   })
 
   test('outputs help text to stdout', async () => {
-    const ctx = createMockContext()
+    const context = createMockContext()
 
-    await help(createDeps(ctx))
+    await help(createDependencies(context))
 
-    expect(ctx.stdoutLines.length).toBe(1)
-    expect(ctx.stdoutLines[0]).toContain('dust')
+    expect(context.stdoutLines.length).toBe(1)
+    expect(context.stdoutLines[0]).toContain('dust')
   })
 
   test('uses dustCommand from settings', async () => {
-    const ctx = createMockContext()
+    const context = createMockContext()
 
-    await help(createDeps(ctx, 'bunx dust'))
+    await help(createDependencies(context, 'bunx dust'))
 
-    expect(ctx.stdoutLines[0]).toContain('bunx dust')
+    expect(context.stdoutLines[0]).toContain('bunx dust')
   })
 })
 

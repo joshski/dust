@@ -27,7 +27,7 @@ export async function* spawnClaudeCode(
     dangerouslySkipPermissions,
   } = options
 
-  const args = [
+  const claudeArguments = [
     '-p',
     prompt,
     '--output-format',
@@ -37,25 +37,25 @@ export async function* spawnClaudeCode(
   ]
 
   if (allowedTools?.length) {
-    args.push('--allowedTools', ...allowedTools)
+    claudeArguments.push('--allowedTools', ...allowedTools)
   }
   if (maxTurns) {
-    args.push('--max-turns', String(maxTurns))
+    claudeArguments.push('--max-turns', String(maxTurns))
   }
   if (model) {
-    args.push('--model', model)
+    claudeArguments.push('--model', model)
   }
   if (systemPrompt) {
-    args.push('--system-prompt', systemPrompt)
+    claudeArguments.push('--system-prompt', systemPrompt)
   }
   if (sessionId) {
-    args.push('--session-id', sessionId)
+    claudeArguments.push('--session-id', sessionId)
   }
   if (dangerouslySkipPermissions) {
-    args.push('--dangerously-skip-permissions')
+    claudeArguments.push('--dangerously-skip-permissions')
   }
 
-  const proc = dependencies.spawn('claude', args, {
+  const proc = dependencies.spawn('claude', claudeArguments, {
     cwd,
     stdio: ['ignore', 'pipe', 'pipe'],
   })

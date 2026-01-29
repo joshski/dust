@@ -37,24 +37,26 @@ function extractBlockedBy(content: string): string[] {
   return blockers
 }
 
-export async function next(deps: CommandDependencies): Promise<CommandResult> {
-  const { context: ctx, fileSystem: fs } = deps
-  const dustPath = `${ctx.cwd}/.dust`
+export async function next(
+  dependencies: CommandDependencies
+): Promise<CommandResult> {
+  const { context, fileSystem } = dependencies
+  const dustPath = `${context.cwd}/.dust`
 
-  if (!fs.exists(dustPath)) {
-    ctx.stderr('Error: .dust directory not found')
-    ctx.stderr("Run 'dust init' to initialize a Dust repository")
+  if (!fileSystem.exists(dustPath)) {
+    context.stderr('Error: .dust directory not found')
+    context.stderr("Run 'dust init' to initialize a Dust repository")
     return { exitCode: 1 }
   }
 
   const tasksPath = `${dustPath}/tasks`
 
-  if (!fs.exists(tasksPath)) {
+  if (!fileSystem.exists(tasksPath)) {
     // No tasks directory means no tasks to show
     return { exitCode: 0 }
   }
 
-  const files = await fs.readdir(tasksPath)
+  const files = await fileSystem.readdir(tasksPath)
   const mdFiles = files.filter(f => f.endsWith('.md')).sort()
 
   if (mdFiles.length === 0) {
@@ -69,7 +71,7 @@ export async function next(deps: CommandDependencies): Promise<CommandResult> {
 
   for (const file of mdFiles) {
     const filePath = `${tasksPath}/${file}`
-    const content = await fs.readFile(filePath)
+    const content = await fileSystem.readFile(filePath)
     const blockers = extractBlockedBy(content)
 
     // Check if any blockers still exist (are incomplete)
@@ -88,12 +90,12 @@ export async function next(deps: CommandDependencies): Promise<CommandResult> {
     return { exitCode: 0 }
   }
 
-  ctx.stdout('Next tasks:')
+  context.stdout('Next tasks:')
   for (const task of unblockedTasks) {
     if (task.title) {
-      ctx.stdout(`  ${task.path} - ${task.title}`)
+      context.stdout(`  ${task.path} - ${task.title}`)
     } else {
-      ctx.stdout(`  ${task.path}`)
+      context.stdout(`  ${task.path}`)
     }
   }
 

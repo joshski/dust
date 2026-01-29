@@ -9,7 +9,9 @@ export function generateHelpText(settings: { dustCommand: string }): string {
   return loadTemplate('help', { bin: settings.dustCommand })
 }
 
-export async function help(deps: CommandDependencies): Promise<CommandResult> {
-  deps.context.stdout(generateHelpText(deps.settings))
+export async function help(
+  dependencies: CommandDependencies
+): Promise<CommandResult> {
+  dependencies.context.stdout(generateHelpText(dependencies.settings))
   return { exitCode: 0 }
 }

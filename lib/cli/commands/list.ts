@@ -8,57 +8,61 @@ import type { CommandDependencies, CommandResult } from '../types'
 const VALID_TYPES = ['tasks', 'ideas', 'goals', 'facts'] as const
 type ListType = (typeof VALID_TYPES)[number]
 
-export async function list(deps: CommandDependencies): Promise<CommandResult> {
-  const { arguments: args, context: ctx, fileSystem: fs } = deps
-  const dustPath = `${ctx.cwd}/.dust`
+export async function list(
+  dependencies: CommandDependencies
+): Promise<CommandResult> {
+  const { arguments: commandArguments, context, fileSystem } = dependencies
+  const dustPath = `${context.cwd}/.dust`
 
-  if (!fs.exists(dustPath)) {
-    ctx.stderr('Error: .dust directory not found')
-    ctx.stderr("Run 'dust init' to initialize a Dust repository")
+  if (!fileSystem.exists(dustPath)) {
+    context.stderr('Error: .dust directory not found')
+    context.stderr("Run 'dust init' to initialize a Dust repository")
     return { exitCode: 1 }
   }
 
   const typesToList: ListType[] =
-    args.length === 0
+    commandArguments.length === 0
       ? [...VALID_TYPES]
-      : (args.filter(a => VALID_TYPES.includes(a as ListType)) as ListType[])
+      : (commandArguments.filter(a =>
+          VALID_TYPES.includes(a as ListType)
+        ) as ListType[])
 
-  if (args.length > 0 && typesToList.length === 0) {
-    ctx.stderr(`Invalid type: ${args[0]}`)
-    ctx.stderr(`Valid types: ${VALID_TYPES.join(', ')}`)
+  if (commandArguments.length > 0 && typesToList.length === 0) {
+    context.stderr(`Invalid type: ${commandArguments[0]}`)
+    context.stderr(`Valid types: ${VALID_TYPES.join(', ')}`)
     return { exitCode: 1 }
   }
 
   for (const type of typesToList) {
     const dirPath = `${dustPath}/${type}`
 
-    if (!fs.exists(dirPath)) {
+    if (!fileSystem.exists(dirPath)) {
       continue
     }
 
-    const files = await fs.readdir(dirPath)
+    const files = await fileSystem.readdir(dirPath)
     const mdFiles = files.filter(f => f.endsWith('.md')).sort()
 
     if (mdFiles.length === 0) {
       continue
     }
 
-    ctx.stdout(`${type}:`)
+    context.stdout(`${type}:`)
 
     for (const file of mdFiles) {
       const filePath = `${dirPath}/${file}`
-      const content = await fs.readFile(filePath)
+      const content = await fileSystem.readFile(filePath)
       const title = extractTitle(content)
       const name = file.replace(/\.md$/, '')
 
       if (title) {
-        ctx.stdout(`  ${name} - ${title}`)
+        context.stdout(`  ${name} - ${title}`)
       } else {
-        ctx.stdout(`  ${name}`)
+        context.stdout(`  ${name}`)
       }
     }
 
-    ctx.stdout('')
+    context.stdout('')
   }
 
   return { exitCode: 0 }

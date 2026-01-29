@@ -7,34 +7,36 @@ import {
 import type { CommandContext, CommandDependencies } from '../types'
 import { list } from './list'
 
-function createDeps(
-  ctx: CommandContext,
-  fs: FileSystemEmulator,
-  args: string[] = []
+function createDependencies(
+  context: CommandContext,
+  fileSystem: FileSystemEmulator,
+  commandArguments: string[] = []
 ): CommandDependencies {
   return {
-    arguments: args,
-    context: ctx,
-    fileSystem: fs,
-    globScanner: fs,
+    arguments: commandArguments,
+    context,
+    fileSystem,
+    globScanner: fileSystem,
     settings: { dustCommand: 'dust' },
   }
 }
 
 describe('list command', () => {
   test('fails if .dust not found', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator()
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
 
-    const result = await list(createDeps(ctx, fs))
+    const result = await list(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(1)
-    expect(ctx.stderrLines.join('\n')).toContain('.dust directory not found')
+    expect(context.stderrLines.join('\n')).toContain(
+      '.dust directory not found'
+    )
   })
 
   test('lists all types when no argument given', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           goals: { 'goal.md': '# My Goal' },
@@ -45,10 +47,10 @@ describe('list command', () => {
       },
     })
 
-    const result = await list(createDeps(ctx, fs))
+    const result = await list(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
-    const output = ctx.stdoutLines.join('\n')
+    const output = context.stdoutLines.join('\n')
     expect(output).toContain('goals:')
     expect(output).toContain('ideas:')
     expect(output).toContain('tasks:')
@@ -56,8 +58,8 @@ describe('list command', () => {
   })
 
   test('lists only specified type', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           goals: { 'goal.md': '# My Goal' },
@@ -66,17 +68,19 @@ describe('list command', () => {
       },
     })
 
-    const result = await list(createDeps(ctx, fs, ['goals']))
+    const result = await list(
+      createDependencies(context, fileSystem, ['goals'])
+    )
 
     expect(result.exitCode).toBe(0)
-    const output = ctx.stdoutLines.join('\n')
+    const output = context.stdoutLines.join('\n')
     expect(output).toContain('goals:')
     expect(output).not.toContain('ideas:')
   })
 
   test('shows file name and title', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           goals: { 'my-goal.md': '# My Goal Title' },
@@ -84,16 +88,16 @@ describe('list command', () => {
       },
     })
 
-    await list(createDeps(ctx, fs, ['goals']))
+    await list(createDependencies(context, fileSystem, ['goals']))
 
-    const output = ctx.stdoutLines.join('\n')
+    const output = context.stdoutLines.join('\n')
     expect(output).toContain('my-goal')
     expect(output).toContain('My Goal Title')
   })
 
   test('shows only file name if no title', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           goals: { 'my-goal.md': 'No heading here' },
@@ -101,15 +105,15 @@ describe('list command', () => {
       },
     })
 
-    await list(createDeps(ctx, fs, ['goals']))
+    await list(createDependencies(context, fileSystem, ['goals']))
 
-    const output = ctx.stdoutLines.join('\n')
+    const output = context.stdoutLines.join('\n')
     expect(output).toContain('my-goal')
   })
 
   test('rejects invalid type', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           goals: { 'g.md': '' },
@@ -117,15 +121,17 @@ describe('list command', () => {
       },
     })
 
-    const result = await list(createDeps(ctx, fs, ['invalid']))
+    const result = await list(
+      createDependencies(context, fileSystem, ['invalid'])
+    )
 
     expect(result.exitCode).toBe(1)
-    expect(ctx.stderrLines.join('\n')).toContain('Invalid type')
+    expect(context.stderrLines.join('\n')).toContain('Invalid type')
   })
 
   test('shows valid types on error', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           goals: { 'g.md': '' },
@@ -133,9 +139,9 @@ describe('list command', () => {
       },
     })
 
-    await list(createDeps(ctx, fs, ['invalid']))
+    await list(createDependencies(context, fileSystem, ['invalid']))
 
-    const output = ctx.stderrLines.join('\n')
+    const output = context.stderrLines.join('\n')
     expect(output).toContain('tasks')
     expect(output).toContain('ideas')
     expect(output).toContain('goals')
@@ -143,9 +149,9 @@ describe('list command', () => {
   })
 
   test('skips type directories that do not exist', async () => {
-    const ctx = createContextEmulator()
+    const context = createContextEmulator()
     // Only goals directory exists, tasks/ideas/facts do not
-    const fs = createFileSystemEmulator({
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           goals: { 'my-goal.md': '# My Goal' },
@@ -153,10 +159,10 @@ describe('list command', () => {
       },
     })
 
-    const result = await list(createDeps(ctx, fs))
+    const result = await list(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
-    const output = ctx.stdoutLines.join('\n')
+    const output = context.stdoutLines.join('\n')
     expect(output).toContain('goals:')
     expect(output).toContain('my-goal')
     // Other types should not appear because their directories don't exist
@@ -166,8 +172,8 @@ describe('list command', () => {
   })
 
   test('skips type directories with no markdown files', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           goals: { 'my-goal.md': '# My Goal' },
@@ -176,10 +182,10 @@ describe('list command', () => {
       },
     })
 
-    const result = await list(createDeps(ctx, fs))
+    const result = await list(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
-    const output = ctx.stdoutLines.join('\n')
+    const output = context.stdoutLines.join('\n')
     expect(output).toContain('goals:')
     // ideas exists but has no .md files, so should not be listed
     expect(output).not.toContain('ideas:')

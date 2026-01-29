@@ -7,34 +7,36 @@ import {
 import type { CommandContext, CommandDependencies } from '../types'
 import { next } from './next'
 
-function createDeps(
-  ctx: CommandContext,
-  fs: FileSystemEmulator
+function createDependencies(
+  context: CommandContext,
+  fileSystem: FileSystemEmulator
 ): CommandDependencies {
   return {
     arguments: [],
-    context: ctx,
-    fileSystem: fs,
-    globScanner: fs,
+    context,
+    fileSystem,
+    globScanner: fileSystem,
     settings: { dustCommand: 'dust' },
   }
 }
 
 describe('next command', () => {
   test('fails if .dust directory not found', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator()
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
 
-    const result = await next(createDeps(ctx, fs))
+    const result = await next(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(1)
-    expect(ctx.stderrLines.join('\n')).toContain('.dust directory not found')
-    expect(ctx.stderrLines.join('\n')).toContain('dust init')
+    expect(context.stderrLines.join('\n')).toContain(
+      '.dust directory not found'
+    )
+    expect(context.stderrLines.join('\n')).toContain('dust init')
   })
 
   test('returns empty output when no tasks directory exists', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           goals: { 'goal.md': '# My Goal' },
@@ -42,27 +44,27 @@ describe('next command', () => {
       },
     })
 
-    const result = await next(createDeps(ctx, fs))
+    const result = await next(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines).toHaveLength(0)
+    expect(context.stdoutLines).toHaveLength(0)
   })
 
   test('returns empty output when tasks directory is empty', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: { '.dust': { tasks: {} } },
     })
 
-    const result = await next(createDeps(ctx, fs))
+    const result = await next(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines).toHaveLength(0)
+    expect(context.stdoutLines).toHaveLength(0)
   })
 
   test('lists tasks with no blockers section', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           tasks: { 'simple-task.md': '# Simple Task\n\nJust do it.' },
@@ -70,17 +72,19 @@ describe('next command', () => {
       },
     })
 
-    const result = await next(createDeps(ctx, fs))
+    const result = await next(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines.join('\n')).toContain('Next tasks:')
-    expect(ctx.stdoutLines.join('\n')).toContain('.dust/tasks/simple-task.md')
-    expect(ctx.stdoutLines.join('\n')).toContain('Simple Task')
+    expect(context.stdoutLines.join('\n')).toContain('Next tasks:')
+    expect(context.stdoutLines.join('\n')).toContain(
+      '.dust/tasks/simple-task.md'
+    )
+    expect(context.stdoutLines.join('\n')).toContain('Simple Task')
   })
 
   test('filters out tasks with incomplete blockers', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           tasks: {
@@ -92,18 +96,18 @@ describe('next command', () => {
       },
     })
 
-    const result = await next(createDeps(ctx, fs))
+    const result = await next(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
-    const output = ctx.stdoutLines.join('\n')
+    const output = context.stdoutLines.join('\n')
     expect(output).toContain('.dust/tasks/blocker-task.md')
     expect(output).not.toContain('.dust/tasks/blocked-task.md')
   })
 
   test('includes tasks whose blockers are all completed (deleted)', async () => {
-    const ctx = createContextEmulator()
+    const context = createContextEmulator()
     // The blocked-task references a blocker that no longer exists (completed)
-    const fs = createFileSystemEmulator({
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           tasks: {
@@ -114,18 +118,18 @@ describe('next command', () => {
       },
     })
 
-    const result = await next(createDeps(ctx, fs))
+    const result = await next(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
-    const output = ctx.stdoutLines.join('\n')
+    const output = context.stdoutLines.join('\n')
     expect(output).toContain('Next tasks:')
     expect(output).toContain('.dust/tasks/unblocked-task.md')
     expect(output).toContain('Unblocked Task')
   })
 
   test('handles tasks with (none) in blocked by section', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           tasks: {
@@ -135,18 +139,18 @@ describe('next command', () => {
       },
     })
 
-    const result = await next(createDeps(ctx, fs))
+    const result = await next(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
-    const output = ctx.stdoutLines.join('\n')
+    const output = context.stdoutLines.join('\n')
     expect(output).toContain('Next tasks:')
     expect(output).toContain('.dust/tasks/ready-task.md')
     expect(output).toContain('Ready Task')
   })
 
   test('shows task path without title if no heading exists', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           tasks: { 'no-title-task.md': 'This task has no heading' },
@@ -154,18 +158,18 @@ describe('next command', () => {
       },
     })
 
-    const result = await next(createDeps(ctx, fs))
+    const result = await next(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
-    const output = ctx.stdoutLines.join('\n')
+    const output = context.stdoutLines.join('\n')
     expect(output).toContain('.dust/tasks/no-title-task.md')
     // Should not have a dash separator without title
     expect(output).not.toContain('.dust/tasks/no-title-task.md -')
   })
 
   test('returns empty when all tasks are blocked', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           tasks: {
@@ -176,16 +180,16 @@ describe('next command', () => {
       },
     })
 
-    const result = await next(createDeps(ctx, fs))
+    const result = await next(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
-    expect(ctx.stdoutLines).toHaveLength(0)
+    expect(context.stdoutLines).toHaveLength(0)
   })
 
   test('handles multiple blockers where some are complete', async () => {
-    const ctx = createContextEmulator()
+    const context = createContextEmulator()
     // Blockers on the same line to ensure they're all captured
-    const fs = createFileSystemEmulator({
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           tasks: {
@@ -197,10 +201,10 @@ describe('next command', () => {
       },
     })
 
-    const result = await next(createDeps(ctx, fs))
+    const result = await next(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
-    const output = ctx.stdoutLines.join('\n')
+    const output = context.stdoutLines.join('\n')
     // multi-blocked should NOT appear because still-exists.md still exists
     expect(output).not.toContain('.dust/tasks/multi-blocked.md')
     // still-exists should appear (no blockers)
@@ -208,8 +212,8 @@ describe('next command', () => {
   })
 
   test('lists multiple unblocked tasks sorted alphabetically', async () => {
-    const ctx = createContextEmulator()
-    const fs = createFileSystemEmulator({
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           tasks: {
@@ -221,10 +225,10 @@ describe('next command', () => {
       },
     })
 
-    const result = await next(createDeps(ctx, fs))
+    const result = await next(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
-    const output = ctx.stdoutLines.join('\n')
+    const output = context.stdoutLines.join('\n')
     expect(output).toContain('.dust/tasks/alpha-task.md')
     expect(output).toContain('.dust/tasks/middle-task.md')
     expect(output).toContain('.dust/tasks/zebra-task.md')
