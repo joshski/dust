@@ -18,6 +18,7 @@ export interface FileSystem {
   writeFile: (path: string, content: string) => Promise<void>
   mkdir: (path: string, options?: { recursive?: boolean }) => Promise<void>
   readdir: (path: string) => Promise<string[]>
+  chmod: (path: string, mode: number) => Promise<void>
 }
 
 export interface GlobScanner {

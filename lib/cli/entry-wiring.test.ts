@@ -27,6 +27,7 @@ function createFsPrimitives(
         .filter(f => f.startsWith(prefix))
         .map(f => f.slice(prefix.length))
     },
+    chmod: async () => {},
   }
 }
 
@@ -98,6 +99,23 @@ describe('createFileSystem', () => {
     const entries = await fs.readdir('/dir')
 
     expect(entries).toEqual(['a.txt', 'b.txt'])
+  })
+
+  test('chmod delegates to primitive', async () => {
+    let chmodPath = ''
+    let chmodMode = 0
+
+    const primitives = createFsPrimitives()
+    primitives.chmod = async (path, mode) => {
+      chmodPath = path
+      chmodMode = mode
+    }
+    const fs = createFileSystem(primitives)
+
+    await fs.chmod('/test.sh', 0o755)
+
+    expect(chmodPath).toBe('/test.sh')
+    expect(chmodMode).toBe(0o755)
   })
 })
 

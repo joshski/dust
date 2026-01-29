@@ -5,11 +5,11 @@
  * All testable logic is in entry-wiring.ts.
  */
 import { existsSync } from 'node:fs'
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
+import { chmod, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { wireEntry } from './entry-wiring'
 
 await wireEntry(
-  { existsSync, readFile, writeFile, mkdir, readdir },
+  { existsSync, readFile, writeFile, mkdir, readdir, chmod },
   { argv: process.argv, cwd: () => process.cwd(), exit: process.exit },
   { log: console.log, error: console.error }
 )

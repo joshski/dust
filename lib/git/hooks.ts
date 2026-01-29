@@ -101,6 +101,7 @@ export function createHooksManager(
       }
 
       await fs.writeFile(prePushPath, finalContent)
+      await fs.chmod(prePushPath, 0o755)
     },
 
     getHookBinaryPath: async () => {
@@ -136,6 +137,7 @@ export function createHooksManager(
         ? `${withoutDust}\n\n${newHookContent}\n`
         : `#!/bin/sh\n\n${newHookContent}\n`
       await fs.writeFile(prePushPath, finalContent)
+      await fs.chmod(prePushPath, 0o755)
     },
   }
 }

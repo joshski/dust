@@ -124,6 +124,8 @@ export interface FileSystemEmulator extends FileSystem, GlobScanner {
   writtenFiles: Map<string, string>
   /** Internal files map - exposed for tests that need to modify file system state */
   files: Map<string, string>
+  /** File permissions set via chmod - maps path to mode */
+  permissions: Map<string, number>
 }
 
 /**
@@ -157,6 +159,7 @@ export function createFileSystemEmulator(
 
   const createdDirs: string[] = []
   const writtenFiles = new Map<string, string>()
+  const permissions = new Map<string, number>()
 
   return {
     exists: (path: string) => paths.has(path),
@@ -174,6 +177,9 @@ export function createFileSystemEmulator(
         .map(f => f.slice(prefix.length))
         .filter(f => !f.includes('/'))
     },
+    chmod: async (path: string, mode: number) => {
+      permissions.set(path, mode)
+    },
     scan: async function* (dir: string) {
       const prefix = `${dir}/`
       for (const file of files.keys()) {
@@ -185,5 +191,6 @@ export function createFileSystemEmulator(
     createdDirs,
     writtenFiles,
     files,
+    permissions,
   }
 }

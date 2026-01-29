@@ -180,6 +180,17 @@ describe('createHooksManager', () => {
       expect(content).toContain('new/path pre push')
       expect(content).not.toContain('old/path')
     })
+
+    test('sets hook file to executable mode', async () => {
+      const fs = createFileSystemEmulator({
+        project: { '.git': { hooks: {} } },
+      })
+      const manager = createHooksManager('/project', fs, defaultSettings)
+
+      await manager.installHook()
+
+      expect(fs.permissions.get('/project/.git/hooks/pre-push')).toBe(0o755)
+    })
   })
 
   describe('getHookBinaryPath', () => {
@@ -323,6 +334,24 @@ describe('createHooksManager', () => {
       expect(content).toContain('#!/bin/sh')
       expect(content).toContain('new/path pre push')
       expect(content).not.toContain('old/path')
+    })
+
+    test('sets hook file to executable mode', async () => {
+      const fs = createFileSystemEmulator({
+        project: {
+          '.git': {
+            hooks: {
+              'pre-push':
+                '#!/bin/sh\n# BEGIN DUST HOOK\nold/path pre push\nif [ $? -ne 0 ]; then\n  echo "dust pre-push check failed"\n  exit 1\nfi\n# END DUST HOOK',
+            },
+          },
+        },
+      })
+      const manager = createHooksManager('/project', fs, defaultSettings)
+
+      await manager.updateHookBinaryPath('new/path')
+
+      expect(fs.permissions.get('/project/.git/hooks/pre-push')).toBe(0o755)
     })
   })
 

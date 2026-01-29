@@ -23,6 +23,7 @@ export interface FileSystemPrimitives {
     (path: string): Promise<string[]>
     (path: string, options: { recursive: true }): Promise<string[]>
   }
+  chmod: (path: string, mode: number) => Promise<void>
 }
 
 /**
@@ -54,6 +55,7 @@ export function createFileSystem(primitives: FileSystemPrimitives): FileSystem {
       await primitives.mkdir(path, options)
     },
     readdir: path => primitives.readdir(path),
+    chmod: (path, mode) => primitives.chmod(path, mode),
   }
 }
 
