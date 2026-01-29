@@ -66,7 +66,11 @@ describe('validateLinks', () => {
   test('returns no violations for valid links', () => {
     const content = '[Goal](../goals/goal.md)'
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/.dust/goals/goal.md', 'content']]),
+      project: {
+        '.dust': {
+          goals: { 'goal.md': 'content' },
+        },
+      },
     })
 
     const violations = validateLinks(
@@ -272,17 +276,18 @@ describe('validate command', () => {
   test('passes with valid files', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/.dust/goals/goal.md', '# Goal\nDescription'],
-        [
-          '/project/.dust/tasks/my-task.md',
-          `# Task
+      project: {
+        '.dust': {
+          goals: { 'goal.md': '# Goal\nDescription' },
+          tasks: {
+            'my-task.md': `# Task
 ## Goals
 [Goal](../goals/goal.md)
 ## Blocked by
 ## Definition of done`,
-        ],
-      ]),
+          },
+        },
+      },
     })
 
     const result = await validate(createDeps(ctx, fs))
@@ -294,9 +299,11 @@ describe('validate command', () => {
   test('reports violations', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/.dust/tasks/my-task.md', '# Task with no headings'],
-      ]),
+      project: {
+        '.dust': {
+          tasks: { 'my-task.md': '# Task with no headings' },
+        },
+      },
     })
 
     const result = await validate(createDeps(ctx, fs))
@@ -308,15 +315,16 @@ describe('validate command', () => {
   test('reports filename violations for invalid task filenames', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([
-        [
-          '/project/.dust/tasks/BadFileName.md',
-          `# Task
+      project: {
+        '.dust': {
+          tasks: {
+            'BadFileName.md': `# Task
 ## Goals
 ## Blocked by
 ## Definition of done`,
-        ],
-      ]),
+          },
+        },
+      },
     })
 
     const result = await validate(createDeps(ctx, fs))
@@ -329,19 +337,20 @@ describe('validate command', () => {
     const ctx = createContextEmulator()
     // Include non-.md files in the file system - they should be skipped during validation
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/.dust/goals/goal.md', '# Goal'],
-        [
-          '/project/.dust/tasks/my-task.md',
-          `# Task
+      project: {
+        '.dust': {
+          goals: { 'goal.md': '# Goal' },
+          tasks: {
+            'my-task.md': `# Task
 ## Goals
 ## Blocked by
 ## Definition of done`,
-        ],
-        ['/project/.dust/some-file.txt', ''],
-        ['/project/.dust/.gitkeep', ''],
-        ['/project/.dust/tasks/README', ''],
-      ]),
+            README: '',
+          },
+          'some-file.txt': '',
+          '.gitkeep': '',
+        },
+      },
     })
 
     const result = await validate(createDeps(ctx, fs))
@@ -353,16 +362,17 @@ describe('validate command', () => {
   test('displays violations with line numbers correctly', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([
-        [
-          '/project/.dust/tasks/my-task.md',
-          `# Task
+      project: {
+        '.dust': {
+          tasks: {
+            'my-task.md': `# Task
 ## Goals
 [Broken](../missing.md)
 ## Blocked by
 ## Definition of done`,
-        ],
-      ]),
+          },
+        },
+      },
     })
 
     await validate(createDeps(ctx, fs))
@@ -376,15 +386,16 @@ describe('validate command', () => {
   test('displays violations without line numbers correctly', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([
-        [
-          '/project/.dust/tasks/BadName.md',
-          `# Task
+      project: {
+        '.dust': {
+          tasks: {
+            'BadName.md': `# Task
 ## Goals
 ## Blocked by
 ## Definition of done`,
-        ],
-      ]),
+          },
+        },
+      },
     })
 
     await validate(createDeps(ctx, fs))
@@ -401,7 +412,11 @@ describe('validate command', () => {
     const ctx = createContextEmulator()
     // Only goals directory, no tasks directory
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/.dust/goals/goal.md', '# Goal']]),
+      project: {
+        '.dust': {
+          goals: { 'goal.md': '# Goal' },
+        },
+      },
     })
 
     const result = await validate(createDeps(ctx, fs))
@@ -415,18 +430,19 @@ describe('validate command', () => {
   test('reports semantic link violations for wrong link type in Goals section', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/.dust/goals/goal.md', '# Goal'],
-        ['/project/.dust/tasks/other-task.md', '# Other'],
-        [
-          '/project/.dust/tasks/my-task.md',
-          `# Task
+      project: {
+        '.dust': {
+          goals: { 'goal.md': '# Goal' },
+          tasks: {
+            'other-task.md': '# Other',
+            'my-task.md': `# Task
 ## Goals
 [Wrong](../tasks/other-task.md)
 ## Blocked by
 ## Definition of done`,
-        ],
-      ]),
+          },
+        },
+      },
     })
 
     const result = await validate(createDeps(ctx, fs))
@@ -440,17 +456,18 @@ describe('validate command', () => {
   test('reports semantic link violations for wrong link type in Blocked by section', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/.dust/goals/goal.md', '# Goal'],
-        [
-          '/project/.dust/tasks/my-task.md',
-          `# Task
+      project: {
+        '.dust': {
+          goals: { 'goal.md': '# Goal' },
+          tasks: {
+            'my-task.md': `# Task
 ## Goals
 ## Blocked by
 [Wrong](../goals/goal.md)
 ## Definition of done`,
-        ],
-      ]),
+          },
+        },
+      },
     })
 
     const result = await validate(createDeps(ctx, fs))

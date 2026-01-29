@@ -441,7 +441,7 @@ describe('check with validation', () => {
       checks: [{ name: 'lint', command: 'npm run lint' }],
     }
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/.dust']),
+      project: { '.dust': {} },
     })
     fs.readFile = async () =>
       '# Test\n## Goals\n## Blocked by\n## Definition of done'
@@ -467,12 +467,14 @@ describe('check with validation', () => {
     }
     // Include a task file with invalid filename (uppercase)
     const fs = createFileSystemEmulator({
-      files: new Map([
-        [
-          '/project/.dust/tasks/InvalidName.md',
-          '# Test\n## Goals\n## Blocked by\n## Definition of done',
-        ],
-      ]),
+      project: {
+        '.dust': {
+          tasks: {
+            'InvalidName.md':
+              '# Test\n## Goals\n## Blocked by\n## Definition of done',
+          },
+        },
+      },
     })
     const bufferedRunner = createMockBufferedRunner({
       'npm run lint': { exitCode: 0, output: '' },

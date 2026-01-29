@@ -35,7 +35,11 @@ describe('next command', () => {
   test('returns empty output when no tasks directory exists', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/.dust/goals/goal.md', '# My Goal']]),
+      project: {
+        '.dust': {
+          goals: { 'goal.md': '# My Goal' },
+        },
+      },
     })
 
     const result = await next(createDeps(ctx, fs))
@@ -47,7 +51,7 @@ describe('next command', () => {
   test('returns empty output when tasks directory is empty', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/.dust', '/project/.dust/tasks']),
+      project: { '.dust': { tasks: {} } },
     })
 
     const result = await next(createDeps(ctx, fs))
@@ -59,9 +63,11 @@ describe('next command', () => {
   test('lists tasks with no blockers section', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/.dust/tasks/simple-task.md', '# Simple Task\n\nJust do it.'],
-      ]),
+      project: {
+        '.dust': {
+          tasks: { 'simple-task.md': '# Simple Task\n\nJust do it.' },
+        },
+      },
     })
 
     const result = await next(createDeps(ctx, fs))
@@ -75,13 +81,15 @@ describe('next command', () => {
   test('filters out tasks with incomplete blockers', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([
-        [
-          '/project/.dust/tasks/blocked-task.md',
-          '# Blocked Task\n\n## Blocked by\n\n- [Blocker](blocker-task.md)',
-        ],
-        ['/project/.dust/tasks/blocker-task.md', '# Blocker Task\n\nDo first.'],
-      ]),
+      project: {
+        '.dust': {
+          tasks: {
+            'blocked-task.md':
+              '# Blocked Task\n\n## Blocked by\n\n- [Blocker](blocker-task.md)',
+            'blocker-task.md': '# Blocker Task\n\nDo first.',
+          },
+        },
+      },
     })
 
     const result = await next(createDeps(ctx, fs))
@@ -96,12 +104,14 @@ describe('next command', () => {
     const ctx = createContextEmulator()
     // The blocked-task references a blocker that no longer exists (completed)
     const fs = createFileSystemEmulator({
-      files: new Map([
-        [
-          '/project/.dust/tasks/unblocked-task.md',
-          '# Unblocked Task\n\n## Blocked by\n\n- [Completed Task](completed-task.md)',
-        ],
-      ]),
+      project: {
+        '.dust': {
+          tasks: {
+            'unblocked-task.md':
+              '# Unblocked Task\n\n## Blocked by\n\n- [Completed Task](completed-task.md)',
+          },
+        },
+      },
     })
 
     const result = await next(createDeps(ctx, fs))
@@ -116,12 +126,13 @@ describe('next command', () => {
   test('handles tasks with (none) in blocked by section', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([
-        [
-          '/project/.dust/tasks/ready-task.md',
-          '# Ready Task\n\n## Blocked by\n\n(none)',
-        ],
-      ]),
+      project: {
+        '.dust': {
+          tasks: {
+            'ready-task.md': '# Ready Task\n\n## Blocked by\n\n(none)',
+          },
+        },
+      },
     })
 
     const result = await next(createDeps(ctx, fs))
@@ -136,9 +147,11 @@ describe('next command', () => {
   test('shows task path without title if no heading exists', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/.dust/tasks/no-title-task.md', 'This task has no heading'],
-      ]),
+      project: {
+        '.dust': {
+          tasks: { 'no-title-task.md': 'This task has no heading' },
+        },
+      },
     })
 
     const result = await next(createDeps(ctx, fs))
@@ -153,16 +166,14 @@ describe('next command', () => {
   test('returns empty when all tasks are blocked', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([
-        [
-          '/project/.dust/tasks/task-a.md',
-          '# Task A\n\n## Blocked by\n\n- [Task B](task-b.md)',
-        ],
-        [
-          '/project/.dust/tasks/task-b.md',
-          '# Task B\n\n## Blocked by\n\n- [Task A](task-a.md)',
-        ],
-      ]),
+      project: {
+        '.dust': {
+          tasks: {
+            'task-a.md': '# Task A\n\n## Blocked by\n\n- [Task B](task-b.md)',
+            'task-b.md': '# Task B\n\n## Blocked by\n\n- [Task A](task-a.md)',
+          },
+        },
+      },
     })
 
     const result = await next(createDeps(ctx, fs))
@@ -175,13 +186,15 @@ describe('next command', () => {
     const ctx = createContextEmulator()
     // Blockers on the same line to ensure they're all captured
     const fs = createFileSystemEmulator({
-      files: new Map([
-        [
-          '/project/.dust/tasks/multi-blocked.md',
-          '# Multi Blocked\n\n## Blocked by\n\n- [Done](done.md), [Still Exists](still-exists.md)',
-        ],
-        ['/project/.dust/tasks/still-exists.md', '# Still Exists'],
-      ]),
+      project: {
+        '.dust': {
+          tasks: {
+            'multi-blocked.md':
+              '# Multi Blocked\n\n## Blocked by\n\n- [Done](done.md), [Still Exists](still-exists.md)',
+            'still-exists.md': '# Still Exists',
+          },
+        },
+      },
     })
 
     const result = await next(createDeps(ctx, fs))
@@ -197,11 +210,15 @@ describe('next command', () => {
   test('lists multiple unblocked tasks sorted alphabetically', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/.dust/tasks/zebra-task.md', '# Zebra Task'],
-        ['/project/.dust/tasks/alpha-task.md', '# Alpha Task'],
-        ['/project/.dust/tasks/middle-task.md', '# Middle Task'],
-      ]),
+      project: {
+        '.dust': {
+          tasks: {
+            'zebra-task.md': '# Zebra Task',
+            'alpha-task.md': '# Alpha Task',
+            'middle-task.md': '# Middle Task',
+          },
+        },
+      },
     })
 
     const result = await next(createDeps(ctx, fs))

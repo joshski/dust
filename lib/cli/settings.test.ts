@@ -13,21 +13,21 @@ describe('detectDustCommand', () => {
 
   test('returns bunx dust when bun.lockb exists', () => {
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/bun.lockb', '']]),
+      project: { 'bun.lockb': '' },
     })
     expect(detectDustCommand('/project', fs)).toBe('bunx dust')
   })
 
   test('returns pnpx dust when pnpm-lock.yaml exists', () => {
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/pnpm-lock.yaml', '']]),
+      project: { 'pnpm-lock.yaml': '' },
     })
     expect(detectDustCommand('/project', fs)).toBe('pnpx dust')
   })
 
   test('returns npx dust when package-lock.json exists', () => {
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/package-lock.json', '']]),
+      project: { 'package-lock.json': '' },
     })
     expect(detectDustCommand('/project', fs)).toBe('npx dust')
   })
@@ -46,20 +46,20 @@ describe('detectDustCommand', () => {
 
   test('prioritizes bun.lockb over pnpm-lock.yaml', () => {
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/bun.lockb', ''],
-        ['/project/pnpm-lock.yaml', ''],
-      ]),
+      project: {
+        'bun.lockb': '',
+        'pnpm-lock.yaml': '',
+      },
     })
     expect(detectDustCommand('/project', fs)).toBe('bunx dust')
   })
 
   test('prioritizes pnpm-lock.yaml over package-lock.json', () => {
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/pnpm-lock.yaml', ''],
-        ['/project/package-lock.json', ''],
-      ]),
+      project: {
+        'pnpm-lock.yaml': '',
+        'package-lock.json': '',
+      },
     })
     expect(detectDustCommand('/project', fs)).toBe('pnpx dust')
   })
@@ -67,7 +67,7 @@ describe('detectDustCommand', () => {
   test('prioritizes lockfiles over BUN_INSTALL env var', () => {
     stubEnv('BUN_INSTALL', '/home/user/.bun')
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/package-lock.json', '']]),
+      project: { 'package-lock.json': '' },
     })
     expect(detectDustCommand('/project', fs)).toBe('npx dust')
   })
@@ -76,7 +76,7 @@ describe('detectDustCommand', () => {
 describe('detectInstallDependenciesHint', () => {
   test('returns bun install when bun.lockb exists', () => {
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/bun.lockb', '']]),
+      project: { 'bun.lockb': '' },
     })
     expect(detectInstallDependenciesHint('/project', fs)).toBe(
       'Run `bun install`'
@@ -85,7 +85,7 @@ describe('detectInstallDependenciesHint', () => {
 
   test('returns bun install when bun.lock exists', () => {
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/bun.lock', '']]),
+      project: { 'bun.lock': '' },
     })
     expect(detectInstallDependenciesHint('/project', fs)).toBe(
       'Run `bun install`'
@@ -94,7 +94,7 @@ describe('detectInstallDependenciesHint', () => {
 
   test('returns pnpm install when pnpm-lock.yaml exists', () => {
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/pnpm-lock.yaml', '']]),
+      project: { 'pnpm-lock.yaml': '' },
     })
     expect(detectInstallDependenciesHint('/project', fs)).toBe(
       'Run `pnpm install`'
@@ -103,7 +103,7 @@ describe('detectInstallDependenciesHint', () => {
 
   test('returns npm install when package-lock.json exists', () => {
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/package-lock.json', '']]),
+      project: { 'package-lock.json': '' },
     })
     expect(detectInstallDependenciesHint('/project', fs)).toBe(
       'Run `npm install`'
@@ -112,7 +112,7 @@ describe('detectInstallDependenciesHint', () => {
 
   test('returns yarn install when yarn.lock exists', () => {
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/yarn.lock', '']]),
+      project: { 'yarn.lock': '' },
     })
     expect(detectInstallDependenciesHint('/project', fs)).toBe(
       'Run `yarn install`'
@@ -128,12 +128,12 @@ describe('detectInstallDependenciesHint', () => {
 
   test('prioritizes bun.lockb over other lockfiles', () => {
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/bun.lockb', ''],
-        ['/project/pnpm-lock.yaml', ''],
-        ['/project/package-lock.json', ''],
-        ['/project/yarn.lock', ''],
-      ]),
+      project: {
+        'bun.lockb': '',
+        'pnpm-lock.yaml': '',
+        'package-lock.json': '',
+        'yarn.lock': '',
+      },
     })
     expect(detectInstallDependenciesHint('/project', fs)).toBe(
       'Run `bun install`'
@@ -142,11 +142,11 @@ describe('detectInstallDependenciesHint', () => {
 
   test('prioritizes pnpm-lock.yaml over npm and yarn', () => {
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/pnpm-lock.yaml', ''],
-        ['/project/package-lock.json', ''],
-        ['/project/yarn.lock', ''],
-      ]),
+      project: {
+        'pnpm-lock.yaml': '',
+        'package-lock.json': '',
+        'yarn.lock': '',
+      },
     })
     expect(detectInstallDependenciesHint('/project', fs)).toBe(
       'Run `pnpm install`'
@@ -155,10 +155,10 @@ describe('detectInstallDependenciesHint', () => {
 
   test('prioritizes package-lock.json over yarn.lock', () => {
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/package-lock.json', ''],
-        ['/project/yarn.lock', ''],
-      ]),
+      project: {
+        'package-lock.json': '',
+        'yarn.lock': '',
+      },
     })
     expect(detectInstallDependenciesHint('/project', fs)).toBe(
       'Run `npm install`'
@@ -183,9 +183,11 @@ describe('loadSettings', () => {
 
   test('loads dustCommand from settings.json', async () => {
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/.dust/config/settings.json', '{"dustCommand": "bin/dust"}'],
-      ]),
+      project: {
+        '.dust': {
+          config: { 'settings.json': '{"dustCommand": "bin/dust"}' },
+        },
+      },
     })
     const settings = await loadSettings('/project', fs)
 
@@ -195,9 +197,11 @@ describe('loadSettings', () => {
   test('returns auto-detected dustCommand when config file is invalid JSON', async () => {
     stubEnv('BUN_INSTALL', '')
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/.dust/config/settings.json', 'not valid json'],
-      ]),
+      project: {
+        '.dust': {
+          config: { 'settings.json': 'not valid json' },
+        },
+      },
     })
     const settings = await loadSettings('/project', fs)
 
@@ -206,10 +210,12 @@ describe('loadSettings', () => {
 
   test('auto-detects dustCommand when not set in settings', async () => {
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/.dust/config/settings.json', '{}'],
-        ['/project/bun.lockb', ''],
-      ]),
+      project: {
+        '.dust': {
+          config: { 'settings.json': '{}' },
+        },
+        'bun.lockb': '',
+      },
     })
     const settings = await loadSettings('/project', fs)
 
@@ -218,13 +224,12 @@ describe('loadSettings', () => {
 
   test('uses explicit dustCommand over auto-detection', async () => {
     const fs = createFileSystemEmulator({
-      files: new Map([
-        [
-          '/project/.dust/config/settings.json',
-          '{"dustCommand": "custom/dust"}',
-        ],
-        ['/project/bun.lockb', ''],
-      ]),
+      project: {
+        '.dust': {
+          config: { 'settings.json': '{"dustCommand": "custom/dust"}' },
+        },
+        'bun.lockb': '',
+      },
     })
     const settings = await loadSettings('/project', fs)
 
@@ -234,7 +239,7 @@ describe('loadSettings', () => {
   test('returns auto-detected installDependenciesHint when no config file exists', async () => {
     stubEnv('BUN_INSTALL', '')
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/yarn.lock', '']]),
+      project: { 'yarn.lock': '' },
     })
     const settings = await loadSettings('/project', fs)
 
@@ -243,10 +248,12 @@ describe('loadSettings', () => {
 
   test('auto-detects installDependenciesHint when not set in settings', async () => {
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/.dust/config/settings.json', '{}'],
-        ['/project/pnpm-lock.yaml', ''],
-      ]),
+      project: {
+        '.dust': {
+          config: { 'settings.json': '{}' },
+        },
+        'pnpm-lock.yaml': '',
+      },
     })
     const settings = await loadSettings('/project', fs)
 
@@ -255,13 +262,14 @@ describe('loadSettings', () => {
 
   test('uses explicit installDependenciesHint over auto-detection', async () => {
     const fs = createFileSystemEmulator({
-      files: new Map([
-        [
-          '/project/.dust/config/settings.json',
-          '{"installDependenciesHint": "Run `make deps`"}',
-        ],
-        ['/project/bun.lockb', ''],
-      ]),
+      project: {
+        '.dust': {
+          config: {
+            'settings.json': '{"installDependenciesHint": "Run `make deps`"}',
+          },
+        },
+        'bun.lockb': '',
+      },
     })
     const settings = await loadSettings('/project', fs)
 
@@ -271,10 +279,12 @@ describe('loadSettings', () => {
   test('returns auto-detected installDependenciesHint when config file is invalid JSON', async () => {
     stubEnv('BUN_INSTALL', '')
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/.dust/config/settings.json', 'not valid json'],
-        ['/project/package-lock.json', ''],
-      ]),
+      project: {
+        '.dust': {
+          config: { 'settings.json': 'not valid json' },
+        },
+        'package-lock.json': '',
+      },
     })
     const settings = await loadSettings('/project', fs)
 

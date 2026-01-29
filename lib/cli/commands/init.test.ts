@@ -80,7 +80,7 @@ describe('init command', () => {
   test('shows notification when .dust already exists', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/.dust']),
+      project: { '.dust': {} },
     })
     const deps: CommandDependencies = {
       arguments: [],
@@ -140,7 +140,7 @@ describe('init command', () => {
     stubEnv('BUN_INSTALL', '')
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/CLAUDE.md']),
+      project: { 'CLAUDE.md': '' },
     })
     const deps: CommandDependencies = {
       arguments: [],
@@ -163,7 +163,7 @@ describe('init command', () => {
     stubEnv('BUN_INSTALL', '')
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/AGENTS.md']),
+      project: { 'AGENTS.md': '' },
     })
     const deps: CommandDependencies = {
       arguments: [],
@@ -185,7 +185,7 @@ describe('init command', () => {
   test('uses bunx when bun.lockb exists', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/bun.lockb']),
+      project: { 'bun.lockb': '' },
     })
     const deps: CommandDependencies = {
       arguments: [],
@@ -207,7 +207,7 @@ describe('init command', () => {
     stubEnv('BUN_INSTALL', '')
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/package.json']),
+      project: { 'package.json': '' },
     })
     const deps: CommandDependencies = {
       arguments: [],
@@ -231,7 +231,7 @@ describe('init command', () => {
   test('creates settings.json with bun test for Bun projects', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/bun.lockb']),
+      project: { 'bun.lockb': '' },
     })
     const deps: CommandDependencies = {
       arguments: [],
@@ -252,7 +252,7 @@ describe('init command', () => {
   test('creates settings.json with pnpm test for pnpm projects', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/pnpm-lock.yaml']),
+      project: { 'pnpm-lock.yaml': '' },
     })
     const deps: CommandDependencies = {
       arguments: [],
@@ -311,7 +311,7 @@ describe('init command', () => {
   test('uses pnpx when pnpm-lock.yaml exists', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/pnpm-lock.yaml']),
+      project: { 'pnpm-lock.yaml': '' },
     })
     const deps: CommandDependencies = {
       arguments: [],
@@ -332,7 +332,7 @@ describe('init command', () => {
   test('uses npx when package-lock.json exists', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/package-lock.json']),
+      project: { 'package-lock.json': '' },
     })
     const deps: CommandDependencies = {
       arguments: [],
@@ -432,7 +432,7 @@ describe('init command', () => {
   test('suggestions use npx runner when package-lock.json exists', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/package-lock.json']),
+      project: { 'package-lock.json': '' },
     })
     const deps: CommandDependencies = {
       arguments: [],
@@ -452,7 +452,7 @@ describe('init command', () => {
   test('suggestions use bunx runner when bun.lockb exists', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/bun.lockb']),
+      project: { 'bun.lockb': '' },
     })
     const deps: CommandDependencies = {
       arguments: [],
@@ -472,7 +472,7 @@ describe('init command', () => {
   test('suggestions use pnpx runner when pnpm-lock.yaml exists', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/pnpm-lock.yaml']),
+      project: { 'pnpm-lock.yaml': '' },
     })
     const deps: CommandDependencies = {
       arguments: [],

@@ -35,12 +35,14 @@ describe('list command', () => {
   test('lists all types when no argument given', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/.dust/goals/goal.md', '# My Goal'],
-        ['/project/.dust/ideas/idea.md', '# My Idea'],
-        ['/project/.dust/tasks/task.md', '# My Task'],
-        ['/project/.dust/facts/fact.md', '# My Fact'],
-      ]),
+      project: {
+        '.dust': {
+          goals: { 'goal.md': '# My Goal' },
+          ideas: { 'idea.md': '# My Idea' },
+          tasks: { 'task.md': '# My Task' },
+          facts: { 'fact.md': '# My Fact' },
+        },
+      },
     })
 
     const result = await list(createDeps(ctx, fs))
@@ -56,10 +58,12 @@ describe('list command', () => {
   test('lists only specified type', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([
-        ['/project/.dust/goals/goal.md', '# My Goal'],
-        ['/project/.dust/ideas/idea.md', '# My Idea'],
-      ]),
+      project: {
+        '.dust': {
+          goals: { 'goal.md': '# My Goal' },
+          ideas: { 'idea.md': '# My Idea' },
+        },
+      },
     })
 
     const result = await list(createDeps(ctx, fs, ['goals']))
@@ -73,7 +77,11 @@ describe('list command', () => {
   test('shows file name and title', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/.dust/goals/my-goal.md', '# My Goal Title']]),
+      project: {
+        '.dust': {
+          goals: { 'my-goal.md': '# My Goal Title' },
+        },
+      },
     })
 
     await list(createDeps(ctx, fs, ['goals']))
@@ -86,7 +94,11 @@ describe('list command', () => {
   test('shows only file name if no title', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/.dust/goals/my-goal.md', 'No heading here']]),
+      project: {
+        '.dust': {
+          goals: { 'my-goal.md': 'No heading here' },
+        },
+      },
     })
 
     await list(createDeps(ctx, fs, ['goals']))
@@ -98,7 +110,11 @@ describe('list command', () => {
   test('rejects invalid type', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/.dust/goals/g.md', '']]),
+      project: {
+        '.dust': {
+          goals: { 'g.md': '' },
+        },
+      },
     })
 
     const result = await list(createDeps(ctx, fs, ['invalid']))
@@ -110,7 +126,11 @@ describe('list command', () => {
   test('shows valid types on error', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/.dust/goals/g.md', '']]),
+      project: {
+        '.dust': {
+          goals: { 'g.md': '' },
+        },
+      },
     })
 
     await list(createDeps(ctx, fs, ['invalid']))
@@ -126,7 +146,11 @@ describe('list command', () => {
     const ctx = createContextEmulator()
     // Only goals directory exists, tasks/ideas/facts do not
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/.dust/goals/my-goal.md', '# My Goal']]),
+      project: {
+        '.dust': {
+          goals: { 'my-goal.md': '# My Goal' },
+        },
+      },
     })
 
     const result = await list(createDeps(ctx, fs))
@@ -144,15 +168,13 @@ describe('list command', () => {
   test('skips type directories with no markdown files', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      files: new Map([['/project/.dust/goals/my-goal.md', '# My Goal']]),
-      existingPaths: new Set(['/project/.dust/ideas']),
+      project: {
+        '.dust': {
+          goals: { 'my-goal.md': '# My Goal' },
+          ideas: {},
+        },
+      },
     })
-    // Override readdir to return empty for ideas
-    const origReaddir = fs.readdir
-    fs.readdir = async (path: string) => {
-      if (path === '/project/.dust/ideas') return []
-      return origReaddir(path)
-    }
 
     const result = await list(createDeps(ctx, fs))
 

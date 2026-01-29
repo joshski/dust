@@ -165,15 +165,14 @@ describe('main', () => {
   test('uses custom binary path from settings for help', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/.dust/config/settings.json']),
+      project: {
+        '.dust': {
+          config: {
+            'settings.json': '{"dustCommand": "bin/dust"}',
+          },
+        },
+      },
     })
-    // Override readFile to return custom settings
-    fs.readFile = async (path: string) => {
-      if (path === '/project/.dust/config/settings.json') {
-        return '{"dustCommand": "bin/dust"}'
-      }
-      return ''
-    }
 
     const result = await main({ args: ['help'], ctx, fs, glob: fs })
 
@@ -184,14 +183,14 @@ describe('main', () => {
   test('uses custom binary path from settings for unknown command error', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/.dust/config/settings.json']),
+      project: {
+        '.dust': {
+          config: {
+            'settings.json': '{"dustCommand": "bin/dust"}',
+          },
+        },
+      },
     })
-    fs.readFile = async (path: string) => {
-      if (path === '/project/.dust/config/settings.json') {
-        return '{"dustCommand": "bin/dust"}'
-      }
-      return ''
-    }
 
     const result = await main({ args: ['unknown'], ctx, fs, glob: fs })
 
@@ -214,7 +213,7 @@ describe('main', () => {
   test('routes list command correctly', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/.dust']),
+      project: { '.dust': {} },
     })
 
     const result = await main({ args: ['list'], ctx, fs, glob: fs })
@@ -225,7 +224,7 @@ describe('main', () => {
   test('routes validate command correctly', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/.dust']),
+      project: { '.dust': {} },
     })
 
     const result = await main({ args: ['validate'], ctx, fs, glob: fs })
@@ -236,7 +235,7 @@ describe('main', () => {
   test('routes next command correctly', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/.dust', '/project/.dust/tasks']),
+      project: { '.dust': { tasks: {} } },
     })
 
     const result = await main({ args: ['next'], ctx, fs, glob: fs })
@@ -247,7 +246,7 @@ describe('main', () => {
   test('routes check command correctly', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/.dust']),
+      project: { '.dust': {} },
     })
 
     const result = await main({ args: ['check'], ctx, fs, glob: fs })
@@ -259,7 +258,7 @@ describe('main', () => {
   test('routes agent command correctly', async () => {
     const ctx = createContextEmulator()
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/.dust']),
+      project: { '.dust': {} },
     })
 
     const result = await main({ args: ['agent'], ctx, fs, glob: fs })
@@ -272,7 +271,7 @@ describe('main', () => {
     const ctx = createContextEmulator()
     // Invalid type should cause the list command to report an error
     const fs = createFileSystemEmulator({
-      existingPaths: new Set(['/project/.dust']),
+      project: { '.dust': {} },
     })
 
     const result = await main({

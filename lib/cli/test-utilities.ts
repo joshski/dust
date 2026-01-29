@@ -9,6 +9,59 @@
 import type { CommandContext, FileSystem, GlobScanner } from './types'
 
 /**
+ * Recursive type for defining file system structure.
+ * String values represent file contents.
+ * Object values represent directories.
+ * Empty objects represent empty directories.
+ */
+export type FileSystemTree = {
+  [name: string]: string | FileSystemTree
+}
+
+/**
+ * Converts a nested FileSystemTree to absolute paths.
+ * Returns both a files Map (for files) and a paths Set (for all paths including directories).
+ */
+function flattenFileSystemTree(
+  tree: FileSystemTree,
+  basePath = ''
+): { files: Map<string, string>; paths: Set<string> } {
+  const files = new Map<string, string>()
+  const paths = new Set<string>()
+
+  for (const [name, value] of Object.entries(tree)) {
+    const fullPath = basePath ? `${basePath}/${name}` : `/${name}`
+
+    if (typeof value === 'string') {
+      // It's a file
+      files.set(fullPath, value)
+      paths.add(fullPath)
+    } else {
+      // It's a directory
+      paths.add(fullPath)
+      const nested = flattenFileSystemTree(value, fullPath)
+      for (const [path, content] of nested.files) {
+        files.set(path, content)
+      }
+      for (const path of nested.paths) {
+        paths.add(path)
+      }
+    }
+  }
+
+  // Add parent directories
+  for (const path of [...files.keys(), ...paths]) {
+    let dir = path
+    while (dir.includes('/')) {
+      dir = dir.substring(0, dir.lastIndexOf('/'))
+      if (dir) paths.add(dir)
+    }
+  }
+
+  return { files, paths }
+}
+
+/**
  * Cross-runtime environment variable stubbing.
  * Works with both Vitest and Bun test runners.
  */
@@ -69,49 +122,38 @@ export function createContextEmulator(cwd = '/project'): ContextEmulator {
 export interface FileSystemEmulator extends FileSystem, GlobScanner {
   createdDirs: string[]
   writtenFiles: Map<string, string>
+  /** Internal files map - exposed for tests that need to modify file system state */
+  files: Map<string, string>
 }
 
 /**
- * Options for createFileSystemEmulator
+ * Options for createFileSystemEmulator - accepts a nested object literal
+ * that mirrors the file system hierarchy.
+ *
+ * @example
+ * createFileSystemEmulator({
+ *   project: {
+ *     '.dust': {
+ *       goals: { 'my-goal.md': '# My Goal' },
+ *       ideas: {}  // empty directory
+ *     }
+ *   }
+ * })
  */
-export interface FileSystemEmulatorOptions {
-  /**
-   * Map of file paths to their contents.
-   * Parent directories are automatically inferred as existing.
-   */
-  files?: Map<string, string>
-  /**
-   * Set of additional paths that exist (directories without files)
-   */
-  existingPaths?: Set<string>
-}
+export type FileSystemEmulatorOptions = FileSystemTree
 
 /**
  * Creates a file system emulator with optional file contents and write tracking.
  * Implements both FileSystem and GlobScanner interfaces - the scan() method
  * iterates over the files the emulator knows about.
  *
- * @param options - Configuration options
+ * @param tree - Nested object representing file system hierarchy
  * @returns FileSystemEmulator with tracking for created directories and written files
  */
 export function createFileSystemEmulator(
-  options: FileSystemEmulatorOptions = {}
+  tree: FileSystemEmulatorOptions = {}
 ): FileSystemEmulator {
-  const { files = new Map(), existingPaths = new Set() } = options
-
-  // Build the set of all existing paths (files + their parent directories)
-  const paths = new Set<string>(files.keys())
-  for (const path of existingPaths) {
-    paths.add(path)
-  }
-  // Add parent directories of all files
-  for (const path of files.keys()) {
-    let dir = path
-    while (dir.includes('/')) {
-      dir = dir.substring(0, dir.lastIndexOf('/'))
-      if (dir) paths.add(dir)
-    }
-  }
+  const { files, paths } = flattenFileSystemTree(tree)
 
   const createdDirs: string[] = []
   const writtenFiles = new Map<string, string>()
@@ -142,5 +184,6 @@ export function createFileSystemEmulator(
     },
     createdDirs,
     writtenFiles,
+    files,
   }
 }

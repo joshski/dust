@@ -15,10 +15,10 @@ import {
 } from './loop'
 
 function createDeps(
-  files: Map<string, string> = new Map()
+  tree: Parameters<typeof createFileSystemEmulator>[0] = {}
 ): CommandDependencies {
   const ctx = createContextEmulator()
-  const fs = createFileSystemEmulator({ files })
+  const fs = createFileSystemEmulator(tree)
   return {
     arguments: [],
     context: ctx,
@@ -120,10 +120,13 @@ describe('hasAvailableTasks', () => {
   })
 
   test('returns true when tasks exist', async () => {
-    const files = new Map([
-      ['/project/.dust/tasks/task.md', '# Task\n\n## Blocked by\n\n(none)'],
-    ])
-    const deps = createDeps(files)
+    const deps = createDeps({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
     const result = await hasAvailableTasks(deps)
     expect(result).toBe(true)
   })
@@ -181,10 +184,13 @@ describe('runOneIteration', () => {
   })
 
   test('invokes Claude when tasks are available', async () => {
-    const files = new Map([
-      ['/project/.dust/tasks/task.md', '# Task\n\n## Blocked by\n\n(none)'],
-    ])
-    const deps = createDeps(files)
+    const deps = createDeps({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
     let claudeCalled = false
     const loopDeps: LoopDependencies = {
       spawn: createMockSpawn(),
@@ -200,10 +206,13 @@ describe('runOneIteration', () => {
   })
 
   test('passes correct cwd to Claude run', async () => {
-    const files = new Map([
-      ['/project/.dust/tasks/task.md', '# Task\n\n## Blocked by\n\n(none)'],
-    ])
-    const deps = createDeps(files)
+    const deps = createDeps({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
     let capturedCwd: string | undefined
     const loopDeps: LoopDependencies = {
       spawn: createMockSpawn(),
@@ -218,10 +227,13 @@ describe('runOneIteration', () => {
   })
 
   test('handles Claude errors gracefully', async () => {
-    const files = new Map([
-      ['/project/.dust/tasks/task.md', '# Task\n\n## Blocked by\n\n(none)'],
-    ])
-    const deps = createDeps(files)
+    const deps = createDeps({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
     const ctx = deps.context as ReturnType<typeof createContextEmulator>
     const loopDeps: LoopDependencies = {
       spawn: createMockSpawn(),
@@ -238,10 +250,13 @@ describe('runOneIteration', () => {
   })
 
   test('handles non-Error throws from Claude', async () => {
-    const files = new Map([
-      ['/project/.dust/tasks/task.md', '# Task\n\n## Blocked by\n\n(none)'],
-    ])
-    const deps = createDeps(files)
+    const deps = createDeps({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
     const ctx = deps.context as ReturnType<typeof createContextEmulator>
     const loopDeps: LoopDependencies = {
       spawn: createMockSpawn(),
@@ -301,10 +316,14 @@ describe('loop', () => {
   })
 
   test('does not sleep when tasks are available', async () => {
-    const files = new Map([
-      ['/project/.dust/tasks/task.md', '# Task\n\n## Blocked by\n\n(none)'],
-    ])
-    const deps = createDeps(files)
+    const deps = createDeps({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
+    const fs = deps.fileSystem as ReturnType<typeof createFileSystemEmulator>
     let sleepCalled = false
     let runCount = 0
     const loopDeps: LoopDependencies = {
@@ -312,7 +331,8 @@ describe('loop', () => {
       run: async () => {
         runCount++
         if (runCount >= 1) {
-          files.clear() // Clear tasks so next iteration sleeps
+          // Clear tasks by deleting from the emulator's internal files map
+          fs.files.delete('/project/.dust/tasks/task.md')
         }
       },
       sleep: async () => {
