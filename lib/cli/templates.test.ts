@@ -1,0 +1,46 @@
+import { describe, expect, test } from 'vitest'
+import { loadTemplate } from './templates'
+
+describe('loadTemplate', () => {
+  test('substitutes simple variables', () => {
+    const result = loadTemplate('help', { bin: 'bin/dust' })
+    expect(result).toContain('bin/dust')
+  })
+
+  test('leaves unmatched variables as placeholders', () => {
+    const result = loadTemplate('help', {})
+    // The help template uses {{bin}} not {{dustCommand}}
+    expect(result).toContain('{{bin}}')
+  })
+})
+
+describe('template conditionals', () => {
+  test('{{#if variable}} shows block when variable is truthy', () => {
+    const result = loadTemplate('agent-implement-task', {
+      bin: 'dust',
+      hooksInstalled: 'true',
+    })
+    // When hooksInstalled is true, commit step is 4 (no check step)
+    expect(result).toContain('4. Create a single atomic commit')
+    expect(result).toContain('5. Push your commit')
+  })
+
+  test('{{#if variable}} hides block when variable is false', () => {
+    const result = loadTemplate('agent-implement-task', {
+      bin: 'dust',
+      hooksInstalled: 'false',
+    })
+    // When hooksInstalled is false, commit step is 5 (after check step)
+    expect(result).toContain('5. Create a single atomic commit')
+    expect(result).toContain('6. Push your commit')
+  })
+
+  test('{{#unless variable}} shows block when variable is false', () => {
+    const result = loadTemplate('agent-implement-task', {
+      bin: 'dust',
+      hooksInstalled: 'false',
+    })
+    // When hooksInstalled is false, should include the manual check reminder
+    expect(result).toContain('4. Run `dust check` before committing')
+  })
+})

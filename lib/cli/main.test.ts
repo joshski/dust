@@ -298,6 +298,7 @@ describe('COMMANDS', () => {
       'check',
       'agent',
       'loop',
+      'pre',
       'help',
     ])
   })

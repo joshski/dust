@@ -1,0 +1,141 @@
+/**
+ * Git hooks management for dust
+ *
+ * Handles installation and verification of git pre-push hooks
+ * that run `dust pre push` automatically before code leaves the machine.
+ */
+
+import { join } from 'node:path'
+import type { DustSettings, FileSystem } from '../cli/types'
+
+const DUST_HOOK_START = '# BEGIN DUST HOOK'
+const DUST_HOOK_END = '# END DUST HOOK'
+
+export interface HooksManager {
+  isGitRepo: () => boolean
+  isHookInstalled: () => Promise<boolean>
+  installHook: () => Promise<void>
+  getHookBinaryPath: () => Promise<string | null>
+  updateHookBinaryPath: (newPath: string) => Promise<void>
+}
+
+function generateHookContent(dustCommand: string): string {
+  return `${DUST_HOOK_START}
+${dustCommand} pre push
+if [ $? -ne 0 ]; then
+  echo "dust pre-push check failed"
+  exit 1
+fi
+${DUST_HOOK_END}`
+}
+
+function extractDustSection(content: string): string | null {
+  const startIndex = content.indexOf(DUST_HOOK_START)
+  const endIndex = content.indexOf(DUST_HOOK_END)
+  if (startIndex === -1 || endIndex === -1) {
+    return null
+  }
+  return content.substring(startIndex, endIndex + DUST_HOOK_END.length)
+}
+
+function removeDustSection(content: string): string {
+  const startIndex = content.indexOf(DUST_HOOK_START)
+  const endIndex = content.indexOf(DUST_HOOK_END)
+  if (startIndex === -1 || endIndex === -1) {
+    return content
+  }
+  const before = content.substring(0, startIndex)
+  const after = content.substring(endIndex + DUST_HOOK_END.length)
+  return (before + after).replace(/\n{3,}/g, '\n\n').trim()
+}
+
+export function createHooksManager(
+  cwd: string,
+  fs: FileSystem,
+  settings: DustSettings
+): HooksManager {
+  const gitDir = join(cwd, '.git')
+  const hooksDir = join(gitDir, 'hooks')
+  const prePushPath = join(hooksDir, 'pre-push')
+
+  return {
+    isGitRepo: () => fs.exists(gitDir),
+
+    isHookInstalled: async () => {
+      if (!fs.exists(prePushPath)) {
+        return false
+      }
+      try {
+        const content = await fs.readFile(prePushPath)
+        return content.includes(DUST_HOOK_START)
+      } catch {
+        return false
+      }
+    },
+
+    installHook: async () => {
+      // Ensure hooks directory exists
+      if (!fs.exists(hooksDir)) {
+        await fs.mkdir(hooksDir, { recursive: true })
+      }
+
+      const hookContent = generateHookContent(settings.dustCommand)
+      let finalContent: string
+
+      if (fs.exists(prePushPath)) {
+        // Append to existing hook
+        const existingContent = await fs.readFile(prePushPath)
+        if (existingContent.includes(DUST_HOOK_START)) {
+          // Already installed, update it
+          const withoutDust = removeDustSection(existingContent)
+          finalContent = withoutDust
+            ? `${withoutDust}\n\n${hookContent}\n`
+            : `#!/bin/sh\n\n${hookContent}\n`
+        } else {
+          // Append to existing hook
+          finalContent = `${existingContent.trimEnd()}\n\n${hookContent}\n`
+        }
+      } else {
+        // Create new hook file
+        finalContent = `#!/bin/sh\n\n${hookContent}\n`
+      }
+
+      await fs.writeFile(prePushPath, finalContent)
+    },
+
+    getHookBinaryPath: async () => {
+      if (!fs.exists(prePushPath)) {
+        return null
+      }
+      try {
+        const content = await fs.readFile(prePushPath)
+        const dustSection = extractDustSection(content)
+        if (!dustSection) {
+          return null
+        }
+        // Extract the command from the dust section
+        const match = dustSection.match(/^(.+) pre push$/m)
+        return match ? match[1] : null
+      } catch {
+        return null
+      }
+    },
+
+    updateHookBinaryPath: async (newPath: string) => {
+      if (!fs.exists(prePushPath)) {
+        return
+      }
+      const content = await fs.readFile(prePushPath)
+      const dustSection = extractDustSection(content)
+      if (!dustSection) {
+        return
+      }
+      const withoutDust = removeDustSection(content)
+      const newHookContent = generateHookContent(newPath)
+      const finalContent = withoutDust
+        ? `${withoutDust}\n\n${newHookContent}\n`
+        : `#!/bin/sh\n\n${newHookContent}\n`
+      await fs.writeFile(prePushPath, finalContent)
+    },
+  }
+}

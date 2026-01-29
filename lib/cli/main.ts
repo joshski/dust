@@ -12,6 +12,7 @@ import { init } from './commands/init'
 import { list } from './commands/list'
 import { loop } from './commands/loop'
 import { next } from './commands/next'
+import { pre } from './commands/pre'
 import { validate } from './commands/validate'
 import { loadSettings } from './settings'
 import type {
@@ -34,6 +35,7 @@ export const commandRegistry = {
   check,
   agent,
   loop,
+  pre,
   help,
 }
 
