@@ -1,0 +1,1762 @@
+{
+  "name": "write-read-echo",
+  "description": "Real recording: write a file, read it, echo with bash",
+  "rawEvents": [
+    {
+      "type": "system",
+      "subtype": "init",
+      "cwd": "/Users/josh/projects/dust",
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "tools": [
+        "Task",
+        "TaskOutput",
+        "Bash",
+        "Glob",
+        "Grep",
+        "ExitPlanMode",
+        "Read",
+        "Edit",
+        "Write",
+        "NotebookEdit",
+        "WebFetch",
+        "TodoWrite",
+        "WebSearch",
+        "TaskStop",
+        "AskUserQuestion",
+        "Skill",
+        "EnterPlanMode",
+        "ToolSearch"
+      ],
+      "mcp_servers": [],
+      "model": "claude-opus-4-5-20251101",
+      "permissionMode": "default",
+      "slash_commands": [
+        "keybindings-help",
+        "compact",
+        "context",
+        "cost",
+        "init",
+        "pr-comments",
+        "release-notes",
+        "review",
+        "security-review"
+      ],
+      "apiKeySource": "none",
+      "claude_code_version": "2.1.23",
+      "output_style": "default",
+      "agents": [
+        "Bash",
+        "general-purpose",
+        "statusline-setup",
+        "Explore",
+        "Plan",
+        "claude-code-guide"
+      ],
+      "skills": ["keybindings-help"],
+      "plugins": [],
+      "uuid": "119d45d5-0ee8-4aa9-a311-9fc38bebb15f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-4-5-20251101",
+          "id": "msg_01LYX9jxjUeREfFxmZLHiohm",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "stop_reason": null,
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 3,
+            "cache_creation_input_tokens": 3618,
+            "cache_read_input_tokens": 15428,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 3618
+            },
+            "output_tokens": 3,
+            "service_tier": "standard"
+          }
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "c70a0e06-b109-48e0-9c11-4926056c7922"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": {
+          "type": "text",
+          "text": ""
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "a54963ed-c415-4635-8a70-d4db88c80db0"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "I'll write"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "6f4ac532-1b36-47a1-9668-ea2655731ee1"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " the"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "f83228bb-2e0a-4ff2-acdc-69c2ded5d0b6"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " file"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "7d66e140-3e46-4f75-945d-13a782d9f2ee"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": ","
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "8c3d98f8-6c74-4bc7-ac1e-19a0fba257fd"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " rea"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "a9faf303-3ab6-4987-a10c-4ca1e800b0d1"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "d it, and then run"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "828694bf-eed6-4dfb-9612-af90be43c599"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " the"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "b3444da8-b718-4007-bc04-f6197b671c0e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " cat command."
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "622d0e56-2572-4f5c-b881-b28ea87ac30d"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-4-5-20251101",
+        "id": "msg_01LYX9jxjUeREfFxmZLHiohm",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "I'll write the file, read it, and then run the cat command."
+          }
+        ],
+        "stop_reason": null,
+        "stop_sequence": null,
+        "usage": {
+          "input_tokens": 3,
+          "cache_creation_input_tokens": 3618,
+          "cache_read_input_tokens": 15428,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 3618
+          },
+          "output_tokens": 3,
+          "service_tier": "standard"
+        },
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "uuid": "154e49bf-afc1-4230-81b7-9c08c580b2d4"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_stop",
+        "index": 0
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "24028ef7-2d3b-4a2f-8358-7802b1f3d189"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 1,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_01GwMaAP7rgrkWjci1UobSFu",
+          "name": "Write",
+          "input": {}
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "4687f364-a21f-4394-8a4e-0532cd8dd0b4"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": ""
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "a976b02e-0b8a-488d-ae22-2653c2eb42f1"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "{\"file_p"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "ca763d5d-3c4f-499d-98c6-8b58442044c6"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "ath\": \"/tm"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "1aa564ff-d521-4ef9-a076-762a9d01053a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "p/claude-te"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "b00203d2-97cc-4cff-a862-6ad35284165e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "st.tx"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "a2831ef9-f758-4939-9ba1-82d00c301299"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "t\""
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "77474101-6e8a-4d05-83cc-f25f282ea4a4"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": ", \"conten"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "2b87e580-8074-4e36-8b56-987e401ea248"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "t\": \"Hello"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "b8b6f4f7-af33-4b57-94dc-2205f5e1f446"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": " from Cla"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "006fbab5-2695-4387-8c85-5458077a4a63"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "ude!\"}"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "e6eb5a6e-1da5-47cc-b123-54a15c19e0cd"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-4-5-20251101",
+        "id": "msg_01LYX9jxjUeREfFxmZLHiohm",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01GwMaAP7rgrkWjci1UobSFu",
+            "name": "Write",
+            "input": {
+              "file_path": "/tmp/claude-test.txt",
+              "content": "Hello from Claude!"
+            }
+          }
+        ],
+        "stop_reason": null,
+        "stop_sequence": null,
+        "usage": {
+          "input_tokens": 3,
+          "cache_creation_input_tokens": 3618,
+          "cache_read_input_tokens": 15428,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 3618
+          },
+          "output_tokens": 3,
+          "service_tier": "standard"
+        },
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "uuid": "e7529eb4-f0d1-4fe1-a044-23be47c40cc8"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_stop",
+        "index": 1
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "891f06c4-4d99-4aa1-8020-5103c327557e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "tool_use",
+          "stop_sequence": null
+        },
+        "usage": {
+          "input_tokens": 3,
+          "cache_creation_input_tokens": 3618,
+          "cache_read_input_tokens": 15428,
+          "output_tokens": 96
+        },
+        "context_management": {
+          "applied_edits": []
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "21c4957d-3204-4b34-89ea-ea66b088e926"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_stop"
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "4392c9c7-a849-4af2-bfd6-25b294f880b2"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "tool_use_id": "toolu_01GwMaAP7rgrkWjci1UobSFu",
+            "type": "tool_result",
+            "content": "File created successfully at: /tmp/claude-test.txt"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "uuid": "370260fe-b957-4f94-9e64-bcab524eba04",
+      "tool_use_result": {
+        "type": "create",
+        "filePath": "/tmp/claude-test.txt",
+        "content": "Hello from Claude!",
+        "structuredPatch": [],
+        "originalFile": null
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-4-5-20251101",
+          "id": "msg_01NBX55mVtbo8JQMJVKtifqV",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "stop_reason": null,
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 1,
+            "cache_creation_input_tokens": 123,
+            "cache_read_input_tokens": 19046,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 123
+            },
+            "output_tokens": 24,
+            "service_tier": "standard"
+          }
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "ab81a3ee-4ff4-4535-b8f3-d00d5704ece7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_019DB4rFjXpwopNiAqi9o3bG",
+          "name": "Read",
+          "input": {}
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "d628473e-242d-40bc-969c-5f58a81f5984"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": ""
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "35164843-44bf-4cad-b727-eb05ab86426b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "{\"file_path"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "429b6f5c-519c-46d5-8923-9f61f110696e"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "\": \"/tmp/c"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "860c692c-cf58-40e2-baae-4f8ca2e32500"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "laud"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "c6ce2d94-2489-441d-ae0a-58863030f253"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "e-t"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "c6c62016-db69-45f8-8e64-92c3f6b9d45b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "est.txt"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "d130148b-1b12-4df3-92e9-a2fd0bb56e88"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "\"}"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "be13a5be-00ab-4746-9de7-2f4d02872eb8"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-4-5-20251101",
+        "id": "msg_01NBX55mVtbo8JQMJVKtifqV",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_019DB4rFjXpwopNiAqi9o3bG",
+            "name": "Read",
+            "input": {
+              "file_path": "/tmp/claude-test.txt"
+            }
+          }
+        ],
+        "stop_reason": null,
+        "stop_sequence": null,
+        "usage": {
+          "input_tokens": 1,
+          "cache_creation_input_tokens": 123,
+          "cache_read_input_tokens": 19046,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 123
+          },
+          "output_tokens": 24,
+          "service_tier": "standard"
+        },
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "uuid": "e7385ccf-3ccd-4b32-afc7-745e6272f78b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_stop",
+        "index": 0
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "f64355a6-ad11-4ffc-87cd-42c9cebc88f2"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 1,
+        "content_block": {
+          "type": "tool_use",
+          "id": "toolu_01GCjRxFH6PtvHVDByFT7bza",
+          "name": "Bash",
+          "input": {}
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "77d648bb-5def-4386-8f75-d6c430c5ebf7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": ""
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "0f90a751-9455-49f9-9d3e-0c7c5e9363e3"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "{\"co"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "4659e6e6-b5f6-4efb-b738-845bb92abce7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "mmand"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "6ad5437d-740a-45d2-b963-39bacf9c1a8f"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "\": \"cat /tm"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "cadcb533-6c57-476d-86de-39d403b640b1"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "p/claud"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "041b7592-582a-4ff9-bf4e-79cbd0436516"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "e-"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "145b92be-b2d7-48d2-a47c-ad4684eeb406"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "tes"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "ad66fd36-5249-49cc-a2b3-e0443588fb6b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "t.txt\""
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "3d2970af-3d8a-4dac-bc38-538f7ef0ffea"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": ", \"de"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "48945ad0-4e4d-464e-80ff-debc31ef0107"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "scription\""
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "d7ce3ac0-cf08-4074-ab6d-903d3b8f17d2"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": ": "
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "3b755ded-dcbf-4a41-ba4e-08c0d139cb76"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "\"Echo cont"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "ca496893-2b9c-47b8-90f9-b49221968662"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "en"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "6fe2275b-4498-46e2-b2fb-be4bd25425bb"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "ts of "
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "8641957a-dd6c-4401-abf7-6d4df09fb27b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "the te"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "74ba421c-0e36-4b01-9dd5-72d2d4c90ee5"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": "st"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "077a8734-c6bb-451f-9e61-7c88fd509e05"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 1,
+        "delta": {
+          "type": "input_json_delta",
+          "partial_json": " file\"}"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "629bf7d9-fd5b-45c1-84db-331afc4adcba"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-4-5-20251101",
+        "id": "msg_01NBX55mVtbo8JQMJVKtifqV",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "tool_use",
+            "id": "toolu_01GCjRxFH6PtvHVDByFT7bza",
+            "name": "Bash",
+            "input": {
+              "command": "cat /tmp/claude-test.txt",
+              "description": "Echo contents of the test file"
+            }
+          }
+        ],
+        "stop_reason": null,
+        "stop_sequence": null,
+        "usage": {
+          "input_tokens": 1,
+          "cache_creation_input_tokens": 123,
+          "cache_read_input_tokens": 19046,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 123
+          },
+          "output_tokens": 24,
+          "service_tier": "standard"
+        },
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "uuid": "f2c6f01a-8721-4a81-9640-a3be61d07fab"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_stop",
+        "index": 1
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "696450a4-4027-43f2-9a13-d337a0e7c213"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "tool_use",
+          "stop_sequence": null
+        },
+        "usage": {
+          "input_tokens": 1,
+          "cache_creation_input_tokens": 123,
+          "cache_read_input_tokens": 19046,
+          "output_tokens": 125
+        },
+        "context_management": {
+          "applied_edits": []
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "60a00004-0b10-4862-b936-0639d13cf133"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_stop"
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "fe8832ad-5ab9-432a-b556-b88c8fe66958"
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "tool_use_id": "toolu_019DB4rFjXpwopNiAqi9o3bG",
+            "type": "tool_result",
+            "content": "     1→Hello from Claude!\n\n<system-reminder>\nWhenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.\n</system-reminder>\n"
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "uuid": "e327b439-3cc5-42fc-8997-7f2f6cf44095",
+      "tool_use_result": {
+        "type": "text",
+        "file": {
+          "filePath": "/tmp/claude-test.txt",
+          "content": "Hello from Claude!",
+          "numLines": 1,
+          "startLine": 1,
+          "totalLines": 1
+        }
+      }
+    },
+    {
+      "type": "user",
+      "message": {
+        "role": "user",
+        "content": [
+          {
+            "tool_use_id": "toolu_01GCjRxFH6PtvHVDByFT7bza",
+            "type": "tool_result",
+            "content": "Hello from Claude!",
+            "is_error": false
+          }
+        ]
+      },
+      "parent_tool_use_id": null,
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "uuid": "1c2e23b6-a13f-40bd-9226-4bf476324519",
+      "tool_use_result": {
+        "stdout": "Hello from Claude!",
+        "stderr": "",
+        "interrupted": false,
+        "isImage": false
+      }
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_start",
+        "message": {
+          "model": "claude-opus-4-5-20251101",
+          "id": "msg_01MeU3o31NYAHeB89wG7e6YT",
+          "type": "message",
+          "role": "assistant",
+          "content": [],
+          "stop_reason": null,
+          "stop_sequence": null,
+          "usage": {
+            "input_tokens": 1,
+            "cache_creation_input_tokens": 275,
+            "cache_read_input_tokens": 19169,
+            "cache_creation": {
+              "ephemeral_5m_input_tokens": 0,
+              "ephemeral_1h_input_tokens": 275
+            },
+            "output_tokens": 1,
+            "service_tier": "standard"
+          }
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "d2bfe48f-2132-4425-80d8-7f323f7918ca"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_start",
+        "index": 0,
+        "content_block": {
+          "type": "text",
+          "text": ""
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "0cf0e67b-14a9-45ee-9072-88096bfc1b81"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "Done"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "a63b0759-3e03-4834-8118-0346ea9eaced"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "! The"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "c8b7ee8c-55cc-45ac-987d-34d7b2510a66"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " file says"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "a4be64e0-4488-42fb-a6dc-6843fb9c26e7"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " **"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "064246e0-125c-4fa7-b7a2-7d15051529e1"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "\"Hello from Claude!\"**"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "dd974e80-1f1a-4cd1-8b30-d67c59a44ed9"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "\n\n-"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "17f77bac-5632-43e7-b00c-6be6b15159fa"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " **Write"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "818e9fab-9b90-4696-95bf-a5c55a5c7fc4"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "**:"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "10cd0077-60ec-4292-8197-e60c467b6de8"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " Create"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "9f687a28-5779-4b46-bb8a-e157d0aebc36"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "d the"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "ac4cb7b3-a17e-44d9-aa2c-b95bdb69785b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " file at"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "59fd2751-01cf-4a7b-be03-892fdb459101"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " `/tmp/claude-test.txt"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "32f3e770-cd69-4825-af75-34be99b48935"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "`\n- **Read**: Confirme"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "2493df51-5f4c-4f70-ade0-436bebf88370"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "d the contents"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "264396a2-b210-4dd7-8e62-75adf17af7f6"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " are"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "e23f6329-3a59-4626-ac42-497691f6625a"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " \"Hello from Claude!\"\n- **"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "a1db0402-a96b-4b15-a4fd-9271478dad86"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "cat"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "bd067a04-a528-435d-9724-0d1235fdd371"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " comman"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "819cabea-15c3-49a9-928a-424faecaec27"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "d**: Output"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "4473f25a-7aff-4a52-8cbc-4e3cc0bc2d74"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " the same"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "36106713-ab69-4167-bde2-2963042b128b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": ":"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "3c927b8b-eb57-4338-878d-461724441964"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": " `"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "a6a405d7-63a6-49f5-9c3a-4b33f36a2d60"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_delta",
+        "index": 0,
+        "delta": {
+          "type": "text_delta",
+          "text": "Hello from Claude!`"
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "042443f3-a987-40d7-a0d2-d7e77f474370"
+    },
+    {
+      "type": "assistant",
+      "message": {
+        "model": "claude-opus-4-5-20251101",
+        "id": "msg_01MeU3o31NYAHeB89wG7e6YT",
+        "type": "message",
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "Done! The file says **\"Hello from Claude!\"**\n\n- **Write**: Created the file at `/tmp/claude-test.txt`\n- **Read**: Confirmed the contents are \"Hello from Claude!\"\n- **cat command**: Output the same: `Hello from Claude!`"
+          }
+        ],
+        "stop_reason": null,
+        "stop_sequence": null,
+        "usage": {
+          "input_tokens": 1,
+          "cache_creation_input_tokens": 275,
+          "cache_read_input_tokens": 19169,
+          "cache_creation": {
+            "ephemeral_5m_input_tokens": 0,
+            "ephemeral_1h_input_tokens": 275
+          },
+          "output_tokens": 1,
+          "service_tier": "standard"
+        },
+        "context_management": null
+      },
+      "parent_tool_use_id": null,
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "uuid": "527d95b2-ca52-4ddc-bca9-3d79ba258b90"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "content_block_stop",
+        "index": 0
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "e6d7ef81-d2c2-4877-8ada-f85b995bda4b"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_delta",
+        "delta": {
+          "stop_reason": "end_turn",
+          "stop_sequence": null
+        },
+        "usage": {
+          "input_tokens": 1,
+          "cache_creation_input_tokens": 275,
+          "cache_read_input_tokens": 19169,
+          "output_tokens": 64
+        },
+        "context_management": {
+          "applied_edits": []
+        }
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "a5696c1a-ae1f-4d41-a9f7-6d514321bced"
+    },
+    {
+      "type": "stream_event",
+      "event": {
+        "type": "message_stop"
+      },
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "parent_tool_use_id": null,
+      "uuid": "8f6da357-b4c4-4567-a173-26922bf515a1"
+    },
+    {
+      "type": "result",
+      "subtype": "success",
+      "is_error": false,
+      "duration_ms": 10164,
+      "duration_api_ms": 10175,
+      "num_turns": 4,
+      "result": "Done! The file says **\"Hello from Claude!\"**\n\n- **Write**: Created the file at `/tmp/claude-test.txt`\n- **Read**: Confirmed the contents are \"Hello from Claude!\"\n- **cat command**: Output the same: `Hello from Claude!`",
+      "session_id": "3b6fd417-57f7-420b-93c8-52f6a5d7b120",
+      "total_cost_usd": 0.0595965,
+      "usage": {
+        "input_tokens": 5,
+        "cache_creation_input_tokens": 4016,
+        "cache_read_input_tokens": 53643,
+        "output_tokens": 285,
+        "server_tool_use": {
+          "web_search_requests": 0,
+          "web_fetch_requests": 0
+        },
+        "service_tier": "standard",
+        "cache_creation": {
+          "ephemeral_1h_input_tokens": 4016,
+          "ephemeral_5m_input_tokens": 0
+        }
+      },
+      "modelUsage": {
+        "claude-opus-4-5-20251101": {
+          "inputTokens": 5,
+          "outputTokens": 285,
+          "cacheReadInputTokens": 53643,
+          "cacheCreationInputTokens": 4016,
+          "webSearchRequests": 0,
+          "costUSD": 0.0590715,
+          "contextWindow": 200000,
+          "maxOutputTokens": 64000
+        },
+        "claude-haiku-4-5-20251001": {
+          "inputTokens": 320,
+          "outputTokens": 41,
+          "cacheReadInputTokens": 0,
+          "cacheCreationInputTokens": 0,
+          "webSearchRequests": 0,
+          "costUSD": 0.0005250000000000001,
+          "contextWindow": 200000,
+          "maxOutputTokens": 64000
+        }
+      },
+      "permission_denials": [],
+      "uuid": "d172160b-b433-4e1d-bf9d-0469d43ad88e"
+    }
+  ],
+  "expectedOutput": [
+    {
+      "op": "write",
+      "text": "I'll write"
+    },
+    {
+      "op": "write",
+      "text": " the"
+    },
+    {
+      "op": "write",
+      "text": " file"
+    },
+    {
+      "op": "write",
+      "text": ","
+    },
+    {
+      "op": "write",
+      "text": " rea"
+    },
+    {
+      "op": "write",
+      "text": "d it, and then run"
+    },
+    {
+      "op": "write",
+      "text": " the"
+    },
+    {
+      "op": "write",
+      "text": " cat command."
+    },
+    {
+      "op": "line",
+      "text": ""
+    },
+    {
+      "op": "line",
+      "text": ""
+    },
+    {
+      "op": "line",
+      "text": "🔧 Tool: Write"
+    },
+    {
+      "op": "line",
+      "text": "   Input: {\n     \"file_path\": \"/tmp/claude-test.txt\",\n     \"content\": \"Hello from Claude!\"\n   }"
+    },
+    {
+      "op": "line",
+      "text": "✅ Result (50 chars)"
+    },
+    {
+      "op": "line",
+      "text": ""
+    },
+    {
+      "op": "line",
+      "text": "🔧 Tool: Read"
+    },
+    {
+      "op": "line",
+      "text": "   Input: {\n     \"file_path\": \"/tmp/claude-test.txt\"\n   }"
+    },
+    {
+      "op": "line",
+      "text": "🔧 Tool: Bash"
+    },
+    {
+      "op": "line",
+      "text": "   Input: {\n     \"command\": \"cat /tmp/claude-test.txt\",\n     \"description\": \"Echo contents of the test file\"\n   }"
+    },
+    {
+      "op": "line",
+      "text": "✅ Result (365 chars)"
+    },
+    {
+      "op": "line",
+      "text": ""
+    },
+    {
+      "op": "line",
+      "text": "✅ Result (18 chars)"
+    },
+    {
+      "op": "line",
+      "text": ""
+    },
+    {
+      "op": "write",
+      "text": "Done"
+    },
+    {
+      "op": "write",
+      "text": "! The"
+    },
+    {
+      "op": "write",
+      "text": " file says"
+    },
+    {
+      "op": "write",
+      "text": " **"
+    },
+    {
+      "op": "write",
+      "text": "\"Hello from Claude!\"**"
+    },
+    {
+      "op": "write",
+      "text": "\n\n-"
+    },
+    {
+      "op": "write",
+      "text": " **Write"
+    },
+    {
+      "op": "write",
+      "text": "**:"
+    },
+    {
+      "op": "write",
+      "text": " Create"
+    },
+    {
+      "op": "write",
+      "text": "d the"
+    },
+    {
+      "op": "write",
+      "text": " file at"
+    },
+    {
+      "op": "write",
+      "text": " `/tmp/claude-test.txt"
+    },
+    {
+      "op": "write",
+      "text": "`\n- **Read**: Confirme"
+    },
+    {
+      "op": "write",
+      "text": "d the contents"
+    },
+    {
+      "op": "write",
+      "text": " are"
+    },
+    {
+      "op": "write",
+      "text": " \"Hello from Claude!\"\n- **"
+    },
+    {
+      "op": "write",
+      "text": "cat"
+    },
+    {
+      "op": "write",
+      "text": " comman"
+    },
+    {
+      "op": "write",
+      "text": "d**: Output"
+    },
+    {
+      "op": "write",
+      "text": " the same"
+    },
+    {
+      "op": "write",
+      "text": ":"
+    },
+    {
+      "op": "write",
+      "text": " `"
+    },
+    {
+      "op": "write",
+      "text": "Hello from Claude!`"
+    },
+    {
+      "op": "line",
+      "text": ""
+    },
+    {
+      "op": "line",
+      "text": "🏁 Done: success, 4 turns, $0.0596"
+    }
+  ]
+}
