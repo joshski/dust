@@ -7,6 +7,7 @@ import {
 } from '../test-utilities'
 import type { CommandDependencies } from '../types'
 import {
+  createDefaultDependencies,
   gitPull,
   hasAvailableTasks,
   type LoopDependencies,
@@ -46,6 +47,21 @@ class LoopBreaker extends Error {
     super('Loop broken for testing')
   }
 }
+
+describe('createDefaultDependencies', () => {
+  test('returns object with spawn, run, and sleep functions', () => {
+    const deps = createDefaultDependencies()
+    expect(typeof deps.spawn).toBe('function')
+    expect(typeof deps.run).toBe('function')
+    expect(typeof deps.sleep).toBe('function')
+  })
+
+  test('sleep function resolves after given time', async () => {
+    const deps = createDefaultDependencies()
+    // Use 0ms to avoid actual delay in tests
+    await expect(deps.sleep(0)).resolves.toBeUndefined()
+  })
+})
 
 describe('gitPull', () => {
   test('returns success on exit code 0', async () => {

@@ -20,15 +20,13 @@ export interface LoopDependencies {
   sleep: (ms: number) => Promise<void>
 }
 
-/* c8 ignore start */
-function createDefaultDependencies(): LoopDependencies {
+export function createDefaultDependencies(): LoopDependencies {
   return {
     spawn: nodeSpawn,
     run: claudeRun,
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
   }
 }
-/* c8 ignore stop */
 
 const SLEEP_INTERVAL_MS = 30000
 
