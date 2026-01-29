@@ -6,7 +6,13 @@
  * See .dust/goals/stubs-over-mocks.md for the rationale.
  */
 
-import type { CommandContext, FileSystem, GlobScanner } from './types'
+import type {
+  CommandContext,
+  CommandDependencies,
+  DustSettings,
+  FileSystem,
+  GlobScanner,
+} from './types'
 
 /**
  * Recursive type for defining file system structure.
@@ -192,5 +198,36 @@ export function createFileSystemEmulator(
     writtenFiles,
     files,
     permissions,
+  }
+}
+
+/**
+ * Default settings for command tests
+ */
+export const defaultTestSettings: DustSettings = { dustCommand: 'dust' }
+
+/**
+ * Creates command dependencies for testing, with captured output for assertions.
+ *
+ * @param settings - Optional DustSettings override
+ * @returns Object with context (for assertions) and deps (for command invocation)
+ */
+export function createCommandDependencies(
+  settings: DustSettings = defaultTestSettings
+): {
+  context: ContextEmulator
+  dependencies: CommandDependencies
+} {
+  const context = createContextEmulator()
+  const fileSystem = createFileSystemEmulator()
+  return {
+    context,
+    dependencies: {
+      arguments: [],
+      context,
+      fileSystem,
+      globScanner: fileSystem,
+      settings,
+    },
   }
 }
