@@ -160,6 +160,38 @@ describe('spawnClaudeCode', () => {
     expect(capturedArgs).toContain('sess-123')
   })
 
+  test('passes dangerously-skip-permissions flag when enabled', async () => {
+    let capturedArgs: string[] = []
+
+    const dependencies: EventSourceDependencies = {
+      spawn: ((_cmd: string, args: string[]) => {
+        capturedArgs = args
+        return {
+          stdout: {},
+          on(event: string, listener: (...args: unknown[]) => void) {
+            if (event === 'close') setTimeout(() => listener(0), 0)
+            return this
+          },
+        }
+      }) as unknown as typeof spawn,
+      createInterface: (() => ({
+        async *[Symbol.asyncIterator]() {
+          // no lines
+        },
+      })) as unknown as typeof createInterface,
+    }
+
+    for await (const _ of spawnClaudeCode(
+      'test prompt',
+      { dangerouslySkipPermissions: true },
+      dependencies
+    )) {
+      // consume
+    }
+
+    expect(capturedArgs).toContain('--dangerously-skip-permissions')
+  })
+
   test('handles process error', async () => {
     const dependencies = createMockDependencies(
       [],

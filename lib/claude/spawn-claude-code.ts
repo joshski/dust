@@ -17,8 +17,15 @@ export async function* spawnClaudeCode(
   options: SpawnOptions = {},
   dependencies: EventSourceDependencies = defaultDependencies
 ): AsyncGenerator<RawEvent> {
-  const { cwd, allowedTools, maxTurns, model, systemPrompt, sessionId } =
-    options
+  const {
+    cwd,
+    allowedTools,
+    maxTurns,
+    model,
+    systemPrompt,
+    sessionId,
+    dangerouslySkipPermissions,
+  } = options
 
   const args = [
     '-p',
@@ -43,6 +50,9 @@ export async function* spawnClaudeCode(
   }
   if (sessionId) {
     args.push('--session-id', sessionId)
+  }
+  if (dangerouslySkipPermissions) {
+    args.push('--dangerously-skip-permissions')
   }
 
   const proc = dependencies.spawn('claude', args, {

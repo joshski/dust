@@ -55,4 +55,5 @@ export interface SpawnOptions {
   model?: string
   systemPrompt?: string
   sessionId?: string
+  dangerouslySkipPermissions?: boolean
 }

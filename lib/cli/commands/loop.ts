@@ -106,7 +106,7 @@ export async function runOneIteration(
   ctx.stdout('')
 
   try {
-    await run('go', { cwd: ctx.cwd })
+    await run('go', { cwd: ctx.cwd, dangerouslySkipPermissions: true })
     ctx.stdout('')
     ctx.stdout('Claude session complete. Continuing loop...')
     ctx.stdout('')
@@ -127,6 +127,10 @@ export async function loop(
 ): Promise<CommandResult> {
   const { context: ctx } = deps
 
+  ctx.stdout(
+    'WARNING: This command skips all permission checks. Only use in a sandbox environment!'
+  )
+  ctx.stdout('')
   ctx.stdout('Starting dust loop...')
   ctx.stdout('Press Ctrl+C to stop')
   ctx.stdout('')
