@@ -16,6 +16,34 @@ const DEFAULT_SETTINGS: DustSettings = {
 }
 
 /**
+ * Detects the appropriate install dependencies hint based on lockfiles.
+ * Priority:
+ * 1. bun.lockb or bun.lock exists → Run `bun install`
+ * 2. pnpm-lock.yaml exists → Run `pnpm install`
+ * 3. package-lock.json exists → Run `npm install`
+ * 4. yarn.lock exists → Run `yarn install`
+ * 5. No lockfile → Install any dependencies
+ */
+export function detectInstallDependenciesHint(
+  cwd: string,
+  fs: FileSystem
+): string {
+  if (fs.exists(join(cwd, 'bun.lockb')) || fs.exists(join(cwd, 'bun.lock'))) {
+    return 'Run `bun install`'
+  }
+  if (fs.exists(join(cwd, 'pnpm-lock.yaml'))) {
+    return 'Run `pnpm install`'
+  }
+  if (fs.exists(join(cwd, 'package-lock.json'))) {
+    return 'Run `npm install`'
+  }
+  if (fs.exists(join(cwd, 'yarn.lock'))) {
+    return 'Run `yarn install`'
+  }
+  return 'Install any dependencies'
+}
+
+/**
  * Detects the appropriate dust command based on lockfiles and environment.
  * Priority:
  * 1. bun.lockb exists → bunx dust
@@ -49,27 +77,30 @@ export async function loadSettings(
   if (!fs.exists(settingsPath)) {
     return {
       dustCommand: detectDustCommand(cwd, fs),
+      installDependenciesHint: detectInstallDependenciesHint(cwd, fs),
     }
   }
 
   try {
     const content = await fs.readFile(settingsPath)
     const parsed = JSON.parse(content)
-    // Only use auto-detection if dustCommand is not explicitly set
-    if (!parsed.dustCommand) {
-      return {
-        ...DEFAULT_SETTINGS,
-        ...parsed,
-        dustCommand: detectDustCommand(cwd, fs),
-      }
-    }
-    return {
+    const result: DustSettings = {
       ...DEFAULT_SETTINGS,
       ...parsed,
     }
+    // Auto-detect dustCommand if not explicitly set
+    if (!parsed.dustCommand) {
+      result.dustCommand = detectDustCommand(cwd, fs)
+    }
+    // Auto-detect installDependenciesHint if not explicitly set
+    if (!parsed.installDependenciesHint) {
+      result.installDependenciesHint = detectInstallDependenciesHint(cwd, fs)
+    }
+    return result
   } catch {
     return {
       dustCommand: detectDustCommand(cwd, fs),
+      installDependenciesHint: detectInstallDependenciesHint(cwd, fs),
     }
   }
 }
