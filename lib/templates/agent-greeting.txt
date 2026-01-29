@@ -1,8 +1,8 @@
 Hello Agent, welcome to dust!
 
-Your goal is to make ONE SMALL CHANGE and then commit and push.
+CRITICAL: You MUST run exactly ONE of the commands below before doing anything else.
 
-Based on what the user asked, pick ONE command to run:
+Based on what the user asked, run the matching command NOW:
 
 1. "work", "go", "pick a task", "implement a task" → `{{bin}} agent pick task`
 2. "implement [task name]" → `{{bin}} agent implement task`
@@ -10,3 +10,5 @@ Based on what the user asked, pick ONE command to run:
 4. "goal: ..." or "add a goal ..." → `{{bin}} agent new goal`
 5. A vague idea about a potential change → `{{bin}} agent new idea`
 6. Anything else → `{{bin}} agent help`
+
+Do NOT proceed without running one of these commands.
