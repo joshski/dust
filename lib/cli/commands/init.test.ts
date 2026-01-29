@@ -1,8 +1,7 @@
 import { afterEach, describe, expect, test } from 'vitest'
 import {
-  createMockContext,
-  createMockFileSystem,
-  createMockGlobScanner,
+  createContextEmulator,
+  createFileSystemEmulator,
   restoreEnv,
   stubEnv,
 } from '../test-utilities'
@@ -15,13 +14,13 @@ describe('init command', () => {
   })
 
   test('creates .dust directory structure', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -39,13 +38,13 @@ describe('init command', () => {
   })
 
   test('creates initial fact file', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -62,13 +61,13 @@ describe('init command', () => {
   })
 
   test('outputs success messages', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -79,15 +78,15 @@ describe('init command', () => {
   })
 
   test('shows notification when .dust already exists', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/.dust']),
     })
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -99,13 +98,13 @@ describe('init command', () => {
 
   test('creates CLAUDE.md with agent instructions', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -119,13 +118,13 @@ describe('init command', () => {
 
   test('creates AGENTS.md with agent instructions', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -139,15 +138,15 @@ describe('init command', () => {
 
   test('warns when CLAUDE.md already exists', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/CLAUDE.md']),
     })
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -162,15 +161,15 @@ describe('init command', () => {
 
   test('warns when AGENTS.md already exists', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/AGENTS.md']),
     })
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -184,15 +183,15 @@ describe('init command', () => {
   })
 
   test('uses bunx when bun.lockb exists', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/bun.lockb']),
     })
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -206,15 +205,15 @@ describe('init command', () => {
 
   test('creates settings.json with npm test for Node.js projects', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/package.json']),
     })
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -230,15 +229,15 @@ describe('init command', () => {
   })
 
   test('creates settings.json with bun test for Bun projects', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/bun.lockb']),
     })
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -251,15 +250,15 @@ describe('init command', () => {
   })
 
   test('creates settings.json with pnpm test for pnpm projects', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/pnpm-lock.yaml']),
     })
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -273,13 +272,13 @@ describe('init command', () => {
 
   test('creates settings.json with empty checks for non-Node projects', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -292,13 +291,13 @@ describe('init command', () => {
   })
 
   test('outputs settings creation message', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -310,15 +309,15 @@ describe('init command', () => {
   })
 
   test('uses pnpx when pnpm-lock.yaml exists', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/pnpm-lock.yaml']),
     })
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -331,15 +330,15 @@ describe('init command', () => {
   })
 
   test('uses npx when package-lock.json exists', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/package-lock.json']),
     })
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -354,13 +353,13 @@ describe('init command', () => {
   test('uses bunx when BUN_INSTALL env var is set and no lockfiles', async () => {
     stubEnv('BUN_INSTALL', '/home/user/.bun')
 
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -374,13 +373,13 @@ describe('init command', () => {
 
   test('outputs suggestions for next steps', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -393,13 +392,13 @@ describe('init command', () => {
 
   test('suggestions include examples for new repositories', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -413,13 +412,13 @@ describe('init command', () => {
 
   test('suggestions include examples for existing codebases', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -431,15 +430,15 @@ describe('init command', () => {
   })
 
   test('suggestions use npx runner when package-lock.json exists', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/package-lock.json']),
     })
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -451,15 +450,15 @@ describe('init command', () => {
   })
 
   test('suggestions use bunx runner when bun.lockb exists', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/bun.lockb']),
     })
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 
@@ -471,15 +470,15 @@ describe('init command', () => {
   })
 
   test('suggestions use pnpx runner when pnpm-lock.yaml exists', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/pnpm-lock.yaml']),
     })
     const deps: CommandDependencies = {
       arguments: [],
       context: ctx,
       fileSystem: fs,
-      globScanner: createMockGlobScanner(),
+      globScanner: fs,
       settings: { dustCommand: 'dust' },
     }
 

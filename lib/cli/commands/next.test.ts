@@ -1,26 +1,29 @@
 import { describe, expect, test } from 'vitest'
 import {
-  createMockContext,
-  createMockFileSystem,
-  createMockGlobScanner,
+  createContextEmulator,
+  createFileSystemEmulator,
+  type FileSystemEmulator,
 } from '../test-utilities'
-import type { CommandContext, CommandDependencies, FileSystem } from '../types'
+import type { CommandContext, CommandDependencies } from '../types'
 import { next } from './next'
 
-function createDeps(ctx: CommandContext, fs: FileSystem): CommandDependencies {
+function createDeps(
+  ctx: CommandContext,
+  fs: FileSystemEmulator
+): CommandDependencies {
   return {
     arguments: [],
     context: ctx,
     fileSystem: fs,
-    globScanner: createMockGlobScanner(),
+    globScanner: fs,
     settings: { dustCommand: 'dust' },
   }
 }
 
 describe('next command', () => {
   test('fails if .dust directory not found', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
 
     const result = await next(createDeps(ctx, fs))
 
@@ -30,8 +33,8 @@ describe('next command', () => {
   })
 
   test('returns empty output when no tasks directory exists', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([['/project/.dust/goals/goal.md', '# My Goal']]),
     })
 
@@ -42,8 +45,8 @@ describe('next command', () => {
   })
 
   test('returns empty output when tasks directory is empty', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/.dust', '/project/.dust/tasks']),
     })
 
@@ -54,8 +57,8 @@ describe('next command', () => {
   })
 
   test('lists tasks with no blockers section', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([
         ['/project/.dust/tasks/simple-task.md', '# Simple Task\n\nJust do it.'],
       ]),
@@ -70,8 +73,8 @@ describe('next command', () => {
   })
 
   test('filters out tasks with incomplete blockers', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([
         [
           '/project/.dust/tasks/blocked-task.md',
@@ -90,9 +93,9 @@ describe('next command', () => {
   })
 
   test('includes tasks whose blockers are all completed (deleted)', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     // The blocked-task references a blocker that no longer exists (completed)
-    const fs = createMockFileSystem({
+    const fs = createFileSystemEmulator({
       files: new Map([
         [
           '/project/.dust/tasks/unblocked-task.md',
@@ -111,8 +114,8 @@ describe('next command', () => {
   })
 
   test('handles tasks with (none) in blocked by section', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([
         [
           '/project/.dust/tasks/ready-task.md',
@@ -131,8 +134,8 @@ describe('next command', () => {
   })
 
   test('shows task path without title if no heading exists', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([
         ['/project/.dust/tasks/no-title-task.md', 'This task has no heading'],
       ]),
@@ -148,8 +151,8 @@ describe('next command', () => {
   })
 
   test('returns empty when all tasks are blocked', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([
         [
           '/project/.dust/tasks/task-a.md',
@@ -169,9 +172,9 @@ describe('next command', () => {
   })
 
   test('handles multiple blockers where some are complete', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     // Blockers on the same line to ensure they're all captured
-    const fs = createMockFileSystem({
+    const fs = createFileSystemEmulator({
       files: new Map([
         [
           '/project/.dust/tasks/multi-blocked.md',
@@ -192,8 +195,8 @@ describe('next command', () => {
   })
 
   test('lists multiple unblocked tasks sorted alphabetically', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       files: new Map([
         ['/project/.dust/tasks/zebra-task.md', '# Zebra Task'],
         ['/project/.dust/tasks/alpha-task.md', '# Alpha Task'],

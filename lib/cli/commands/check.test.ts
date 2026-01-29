@@ -2,16 +2,14 @@ import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
 import {
-  createMockContext,
-  createMockFileSystem,
-  createMockGlobScanner,
+  createContextEmulator,
+  createFileSystemEmulator,
+  type FileSystemEmulator,
 } from '../test-utilities'
 import type {
   CommandContext,
   CommandDependencies,
   DustSettings,
-  FileSystem,
-  GlobScanner,
 } from '../types'
 import {
   type BufferedProcessRunner,
@@ -37,22 +35,21 @@ function createMockBufferedRunner(
 
 function createDeps(
   ctx: CommandContext,
-  fs: FileSystem,
-  settings: DustSettings,
-  glob?: GlobScanner
+  fs: FileSystemEmulator,
+  settings: DustSettings
 ): CommandDependencies {
   return {
     arguments: [],
     context: ctx,
     fileSystem: fs,
-    globScanner: glob ?? createMockGlobScanner(),
+    globScanner: fs,
     settings,
   }
 }
 
 describe('check command with checks configuration', () => {
   test('runs configured checks in parallel', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
       checks: [
@@ -61,7 +58,7 @@ describe('check command with checks configuration', () => {
         { name: 'build', command: 'npm run build' },
       ],
     }
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
     const bufferedRunner = createMockBufferedRunner({
       'npm run lint': { exitCode: 0, output: '' },
       'npm test': { exitCode: 0, output: '' },
@@ -81,7 +78,7 @@ describe('check command with checks configuration', () => {
   })
 
   test('displays pass status for each check', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
       checks: [
@@ -89,7 +86,7 @@ describe('check command with checks configuration', () => {
         { name: 'test', command: 'npm test' },
       ],
     }
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
     const bufferedRunner = createMockBufferedRunner({
       'npm run lint': { exitCode: 0, output: '' },
       'npm test': { exitCode: 0, output: '' },
@@ -106,7 +103,7 @@ describe('check command with checks configuration', () => {
   })
 
   test('displays failure status and output for failing checks', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
       checks: [
@@ -114,7 +111,7 @@ describe('check command with checks configuration', () => {
         { name: 'test', command: 'npm test' },
       ],
     }
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
     const bufferedRunner = createMockBufferedRunner({
       'npm run lint': { exitCode: 0, output: '' },
       'npm test': { exitCode: 1, output: 'Test failed: expected 1 to equal 2' },
@@ -133,12 +130,12 @@ describe('check command with checks configuration', () => {
   })
 
   test('suppresses output for passing checks', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
       checks: [{ name: 'lint', command: 'npm run lint' }],
     }
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
     const bufferedRunner = createMockBufferedRunner({
       'npm run lint': { exitCode: 0, output: 'All files passed linting!' },
     })
@@ -151,12 +148,12 @@ describe('check command with checks configuration', () => {
   })
 
   test('shows command before output for failed checks', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
       checks: [{ name: 'typecheck', command: 'bunx tsc --noEmit' }],
     }
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
     const bufferedRunner = createMockBufferedRunner({
       'bunx tsc --noEmit': {
         exitCode: 1,
@@ -173,7 +170,7 @@ describe('check command with checks configuration', () => {
   })
 
   test('handles multiple failing checks', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
       checks: [
@@ -182,7 +179,7 @@ describe('check command with checks configuration', () => {
         { name: 'build', command: 'npm run build' },
       ],
     }
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
     const bufferedRunner = createMockBufferedRunner({
       'npm run lint': { exitCode: 1, output: 'Lint error' },
       'npm test': { exitCode: 0, output: '' },
@@ -201,12 +198,12 @@ describe('check command with checks configuration', () => {
   })
 
   test('handles failed check with empty output', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
       checks: [{ name: 'silent-fail', command: 'exit 1' }],
     }
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
     const bufferedRunner = createMockBufferedRunner({
       'exit 1': { exitCode: 1, output: '' },
     })
@@ -220,7 +217,7 @@ describe('check command with checks configuration', () => {
   })
 
   test('displays hints for failed check when configured', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
       checks: [
@@ -234,7 +231,7 @@ describe('check command with checks configuration', () => {
         },
       ],
     }
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
     const bufferedRunner = createMockBufferedRunner({
       'npm run build': {
         exitCode: 1,
@@ -256,7 +253,7 @@ describe('check command with checks configuration', () => {
   })
 
   test('does not display hints when check passes', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
       checks: [
@@ -267,7 +264,7 @@ describe('check command with checks configuration', () => {
         },
       ],
     }
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
     const bufferedRunner = createMockBufferedRunner({
       'npm run build': { exitCode: 0, output: '' },
     })
@@ -281,12 +278,12 @@ describe('check command with checks configuration', () => {
   })
 
   test('does not display hints section when no hints configured', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
       checks: [{ name: 'test', command: 'npm test' }],
     }
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
     const bufferedRunner = createMockBufferedRunner({
       'npm test': { exitCode: 1, output: 'Test failed' },
     })
@@ -301,9 +298,9 @@ describe('check command with checks configuration', () => {
 
 describe('check command when no checks configured', () => {
   test('returns error when no checks configured', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     const settings: DustSettings = { dustCommand: 'npx dust' }
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
     const bufferedRunner = createMockBufferedRunner({})
 
     const result = await check(createDeps(ctx, fs, settings), bufferedRunner)
@@ -314,9 +311,9 @@ describe('check command when no checks configured', () => {
   })
 
   test('returns error when checks array is empty', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     const settings: DustSettings = { dustCommand: 'dust', checks: [] }
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
     const bufferedRunner = createMockBufferedRunner({})
 
     const result = await check(createDeps(ctx, fs, settings), bufferedRunner)
@@ -326,9 +323,9 @@ describe('check command when no checks configured', () => {
   })
 
   test('shows helpful instructions when no checks configured', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     const settings: DustSettings = { dustCommand: 'dust' }
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
     const bufferedRunner = createMockBufferedRunner({})
 
     await check(createDeps(ctx, fs, settings), bufferedRunner)
@@ -438,12 +435,12 @@ describe('createBufferedRunner', () => {
 
 describe('check with validation', () => {
   test('runs validation in parallel with configured checks', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
       checks: [{ name: 'lint', command: 'npm run lint' }],
     }
-    const fs = createMockFileSystem({
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/.dust']),
     })
     fs.readFile = async () =>
@@ -451,12 +448,8 @@ describe('check with validation', () => {
     const bufferedRunner = createMockBufferedRunner({
       'npm run lint': { exitCode: 0, output: '' },
     })
-    const glob = createMockGlobScanner([])
 
-    const result = await check(
-      createDeps(ctx, fs, settings, glob),
-      bufferedRunner
-    )
+    const result = await check(createDeps(ctx, fs, settings), bufferedRunner)
 
     expect(result.exitCode).toBe(0)
     expect(bufferedRunner.calls).toHaveLength(1)
@@ -467,26 +460,25 @@ describe('check with validation', () => {
   })
 
   test('fails overall if validation fails', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
       checks: [{ name: 'lint', command: 'npm run lint' }],
     }
-    const fs = createMockFileSystem({
-      existingPaths: new Set(['/project/.dust', '/project/.dust/tasks']),
+    // Include a task file with invalid filename (uppercase)
+    const fs = createFileSystemEmulator({
+      files: new Map([
+        [
+          '/project/.dust/tasks/InvalidName.md',
+          '# Test\n## Goals\n## Blocked by\n## Definition of done',
+        ],
+      ]),
     })
-    // Return a task file with invalid filename (uppercase)
-    fs.readFile = async () =>
-      '# Test\n## Goals\n## Blocked by\n## Definition of done'
     const bufferedRunner = createMockBufferedRunner({
       'npm run lint': { exitCode: 0, output: '' },
     })
-    const glob = createMockGlobScanner(['/project/.dust/tasks/InvalidName.md'])
 
-    const result = await check(
-      createDeps(ctx, fs, settings, glob),
-      bufferedRunner
-    )
+    const result = await check(createDeps(ctx, fs, settings), bufferedRunner)
 
     expect(result.exitCode).toBe(1)
     // Checks now run in parallel, so lint still runs
@@ -497,12 +489,12 @@ describe('check with validation', () => {
   })
 
   test('skips validation when .dust directory does not exist', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
       checks: [{ name: 'lint', command: 'npm run lint' }],
     }
-    const fs = createMockFileSystem()
+    const fs = createFileSystemEmulator()
     const bufferedRunner = createMockBufferedRunner({
       'npm run lint': { exitCode: 0, output: '' },
     })

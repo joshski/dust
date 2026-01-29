@@ -8,25 +8,18 @@ import {
   main,
   runCommand,
 } from './main'
+import type { FileSystemEmulator } from './test-utilities'
 import {
-  createMockContext,
-  createMockFileSystem,
-  createMockGlobScanner,
+  createContextEmulator,
+  createFileSystemEmulator,
   restoreEnv,
   stubEnv,
 } from './test-utilities'
-import type {
-  CommandContext,
-  CommandDependencies,
-  DustSettings,
-  FileSystem,
-  GlobScanner,
-} from './types'
+import type { CommandContext, CommandDependencies, DustSettings } from './types'
 
 function createDeps(
   ctx: CommandContext,
-  fs: FileSystem,
-  glob: GlobScanner,
+  fs: FileSystemEmulator,
   args: string[] = [],
   settings: DustSettings = { dustCommand: 'dust' }
 ): CommandDependencies {
@@ -34,7 +27,7 @@ function createDeps(
     arguments: args,
     context: ctx,
     fileSystem: fs,
-    globScanner: glob,
+    globScanner: fs,
     settings,
   }
 }
@@ -78,10 +71,9 @@ describe('isValidCommand', () => {
 
 describe('runCommand', () => {
   test('runs help command and outputs help text', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
-    const glob = createMockGlobScanner()
-    const deps = createDeps(ctx, fs, glob)
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
+    const deps = createDeps(ctx, fs)
 
     const result = await runCommand('help', deps)
 
@@ -92,10 +84,9 @@ describe('runCommand', () => {
   })
 
   test('runs init command', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
-    const glob = createMockGlobScanner()
-    const deps = createDeps(ctx, fs, glob)
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
+    const deps = createDeps(ctx, fs)
 
     const result = await runCommand('init', deps)
 
@@ -111,11 +102,10 @@ describe('main', () => {
 
   test('shows help when no command provided', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
-    const glob = createMockGlobScanner()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
 
-    const result = await main({ args: [], ctx, fs, glob })
+    const result = await main({ args: [], ctx, fs, glob: fs })
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain(
@@ -125,11 +115,10 @@ describe('main', () => {
   })
 
   test('shows help for help command', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
-    const glob = createMockGlobScanner()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
 
-    const result = await main({ args: ['help'], ctx, fs, glob })
+    const result = await main({ args: ['help'], ctx, fs, glob: fs })
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain(
@@ -139,11 +128,10 @@ describe('main', () => {
 
   test('shows help for --help flag', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
-    const glob = createMockGlobScanner()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
 
-    const result = await main({ args: ['--help'], ctx, fs, glob })
+    const result = await main({ args: ['--help'], ctx, fs, glob: fs })
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Usage: npx dust <command>')
@@ -151,11 +139,10 @@ describe('main', () => {
 
   test('shows help for -h flag', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
-    const glob = createMockGlobScanner()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
 
-    const result = await main({ args: ['-h'], ctx, fs, glob })
+    const result = await main({ args: ['-h'], ctx, fs, glob: fs })
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Usage: npx dust <command>')
@@ -163,11 +150,10 @@ describe('main', () => {
 
   test('returns error for unknown command', async () => {
     stubEnv('BUN_INSTALL', '')
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
-    const glob = createMockGlobScanner()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
 
-    const result = await main({ args: ['unknown'], ctx, fs, glob })
+    const result = await main({ args: ['unknown'], ctx, fs, glob: fs })
 
     expect(result.exitCode).toBe(1)
     expect(ctx.stderrLines.join('\n')).toContain('Unknown command: unknown')
@@ -177,8 +163,8 @@ describe('main', () => {
   })
 
   test('uses custom binary path from settings for help', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/.dust/config/settings.json']),
     })
     // Override readFile to return custom settings
@@ -188,17 +174,16 @@ describe('main', () => {
       }
       return ''
     }
-    const glob = createMockGlobScanner()
 
-    const result = await main({ args: ['help'], ctx, fs, glob })
+    const result = await main({ args: ['help'], ctx, fs, glob: fs })
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Usage: bin/dust <command>')
   })
 
   test('uses custom binary path from settings for unknown command error', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/.dust/config/settings.json']),
     })
     fs.readFile = async (path: string) => {
@@ -207,9 +192,8 @@ describe('main', () => {
       }
       return ''
     }
-    const glob = createMockGlobScanner()
 
-    const result = await main({ args: ['unknown'], ctx, fs, glob })
+    const result = await main({ args: ['unknown'], ctx, fs, glob: fs })
 
     expect(result.exitCode).toBe(1)
     expect(ctx.stderrLines.join('\n')).toContain(
@@ -218,87 +202,85 @@ describe('main', () => {
   })
 
   test('routes init command correctly', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem()
-    const glob = createMockGlobScanner()
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator()
 
-    const result = await main({ args: ['init'], ctx, fs, glob })
+    const result = await main({ args: ['init'], ctx, fs, glob: fs })
 
     expect(result.exitCode).toBe(0)
     expect(fs.createdDirs).toContain('/project/.dust')
   })
 
   test('routes list command correctly', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/.dust']),
     })
-    const glob = createMockGlobScanner()
 
-    const result = await main({ args: ['list'], ctx, fs, glob })
+    const result = await main({ args: ['list'], ctx, fs, glob: fs })
 
     expect(result.exitCode).toBe(0)
   })
 
   test('routes validate command correctly', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/.dust']),
     })
-    const glob = createMockGlobScanner()
 
-    const result = await main({ args: ['validate'], ctx, fs, glob })
+    const result = await main({ args: ['validate'], ctx, fs, glob: fs })
 
     expect(result.exitCode).toBe(0)
   })
 
   test('routes next command correctly', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/.dust', '/project/.dust/tasks']),
     })
-    const glob = createMockGlobScanner()
 
-    const result = await main({ args: ['next'], ctx, fs, glob })
+    const result = await main({ args: ['next'], ctx, fs, glob: fs })
 
     expect(result.exitCode).toBe(0)
   })
 
   test('routes check command correctly', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/.dust']),
     })
-    const glob = createMockGlobScanner()
 
-    const result = await main({ args: ['check'], ctx, fs, glob })
+    const result = await main({ args: ['check'], ctx, fs, glob: fs })
 
     // check command runs validate first, which should pass with empty .dust
     expect(typeof result.exitCode).toBe('number')
   })
 
   test('routes agent command correctly', async () => {
-    const ctx = createMockContext()
-    const fs = createMockFileSystem({
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/.dust']),
     })
-    const glob = createMockGlobScanner()
 
-    const result = await main({ args: ['agent'], ctx, fs, glob })
+    const result = await main({ args: ['agent'], ctx, fs, glob: fs })
 
     expect(result.exitCode).toBe(0)
     expect(ctx.stdoutLines.join('\n')).toContain('Hello Agent')
   })
 
   test('passes command args to subcommands', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     // Invalid type should cause the list command to report an error
-    const fs = createMockFileSystem({
+    const fs = createFileSystemEmulator({
       existingPaths: new Set(['/project/.dust']),
     })
-    const glob = createMockGlobScanner()
 
-    const result = await main({ args: ['list', 'invalid-type'], ctx, fs, glob })
+    const result = await main({
+      args: ['list', 'invalid-type'],
+      ctx,
+      fs,
+      glob: fs,
+    })
 
     expect(result.exitCode).toBe(1)
     expect(

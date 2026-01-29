@@ -1,8 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import {
-  createMockContext,
-  createMockFileSystem,
-  createMockGlobScanner,
+  createContextEmulator,
+  createFileSystemEmulator,
 } from '../test-utilities'
 import type {
   CommandContext,
@@ -16,11 +15,12 @@ function createDeps(
   args: string[],
   settings: DustSettings
 ): CommandDependencies {
+  const fs = createFileSystemEmulator()
   return {
     arguments: args,
     context: ctx,
-    fileSystem: createMockFileSystem(),
-    globScanner: createMockGlobScanner(),
+    fileSystem: fs,
+    globScanner: fs,
     settings,
   }
 }
@@ -29,7 +29,7 @@ const defaultSettings: DustSettings = { dustCommand: 'dust' }
 
 describe('agent command', () => {
   test('outputs greeting with routing instructions when no subcommand', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
 
     const result = await agent(createDeps(ctx, [], defaultSettings))
 
@@ -44,7 +44,7 @@ describe('agent command', () => {
   })
 
   test('pick task subcommand outputs work instructions', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
 
     const result = await agent(
       createDeps(ctx, ['pick', 'task'], defaultSettings)
@@ -57,7 +57,7 @@ describe('agent command', () => {
   })
 
   test('implement task subcommand outputs implementation instructions', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
 
     const result = await agent(
       createDeps(ctx, ['implement', 'task'], defaultSettings)
@@ -69,7 +69,7 @@ describe('agent command', () => {
   })
 
   test('new task subcommand outputs task creation instructions', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
 
     const result = await agent(
       createDeps(ctx, ['new', 'task'], defaultSettings)
@@ -82,7 +82,7 @@ describe('agent command', () => {
   })
 
   test('new goal subcommand outputs goal creation instructions', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
 
     const result = await agent(
       createDeps(ctx, ['new', 'goal'], defaultSettings)
@@ -95,7 +95,7 @@ describe('agent command', () => {
   })
 
   test('understand goals subcommand outputs goals instructions', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
 
     const result = await agent(
       createDeps(ctx, ['understand', 'goals'], defaultSettings)
@@ -108,7 +108,7 @@ describe('agent command', () => {
   })
 
   test('new idea subcommand outputs ideas instructions', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
 
     const result = await agent(
       createDeps(ctx, ['new', 'idea'], defaultSettings)
@@ -121,7 +121,7 @@ describe('agent command', () => {
   })
 
   test('help subcommand outputs agent help', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
 
     const result = await agent(createDeps(ctx, ['help'], defaultSettings))
 
@@ -132,7 +132,7 @@ describe('agent command', () => {
   })
 
   test('unknown subcommand returns error', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
 
     const result = await agent(createDeps(ctx, ['unknown'], defaultSettings))
 
@@ -142,7 +142,7 @@ describe('agent command', () => {
   })
 
   test('unknown verb-noun combination returns error', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
 
     const result = await agent(
       createDeps(ctx, ['new', 'unknown'], defaultSettings)
@@ -156,7 +156,7 @@ describe('agent command', () => {
   })
 
   test('uses custom binary path in output', async () => {
-    const ctx = createMockContext()
+    const ctx = createContextEmulator()
     const settings: DustSettings = { dustCommand: 'bin/dust' }
 
     await agent(createDeps(ctx, [], settings))
