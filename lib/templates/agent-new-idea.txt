@@ -8,3 +8,4 @@ Follow these steps:
 4. Write a brief description of the potential change or improvement
 5. Run `{{bin}} validate` to catch any issues with the idea file format
 6. Create a single atomic commit with a message in the format "Add idea: <title>"
+7. Push your commit to the remote repository

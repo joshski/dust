@@ -17,3 +17,4 @@ Follow these steps:
     - The new task file
     - Deletion of any ideas that were fully realized
     - Updates to any ideas whose scope changed
+11. Push your commit to the remote repository

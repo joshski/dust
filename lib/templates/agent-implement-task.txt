@@ -18,4 +18,6 @@ Follow these steps:
    Add validation for user input
    ```
 
+5. Push your commit to the remote repository
+
 Keep your change small and focused. One task, one commit.
