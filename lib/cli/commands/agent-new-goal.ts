@@ -1,20 +1,21 @@
 /**
- * dust agent - Agent greeting and routing instructions
+ * dust agent new goal - Goal creation instructions
  *
- * Displays the welcome message and command routing guidance for AI agents.
+ * Displays guidance for creating new goals.
  */
 
 import { loadTemplate } from '../templates'
 import type { CommandDependencies, CommandResult } from '../types'
 import { manageGitHooks, templateVariables } from './agent-shared'
 
-export async function agent(deps: CommandDependencies): Promise<CommandResult> {
+export async function agentNewGoal(
+  deps: CommandDependencies
+): Promise<CommandResult> {
   const { context: ctx, settings } = deps
 
-  // Manage git hooks when agent command is invoked
   const hooksInstalled = await manageGitHooks(deps)
   const vars = templateVariables(settings, hooksInstalled)
 
-  ctx.stdout(loadTemplate('agent-greeting', vars))
+  ctx.stdout(loadTemplate('agent-new-goal', vars))
   return { exitCode: 0 }
 }

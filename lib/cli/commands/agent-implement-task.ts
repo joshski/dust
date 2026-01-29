@@ -1,20 +1,21 @@
 /**
- * dust agent - Agent greeting and routing instructions
+ * dust agent implement task - Task implementation instructions
  *
- * Displays the welcome message and command routing guidance for AI agents.
+ * Displays guidance for implementing tasks.
  */
 
 import { loadTemplate } from '../templates'
 import type { CommandDependencies, CommandResult } from '../types'
 import { manageGitHooks, templateVariables } from './agent-shared'
 
-export async function agent(deps: CommandDependencies): Promise<CommandResult> {
+export async function agentImplementTask(
+  deps: CommandDependencies
+): Promise<CommandResult> {
   const { context: ctx, settings } = deps
 
-  // Manage git hooks when agent command is invoked
   const hooksInstalled = await manageGitHooks(deps)
   const vars = templateVariables(settings, hooksInstalled)
 
-  ctx.stdout(loadTemplate('agent-greeting', vars))
+  ctx.stdout(loadTemplate('agent-implement-task', vars))
   return { exitCode: 0 }
 }

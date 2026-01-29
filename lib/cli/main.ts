@@ -3,16 +3,26 @@
  *
  * This module contains all the command routing, help text, and adapter setup
  * so that bin/dust can be minimal.
+ *
+ * Command resolution works by joining args with hyphens and looking up in the registry.
+ * For example, `dust agent new task` resolves to `agent-new-task` in the registry.
  */
 
 import { agent } from './commands/agent'
+import { agentHelp } from './commands/agent-help'
+import { agentImplementTask } from './commands/agent-implement-task'
+import { agentNewGoal } from './commands/agent-new-goal'
+import { agentNewIdea } from './commands/agent-new-idea'
+import { agentNewTask } from './commands/agent-new-task'
+import { agentPickTask } from './commands/agent-pick-task'
+import { agentUnderstandGoals } from './commands/agent-understand-goals'
 import { check } from './commands/check'
 import { generateHelpText, help } from './commands/help'
 import { init } from './commands/init'
 import { list } from './commands/list'
 import { loop } from './commands/loop'
 import { next } from './commands/next'
-import { pre } from './commands/pre'
+import { prePush } from './commands/pre-push'
 import { validate } from './commands/validate'
 import { loadSettings } from './settings'
 import type {
@@ -24,8 +34,12 @@ import type {
 } from './types'
 
 /**
- * Command registry maps command names to their handler functions.
+ * Command registry maps hyphenated command names to their handler functions.
  * Adding a new command only requires adding an entry here.
+ *
+ * Command names use hyphens to join verb-noun patterns:
+ * - `dust agent new task` -> `agent-new-task`
+ * - `dust pre-push` -> `pre-push`
  */
 export const commandRegistry = {
   init,
@@ -34,15 +48,24 @@ export const commandRegistry = {
   next,
   check,
   agent,
+  'agent-help': agentHelp,
+  'agent-new-task': agentNewTask,
+  'agent-new-goal': agentNewGoal,
+  'agent-new-idea': agentNewIdea,
+  'agent-implement-task': agentImplementTask,
+  'agent-pick-task': agentPickTask,
+  'agent-understand-goals': agentUnderstandGoals,
   loop,
-  pre,
+  'pre-push': prePush,
   help,
 }
 
 export type Command = keyof typeof commandRegistry
 
-// Derive COMMANDS array from registry keys for backward compatibility
-export const COMMANDS = Object.keys(commandRegistry) as Command[]
+// Top-level commands shown in help (excludes hyphenated subcommands)
+export const COMMANDS = Object.keys(commandRegistry).filter(
+  cmd => !cmd.includes('-')
+) as Command[]
 
 // Re-export for backward compatibility
 export { generateHelpText }
@@ -74,27 +97,50 @@ export async function runCommand(
   return commandRegistry[command](deps)
 }
 
+/**
+ * Resolves command args to a hyphenated command name.
+ * Tries progressively longer command chains until it finds a match.
+ *
+ * For example, with args ['agent', 'new', 'task', 'extra']:
+ * - Tries 'agent-new-task-extra' -> not found
+ * - Tries 'agent-new-task' -> found! Returns { command: 'agent-new-task', remaining: ['extra'] }
+ */
+function resolveCommand(args: string[]): {
+  command: string | null
+  remaining: string[]
+} {
+  // Try progressively shorter command chains
+  for (let i = args.length; i > 0; i--) {
+    const candidate = args.slice(0, i).join('-')
+    if (candidate in commandRegistry) {
+      return { command: candidate, remaining: args.slice(i) }
+    }
+  }
+
+  return { command: null, remaining: args }
+}
+
 export async function main(options: MainOptions): Promise<CommandResult> {
   const { args, ctx, fs, glob } = options
-  const command = args[0]
-  const commandArgs = args.slice(1)
 
   const settings = await loadSettings(ctx.cwd, fs)
   const helpText = generateHelpText(settings)
 
-  if (isHelpRequest(command)) {
+  if (isHelpRequest(args[0])) {
     ctx.stdout(helpText)
     return { exitCode: 0 }
   }
 
-  if (!isValidCommand(command)) {
-    ctx.stderr(`Unknown command: ${command}`)
+  const { command, remaining } = resolveCommand(args)
+
+  if (!command || !isValidCommand(command)) {
+    ctx.stderr(`Unknown command: ${args.join(' ')}`)
     ctx.stderr(`Run '${settings.dustCommand} help' for available commands`)
     return { exitCode: 1 }
   }
 
   const deps: CommandDependencies = {
-    arguments: commandArgs,
+    arguments: remaining,
     context: ctx,
     fileSystem: fs,
     globScanner: glob,

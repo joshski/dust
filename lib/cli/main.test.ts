@@ -289,7 +289,7 @@ describe('main', () => {
 })
 
 describe('COMMANDS', () => {
-  test('contains expected commands', () => {
+  test('contains expected top-level commands (excludes hyphenated subcommands)', () => {
     expect(COMMANDS).toEqual([
       'init',
       'validate',
@@ -298,9 +298,81 @@ describe('COMMANDS', () => {
       'check',
       'agent',
       'loop',
-      'pre',
       'help',
     ])
+  })
+})
+
+describe('hyphenated command routing', () => {
+  test('routes agent new task correctly', async () => {
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
+      project: { '.dust': {} },
+    })
+
+    const result = await main({
+      args: ['agent', 'new', 'task'],
+      ctx,
+      fs,
+      glob: fs,
+    })
+
+    expect(result.exitCode).toBe(0)
+    expect(ctx.stdoutLines.join('\n')).toContain('Adding a New Task')
+  })
+
+  test('routes agent help correctly', async () => {
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
+      project: { '.dust': {} },
+    })
+
+    const result = await main({
+      args: ['agent', 'help'],
+      ctx,
+      fs,
+      glob: fs,
+    })
+
+    expect(result.exitCode).toBe(0)
+    expect(ctx.stdoutLines.join('\n')).toContain('Dust Agent Guide')
+  })
+
+  test('routes pre push correctly', async () => {
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
+      project: { '.dust': {} },
+    })
+
+    const result = await main({
+      args: ['pre', 'push'],
+      ctx,
+      fs,
+      glob: fs,
+    })
+
+    // pre push runs check, which should fail without checks configured
+    expect(result.exitCode).toBe(1)
+    expect(ctx.stderrLines.join('\n')).toContain('No checks configured')
+  })
+
+  test('routes unknown multi-word command to error', async () => {
+    stubEnv('BUN_INSTALL', '')
+    const ctx = createContextEmulator()
+    const fs = createFileSystemEmulator({
+      project: { '.dust': {} },
+    })
+
+    const result = await main({
+      args: ['agent', 'unknown', 'subcommand'],
+      ctx,
+      fs,
+      glob: fs,
+    })
+
+    // Should fall back to 'agent' command since 'agent-unknown-subcommand' doesn't exist
+    expect(result.exitCode).toBe(0)
+    expect(ctx.stdoutLines.join('\n')).toContain('Hello Agent')
   })
 })
 
