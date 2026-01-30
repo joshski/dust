@@ -27,6 +27,7 @@ The `dust loop` command is currently implemented in `lib/cli/commands/loop.ts` a
 - `lib/cli/main.ts` - Update command registry
 - `lib/cli/commands/loop.ts` - Add iteration counting and argument parsing
 - `lib/cli/commands/loop.test.ts` - Update tests for new behavior
+- `README.md` - Update documentation to reflect new command name
 
 ## Goals
 
