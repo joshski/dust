@@ -2,19 +2,9 @@
 
 A tool for keeping AI coding agents on track.
 
-[![CI](https://github.com/joshski/dust/actions/workflows/ci.yml/badge.svg)](https://github.com/joshski/dust/actions/workflows/ci.yml)
-
-## Approach
-
 AI coding agents lose effectiveness when overwhelmed with context. Dust provides a CLI that agents use to progressively explore your priorities and knowledge. Just what they need, when they need it.
 
-📖 **Facts** — project knowledge revealed through exploration
-
-🎯 **Goals** — high-level priorities that inform decisions
-
-📋 **Tasks** — small work items with clear acceptance criteria
-
-✓ **Checks** — fast quality gates that are quiet until things fail
+[![CI](https://github.com/joshski/dust/actions/workflows/ci.yml/badge.svg)](https://github.com/joshski/dust/actions/workflows/ci.yml)
 
 ## Quick Start
 
