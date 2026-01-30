@@ -6,6 +6,7 @@
       "name": "lint",
       "command": "bunx biome check .",
       "hints": [
+        "Run `bun install` if this is a fresh checkout",
         "Run `bunx biome check . --write` to auto-fix lint errors",
         "Check biome.json for rule configurations"
       ]
@@ -22,6 +23,7 @@
       "name": "tests (vitest)",
       "command": "bun run test:coverage",
       "hints": [
+        "Run `bun install` if this is a fresh checkout",
         "Run `bun run test` to see detailed test output",
         "Check if new code needs corresponding tests"
       ]
