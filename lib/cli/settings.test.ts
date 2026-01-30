@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from 'vitest'
 import {
   detectDustCommand,
   detectInstallDependenciesHint,
+  detectTestCommand,
   loadSettings,
 } from './settings'
 import { createFileSystemEmulator, restoreEnv, stubEnv } from './test-utilities'
@@ -163,6 +164,97 @@ describe('detectInstallDependenciesHint', () => {
     expect(detectInstallDependenciesHint('/project', fileSystem)).toBe(
       'Run `npm install`'
     )
+  })
+})
+
+describe('detectTestCommand', () => {
+  afterEach(() => {
+    restoreEnv()
+  })
+
+  test('returns bun test when bun.lockb exists', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { 'bun.lockb': '' },
+    })
+    expect(detectTestCommand('/project', fileSystem)).toBe('bun test')
+  })
+
+  test('returns bun test when bun.lock exists', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { 'bun.lock': '' },
+    })
+    expect(detectTestCommand('/project', fileSystem)).toBe('bun test')
+  })
+
+  test('returns pnpm test when pnpm-lock.yaml exists', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { 'pnpm-lock.yaml': '' },
+    })
+    expect(detectTestCommand('/project', fileSystem)).toBe('pnpm test')
+  })
+
+  test('returns npm test when package-lock.json exists', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { 'package-lock.json': '' },
+    })
+    expect(detectTestCommand('/project', fileSystem)).toBe('npm test')
+  })
+
+  test('returns yarn test when yarn.lock exists', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { 'yarn.lock': '' },
+    })
+    expect(detectTestCommand('/project', fileSystem)).toBe('yarn test')
+  })
+
+  test('returns bun test when BUN_INSTALL env var is set and no lockfiles', () => {
+    stubEnv('BUN_INSTALL', '/home/user/.bun')
+    const fileSystem = createFileSystemEmulator({
+      project: { 'package.json': '' },
+    })
+    expect(detectTestCommand('/project', fileSystem)).toBe('bun test')
+  })
+
+  test('returns npm test when only package.json exists and no BUN_INSTALL', () => {
+    stubEnv('BUN_INSTALL', '')
+    const fileSystem = createFileSystemEmulator({
+      project: { 'package.json': '' },
+    })
+    expect(detectTestCommand('/project', fileSystem)).toBe('npm test')
+  })
+
+  test('returns null when no lockfiles and no package.json', () => {
+    stubEnv('BUN_INSTALL', '')
+    const fileSystem = createFileSystemEmulator()
+    expect(detectTestCommand('/project', fileSystem)).toBeNull()
+  })
+
+  test('prioritizes bun.lockb over other lockfiles', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        'bun.lockb': '',
+        'pnpm-lock.yaml': '',
+        'package-lock.json': '',
+        'yarn.lock': '',
+      },
+    })
+    expect(detectTestCommand('/project', fileSystem)).toBe('bun test')
+  })
+
+  test('prioritizes lockfiles over BUN_INSTALL env var', () => {
+    stubEnv('BUN_INSTALL', '/home/user/.bun')
+    const fileSystem = createFileSystemEmulator({
+      project: { 'package-lock.json': '' },
+    })
+    expect(detectTestCommand('/project', fileSystem)).toBe('npm test')
+  })
+
+  test('prioritizes BUN_INSTALL over package.json fallback', () => {
+    stubEnv('BUN_INSTALL', '/home/user/.bun')
+    const fileSystem = createFileSystemEmulator({
+      project: { 'package.json': '' },
+    })
+    expect(detectTestCommand('/project', fileSystem)).toBe('bun test')
   })
 })
 

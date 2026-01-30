@@ -6,6 +6,8 @@ import {
   type CheckConfig,
   type DustSettings,
   detectDustCommand,
+  detectInstallDependenciesHint,
+  detectTestCommand,
 } from '../settings'
 import { loadTemplate } from '../templates'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
@@ -18,22 +20,12 @@ const DUST_DIRECTORIES = ['goals', 'ideas', 'tasks', 'facts', 'config']
  */
 function generateSettings(cwd: string, fileSystem: FileSystem): DustSettings {
   const dustCommand = detectDustCommand(cwd, fileSystem)
+  const installDependenciesHint = detectInstallDependenciesHint(cwd, fileSystem)
+  const testCommand = detectTestCommand(cwd, fileSystem)
   const checks: CheckConfig[] = []
-  let installDependenciesHint = 'Install any dependencies'
 
-  // Detect project type and add appropriate test check
-  if (fileSystem.exists(`${cwd}/bun.lockb`)) {
-    checks.push({ name: 'test', command: 'bun test' })
-    installDependenciesHint = 'Run `bun install`'
-  } else if (fileSystem.exists(`${cwd}/pnpm-lock.yaml`)) {
-    checks.push({ name: 'test', command: 'pnpm test' })
-    installDependenciesHint = 'Run `pnpm install`'
-  } else if (
-    fileSystem.exists(`${cwd}/package-lock.json`) ||
-    fileSystem.exists(`${cwd}/package.json`)
-  ) {
-    checks.push({ name: 'test', command: 'npm test' })
-    installDependenciesHint = 'Run `npm install`'
+  if (testCommand) {
+    checks.push({ name: 'test', command: testCommand })
   }
 
   return { dustCommand, checks, installDependenciesHint }

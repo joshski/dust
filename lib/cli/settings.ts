@@ -71,6 +71,45 @@ export function detectDustCommand(cwd: string, fileSystem: FileSystem): string {
   return 'npx dust'
 }
 
+/**
+ * Detects the appropriate test command based on lockfiles and environment.
+ * Priority:
+ * 1. bun.lockb or bun.lock exists → bun test
+ * 2. pnpm-lock.yaml exists → pnpm test
+ * 3. package-lock.json exists → npm test
+ * 4. yarn.lock exists → yarn test
+ * 5. No lockfile + BUN_INSTALL env var set → bun test
+ * 6. package.json exists → npm test
+ * 7. Default → null (no test command)
+ */
+export function detectTestCommand(
+  cwd: string,
+  fileSystem: FileSystem
+): string | null {
+  if (
+    fileSystem.exists(join(cwd, 'bun.lockb')) ||
+    fileSystem.exists(join(cwd, 'bun.lock'))
+  ) {
+    return 'bun test'
+  }
+  if (fileSystem.exists(join(cwd, 'pnpm-lock.yaml'))) {
+    return 'pnpm test'
+  }
+  if (fileSystem.exists(join(cwd, 'package-lock.json'))) {
+    return 'npm test'
+  }
+  if (fileSystem.exists(join(cwd, 'yarn.lock'))) {
+    return 'yarn test'
+  }
+  if (process.env.BUN_INSTALL) {
+    return 'bun test'
+  }
+  if (fileSystem.exists(join(cwd, 'package.json'))) {
+    return 'npm test'
+  }
+  return null
+}
+
 export async function loadSettings(
   cwd: string,
   fileSystem: FileSystem
