@@ -26,7 +26,8 @@
   "scripts": {
     "build": "bun build lib/cli/entry.ts --target node --outfile dist/dust.js && printf '%s\\n%s' '#!/usr/bin/env node' \"$(cat dist/dust.js)\" > dist/dust.js && cp -r lib/templates templates",
     "test": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "eval": "bun run ./evals/run.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",

@@ -1,0 +1,4 @@
+{
+  "prompt": "add a task to fix the login bug",
+  "expectation": "Agent should run the 'new task' workflow by executing a command containing 'bin/dust agent new task'"
+}
