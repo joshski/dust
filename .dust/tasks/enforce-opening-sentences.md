@@ -4,17 +4,18 @@ Every markdown file in `.dust/` (goals, facts, ideas, tasks) must have a succinc
 
 ## What constitutes a good opening sentence
 
-A valid opening sentence:
+A valid opening paragraph:
 - Appears on the first non-blank line after the H1 heading
 - Is a plain paragraph (not a heading, list item, or code block)
-- Ends with sentence-ending punctuation (`.` `?` `!`)
-- Is a single line (no line breaks within)
-- Is concise (recommended: under 150 characters, but not enforced)
+- Starts with a sentence that ends in `.` `?` or `!`
+
+The **first sentence** of this paragraph is extracted for display in listings. Additional sentences in the same paragraph are allowed but won't be shown - they provide context for readers who open the full file.
 
 ## Implementation
 
 1. **Add `extractOpeningSentence` to `markdown-utilities.ts`**
-   - Returns the first paragraph after the H1 heading, or null if invalid
+   - Extracts the first sentence from the first paragraph after the H1 heading
+   - Returns null if no valid opening paragraph exists
    - Used by both display commands and validation
 
 2. **Update `list` command (`list.ts`)**
