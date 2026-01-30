@@ -47,17 +47,22 @@ export async function list(
     return { exitCode: 1 }
   }
 
+  const specificTypeRequested = commandArguments.length > 0
+
   for (const type of typesToList) {
     const dirPath = `${dustPath}/${type}`
 
-    if (!fileSystem.exists(dirPath)) {
-      continue
-    }
-
-    const files = await fileSystem.readdir(dirPath)
+    const dirExists = fileSystem.exists(dirPath)
+    const files = dirExists ? await fileSystem.readdir(dirPath) : []
     const mdFiles = files.filter(f => f.endsWith('.md')).sort()
 
     if (mdFiles.length === 0) {
+      if (specificTypeRequested) {
+        context.stdout(SECTION_HEADERS[type])
+        context.stdout('')
+        context.stdout(`No ${type} found.`)
+        context.stdout('')
+      }
       continue
     }
 

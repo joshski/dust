@@ -192,4 +192,44 @@ describe('list command', () => {
     // ideas exists but has no .md files, so should not be listed
     expect(output).not.toContain('💡 Ideas')
   })
+
+  test('shows "No tasks found." when listing tasks and none exist', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: { 'my-goal.md': '# My Goal' },
+        },
+      },
+    })
+
+    const result = await list(
+      createDependencies(context, fileSystem, ['tasks'])
+    )
+
+    expect(result.exitCode).toBe(0)
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('📋 Tasks')
+    expect(output).toContain('No tasks found.')
+  })
+
+  test('shows "No ideas found." when listing ideas and none exist', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+        },
+      },
+    })
+
+    const result = await list(
+      createDependencies(context, fileSystem, ['ideas'])
+    )
+
+    expect(result.exitCode).toBe(0)
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('💡 Ideas')
+    expect(output).toContain('No ideas found.')
+  })
 })
