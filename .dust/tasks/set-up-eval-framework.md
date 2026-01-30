@@ -29,20 +29,39 @@ The `lib/templates/agent-greeting.txt` template guides agents to select the corr
 
 ## Technical approach
 
-### Directory setup
-Each eval is a directory containing:
-- `setup.sh` - Bash script that creates the isolated test directory with required state (git history, files, .dust contents, etc.)
-- `eval.json` - Defines the user prompt and evaluation criteria
+### Directory structure
+```
+./evals/
+  run.ts                      # Generic eval runner
+  add-task-from-prompt/       # Example eval
+    setup.sh                  # Creates isolated test directory
+    eval.json                 # Defines prompt and evaluation criteria
+```
 
-### Execution
-1. Run `setup.sh` to create isolated test directory (e.g., in `/tmp/dust-eval-xxx/`)
-2. Run agent via `lib/claude/spawn-claude-code.ts` with:
+### Running evals
+```bash
+bun run eval add-task-from-prompt
+```
+
+This executes `./evals/run.ts ./evals/add-task-from-prompt`.
+
+### Eval definition (`eval.json`)
+```json
+{
+  "prompt": "add a task to fix the login bug",
+  "expectation": "Agent should run the 'new task' workflow"
+}
+```
+
+### Execution flow
+1. `setup.sh` creates isolated test directory (e.g., `/tmp/dust-eval-xxx/`)
+2. Runner invokes `lib/claude/spawn-claude-code.ts` with:
    - `cwd` pointing to test directory
    - `dangerouslySkipPermissions: true`
-   - Collect all events (especially `ToolUseEvent` for commands run)
-3. Send collected transcript to Haiku with evaluation prompt
+   - Collects all events (especially `ToolUseEvent` for commands run)
+3. Transcript sent to Haiku with evaluation prompt
 4. Haiku determines pass/fail based on whether agent behavior matched expectations
-5. Report results
+5. Runner reports results
 
 ### Why Haiku for evaluation
 Using a separate Claude session (Haiku) to judge outcomes allows flexible evaluation criteria without brittle string matching. The evaluator can understand intent rather than requiring exact command matches.
@@ -58,9 +77,9 @@ Using a separate Claude session (Haiku) to judge outcomes allows flexible evalua
 
 ## Definition of done
 
-- [ ] Eval framework can create isolated test directories with controlled state
-- [ ] Eval framework can run Claude Code against a test directory with a given prompt
-- [ ] Eval framework can capture what action the agent took
-- [ ] Eval framework can compare actual vs expected outcomes
-- [ ] At least one working eval case exists and passes
-- [ ] Running evals is documented (e.g., `bin/dust eval` or similar)
+- [ ] `./evals/run.ts` can execute an eval from a given directory
+- [ ] Eval runner creates isolated test directories via `setup.sh`
+- [ ] Eval runner invokes Claude Code and captures events
+- [ ] Eval runner sends transcript to Haiku for pass/fail judgment
+- [ ] `bun run eval <name>` works via package.json script
+- [ ] At least one working eval (`add-task-from-prompt`) exists and passes
