@@ -18,7 +18,7 @@ Commands:
   agent implement task      Implement a task
   agent new task            Create a new task
   agent new goal            Create a new goal
-  agent new idea            Working with ideas
+  agent new idea            Create a new idea
   agent understand goals    Understanding goals
   loop                      Run continuous Claude iteration on tasks
   pre-push                  Git pre-push hook validation
