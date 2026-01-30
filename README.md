@@ -8,12 +8,11 @@ A tool for keeping AI coding agents on track.
 
 AI coding agents lose effectiveness when overwhelmed with context. Dust provides a CLI that agents use to progressively explore your priorities and knowledge. Just what they need, when they need it.
 
-| | |
 |---|---|
 | 📖 **Facts** | project knowledge revealed through exploration |
 | 🎯 **Goals** | high-level priorities that inform decisions |
-| 📋 **Tasks** | small, concrete work items with clear acceptance criteria |
-| ✓ **Checks** | fast quality gates that are only noisy when things fail |
+| 📋 **Tasks** | small work items with clear acceptance criteria |
+| ✓ **Checks** | fast quality gates that are quiet until things fail |
 
 ## Quick Start
 
