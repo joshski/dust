@@ -6,12 +6,13 @@ A workflow tool for keeping AI coding agents on track.
 
 ## Why Use This?
 
-AI coding agents work best with clear tasks and fast feedback. Dust gives them both:
+AI coding agents lose effectiveness when overwhelmed with context. Dust keeps them focused through [progressive disclosure](./.dust/goals/progressive-disclosure.md):
 
+- **Facts** — project knowledge revealed through exploration, not dumped upfront
 - **Tasks** — a queue of work, each with clear requirements and definition of done
-- **Checks** — quality gates (tests, lint, build) that run before and after changes
+- **Checks** — quality gates that surface failures but stay quiet when things pass
 
-Agents pick tasks, implement them, verify checks pass, and move on. You add tasks, review commits, and steer direction.
+Agents pick tasks, discover what they need to know, verify checks pass, and move on. You add tasks, review commits, and steer direction.
 
 ## Quick Start
 
