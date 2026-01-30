@@ -318,7 +318,7 @@ describe('loopClaude', () => {
     }
 
     expect(context.stdoutLines.join('\n')).toContain(
-      'Starting dust loop claude (max 3 iterations)'
+      '🔄 Starting dust loop claude (max 3 iterations)'
     )
     expect(context.stdoutLines.join('\n')).toContain('Ctrl+C')
   })
@@ -397,7 +397,7 @@ describe('loopClaude', () => {
     expect(runCount).toBe(3)
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain(
-      'Reached max iterations (3)'
+      '🏁 Reached max iterations (3)'
     )
   })
 

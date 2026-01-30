@@ -88,37 +88,37 @@ export async function runOneIteration(
   const { spawn, run } = loopDependencies
 
   // Step 1: Sync with remote
-  context.stdout('Syncing with remote...')
+  context.stdout('🔄 Syncing with remote...')
   const pullResult = await gitPull(context.cwd, spawn)
   if (!pullResult.success) {
     context.stdout(`Note: git pull skipped (${pullResult.message})`)
   }
 
   // Step 2: Check for available tasks
-  context.stdout('Checking for available tasks...')
+  context.stdout('🔍 Checking for available tasks...')
   const hasTasks = await hasAvailableTasks(dependencies)
 
   if (!hasTasks) {
-    context.stdout('No tasks available. Sleeping...')
+    context.stdout('💤 No tasks available. Sleeping...')
     context.stdout('')
     return 'no_tasks'
   }
 
   // Step 3: Invoke Claude Code
-  context.stdout('Found task(s). Starting Claude...')
+  context.stdout('✨ Found task(s). 🤖 Starting Claude...')
   context.stdout('')
 
   try {
     await run('go', { cwd: context.cwd, dangerouslySkipPermissions: true })
     context.stdout('')
-    context.stdout('Claude session complete. Continuing loop...')
+    context.stdout('✅ Claude session complete. Continuing loop...')
     context.stdout('')
     return 'ran_claude'
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     context.stderr(`Claude exited with error: ${message}`)
     context.stdout('')
-    context.stdout('Claude session complete. Continuing loop...')
+    context.stdout('✅ Claude session complete. Continuing loop...')
     context.stdout('')
     return 'claude_error'
   }
@@ -143,13 +143,13 @@ export async function loopClaude(
   const maxIterations = parseMaxIterations(dependencies.arguments)
 
   context.stdout(
-    'WARNING: This command skips all permission checks. Only use in a sandbox environment!'
+    '⚠️  WARNING: This command skips all permission checks. Only use in a sandbox environment!'
   )
   context.stdout('')
   context.stdout(
-    `Starting dust loop claude (max ${maxIterations} iterations)...`
+    `🔄 Starting dust loop claude (max ${maxIterations} iterations)...`
   )
-  context.stdout('Press Ctrl+C to stop')
+  context.stdout('   Press Ctrl+C to stop')
   context.stdout('')
 
   let completedIterations = 0
@@ -162,12 +162,12 @@ export async function loopClaude(
       // Only count iterations where Claude actually ran (ran_claude or claude_error)
       completedIterations++
       context.stdout(
-        `Completed iteration ${completedIterations}/${maxIterations}`
+        `📋 Completed iteration ${completedIterations}/${maxIterations}`
       )
       context.stdout('')
     }
   }
 
-  context.stdout(`Reached max iterations (${maxIterations}). Exiting.`)
+  context.stdout(`🏁 Reached max iterations (${maxIterations}). Exiting.`)
   return { exitCode: 0 }
 }
