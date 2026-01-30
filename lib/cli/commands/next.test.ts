@@ -75,11 +75,11 @@ describe('next command', () => {
     const result = await next(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
-    expect(context.stdoutLines.join('\n')).toContain('Next tasks:')
-    expect(context.stdoutLines.join('\n')).toContain(
-      '.dust/tasks/simple-task.md'
-    )
-    expect(context.stdoutLines.join('\n')).toContain('Just do it.')
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('📋 Next tasks')
+    expect(output).toContain('# Simple Task')
+    expect(output).toContain('.dust/tasks/simple-task.md')
+    expect(output).toContain('Just do it.')
   })
 
   test('filters out tasks with incomplete blockers', async () => {
@@ -122,7 +122,7 @@ describe('next command', () => {
 
     expect(result.exitCode).toBe(0)
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('Next tasks:')
+    expect(output).toContain('📋 Next tasks')
     expect(output).toContain('.dust/tasks/unblocked-task.md')
     expect(output).toContain('This task is now unblocked.')
   })
@@ -144,7 +144,7 @@ describe('next command', () => {
 
     expect(result.exitCode).toBe(0)
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('Next tasks:')
+    expect(output).toContain('📋 Next tasks')
     expect(output).toContain('.dust/tasks/ready-task.md')
     expect(output).toContain('This task is ready to work on.')
   })

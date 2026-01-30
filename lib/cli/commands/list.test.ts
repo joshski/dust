@@ -51,10 +51,10 @@ describe('list command', () => {
 
     expect(result.exitCode).toBe(0)
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('goals:')
-    expect(output).toContain('ideas:')
-    expect(output).toContain('tasks:')
-    expect(output).toContain('facts:')
+    expect(output).toContain('🎯 Goals')
+    expect(output).toContain('💡 Ideas')
+    expect(output).toContain('📋 Tasks')
+    expect(output).toContain('📄 Facts')
   })
 
   test('lists only specified type', async () => {
@@ -74,8 +74,8 @@ describe('list command', () => {
 
     expect(result.exitCode).toBe(0)
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('goals:')
-    expect(output).not.toContain('ideas:')
+    expect(output).toContain('🎯 Goals')
+    expect(output).not.toContain('💡 Ideas')
   })
 
   test('shows relative path and opening sentence', async () => {
@@ -165,12 +165,12 @@ describe('list command', () => {
 
     expect(result.exitCode).toBe(0)
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('goals:')
-    expect(output).toContain('my-goal')
+    expect(output).toContain('🎯 Goals')
+    expect(output).toContain('My Goal')
     // Other types should not appear because their directories don't exist
-    expect(output).not.toContain('tasks:')
-    expect(output).not.toContain('ideas:')
-    expect(output).not.toContain('facts:')
+    expect(output).not.toContain('📋 Tasks')
+    expect(output).not.toContain('💡 Ideas')
+    expect(output).not.toContain('📄 Facts')
   })
 
   test('skips type directories with no markdown files', async () => {
@@ -188,8 +188,8 @@ describe('list command', () => {
 
     expect(result.exitCode).toBe(0)
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('goals:')
+    expect(output).toContain('🎯 Goals')
     // ideas exists but has no .md files, so should not be listed
-    expect(output).not.toContain('ideas:')
+    expect(output).not.toContain('💡 Ideas')
   })
 })

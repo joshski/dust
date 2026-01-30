@@ -5,8 +5,15 @@
  * A task is blocked if its "## Blocked by" section references task files that still exist.
  */
 
-import { extractOpeningSentence } from '../markdown-utilities'
+import { extractOpeningSentence, extractTitle } from '../markdown-utilities'
 import type { CommandDependencies, CommandResult } from '../types'
+
+const colors = {
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  cyan: '\x1b[36m',
+}
 
 function extractBlockedBy(content: string): string[] {
   // Find the "## Blocked by" section
@@ -69,6 +76,7 @@ export async function next(
   // Find unblocked tasks
   const unblockedTasks: Array<{
     path: string
+    title: string | null
     openingSentence: string | null
   }> = []
 
@@ -83,9 +91,10 @@ export async function next(
     )
 
     if (!hasIncompleteBlocker) {
+      const title = extractTitle(content)
       const openingSentence = extractOpeningSentence(content)
       const relativePath = `.dust/tasks/${file}`
-      unblockedTasks.push({ path: relativePath, openingSentence })
+      unblockedTasks.push({ path: relativePath, title, openingSentence })
     }
   }
 
@@ -93,13 +102,19 @@ export async function next(
     return { exitCode: 0 }
   }
 
-  context.stdout('Next tasks:')
+  context.stdout('📋 Next tasks')
+  context.stdout('')
   for (const task of unblockedTasks) {
+    const displayTitle =
+      task.title || task.path.split('/').pop()!.replace('.md', '')
+    context.stdout(`${colors.bold}# ${displayTitle}${colors.reset}`)
+
     if (task.openingSentence) {
-      context.stdout(`  ${task.path} - ${task.openingSentence}`)
-    } else {
-      context.stdout(`  ${task.path}`)
+      context.stdout(`${colors.dim}${task.openingSentence}${colors.reset}`)
     }
+
+    context.stdout(`${colors.cyan}→ ${task.path}${colors.reset}`)
+    context.stdout('')
   }
 
   return { exitCode: 0 }

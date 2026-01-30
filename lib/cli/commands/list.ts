@@ -2,11 +2,25 @@
  * dust list [type] - List tasks, ideas, goals, or facts
  */
 
-import { extractOpeningSentence } from '../markdown-utilities'
+import { extractOpeningSentence, extractTitle } from '../markdown-utilities'
 import type { CommandDependencies, CommandResult } from '../types'
 
 const VALID_TYPES = ['tasks', 'ideas', 'goals', 'facts'] as const
 type ListType = (typeof VALID_TYPES)[number]
+
+const SECTION_HEADERS: Record<ListType, string> = {
+  tasks: '📋 Tasks',
+  ideas: '💡 Ideas',
+  goals: '🎯 Goals',
+  facts: '📄 Facts',
+}
+
+const colors = {
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  cyan: '\x1b[36m',
+}
 
 export async function list(
   dependencies: CommandDependencies
@@ -47,22 +61,31 @@ export async function list(
       continue
     }
 
-    context.stdout(`${type}:`)
+    context.stdout(SECTION_HEADERS[type])
+    context.stdout('')
 
     for (const file of mdFiles) {
       const filePath = `${dirPath}/${file}`
       const content = await fileSystem.readFile(filePath)
+      const title = extractTitle(content)
       const openingSentence = extractOpeningSentence(content)
       const relativePath = `.dust/${type}/${file}`
 
-      if (openingSentence) {
-        context.stdout(`  ${relativePath} - ${openingSentence}`)
+      if (title) {
+        context.stdout(`${colors.bold}# ${title}${colors.reset}`)
       } else {
-        context.stdout(`  ${relativePath}`)
+        context.stdout(
+          `${colors.bold}# ${file.replace('.md', '')}${colors.reset}`
+        )
       }
-    }
 
-    context.stdout('')
+      if (openingSentence) {
+        context.stdout(`${colors.dim}${openingSentence}${colors.reset}`)
+      }
+
+      context.stdout(`${colors.cyan}→ ${relativePath}${colors.reset}`)
+      context.stdout('')
+    }
   }
 
   return { exitCode: 0 }
