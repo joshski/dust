@@ -2,7 +2,7 @@
  * dust list [type] - List tasks, ideas, goals, or facts
  */
 
-import { extractTitle } from '../markdown-utilities'
+import { extractOpeningSentence } from '../markdown-utilities'
 import type { CommandDependencies, CommandResult } from '../types'
 
 const VALID_TYPES = ['tasks', 'ideas', 'goals', 'facts'] as const
@@ -52,13 +52,13 @@ export async function list(
     for (const file of mdFiles) {
       const filePath = `${dirPath}/${file}`
       const content = await fileSystem.readFile(filePath)
-      const title = extractTitle(content)
-      const name = file.replace(/\.md$/, '')
+      const openingSentence = extractOpeningSentence(content)
+      const relativePath = `.dust/${type}/${file}`
 
-      if (title) {
-        context.stdout(`  ${name} - ${title}`)
+      if (openingSentence) {
+        context.stdout(`  ${relativePath} - ${openingSentence}`)
       } else {
-        context.stdout(`  ${name}`)
+        context.stdout(`  ${relativePath}`)
       }
     }
 

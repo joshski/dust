@@ -9,6 +9,7 @@ import {
   validate,
   validateFilename,
   validateLinks,
+  validateOpeningSentence,
   validateSemanticLinks,
   validateTaskHeadings,
 } from './validate'
@@ -39,6 +40,34 @@ describe('validateFilename', () => {
     expect(validateFilename('my_task.md')).not.toBeNull()
     expect(validateFilename('-task.md')).not.toBeNull()
     expect(validateFilename('task-.md')).not.toBeNull()
+  })
+})
+
+describe('validateOpeningSentence', () => {
+  test('returns null for valid opening sentence', () => {
+    const content = '# Title\n\nThis is a valid opening sentence.'
+    expect(validateOpeningSentence('file.md', content)).toBeNull()
+  })
+
+  test('returns violation when opening sentence is missing', () => {
+    const content = '# Title\n\n## Another Heading'
+    const violation = validateOpeningSentence('file.md', content)
+    expect(violation).not.toBeNull()
+    expect(violation?.message).toContain(
+      'Missing or malformed opening sentence'
+    )
+  })
+
+  test('returns violation when no content after H1', () => {
+    const content = '# Title'
+    const violation = validateOpeningSentence('file.md', content)
+    expect(violation).not.toBeNull()
+  })
+
+  test('returns violation when first paragraph has no sentence ending', () => {
+    const content = '# Title\n\nNo sentence ending here'
+    const violation = validateOpeningSentence('file.md', content)
+    expect(violation).not.toBeNull()
   })
 })
 
@@ -280,9 +309,12 @@ describe('validate command', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'goal.md': '# Goal\nDescription' },
+          goals: { 'goal.md': '# Goal\n\nThis is a goal.' },
           tasks: {
             'my-task.md': `# Task
+
+This is a task.
+
 ## Goals
 [Goal](../goals/goal.md)
 ## Blocked by
@@ -343,9 +375,12 @@ describe('validate command', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'goal.md': '# Goal' },
+          goals: { 'goal.md': '# Goal\n\nThis is a goal.' },
           tasks: {
             'my-task.md': `# Task
+
+This is a task.
+
 ## Goals
 ## Blocked by
 ## Definition of done`,
@@ -418,7 +453,7 @@ describe('validate command', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'goal.md': '# Goal' },
+          goals: { 'goal.md': '# Goal\n\nThis is a goal.' },
         },
       },
     })
@@ -427,8 +462,8 @@ describe('validate command', () => {
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain('All validations passed')
-    // Should not mention task validation
-    expect(context.stdoutLines.join('\n')).not.toContain('tasks')
+    // Should not mention task validation in .dust/tasks/
+    expect(context.stdoutLines.join('\n')).not.toContain('.dust/tasks/')
   })
 
   test('reports semantic link violations for wrong link type in Goals section', async () => {

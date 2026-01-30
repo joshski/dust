@@ -79,7 +79,7 @@ describe('next command', () => {
     expect(context.stdoutLines.join('\n')).toContain(
       '.dust/tasks/simple-task.md'
     )
-    expect(context.stdoutLines.join('\n')).toContain('Simple Task')
+    expect(context.stdoutLines.join('\n')).toContain('Just do it.')
   })
 
   test('filters out tasks with incomplete blockers', async () => {
@@ -112,7 +112,7 @@ describe('next command', () => {
         '.dust': {
           tasks: {
             'unblocked-task.md':
-              '# Unblocked Task\n\n## Blocked by\n\n- [Completed Task](completed-task.md)',
+              '# Unblocked Task\n\nThis task is now unblocked.\n\n## Blocked by\n\n- [Completed Task](completed-task.md)',
           },
         },
       },
@@ -124,7 +124,7 @@ describe('next command', () => {
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('Next tasks:')
     expect(output).toContain('.dust/tasks/unblocked-task.md')
-    expect(output).toContain('Unblocked Task')
+    expect(output).toContain('This task is now unblocked.')
   })
 
   test('handles tasks with (none) in blocked by section', async () => {
@@ -133,7 +133,8 @@ describe('next command', () => {
       project: {
         '.dust': {
           tasks: {
-            'ready-task.md': '# Ready Task\n\n## Blocked by\n\n(none)',
+            'ready-task.md':
+              '# Ready Task\n\nThis task is ready to work on.\n\n## Blocked by\n\n(none)',
           },
         },
       },
@@ -145,7 +146,7 @@ describe('next command', () => {
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('Next tasks:')
     expect(output).toContain('.dust/tasks/ready-task.md')
-    expect(output).toContain('Ready Task')
+    expect(output).toContain('This task is ready to work on.')
   })
 
   test('shows task path without title if no heading exists', async () => {

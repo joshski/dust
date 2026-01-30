@@ -3,7 +3,10 @@
  */
 
 import { dirname, resolve } from 'node:path'
-import { MARKDOWN_LINK_PATTERN } from '../markdown-utilities'
+import {
+  extractOpeningSentence,
+  MARKDOWN_LINK_PATTERN,
+} from '../markdown-utilities'
 import type {
   CommandDependencies,
   CommandResult,
@@ -31,6 +34,20 @@ export function validateFilename(filePath: string): Violation | null {
     return {
       file: filePath,
       message: `Filename "${filename}" does not match slug-style naming`,
+    }
+  }
+  return null
+}
+
+export function validateOpeningSentence(
+  filePath: string,
+  content: string
+): Violation | null {
+  const openingSentence = extractOpeningSentence(content)
+  if (!openingSentence) {
+    return {
+      file: filePath,
+      message: 'Missing or malformed opening sentence after H1 heading',
     }
   }
   return null
@@ -207,6 +224,30 @@ export async function validate(
     const filePath = `${dustPath}/${file}`
     const content = await fileSystem.readFile(filePath)
     violations.push(...validateLinks(filePath, content, fileSystem))
+  }
+
+  // Validate opening sentences in all content directories
+  const contentDirs = ['goals', 'facts', 'ideas', 'tasks']
+  context.stdout('Validating opening sentences...')
+
+  for (const dir of contentDirs) {
+    const dirPath = `${dustPath}/${dir}`
+    if (!fileSystem.exists(dirPath)) continue
+
+    for await (const file of glob.scan(dirPath)) {
+      if (!file.endsWith('.md')) continue
+
+      const filePath = `${dirPath}/${file}`
+      const content = await fileSystem.readFile(filePath)
+
+      const openingSentenceViolation = validateOpeningSentence(
+        filePath,
+        content
+      )
+      if (openingSentenceViolation) {
+        violations.push(openingSentenceViolation)
+      }
+    }
   }
 
   // Validate task files specifically

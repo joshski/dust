@@ -1,6 +1,6 @@
 # Unified CLI
 
-Dust provides a single `dust` command with subcommands for all operations:
+Dust provides a single `dust` command with subcommands for all operations.
 
 - `dust init` - Initialize a new Dust repository
 - `dust validate` - Run validation checks on .dust/ files

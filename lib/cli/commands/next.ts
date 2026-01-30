@@ -5,7 +5,7 @@
  * A task is blocked if its "## Blocked by" section references task files that still exist.
  */
 
-import { extractTitle } from '../markdown-utilities'
+import { extractOpeningSentence } from '../markdown-utilities'
 import type { CommandDependencies, CommandResult } from '../types'
 
 function extractBlockedBy(content: string): string[] {
@@ -67,7 +67,10 @@ export async function next(
   const existingTasks = new Set(mdFiles)
 
   // Find unblocked tasks
-  const unblockedTasks: Array<{ path: string; title: string | null }> = []
+  const unblockedTasks: Array<{
+    path: string
+    openingSentence: string | null
+  }> = []
 
   for (const file of mdFiles) {
     const filePath = `${tasksPath}/${file}`
@@ -80,9 +83,9 @@ export async function next(
     )
 
     if (!hasIncompleteBlocker) {
-      const title = extractTitle(content)
+      const openingSentence = extractOpeningSentence(content)
       const relativePath = `.dust/tasks/${file}`
-      unblockedTasks.push({ path: relativePath, title })
+      unblockedTasks.push({ path: relativePath, openingSentence })
     }
   }
 
@@ -92,8 +95,8 @@ export async function next(
 
   context.stdout('Next tasks:')
   for (const task of unblockedTasks) {
-    if (task.title) {
-      context.stdout(`  ${task.path} - ${task.title}`)
+    if (task.openingSentence) {
+      context.stdout(`  ${task.path} - ${task.openingSentence}`)
     } else {
       context.stdout(`  ${task.path}`)
     }

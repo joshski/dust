@@ -78,12 +78,14 @@ describe('list command', () => {
     expect(output).not.toContain('ideas:')
   })
 
-  test('shows file name and title', async () => {
+  test('shows relative path and opening sentence', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'my-goal.md': '# My Goal Title' },
+          goals: {
+            'my-goal.md': '# My Goal Title\n\nThis is the opening sentence.',
+          },
         },
       },
     })
@@ -91,8 +93,8 @@ describe('list command', () => {
     await list(createDependencies(context, fileSystem, ['goals']))
 
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('my-goal')
-    expect(output).toContain('My Goal Title')
+    expect(output).toContain('.dust/goals/my-goal.md')
+    expect(output).toContain('This is the opening sentence.')
   })
 
   test('shows only file name if no title', async () => {

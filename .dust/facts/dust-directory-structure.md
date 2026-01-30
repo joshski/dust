@@ -1,6 +1,6 @@
 # Dust Directory Structure
 
-The `.dust/` directory contains planning artifacts organized by type:
+The `.dust/` directory contains planning artifacts organized by type.
 
 ```
 .dust/
