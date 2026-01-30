@@ -10,7 +10,8 @@ import {
   gitPull,
   hasAvailableTasks,
   type LoopDependencies,
-  loop,
+  loopClaude,
+  parseMaxIterations,
   runOneIteration,
 } from './loop'
 
@@ -278,9 +279,27 @@ describe('runOneIteration', () => {
   })
 })
 
-describe('loop', () => {
-  test('outputs startup message', async () => {
+describe('parseMaxIterations', () => {
+  test('returns default when no arguments', () => {
+    expect(parseMaxIterations([])).toBe(10)
+  })
+
+  test('parses valid positive integer', () => {
+    expect(parseMaxIterations(['5'])).toBe(5)
+    expect(parseMaxIterations(['100'])).toBe(100)
+  })
+
+  test('returns default for invalid input', () => {
+    expect(parseMaxIterations(['abc'])).toBe(10)
+    expect(parseMaxIterations(['0'])).toBe(10)
+    expect(parseMaxIterations(['-5'])).toBe(10)
+  })
+})
+
+describe('loopClaude', () => {
+  test('outputs startup message with max iterations', async () => {
     const dependencies = createDependencies()
+    dependencies.arguments = ['3']
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
@@ -293,12 +312,14 @@ describe('loop', () => {
     }
 
     try {
-      await loop(dependencies, loopDeps)
+      await loopClaude(dependencies, loopDeps)
     } catch (e) {
       if (!(e instanceof LoopBreaker)) throw e
     }
 
-    expect(context.stdoutLines.join('\n')).toContain('Starting dust loop')
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Starting dust loop claude (max 3 iterations)'
+    )
     expect(context.stdoutLines.join('\n')).toContain('Ctrl+C')
   })
 
@@ -315,7 +336,7 @@ describe('loop', () => {
     }
 
     try {
-      await loop(dependencies, loopDeps)
+      await loopClaude(dependencies, loopDeps)
     } catch (e) {
       if (!(e instanceof LoopBreaker)) throw e
     }
@@ -331,34 +352,131 @@ describe('loop', () => {
         },
       },
     })
-    const fileSystem = dependencies.fileSystem as ReturnType<
-      typeof createFileSystemEmulator
-    >
+    dependencies.arguments = ['1']
     let sleepCalled = false
     let runCount = 0
     const loopDeps: LoopDependencies = {
       spawn: createMockSpawn(),
       run: async () => {
         runCount++
-        if (runCount >= 1) {
-          // Clear tasks by deleting from the emulator's internal files map
-          fileSystem.files.delete('/project/.dust/tasks/task.md')
-        }
       },
       sleep: async () => {
         sleepCalled = true
-        throw new LoopBreaker()
       },
     }
 
-    try {
-      await loop(dependencies, loopDeps)
-    } catch (e) {
-      if (!(e instanceof LoopBreaker)) throw e
+    await loopClaude(dependencies, loopDeps)
+
+    expect(sleepCalled).toBe(false)
+    expect(runCount).toBe(1)
+  })
+
+  test('exits after max iterations', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
+    dependencies.arguments = ['3']
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    let runCount = 0
+    const loopDeps: LoopDependencies = {
+      spawn: createMockSpawn(),
+      run: async () => {
+        runCount++
+      },
+      sleep: async () => {},
     }
 
-    // Sleep was called only after tasks were cleared
-    expect(sleepCalled).toBe(true)
-    expect(runCount).toBe(1)
+    const result = await loopClaude(dependencies, loopDeps)
+
+    expect(runCount).toBe(3)
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Reached max iterations (3)'
+    )
+  })
+
+  test('sleep iterations do not count toward max', async () => {
+    // Create two tasks - one blocked, one unblocked
+    // The blocked task references the unblocked one, so completing unblocked task
+    // would unblock the second one.
+    // But for this test, we just want to verify sleeps don't count:
+    // - Start with one blocked task (sleeps once)
+    // - Add an unblocked task during sleep
+    // - Claude runs twice
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {
+            // This task is blocked because it references a non-existent task
+            // Actually no - blockers are only blocked if the referenced task EXISTS
+            // So we need a different setup: just use an empty tasks dir
+          },
+        },
+      },
+    })
+    // Remove the empty object from files since it's not a valid file
+    const fileSystem = dependencies.fileSystem as ReturnType<
+      typeof createFileSystemEmulator
+    >
+    dependencies.arguments = ['2']
+    let sleepCount = 0
+    let runCount = 0
+
+    const loopDeps: LoopDependencies = {
+      spawn: createMockSpawn(),
+      run: async () => {
+        runCount++
+      },
+      sleep: async () => {
+        sleepCount++
+        // After first sleep, add an unblocked task so Claude can run
+        if (sleepCount === 1) {
+          fileSystem.files.set(
+            '/project/.dust/tasks/task.md',
+            '# Task\n\n## Blocked by\n\n(none)'
+          )
+        }
+      },
+    }
+
+    const result = await loopClaude(dependencies, loopDeps)
+
+    // Should have slept at least once before unblocked tasks appeared
+    expect(sleepCount).toBeGreaterThanOrEqual(1)
+    // Should run exactly max iterations (2)
+    expect(runCount).toBe(2)
+    expect(result.exitCode).toBe(0)
+  })
+
+  test('uses default max iterations when not specified', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    let runCount = 0
+    const loopDeps: LoopDependencies = {
+      spawn: createMockSpawn(),
+      run: async () => {
+        runCount++
+      },
+      sleep: async () => {},
+    }
+
+    await loopClaude(dependencies, loopDeps)
+
+    expect(runCount).toBe(10)
+    expect(context.stdoutLines.join('\n')).toContain('max 10 iterations')
   })
 })

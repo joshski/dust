@@ -21,7 +21,7 @@ import { generateHelpText, help } from './commands/help'
 import { init } from './commands/init'
 import { lintMarkdown } from './commands/lint-markdown'
 import { list } from './commands/list'
-import { loop } from './commands/loop'
+import { loopClaude } from './commands/loop'
 import { next } from './commands/next'
 import { prePush } from './commands/pre-push'
 import { loadSettings } from './settings'
@@ -55,7 +55,7 @@ export const commandRegistry = {
   'agent-implement-task': agentImplementTask,
   'agent-pick-task': agentPickTask,
   'agent-understand-goals': agentUnderstandGoals,
-  loop,
+  'loop-claude': loopClaude,
   'pre-push': prePush,
   help,
 }

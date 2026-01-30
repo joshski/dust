@@ -365,15 +365,7 @@ describe('main', () => {
 
 describe('COMMANDS', () => {
   test('contains expected top-level commands (excludes hyphenated subcommands)', () => {
-    expect(COMMANDS).toEqual([
-      'init',
-      'list',
-      'next',
-      'check',
-      'agent',
-      'loop',
-      'help',
-    ])
+    expect(COMMANDS).toEqual(['init', 'list', 'next', 'check', 'agent', 'help'])
   })
 })
 

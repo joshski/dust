@@ -33,10 +33,14 @@ claude "implement the next task"
 Or let dust run agents continuously [in a sandbox](./.dust/facts/autonomous-agents-need-sandboxes.md) with the [loop](./.dust/facts/loop-command.md) command:
 
 ```bash
-npx dust loop
+npx dust loop claude
 ```
 
-This runs Claude Code in a [ralph loop](https://ghuntley.com/loop/), picking up tasks until none remain.
+This runs Claude Code in a [ralph loop](https://ghuntley.com/loop/), picking up tasks until the iteration limit is reached (default: 10). You can specify a custom limit:
+
+```bash
+npx dust loop claude 5
+```
 
 ## Learn More
 

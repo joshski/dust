@@ -1,12 +1,16 @@
 /**
- * dust loop - Continuous Claude iteration on available tasks
+ * dust loop claude - Continuous Claude iteration on available tasks
  *
  * Runs Claude Code in a loop to work on tasks continuously:
  * 1. Sync with remote (git pull)
  * 2. Check for available tasks via `dust next`
  * 3. If no tasks, sleep and retry
  * 4. If tasks available, invoke Claude Code
- * 5. Repeat until interrupted
+ * 5. Repeat until max iterations reached (default: 10)
+ *
+ * Usage: dust loop claude [max-iterations]
+ * - max-iterations: Maximum number of task iterations (default: 10)
+ * - Sleep iterations (when no tasks) don't count toward max
  */
 
 import { spawn as nodeSpawn } from 'node:child_process'
@@ -29,6 +33,7 @@ export function createDefaultDependencies(): LoopDependencies {
 }
 
 const SLEEP_INTERVAL_MS = 30000
+const DEFAULT_MAX_ITERATIONS = 10
 
 export async function gitPull(
   cwd: string,
@@ -119,24 +124,50 @@ export async function runOneIteration(
   }
 }
 
-export async function loop(
+export function parseMaxIterations(commandArguments: string[]): number {
+  if (commandArguments.length === 0) {
+    return DEFAULT_MAX_ITERATIONS
+  }
+  const parsed = Number.parseInt(commandArguments[0], 10)
+  if (Number.isNaN(parsed) || parsed <= 0) {
+    return DEFAULT_MAX_ITERATIONS
+  }
+  return parsed
+}
+
+export async function loopClaude(
   dependencies: CommandDependencies,
   loopDependencies: LoopDependencies = createDefaultDependencies()
 ): Promise<CommandResult> {
   const { context } = dependencies
+  const maxIterations = parseMaxIterations(dependencies.arguments)
 
   context.stdout(
     'WARNING: This command skips all permission checks. Only use in a sandbox environment!'
   )
   context.stdout('')
-  context.stdout('Starting dust loop...')
+  context.stdout(
+    `Starting dust loop claude (max ${maxIterations} iterations)...`
+  )
   context.stdout('Press Ctrl+C to stop')
   context.stdout('')
 
-  while (true) {
+  let completedIterations = 0
+
+  while (completedIterations < maxIterations) {
     const result = await runOneIteration(dependencies, loopDependencies)
     if (result === 'no_tasks') {
       await loopDependencies.sleep(SLEEP_INTERVAL_MS)
+    } else {
+      // Only count iterations where Claude actually ran (ran_claude or claude_error)
+      completedIterations++
+      context.stdout(
+        `Completed iteration ${completedIterations}/${maxIterations}`
+      )
+      context.stdout('')
     }
   }
+
+  context.stdout(`Reached max iterations (${maxIterations}). Exiting.`)
+  return { exitCode: 0 }
 }
