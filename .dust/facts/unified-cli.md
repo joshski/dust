@@ -3,7 +3,7 @@
 Dust provides a single `dust` command with subcommands for all operations.
 
 - `dust init` - Initialize a new Dust repository
-- `dust validate` - Run validation checks on .dust/ files
+- `dust lint markdown` - Run lint checks on .dust/ files
 - `dust list [type]` - List tasks, ideas, goals, or facts
 - `dust next` - Show tasks ready to work on (not blocked by other tasks)
 - `dust check` - Run quality gates configured in `.dust/config/settings.json`

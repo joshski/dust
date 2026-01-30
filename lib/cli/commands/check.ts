@@ -1,7 +1,7 @@
 /**
  * dust check - Execute project-defined quality gate checks
  *
- * Runs `dust validate` and executes checks from settings.json
+ * Runs `dust lint markdown` and executes checks from settings.json
  * in parallel with buffered output.
  */
 
@@ -12,7 +12,7 @@ import type {
   CommandDependencies,
   CommandResult,
 } from '../types'
-import { validate } from './validate'
+import { lintMarkdown } from './lint-markdown'
 
 export interface CheckResult {
   name: string
@@ -92,15 +92,15 @@ async function runValidationCheck(
     stderr: (msg: string) => outputLines.push(msg),
   }
 
-  const result = await validate({
+  const result = await lintMarkdown({
     ...dependencies,
     context: bufferedContext,
     arguments: [],
   })
 
   return {
-    name: 'validate',
-    command: 'dust validate',
+    name: 'lint markdown',
+    command: 'dust lint markdown',
     exitCode: result.exitCode,
     output: outputLines.join('\n'),
     isBuiltIn: true,

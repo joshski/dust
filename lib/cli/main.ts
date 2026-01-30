@@ -19,11 +19,11 @@ import { agentUnderstandGoals } from './commands/agent-understand-goals'
 import { check } from './commands/check'
 import { generateHelpText, help } from './commands/help'
 import { init } from './commands/init'
+import { lintMarkdown } from './commands/lint-markdown'
 import { list } from './commands/list'
 import { loop } from './commands/loop'
 import { next } from './commands/next'
 import { prePush } from './commands/pre-push'
-import { validate } from './commands/validate'
 import { loadSettings } from './settings'
 import type {
   CommandContext,
@@ -43,7 +43,7 @@ import type {
  */
 export const commandRegistry = {
   init,
-  validate,
+  'lint-markdown': lintMarkdown,
   list,
   next,
   check,

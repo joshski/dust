@@ -86,7 +86,7 @@ describe('generateHelpText', () => {
 
     expect(text).toContain('dust')
     expect(text).toContain('init')
-    expect(text).toContain('validate')
+    expect(text).toContain('lint markdown')
   })
 
   test('generates help text with custom command', () => {

@@ -12,7 +12,7 @@ Follow these steps:
 6. Add a `## Goals` section with links to relevant goals this task supports (e.g., `- [Goal Name](../goals/goal-name.md)`)
 7. Add a `## Blocked by` section listing any tasks that must complete first, or `(none)` if there are no blockers
 8. Add a `## Definition of done` section with a checklist of completion criteria using `- [ ]` for each item
-9. Run `{{bin}} validate` to catch any issues with the task format
+9. Run `{{bin}} lint markdown` to catch any issues with the task format
 10. Create a single atomic commit with a message in the format "Add task: <title>" that includes:
     - The new task file
     - Deletion of any ideas that were fully realized

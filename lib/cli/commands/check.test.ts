@@ -496,7 +496,7 @@ describe('check with validation', () => {
     expect(result.exitCode).toBe(0)
     expect(bufferedRunner.calls).toHaveLength(1)
     // Validation is now shown as a check result
-    expect(context.stdoutLines).toContain('✓ validate')
+    expect(context.stdoutLines).toContain('✓ lint markdown')
     expect(context.stdoutLines).toContain('✓ lint')
     expect(context.stdoutLines).toContain('2/2 checks passed')
   })
@@ -530,7 +530,7 @@ describe('check with validation', () => {
     expect(result.exitCode).toBe(1)
     // Checks now run in parallel, so lint still runs
     expect(bufferedRunner.calls).toHaveLength(1)
-    expect(context.stdoutLines).toContain('✗ validate')
+    expect(context.stdoutLines).toContain('✗ lint markdown')
     expect(context.stdoutLines).toContain('✓ lint')
     expect(context.stdoutLines).toContain('1/2 checks passed')
   })
@@ -554,7 +554,7 @@ describe('check with validation', () => {
     expect(result.exitCode).toBe(0)
     expect(bufferedRunner.calls).toHaveLength(1)
     // No validation check in results when .dust doesn't exist
-    expect(context.stdoutLines).not.toContain('✓ validate')
+    expect(context.stdoutLines).not.toContain('✓ lint markdown')
     expect(context.stdoutLines).toContain('1/1 checks passed')
   })
 })
