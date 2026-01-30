@@ -38,6 +38,20 @@ An array of quality gate checks run by `dust check`. Each check has a `name` and
 }
 ```
 
+Each check can optionally include a `hints` array with helpful suggestions shown when the check fails:
+
+```json
+{
+  "checks": [
+    {
+      "name": "lint",
+      "command": "npm run lint",
+      "hints": ["Run 'npm run lint:fix' to auto-fix issues"]
+    }
+  ]
+}
+```
+
 Checks run in parallel with buffered output. The `dust check` command also runs `dust lint markdown` as a built-in check.
 
 ## Implementation
