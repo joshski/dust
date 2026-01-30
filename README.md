@@ -4,12 +4,13 @@ A workflow tool for keeping AI coding agents on track.
 
 [![CI](https://github.com/joshski/dust/actions/workflows/ci.yml/badge.svg)](https://github.com/joshski/dust/actions/workflows/ci.yml)
 
-## Why Use This?
+## Approach
 
-AI coding agents lose effectiveness when overwhelmed with context. Dust keeps them focused through [progressive disclosure](./.dust/goals/progressive-disclosure.md):
+AI coding agents lose effectiveness when overwhelmed with context. Dust provides a CLI that agents use to progressively explore your priorities and knowledge — discovering what they need, when they need it, rather than receiving everything upfront.
 
-- **Facts** — project knowledge revealed through exploration, not dumped upfront
-- **Tasks** — a queue of work, each with clear requirements and definition of done
+- **Facts** — project knowledge revealed through exploration
+- **Goals** — high-level priorities that inform decisions
+- **Tasks** — small, concrete work items with clear acceptance criteria
 - **Checks** — quality gates that surface failures but stay quiet when things pass
 
 Agents pick tasks, discover what they need to know, verify checks pass, and move on. You add tasks, review commits, and steer direction.
