@@ -27,12 +27,25 @@ The `lib/templates/agent-greeting.txt` template guides agents to select the corr
 
 4. **First eval**: Design a simple first eval case that tests whether a user saying "add a task to fix the login bug" results in the agent running `bin/dust agent new task`.
 
-## Technical considerations
+## Technical approach
 
-- May need to use `claude --dangerously-skip-permissions` or similar for unattended execution
-- Need to capture what commands the agent ran (possibly via hooks or log parsing)
-- Consider whether to use actual Claude API calls or mock responses for initial framework setup
-- The eval framework itself should be testable without making API calls
+### Directory setup
+Each eval is a directory containing:
+- `setup.sh` - Bash script that creates the isolated test directory with required state (git history, files, .dust contents, etc.)
+- `eval.json` - Defines the user prompt and evaluation criteria
+
+### Execution
+1. Run `setup.sh` to create isolated test directory (e.g., in `/tmp/dust-eval-xxx/`)
+2. Run agent via `lib/claude/spawn-claude-code.ts` with:
+   - `cwd` pointing to test directory
+   - `dangerouslySkipPermissions: true`
+   - Collect all events (especially `ToolUseEvent` for commands run)
+3. Send collected transcript to Haiku with evaluation prompt
+4. Haiku determines pass/fail based on whether agent behavior matched expectations
+5. Report results
+
+### Why Haiku for evaluation
+Using a separate Claude session (Haiku) to judge outcomes allows flexible evaluation criteria without brittle string matching. The evaluator can understand intent rather than requiring exact command matches.
 
 ## Goals
 
