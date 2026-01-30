@@ -15,6 +15,17 @@ const SECTION_HEADERS: Record<ListType, string> = {
   facts: '📄 Facts',
 }
 
+const TYPE_EXPLANATIONS: Record<ListType, string> = {
+  tasks:
+    'Tasks are detailed work plans with dependencies and completion criteria. Each task describes a specific piece of work to be done.',
+  ideas:
+    "Ideas are future feature notes and proposals. Ideas capture possibilities that haven't yet been refined into actionable tasks.",
+  goals:
+    'Goals are mission statements and guiding principles. Goals describe desired outcomes and values that inform decision-making.',
+  facts:
+    'Facts are current state documentation. Facts capture how things work today, providing context for agents and contributors.',
+}
+
 const colors = {
   reset: '\x1b[0m',
   bold: '\x1b[1m',
@@ -60,6 +71,8 @@ export async function list(
       if (specificTypeRequested) {
         context.stdout(SECTION_HEADERS[type])
         context.stdout('')
+        context.stdout(TYPE_EXPLANATIONS[type])
+        context.stdout('')
         context.stdout(`No ${type} found.`)
         context.stdout('')
       }
@@ -67,6 +80,8 @@ export async function list(
     }
 
     context.stdout(SECTION_HEADERS[type])
+    context.stdout('')
+    context.stdout(TYPE_EXPLANATIONS[type])
     context.stdout('')
 
     for (const file of mdFiles) {

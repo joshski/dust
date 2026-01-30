@@ -232,4 +232,91 @@ describe('list command', () => {
     expect(output).toContain('💡 Ideas')
     expect(output).toContain('No ideas found.')
   })
+
+  test('shows type explanation for tasks', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# My Task' },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['tasks']))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain(
+      'Tasks are detailed work plans with dependencies and completion criteria'
+    )
+  })
+
+  test('shows type explanation for ideas', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'idea.md': '# My Idea' },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['ideas']))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('Ideas are future feature notes and proposals')
+  })
+
+  test('shows type explanation for goals', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: { 'goal.md': '# My Goal' },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['goals']))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain(
+      'Goals are mission statements and guiding principles'
+    )
+  })
+
+  test('shows type explanation for facts', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          facts: { 'fact.md': '# My Fact' },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['facts']))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('Facts are current state documentation')
+  })
+
+  test('shows type explanation even when no items exist', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: {},
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['tasks']))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain(
+      'Tasks are detailed work plans with dependencies and completion criteria'
+    )
+    expect(output).toContain('No tasks found.')
+  })
 })
