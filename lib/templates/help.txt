@@ -1,24 +1,27 @@
-dust - A lightweight planning system for human-AI collaboration
+💨 dust - A workflow tool for keeping AI coding agents on track.
 
 Usage: {{bin}} <command> [options]
 
 Commands:
-  init              Initialize a new Dust repository
-  validate          Run validation checks on .dust/ files
-  list [type]       List items (tasks, ideas, goals, facts)
-  next              Show tasks ready to work on (not blocked)
-  check             Run project-defined quality gate hook
-  agent [cmd]       Agent-specific guidance (work, tasks, goals, ideas, help)
-  loop              Run continuous Claude iteration on tasks
-  help              Show this help message
+  init                      Initialize a new Dust repository
+  validate                  Run validation checks on .dust/ files
+  list                      List all items (tasks, ideas, goals, facts)
+  list tasks                List tasks (actionable work with definitions of done)
+  list ideas                List ideas (vague proposals, convert to tasks when ready)
+  list goals                List goals (guiding principles, stable, rarely change)
+  list facts                List facts (documentation of current system state)
+  next                      Show tasks ready to work on (not blocked)
+  check                     Run project-defined quality gate hook
+  agent                     Agent greeting and routing instructions
+  agent help                Show agent guidance
+  agent pick task           Pick the next task to work on
+  agent implement task      Implement a task
+  agent new task            Create a new task
+  agent new goal            Create a new goal
+  agent new idea            Working with ideas
+  agent understand goals    Understanding goals
+  loop                      Run continuous Claude iteration on tasks
+  pre-push                  Git pre-push hook validation
+  help                      Show this help message
 
-Examples:
-  {{bin}} init
-  {{bin}} validate
-  {{bin}} list tasks
-  {{bin}} list
-  {{bin}} next
-  {{bin}} check
-  {{bin}} agent work
-
-If you are an AI agent, run `{{bin}} agent` now!
+🤖 If you are an AI agent, run `{{bin}} agent` to get started!

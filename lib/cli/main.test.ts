@@ -79,7 +79,7 @@ describe('runCommand', () => {
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain(
-      'dust - A lightweight planning system'
+      '💨 dust - A workflow tool for keeping AI coding agents on track'
     )
   })
 
@@ -114,7 +114,7 @@ describe('main', () => {
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain(
-      'dust - A lightweight planning system'
+      '💨 dust - A workflow tool for keeping AI coding agents on track'
     )
     expect(context.stdoutLines.join('\n')).toContain(
       'Usage: npx dust <command>'
@@ -134,7 +134,7 @@ describe('main', () => {
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain(
-      'dust - A lightweight planning system'
+      '💨 dust - A workflow tool for keeping AI coding agents on track'
     )
   })
 
@@ -465,22 +465,12 @@ describe('HELP_TEXT', () => {
     expect(HELP_TEXT).toContain('agent')
     expect(HELP_TEXT).toContain('help')
   })
-
-  test('contains examples', () => {
-    expect(HELP_TEXT).toContain('Examples:')
-    expect(HELP_TEXT).toContain('dust init')
-  })
 })
 
 describe('generateHelpText', () => {
   test('uses custom binary path in usage', () => {
     const helpText = generateHelpText({ dustCommand: 'bin/dust' })
     expect(helpText).toContain('Usage: bin/dust <command>')
-  })
-
-  test('uses custom binary path in examples', () => {
-    const helpText = generateHelpText({ dustCommand: 'bin/dust' })
-    expect(helpText).toContain('bin/dust init')
   })
 
   test('uses custom binary path in agent pointer', () => {
