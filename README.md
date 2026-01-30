@@ -2,7 +2,7 @@
 
 A tool for keeping AI coding agents on track.
 
-AI coding agents lose effectiveness when overwhelmed with context. Dust provides a CLI that agents use to progressively explore your priorities and knowledge. Just what they need, when they need it.
+Dust provides a CLI that agents use to progressively explore your priorities and knowledge.
 
 [![CI](https://github.com/joshski/dust/actions/workflows/ci.yml/badge.svg)](https://github.com/joshski/dust/actions/workflows/ci.yml)
 
