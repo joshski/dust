@@ -29,11 +29,7 @@ Or let dust run agents continuously [in a sandbox](./.dust/facts/autonomous-agen
 npx dust loop claude
 ```
 
-This runs Claude Code in a [ralph loop](https://ghuntley.com/loop/), picking up tasks until the iteration limit is reached (default: 10). You can specify a custom limit:
-
-```bash
-npx dust loop claude 5
-```
+This runs Claude Code in a [ralph loop](https://ghuntley.com/loop/), picking up tasks until they are all done.
 
 ## Learn More
 
