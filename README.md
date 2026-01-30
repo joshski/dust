@@ -1,6 +1,6 @@
 # Dust
 
-A tool for keeping AI coding agents on track.
+**A tool for keeping AI coding agents on track.**
 
 Dust provides a CLI that agents use to progressively explore your priorities and knowledge.
 
