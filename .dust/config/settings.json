@@ -3,7 +3,7 @@
   "installDependenciesHint": "Run `bun install`",
   "checks": [
     {
-      "name": "lint",
+      "name": "lint typescript",
       "command": "bunx biome check .",
       "hints": [
         "Run `bun install` if this is a fresh checkout",

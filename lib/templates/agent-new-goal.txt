@@ -11,7 +11,7 @@ Follow these steps:
    - What this goal means in practice
    - Why it matters for the project
    - How to evaluate whether work supports this goal
-5. Run `{{bin}} validate` to catch any formatting issues
+5. Run `{{bin}} lint markdown` to catch any formatting issues
 6. Create a single atomic commit with a message in the format "Add goal: <title>"
 7. Push your commit to the remote repository
 

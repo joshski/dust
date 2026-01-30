@@ -6,13 +6,13 @@ import {
 } from '../test-utilities'
 import type { CommandContext, CommandDependencies } from '../types'
 import {
-  validate,
+  lintMarkdown,
   validateFilename,
   validateLinks,
   validateOpeningSentence,
   validateSemanticLinks,
   validateTaskHeadings,
-} from './validate'
+} from './lint-markdown'
 
 function createDependencies(
   context: CommandContext,
@@ -291,12 +291,12 @@ describe('validateSemanticLinks', () => {
   })
 })
 
-describe('validate command', () => {
+describe('lintMarkdown command', () => {
   test('fails if .dust not found', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator()
 
-    const result = await validate(createDependencies(context, fileSystem))
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain(
@@ -324,7 +324,7 @@ This is a task.
       },
     })
 
-    const result = await validate(createDependencies(context, fileSystem))
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain('All validations passed')
@@ -340,7 +340,7 @@ This is a task.
       },
     })
 
-    const result = await validate(createDependencies(context, fileSystem))
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain('violation')
@@ -361,7 +361,7 @@ This is a task.
       },
     })
 
-    const result = await validate(createDependencies(context, fileSystem))
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain(
@@ -392,7 +392,7 @@ This is a task.
       },
     })
 
-    const result = await validate(createDependencies(context, fileSystem))
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain('All validations passed')
@@ -414,7 +414,7 @@ This is a task.
       },
     })
 
-    await validate(createDependencies(context, fileSystem))
+    await lintMarkdown(createDependencies(context, fileSystem))
 
     // Broken link violations include line numbers
     const output = context.stderrLines.join('\n')
@@ -437,7 +437,7 @@ This is a task.
       },
     })
 
-    await validate(createDependencies(context, fileSystem))
+    await lintMarkdown(createDependencies(context, fileSystem))
 
     // Filename violations don't have line numbers
     const output = context.stderrLines.join('\n')
@@ -458,7 +458,7 @@ This is a task.
       },
     })
 
-    const result = await validate(createDependencies(context, fileSystem))
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain('All validations passed')
@@ -484,7 +484,7 @@ This is a task.
       },
     })
 
-    const result = await validate(createDependencies(context, fileSystem))
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(1)
     const output = context.stderrLines.join('\n')
@@ -509,7 +509,7 @@ This is a task.
       },
     })
 
-    const result = await validate(createDependencies(context, fileSystem))
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(1)
     const output = context.stderrLines.join('\n')

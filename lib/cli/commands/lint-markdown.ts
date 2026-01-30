@@ -1,5 +1,5 @@
 /**
- * dust validate - Run validation checks on Dust repository
+ * dust lint markdown - Run lint checks on .dust/ markdown files
  */
 
 import { dirname, resolve } from 'node:path'
@@ -201,7 +201,7 @@ export function validateSemanticLinks(
   return violations
 }
 
-export async function validate(
+export async function lintMarkdown(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
   const { context, fileSystem, globScanner: glob } = dependencies

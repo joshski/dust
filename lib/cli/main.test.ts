@@ -274,14 +274,14 @@ describe('main', () => {
     expect(result.exitCode).toBe(0)
   })
 
-  test('routes validate command correctly', async () => {
+  test('routes lint markdown command correctly', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: { '.dust': {} },
     })
 
     const result = await main({
-      commandArguments: ['validate'],
+      commandArguments: ['lint', 'markdown'],
       context,
       fileSystem,
       glob: fileSystem,
@@ -319,7 +319,7 @@ describe('main', () => {
       glob: fileSystem,
     })
 
-    // check command runs validate first, which should pass with empty .dust
+    // check command runs lint markdown first, which should pass with empty .dust
     expect(typeof result.exitCode).toBe('number')
   })
 
@@ -367,7 +367,6 @@ describe('COMMANDS', () => {
   test('contains expected top-level commands (excludes hyphenated subcommands)', () => {
     expect(COMMANDS).toEqual([
       'init',
-      'validate',
       'list',
       'next',
       'check',
@@ -458,7 +457,7 @@ describe('HELP_TEXT', () => {
 
   test('documents all commands', () => {
     expect(HELP_TEXT).toContain('init')
-    expect(HELP_TEXT).toContain('validate')
+    expect(HELP_TEXT).toContain('lint markdown')
     expect(HELP_TEXT).toContain('list')
     expect(HELP_TEXT).toContain('next')
     expect(HELP_TEXT).toContain('check')

@@ -38,7 +38,7 @@ An array of quality gate checks run by `dust check`. Each check has a `name` and
 }
 ```
 
-Checks run in parallel with buffered output. The `dust check` command also runs `dust validate` as a built-in check.
+Checks run in parallel with buffered output. The `dust check` command also runs `dust lint markdown` as a built-in check.
 
 ## Implementation
 

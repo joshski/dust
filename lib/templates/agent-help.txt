@@ -11,7 +11,7 @@ Dust is a lightweight planning system. The `.dust/` directory contains:
 - `{{bin}} check` - Run quality gates (do this before and after work)
 - `{{bin}} next` - Show tasks ready to work on
 - `{{bin}} list [type]` - List artifacts (tasks, ideas, goals, facts)
-- `{{bin}} validate` - Check .dust/ files for errors
+- `{{bin}} lint markdown` - Check .dust/ files for errors
 
 **Workflow:** Pick a task, implement it, delete the task file, commit atomically.
 
