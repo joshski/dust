@@ -1,129 +1,47 @@
 # Dust
 
-A lightweight workflow tool for humans working with AI agents.
+A workflow tool for keeping AI coding agents on track.
 
 [![CI](https://github.com/joshski/dust/actions/workflows/ci.yml/badge.svg)](https://github.com/joshski/dust/actions/workflows/ci.yml)
 
-## Why Would I Use This?
+## Why Use This?
 
-Use this to plan a series of tasks that coding agents can perform autonomously.
+AI coding agents work best with clear tasks and fast feedback. Dust gives them both:
 
-## Getting Started
+- **Tasks** — a queue of work, each with clear requirements and definition of done
+- **Checks** — quality gates (tests, lint, build) that run before and after changes
 
-Install dust using your package manager of choice (`npm` and `bun` officially supported for now):
+Agents pick tasks, implement them, verify checks pass, and move on. You add tasks, review commits, and steer direction.
+
+## Quick Start
 
 ```bash
 npm install @joshski/dust
-```
-
-Initialize dust in your repository:
-
-```bash
 npx dust init
 ```
 
-## How It Works
+This creates a [.dust](./.dust/facts/dust-directory-structure.md) directory and adds an [instruction](./.dust/facts/agents-md-instruction.md) to your `AGENTS.md` file.
 
-The [.dust](./.dust) directory in your repository contains 4 sets of markdown files:
+## Running Agents
 
-```
-.dust/
-├── goals/    # Mission statements explaining why the project exists
-├── ideas/    # Brief notes about future tasks (intentionally vague)
-├── tasks/    # Detailed work plans with dependencies and definition of done
-└── facts/    # Current state: design, architecture, rules, invariants
-```
-
-These files are used to facilitate exploration and management of AI agent workflow.
-
-## Workflow
-
-Progress is tracked via changes to markdown files in the `.dust/` directory. The four directories together (`goals/`, `ideas/`, `tasks/`, `facts/`) act as a kanban system for managing work.
-
-The `tasks/` directory acts as a work queue. When a task is completed, the commit typically includes both the code changes and the deletion of the task file—removing work from the queue for subsequent agents.
-
-Humans primarily interact with `dust` using their AI coding agent of choice, e.g.
-
-```
-> claude "implement the next task"
-> claude "get to work!"
-> codex "add task: coverage reporting"
-> codex "goal: cross-platform compatibility"
-```
-
-Agents discover everything they need to know to interpret human prompts using the `dust` CLI.
-
-## Agent CLI
-
-The `dust` CLI is intended to be used primarily by agents, not by humans (except for the `init` command, as mentioned above).
-
-Don't let that stop you:
+Start an agent on a single task:
 
 ```bash
-npx dust help
+claude "implement the next task"
 ```
 
-## AGENTS.md
+Or let dust run agents continuously [in a sandbox](./.dust/facts/autonomous-agents-need-sandboxes.md) with the [loop](./.dust/facts/loop-command.md) command:
 
-Add a line like this to your `AGENTS.md` or `CLAUDE.md` file:
-
-```markdown
-Always immediately run `npx dust agent` when you start working in this repository.
+```bash
+npx dust loop
 ```
 
-In fact, you might find it effective to use that as the _only_ line in those files. Essential documentation should be discoverable by agents exploring your `./.dust` directory.
+This runs Claude Code in a [ralph loop](https://ghuntley.com/loop/), picking up tasks until none remain.
 
-## Configuration
+## Learn More
 
-Configure dust in `./.dust/config/settings.json` e.g.
+Details live in the [.dust/facts](./.dust/facts) directory:
 
-```json
-{
-  "dustCommand": "bunx dust",
-  "checks": [
-    { "name": "lint", "command": "bunx biome check ." },
-    { "name": "build", "command": "bun run build" },
-    { "name": "tests", "command": "bun run test:coverage" },
-    { "name": "typecheck", "command": "bunx tsc --noEmit lib/**/*.ts" }
-  ]
-}
-```
-
-The `dust check` command will run all of the configured checks in parallel and produce a very terse (context window-friendly) output unless one or more of the checks fail.
-
-### Check Failure Hints
-
-Add optional `hints` to help agents recover from check failures:
-
-```json
-{
-  "checks": [
-    {
-      "name": "build",
-      "command": "npm run build",
-      "hints": [
-        "Run `npm install` if this is a fresh checkout",
-        "Check for TypeScript errors in the files you modified"
-      ]
-    }
-  ]
-}
-```
-
-When a check fails, hints are displayed after the error output:
-
-```
-✓ validate
-✗ build
-
-> npm run build
-error TS2307: Cannot find module 'lodash'...
-
-Hints for fixing 'build':
-  - Run `npm install` if this is a fresh checkout
-  - Check for TypeScript errors in the files you modified
-
-1/2 checks passed
-```
-
-Agents are instructed to run `dust check` before and after any changes, as a way of keeping them on track. It's more important that these commands are comprehensive, than they are fast.
+- [Directory Structure](./.dust/facts/dust-directory-structure.md) — how `.dust/` is organized
+- [Configuration](./.dust/facts/configuration-system.md) — settings and quality checks
+- [CLI Commands](./.dust/facts/unified-cli.md) — full command reference
