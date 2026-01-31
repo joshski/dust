@@ -210,9 +210,9 @@ export const defaultTestSettings: DustSettings = { dustCommand: 'dust' }
  * Strips ANSI escape codes from a string for cleaner test assertions.
  * Useful when testing output that may contain colors or formatting.
  */
-export function stripAnsi(str: string): string {
-  // eslint-disable-next-line no-control-regex
-  return str.replace(/\x1b\[[0-9;]*m/g, '')
+export function stripAnsi(text: string): string {
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI codes require escape sequences
+  return text.replace(/\x1b\[[0-9;]*m/g, '')
 }
 
 /**

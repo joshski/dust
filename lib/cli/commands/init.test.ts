@@ -117,7 +117,9 @@ describe('init command', () => {
     expect(fileSystem.writtenFiles.has('/project/CLAUDE.md')).toBe(true)
     const content = fileSystem.writtenFiles.get('/project/CLAUDE.md')
     expect(content).toContain('npx dust agent')
-    expect(stripAnsi(context.stdoutLines.join('\n'))).toContain('Created CLAUDE.md')
+    expect(stripAnsi(context.stdoutLines.join('\n'))).toContain(
+      'Created CLAUDE.md'
+    )
   })
 
   test('creates AGENTS.md with agent instructions', async () => {
@@ -137,7 +139,9 @@ describe('init command', () => {
     expect(fileSystem.writtenFiles.has('/project/AGENTS.md')).toBe(true)
     const content = fileSystem.writtenFiles.get('/project/AGENTS.md')
     expect(content).toContain('npx dust agent')
-    expect(stripAnsi(context.stdoutLines.join('\n'))).toContain('Created AGENTS.md')
+    expect(stripAnsi(context.stdoutLines.join('\n'))).toContain(
+      'Created AGENTS.md'
+    )
   })
 
   test('warns when CLAUDE.md already exists', async () => {
