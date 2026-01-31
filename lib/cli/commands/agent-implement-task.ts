@@ -4,18 +4,6 @@
  * Displays guidance for implementing tasks.
  */
 
-import { loadTemplate } from '../templates'
-import type { CommandDependencies, CommandResult } from '../types'
-import { manageGitHooks, templateVariables } from './agent-shared'
+import { createTemplateCommand } from './template-command'
 
-export async function agentImplementTask(
-  dependencies: CommandDependencies
-): Promise<CommandResult> {
-  const { context, settings } = dependencies
-
-  const hooksInstalled = await manageGitHooks(dependencies)
-  const vars = templateVariables(settings, hooksInstalled)
-
-  context.stdout(loadTemplate('agent-implement-task', vars))
-  return { exitCode: 0 }
-}
+export const agentImplementTask = createTemplateCommand('agent-implement-task')

@@ -4,19 +4,6 @@
  * Displays the welcome message and command routing guidance for AI agents.
  */
 
-import { loadTemplate } from '../templates'
-import type { CommandDependencies, CommandResult } from '../types'
-import { manageGitHooks, templateVariables } from './agent-shared'
+import { createTemplateCommand } from './template-command'
 
-export async function agent(
-  dependencies: CommandDependencies
-): Promise<CommandResult> {
-  const { context, settings } = dependencies
-
-  // Manage git hooks when agent command is invoked
-  const hooksInstalled = await manageGitHooks(dependencies)
-  const vars = templateVariables(settings, hooksInstalled)
-
-  context.stdout(loadTemplate('agent-greeting', vars))
-  return { exitCode: 0 }
-}
+export const agent = createTemplateCommand('agent-greeting')
