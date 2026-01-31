@@ -10,4 +10,4 @@ Scripts and tooling should execute quickly so developers can iterate rapidly. Sl
 
 ## Sub-Goals
 
-- [Bun-Compatible Tests](bun-compatible-tests.md)
+- [Runtime Agnostic Tests](runtime-agnostic-tests.md)
