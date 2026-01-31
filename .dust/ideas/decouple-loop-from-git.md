@@ -4,4 +4,4 @@ The `ralph loop claude` command currently has git dependencies that could be abs
 
 Decoupling from git would allow dust to work with other version control systems or even non-VCS workflows.
 
-Related to a potential "VCS agnostic" goal.
+Related to [VCS Agnostic](../goals/vcs-agnostic.md).
