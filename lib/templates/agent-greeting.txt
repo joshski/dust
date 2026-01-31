@@ -1,4 +1,4 @@
-🤖 Hello Agent, welcome to dust!
+🤖 Hello {{agentName}}, welcome to dust!
 
 CRITICAL: You MUST run exactly ONE of the commands below before doing anything else.
 
