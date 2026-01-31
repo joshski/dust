@@ -34,12 +34,14 @@ export function templateVariables(
   hooksInstalled: boolean,
   env: NodeJS.ProcessEnv = process.env
 ) {
+  const agentName = detectAgent(env)
   return {
     bin: settings.dustCommand,
-    agentName: detectAgent(env),
+    agentName,
     installDependenciesHint:
       settings.installDependenciesHint || 'Install any dependencies',
     hooksInstalled: hooksInstalled ? 'true' : 'false',
+    isClaudeCodeWeb: agentName === 'Claude Code Web' ? 'true' : '',
   }
 }
 

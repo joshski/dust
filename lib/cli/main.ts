@@ -25,6 +25,7 @@ import { list } from './commands/list'
 import { loopClaude } from './commands/loop'
 import { next } from './commands/next'
 import { prePush } from './commands/pre-push'
+import { subagentNewTask } from './commands/subagent-new-task'
 import { facts, goals, ideas, tasks } from './commands/type-list'
 import type {
   CommandContext,
@@ -60,6 +61,7 @@ export const commandRegistry = {
   'agent-implement-task': agentImplementTask,
   'agent-pick-task': agentPickTask,
   'agent-understand-goals': agentUnderstandGoals,
+  'subagent-new-task': subagentNewTask,
   'loop-claude': loopClaude,
   'pre-push': prePush,
   help,
