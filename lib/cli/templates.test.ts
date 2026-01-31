@@ -20,9 +20,9 @@ describe('template conditionals', () => {
       bin: 'dust',
       hooksInstalled: 'true',
     })
-    // When hooksInstalled is true, commit step is 4 (no check step)
-    expect(result).toContain('4. Create a single atomic commit')
-    expect(result).toContain('5. Push your commit')
+    // When hooksInstalled is true, commit step is 5 (no check step)
+    expect(result).toContain('5. Create a single atomic commit')
+    expect(result).toContain('6. Push your commit')
   })
 
   test('{{#if variable}} hides block when variable is false', () => {
@@ -30,9 +30,9 @@ describe('template conditionals', () => {
       bin: 'dust',
       hooksInstalled: 'false',
     })
-    // When hooksInstalled is false, commit step is 5 (after check step)
-    expect(result).toContain('5. Create a single atomic commit')
-    expect(result).toContain('6. Push your commit')
+    // When hooksInstalled is false, commit step is 6 (after check step)
+    expect(result).toContain('6. Create a single atomic commit')
+    expect(result).toContain('7. Push your commit')
   })
 
   test('{{#unless variable}} shows block when variable is false', () => {
@@ -41,6 +41,6 @@ describe('template conditionals', () => {
       hooksInstalled: 'false',
     })
     // When hooksInstalled is false, should include the manual check reminder
-    expect(result).toContain('4. Run `dust check` before committing')
+    expect(result).toContain('5. Run `dust check` before committing')
   })
 })
