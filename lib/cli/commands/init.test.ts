@@ -3,6 +3,7 @@ import {
   createContextEmulator,
   createFileSystemEmulator,
   restoreEnv,
+  stripAnsi,
   stubEnv,
 } from '../../test/test-utilities'
 import type { CommandDependencies } from '../types'
@@ -75,10 +76,9 @@ describe('init command', () => {
 
     await init(dependencies)
 
-    expect(context.stdoutLines.join('\n')).toContain(
-      'Initialized Dust repository'
-    )
-    expect(context.stdoutLines.join('\n')).toContain('Created directories')
+    const output = stripAnsi(context.stdoutLines.join('\n'))
+    expect(output).toContain('Initialized Dust repository')
+    expect(output).toContain('Created directories')
   })
 
   test('shows notification when .dust already exists', async () => {
@@ -117,7 +117,7 @@ describe('init command', () => {
     expect(fileSystem.writtenFiles.has('/project/CLAUDE.md')).toBe(true)
     const content = fileSystem.writtenFiles.get('/project/CLAUDE.md')
     expect(content).toContain('npx dust agent')
-    expect(context.stdoutLines.join('\n')).toContain('Created CLAUDE.md')
+    expect(stripAnsi(context.stdoutLines.join('\n'))).toContain('Created CLAUDE.md')
   })
 
   test('creates AGENTS.md with agent instructions', async () => {
@@ -137,7 +137,7 @@ describe('init command', () => {
     expect(fileSystem.writtenFiles.has('/project/AGENTS.md')).toBe(true)
     const content = fileSystem.writtenFiles.get('/project/AGENTS.md')
     expect(content).toContain('npx dust agent')
-    expect(context.stdoutLines.join('\n')).toContain('Created AGENTS.md')
+    expect(stripAnsi(context.stdoutLines.join('\n'))).toContain('Created AGENTS.md')
   })
 
   test('warns when CLAUDE.md already exists', async () => {
@@ -157,10 +157,9 @@ describe('init command', () => {
     await init(dependencies)
 
     expect(fileSystem.writtenFiles.has('/project/CLAUDE.md')).toBe(false)
-    expect(context.stdoutLines.join('\n')).toContain(
-      'Warning: CLAUDE.md already exists'
-    )
-    expect(context.stdoutLines.join('\n')).toContain('npx dust agent')
+    const output = stripAnsi(context.stdoutLines.join('\n'))
+    expect(output).toContain('Warning: CLAUDE.md already exists')
+    expect(output).toContain('npx dust agent')
   })
 
   test('warns when AGENTS.md already exists', async () => {
@@ -180,10 +179,9 @@ describe('init command', () => {
     await init(dependencies)
 
     expect(fileSystem.writtenFiles.has('/project/AGENTS.md')).toBe(false)
-    expect(context.stdoutLines.join('\n')).toContain(
-      'Warning: AGENTS.md already exists'
-    )
-    expect(context.stdoutLines.join('\n')).toContain('npx dust agent')
+    const output = stripAnsi(context.stdoutLines.join('\n'))
+    expect(output).toContain('Warning: AGENTS.md already exists')
+    expect(output).toContain('npx dust agent')
   })
 
   test('uses bunx when bun.lockb exists', async () => {
@@ -315,7 +313,7 @@ describe('init command', () => {
 
     await init(dependencies)
 
-    expect(context.stdoutLines.join('\n')).toContain(
+    expect(stripAnsi(context.stdoutLines.join('\n'))).toContain(
       'Created settings: .dust/config/settings.json'
     )
   })
@@ -456,7 +454,7 @@ describe('init command', () => {
 
     await init(dependencies)
 
-    const output = context.stdoutLines.join('\n')
+    const output = stripAnsi(context.stdoutLines.join('\n'))
     expect(output).toContain('> npx claude')
     expect(output).toContain('> npx codex')
   })
@@ -476,7 +474,7 @@ describe('init command', () => {
 
     await init(dependencies)
 
-    const output = context.stdoutLines.join('\n')
+    const output = stripAnsi(context.stdoutLines.join('\n'))
     expect(output).toContain('> bunx claude')
     expect(output).toContain('> bunx codex')
   })
@@ -496,7 +494,7 @@ describe('init command', () => {
 
     await init(dependencies)
 
-    const output = context.stdoutLines.join('\n')
+    const output = stripAnsi(context.stdoutLines.join('\n'))
     expect(output).toContain('> pnpx claude')
     expect(output).toContain('> pnpx codex')
   })
