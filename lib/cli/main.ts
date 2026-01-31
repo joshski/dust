@@ -25,6 +25,7 @@ import { list } from './commands/list'
 import { loopClaude } from './commands/loop'
 import { next } from './commands/next'
 import { prePush } from './commands/pre-push'
+import { facts, goals, ideas, tasks } from './commands/type-list'
 import type {
   CommandContext,
   CommandDependencies,
@@ -45,6 +46,10 @@ export const commandRegistry = {
   init,
   'lint-markdown': lintMarkdown,
   list,
+  tasks,
+  goals,
+  ideas,
+  facts,
   next,
   check,
   agent,
