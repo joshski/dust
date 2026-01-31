@@ -6,9 +6,14 @@ import {
 } from '../../test/test-utilities'
 import type { CommandContext, CommandDependencies } from '../types'
 import {
+  extractGoalRelationships,
   lintMarkdown,
+  validateBidirectionalLinks,
   validateFilename,
+  validateGoalHierarchyLinks,
+  validateGoalHierarchySections,
   validateLinks,
+  validateNoCycles,
   validateOpeningSentence,
   validateSemanticLinks,
   validateTaskHeadings,
@@ -309,7 +314,20 @@ describe('lintMarkdown command', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'goal.md': '# Goal\n\nThis is a goal.' },
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
           tasks: {
             'my-task.md': `# Task
 
@@ -375,7 +393,20 @@ This is a task.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'goal.md': '# Goal\n\nThis is a goal.' },
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
           tasks: {
             'my-task.md': `# Task
 
@@ -453,7 +484,20 @@ This is a task.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'goal.md': '# Goal\n\nThis is a goal.' },
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
         },
       },
     })
@@ -515,5 +559,671 @@ This is a task.
     const output = context.stderrLines.join('\n')
     expect(output).toContain('## Blocked by')
     expect(output).toContain('task file')
+  })
+})
+
+describe('validateGoalHierarchySections', () => {
+  test('returns no violations for valid goal with both sections', () => {
+    const content = `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`
+    const violations = validateGoalHierarchySections('goal.md', content)
+    expect(violations).toHaveLength(0)
+  })
+
+  test('reports missing Parent Goal section', () => {
+    const content = `# Goal
+
+This is a goal.
+
+## Sub-Goals
+
+- (none)
+`
+    const violations = validateGoalHierarchySections('goal.md', content)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('## Parent Goal')
+  })
+
+  test('reports missing Sub-Goals section', () => {
+    const content = `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+`
+    const violations = validateGoalHierarchySections('goal.md', content)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('## Sub-Goals')
+  })
+
+  test('reports both missing sections', () => {
+    const content = `# Goal
+
+This is a goal.
+`
+    const violations = validateGoalHierarchySections('goal.md', content)
+    expect(violations).toHaveLength(2)
+  })
+})
+
+describe('validateGoalHierarchyLinks', () => {
+  test('returns no violations for valid goal links', () => {
+    const content = `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- [Parent](parent-goal.md)
+
+## Sub-Goals
+
+- [Child](child-goal.md)
+`
+    const violations = validateGoalHierarchyLinks(
+      '/project/.dust/goals/goal.md',
+      content
+    )
+    expect(violations).toHaveLength(0)
+  })
+
+  test('returns violation for non-goal link in Parent Goal section', () => {
+    const content = `# Goal
+
+## Parent Goal
+
+- [Task](../tasks/task.md)
+
+## Sub-Goals
+
+- (none)
+`
+    const violations = validateGoalHierarchyLinks(
+      '/project/.dust/goals/goal.md',
+      content
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('## Parent Goal')
+    expect(violations[0].message).toContain('goal file')
+  })
+
+  test('returns violation for non-goal link in Sub-Goals section', () => {
+    const content = `# Goal
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- [Idea](../ideas/idea.md)
+`
+    const violations = validateGoalHierarchyLinks(
+      '/project/.dust/goals/goal.md',
+      content
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('## Sub-Goals')
+    expect(violations[0].message).toContain('goal file')
+  })
+
+  test('rejects external links in hierarchy sections', () => {
+    const content = `# Goal
+
+## Parent Goal
+
+- [External](https://example.com)
+
+## Sub-Goals
+
+- (none)
+`
+    const violations = validateGoalHierarchyLinks(
+      '/project/.dust/goals/goal.md',
+      content
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('external URL')
+  })
+
+  test('rejects anchor links in hierarchy sections', () => {
+    const content = `# Goal
+
+## Parent Goal
+
+- [Anchor](#section)
+
+## Sub-Goals
+
+- (none)
+`
+    const violations = validateGoalHierarchyLinks(
+      '/project/.dust/goals/goal.md',
+      content
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('anchor')
+  })
+
+  test('includes line numbers in violations', () => {
+    const content = `# Goal
+
+## Parent Goal
+
+- [Task](../tasks/task.md)
+
+## Sub-Goals
+
+- (none)
+`
+    const violations = validateGoalHierarchyLinks(
+      '/project/.dust/goals/goal.md',
+      content
+    )
+    expect(violations[0].line).toBe(5)
+  })
+})
+
+describe('extractGoalRelationships', () => {
+  test('extracts parent and sub-goal relationships', () => {
+    const content = `# Goal
+
+## Parent Goal
+
+- [Parent](parent.md)
+
+## Sub-Goals
+
+- [Child1](child1.md)
+- [Child2](child2.md)
+`
+    const rel = extractGoalRelationships(
+      '/project/.dust/goals/goal.md',
+      content
+    )
+    expect(rel.filePath).toBe('/project/.dust/goals/goal.md')
+    expect(rel.parentGoals).toEqual(['/project/.dust/goals/parent.md'])
+    expect(rel.subGoals).toEqual([
+      '/project/.dust/goals/child1.md',
+      '/project/.dust/goals/child2.md',
+    ])
+  })
+
+  test('handles goals with no parents', () => {
+    const content = `# Goal
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- [Child](child.md)
+`
+    const rel = extractGoalRelationships(
+      '/project/.dust/goals/goal.md',
+      content
+    )
+    expect(rel.parentGoals).toEqual([])
+    expect(rel.subGoals).toEqual(['/project/.dust/goals/child.md'])
+  })
+
+  test('handles goals with no sub-goals', () => {
+    const content = `# Goal
+
+## Parent Goal
+
+- [Parent](parent.md)
+
+## Sub-Goals
+
+- (none)
+`
+    const rel = extractGoalRelationships(
+      '/project/.dust/goals/goal.md',
+      content
+    )
+    expect(rel.parentGoals).toEqual(['/project/.dust/goals/parent.md'])
+    expect(rel.subGoals).toEqual([])
+  })
+
+  test('ignores non-goal links', () => {
+    const content = `# Goal
+
+## Parent Goal
+
+- [Task](../tasks/task.md)
+
+## Sub-Goals
+
+- (none)
+`
+    const rel = extractGoalRelationships(
+      '/project/.dust/goals/goal.md',
+      content
+    )
+    expect(rel.parentGoals).toEqual([])
+    expect(rel.subGoals).toEqual([])
+  })
+
+  test('ignores anchor links', () => {
+    const content = `# Goal
+
+## Parent Goal
+
+- [Anchor](#section)
+
+## Sub-Goals
+
+- (none)
+`
+    const rel = extractGoalRelationships(
+      '/project/.dust/goals/goal.md',
+      content
+    )
+    expect(rel.parentGoals).toEqual([])
+    expect(rel.subGoals).toEqual([])
+  })
+
+  test('ignores external links', () => {
+    const content = `# Goal
+
+## Parent Goal
+
+- [External](https://example.com)
+
+## Sub-Goals
+
+- [HTTP](http://example.com)
+`
+    const rel = extractGoalRelationships(
+      '/project/.dust/goals/goal.md',
+      content
+    )
+    expect(rel.parentGoals).toEqual([])
+    expect(rel.subGoals).toEqual([])
+  })
+})
+
+describe('validateBidirectionalLinks', () => {
+  test('returns no violations for consistent bidirectional links', () => {
+    const relationships = [
+      {
+        filePath: '/project/.dust/goals/parent.md',
+        parentGoals: [],
+        subGoals: ['/project/.dust/goals/child.md'],
+      },
+      {
+        filePath: '/project/.dust/goals/child.md',
+        parentGoals: ['/project/.dust/goals/parent.md'],
+        subGoals: [],
+      },
+    ]
+    const violations = validateBidirectionalLinks(relationships)
+    expect(violations).toHaveLength(0)
+  })
+
+  test('reports missing sub-goal link in parent', () => {
+    const relationships = [
+      {
+        filePath: '/project/.dust/goals/parent.md',
+        parentGoals: [],
+        subGoals: [], // Parent doesn't list child as sub-goal
+      },
+      {
+        filePath: '/project/.dust/goals/child.md',
+        parentGoals: ['/project/.dust/goals/parent.md'],
+        subGoals: [],
+      },
+    ]
+    const violations = validateBidirectionalLinks(relationships)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].file).toBe('/project/.dust/goals/child.md')
+    expect(violations[0].message).toContain(
+      'does not list this goal as a sub-goal'
+    )
+  })
+
+  test('reports missing parent link in child', () => {
+    const relationships = [
+      {
+        filePath: '/project/.dust/goals/parent.md',
+        parentGoals: [],
+        subGoals: ['/project/.dust/goals/child.md'],
+      },
+      {
+        filePath: '/project/.dust/goals/child.md',
+        parentGoals: [], // Child doesn't list parent
+        subGoals: [],
+      },
+    ]
+    const violations = validateBidirectionalLinks(relationships)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].file).toBe('/project/.dust/goals/parent.md')
+    expect(violations[0].message).toContain(
+      'does not list this goal as its parent'
+    )
+  })
+
+  test('handles complex hierarchy with multiple children', () => {
+    const relationships = [
+      {
+        filePath: '/project/.dust/goals/root.md',
+        parentGoals: [],
+        subGoals: ['/project/.dust/goals/a.md', '/project/.dust/goals/b.md'],
+      },
+      {
+        filePath: '/project/.dust/goals/a.md',
+        parentGoals: ['/project/.dust/goals/root.md'],
+        subGoals: [],
+      },
+      {
+        filePath: '/project/.dust/goals/b.md',
+        parentGoals: ['/project/.dust/goals/root.md'],
+        subGoals: [],
+      },
+    ]
+    const violations = validateBidirectionalLinks(relationships)
+    expect(violations).toHaveLength(0)
+  })
+})
+
+describe('validateNoCycles', () => {
+  test('returns no violations for valid hierarchy', () => {
+    const relationships = [
+      {
+        filePath: '/project/.dust/goals/root.md',
+        parentGoals: [],
+        subGoals: ['/project/.dust/goals/child.md'],
+      },
+      {
+        filePath: '/project/.dust/goals/child.md',
+        parentGoals: ['/project/.dust/goals/root.md'],
+        subGoals: [],
+      },
+    ]
+    const violations = validateNoCycles(relationships)
+    expect(violations).toHaveLength(0)
+  })
+
+  test('detects simple cycle between two goals', () => {
+    const relationships = [
+      {
+        filePath: '/project/.dust/goals/a.md',
+        parentGoals: ['/project/.dust/goals/b.md'],
+        subGoals: [],
+      },
+      {
+        filePath: '/project/.dust/goals/b.md',
+        parentGoals: ['/project/.dust/goals/a.md'],
+        subGoals: [],
+      },
+    ]
+    const violations = validateNoCycles(relationships)
+    expect(violations.length).toBeGreaterThan(0)
+    expect(violations[0].message).toContain('Cycle detected')
+  })
+
+  test('detects longer cycle', () => {
+    const relationships = [
+      {
+        filePath: '/project/.dust/goals/a.md',
+        parentGoals: ['/project/.dust/goals/c.md'],
+        subGoals: [],
+      },
+      {
+        filePath: '/project/.dust/goals/b.md',
+        parentGoals: ['/project/.dust/goals/a.md'],
+        subGoals: [],
+      },
+      {
+        filePath: '/project/.dust/goals/c.md',
+        parentGoals: ['/project/.dust/goals/b.md'],
+        subGoals: [],
+      },
+    ]
+    const violations = validateNoCycles(relationships)
+    expect(violations.length).toBeGreaterThan(0)
+    expect(violations[0].message).toContain('Cycle detected')
+  })
+
+  test('detects self-referential cycle', () => {
+    const relationships = [
+      {
+        filePath: '/project/.dust/goals/a.md',
+        parentGoals: ['/project/.dust/goals/a.md'],
+        subGoals: [],
+      },
+    ]
+    const violations = validateNoCycles(relationships)
+    expect(violations.length).toBeGreaterThan(0)
+    expect(violations[0].message).toContain('Cycle detected')
+  })
+})
+
+describe('lintMarkdown goal hierarchy validation', () => {
+  test('passes with valid goal hierarchy', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'parent.md': `# Parent Goal
+
+This is the parent goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- [Child](child.md)
+`,
+            'child.md': `# Child Goal
+
+This is the child goal.
+
+## Parent Goal
+
+- [Parent](parent.md)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain('All validations passed')
+  })
+
+  test('reports missing hierarchy sections in goal files', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal without hierarchy sections.
+`,
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    const output = context.stderrLines.join('\n')
+    expect(output).toContain('## Parent Goal')
+    expect(output).toContain('## Sub-Goals')
+  })
+
+  test('reports bidirectional link violations', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'parent.md': `# Parent Goal
+
+This is the parent goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+            'child.md': `# Child Goal
+
+This is the child goal.
+
+## Parent Goal
+
+- [Parent](parent.md)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    const output = context.stderrLines.join('\n')
+    expect(output).toContain('does not list this goal as a sub-goal')
+  })
+
+  test('reports cycle in goal hierarchy', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'a.md': `# Goal A
+
+This is goal A.
+
+## Parent Goal
+
+- [Goal B](b.md)
+
+## Sub-Goals
+
+- (none)
+`,
+            'b.md': `# Goal B
+
+This is goal B.
+
+## Parent Goal
+
+- [Goal A](a.md)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    const output = context.stderrLines.join('\n')
+    expect(output).toContain('Cycle detected')
+  })
+
+  test('reports wrong link type in hierarchy sections', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- [Task](../tasks/task.md)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+          tasks: {
+            'task.md': '# Task',
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    const output = context.stderrLines.join('\n')
+    expect(output).toContain('## Parent Goal')
+    expect(output).toContain('goal file')
+  })
+
+  test('skips non-markdown files in goals directory', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+            README: '',
+            '.gitkeep': '',
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain('All validations passed')
   })
 })
