@@ -4,8 +4,8 @@
  * This module contains all the command routing, help text, and adapter setup
  * so that bin/dust can be minimal.
  *
- * Command resolution works by joining arguments with hyphens and looking up in the registry.
- * For example, `dust agent new task` resolves to `agent-new-task` in the registry.
+ * Command resolution works by joining arguments with spaces and looking up in the registry.
+ * For example, `dust agent new task` resolves to `agent new task` in the registry.
  */
 
 import { loadSettings } from '../config/settings'
@@ -36,16 +36,16 @@ import type {
 } from './types'
 
 /**
- * Command registry maps hyphenated command names to their handler functions.
+ * Command registry maps command names to their handler functions.
  * Adding a new command only requires adding an entry here.
  *
- * Command names use hyphens to join verb-noun patterns:
- * - `dust agent new task` -> `agent-new-task`
- * - `dust pre-push` -> `pre-push`
+ * Multi-word command names use spaces to match CLI invocation:
+ * - `dust agent new task` -> `agent new task`
+ * - `dust pre push` -> `pre push`
  */
 export const commandRegistry = {
   init,
-  'lint-markdown': lintMarkdown,
+  'lint markdown': lintMarkdown,
   list,
   tasks,
   goals,
@@ -54,24 +54,24 @@ export const commandRegistry = {
   next,
   check,
   agent,
-  'agent-help': agentHelp,
-  'agent-new-task': agentNewTask,
-  'agent-new-goal': agentNewGoal,
-  'agent-new-idea': agentNewIdea,
-  'agent-implement-task': agentImplementTask,
-  'agent-pick-task': agentPickTask,
-  'agent-understand-goals': agentUnderstandGoals,
-  'subagent-new-task': subagentNewTask,
-  'loop-claude': loopClaude,
-  'pre-push': prePush,
+  'agent help': agentHelp,
+  'agent new task': agentNewTask,
+  'agent new goal': agentNewGoal,
+  'agent new idea': agentNewIdea,
+  'agent implement task': agentImplementTask,
+  'agent pick task': agentPickTask,
+  'agent understand goals': agentUnderstandGoals,
+  'subagent new task': subagentNewTask,
+  'loop claude': loopClaude,
+  'pre push': prePush,
   help,
 }
 
 export type Command = keyof typeof commandRegistry
 
-// Top-level commands shown in help (excludes hyphenated subcommands)
+// Top-level commands shown in help (excludes multi-word subcommands)
 export const COMMANDS = Object.keys(commandRegistry).filter(
-  cmd => !cmd.includes('-')
+  cmd => !cmd.includes(' ')
 ) as Command[]
 
 // Re-export for backward compatibility
@@ -105,12 +105,12 @@ export async function runCommand(
 }
 
 /**
- * Resolves command arguments to a hyphenated command name.
+ * Resolves command arguments to a command name.
  * Tries progressively longer command chains until it finds a match.
  *
  * For example, with commandArguments ['agent', 'new', 'task', 'extra']:
- * - Tries 'agent-new-task-extra' -> not found
- * - Tries 'agent-new-task' -> found! Returns { command: 'agent-new-task', remaining: ['extra'] }
+ * - Tries 'agent new task extra' -> not found
+ * - Tries 'agent new task' -> found! Returns { command: 'agent new task', remaining: ['extra'] }
  */
 function resolveCommand(commandArguments: string[]): {
   command: string | null
@@ -118,7 +118,7 @@ function resolveCommand(commandArguments: string[]): {
 } {
   // Try progressively shorter command chains
   for (let i = commandArguments.length; i > 0; i--) {
-    const candidate = commandArguments.slice(0, i).join('-')
+    const candidate = commandArguments.slice(0, i).join(' ')
     if (candidate in commandRegistry) {
       return { command: candidate, remaining: commandArguments.slice(i) }
     }

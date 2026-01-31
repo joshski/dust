@@ -364,7 +364,7 @@ describe('main', () => {
 })
 
 describe('COMMANDS', () => {
-  test('contains expected top-level commands (excludes hyphenated subcommands)', () => {
+  test('contains expected top-level commands (excludes multi-word subcommands)', () => {
     expect(COMMANDS).toEqual([
       'init',
       'list',
@@ -380,7 +380,7 @@ describe('COMMANDS', () => {
   })
 })
 
-describe('hyphenated command routing', () => {
+describe('multi-word command routing', () => {
   test('routes agent new task correctly', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
@@ -447,7 +447,7 @@ describe('hyphenated command routing', () => {
       glob: fileSystem,
     })
 
-    // Should fall back to 'agent' command since 'agent-unknown-subcommand' doesn't exist
+    // Should fall back to 'agent' command since 'agent unknown subcommand' doesn't exist
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toMatch(/Hello .+, welcome to dust/)
   })
