@@ -36,7 +36,7 @@ describe('agent command', () => {
     const result = await agent(createDependencies(context, [], defaultSettings))
 
     expect(result.exitCode).toBe(0)
-    expect(context.stdoutLines.join('\n')).toContain('Hello Agent')
+    expect(context.stdoutLines.join('\n')).toMatch(/Hello .+, welcome to dust/)
     expect(context.stdoutLines.join('\n')).toContain('dust agent pick task')
     expect(context.stdoutLines.join('\n')).toContain(
       'dust agent implement task'

@@ -337,7 +337,7 @@ describe('main', () => {
     })
 
     expect(result.exitCode).toBe(0)
-    expect(context.stdoutLines.join('\n')).toContain('Hello Agent')
+    expect(context.stdoutLines.join('\n')).toMatch(/Hello .+, welcome to dust/)
   })
 
   test('passes command args to subcommands', async () => {
@@ -449,7 +449,7 @@ describe('hyphenated command routing', () => {
 
     // Should fall back to 'agent' command since 'agent-unknown-subcommand' doesn't exist
     expect(result.exitCode).toBe(0)
-    expect(context.stdoutLines.join('\n')).toContain('Hello Agent')
+    expect(context.stdoutLines.join('\n')).toMatch(/Hello .+, welcome to dust/)
   })
 })
 
