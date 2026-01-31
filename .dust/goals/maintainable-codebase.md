@@ -11,5 +11,6 @@ This goal governs how we develop and maintain dust itself, separate from the goa
 ## Sub-Goals
 
 - [Make Changes with Confidence](make-changes-with-confidence.md)
+- [Minimal Dependencies](minimal-dependencies.md)
 - [Organized Concerns](organized-concerns.md)
 - [Repository Hygiene](repository-hygiene.md)

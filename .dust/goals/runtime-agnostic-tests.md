@@ -6,7 +6,7 @@ Tests should use standard JavaScript testing patterns that work across Node.js, 
 
 ## Parent Goal
 
-- [Fast Feedback](fast-feedback.md)
+- [Minimal Dependencies](minimal-dependencies.md)
 
 ## Sub-Goals
 
