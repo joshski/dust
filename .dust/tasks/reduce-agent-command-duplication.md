@@ -14,10 +14,10 @@ export async function agentXxx(dependencies: CommandDependencies): Promise<Comma
 }
 ```
 
-Consolidate with a factory function in `agent-shared.ts`:
+Consolidate with a factory function in `template-command.ts`:
 
 ```typescript
-export const createAgentCommand = (templateName: string) =>
+export const createTemplateCommand = (templateName: string) =>
   async (dependencies: CommandDependencies): Promise<CommandResult> => {
     const { context, settings } = dependencies
     const hooksInstalled = await manageGitHooks(dependencies)
@@ -39,7 +39,7 @@ Then each command file becomes trivial or could be eliminated entirely.
 
 ## Definition of done
 
-- [ ] Factory function `createAgentCommand` exists in `agent-shared.ts`
+- [ ] Factory function `createTemplateCommand` exists in `template-command.ts`
 - [ ] All agent command files use the factory function
 - [ ] Tests pass
 - [ ] No code duplication across agent command files
