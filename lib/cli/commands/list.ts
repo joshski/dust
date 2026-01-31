@@ -6,6 +6,7 @@ import {
   extractOpeningSentence,
   extractTitle,
 } from '../../markdown/markdown-utilities'
+import { getColors } from '../colors'
 import type { CommandDependencies, CommandResult } from '../types'
 
 const VALID_TYPES = ['tasks', 'ideas', 'goals', 'facts'] as const
@@ -29,18 +30,12 @@ const TYPE_EXPLANATIONS: Record<ListType, string> = {
     'Facts are current state documentation. Facts capture how things work today, providing context for agents and contributors.',
 }
 
-const colors = {
-  reset: '\x1b[0m',
-  bold: '\x1b[1m',
-  dim: '\x1b[2m',
-  cyan: '\x1b[36m',
-}
-
 export async function list(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
   const { arguments: commandArguments, context, fileSystem } = dependencies
   const dustPath = `${context.cwd}/.dust`
+  const colors = getColors()
 
   if (!fileSystem.exists(dustPath)) {
     context.stderr('Error: .dust directory not found')
