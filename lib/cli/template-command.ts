@@ -4,9 +4,9 @@
  * Creates command handlers that load and render templates with standard variables.
  */
 
-import { loadTemplate } from '../templates'
-import type { CommandDependencies, CommandResult } from '../types'
-import { manageGitHooks, templateVariables } from './agent-shared'
+import { manageGitHooks, templateVariables } from './commands/agent-shared'
+import { loadTemplate } from './templates'
+import type { CommandDependencies, CommandResult } from './types'
 
 export const createTemplateCommand =
   (templateName: string) =>

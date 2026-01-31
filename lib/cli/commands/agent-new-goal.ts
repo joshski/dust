@@ -4,6 +4,6 @@
  * Displays guidance for creating new goals.
  */
 
-import { createTemplateCommand } from './template-command'
+import { createTemplateCommand } from '../template-command'
 
 export const agentNewGoal = createTemplateCommand('agent-new-goal')

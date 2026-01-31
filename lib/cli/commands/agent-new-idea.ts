@@ -4,6 +4,6 @@
  * Displays guidance for capturing new ideas.
  */
 
-import { createTemplateCommand } from './template-command'
+import { createTemplateCommand } from '../template-command'
 
 export const agentNewIdea = createTemplateCommand('agent-new-idea')

@@ -4,6 +4,6 @@
  * Displays guidance for implementing tasks.
  */
 
-import { createTemplateCommand } from './template-command'
+import { createTemplateCommand } from '../template-command'
 
 export const agentImplementTask = createTemplateCommand('agent-implement-task')

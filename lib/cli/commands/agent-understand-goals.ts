@@ -4,7 +4,7 @@
  * Displays guidance for understanding project goals.
  */
 
-import { createTemplateCommand } from './template-command'
+import { createTemplateCommand } from '../template-command'
 
 export const agentUnderstandGoals = createTemplateCommand(
   'agent-understand-goals'
