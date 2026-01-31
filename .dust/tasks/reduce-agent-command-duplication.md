@@ -14,7 +14,7 @@ export async function agentXxx(dependencies: CommandDependencies): Promise<Comma
 }
 ```
 
-Could be consolidated with a factory function in `agent-shared.ts`:
+Consolidate with a factory function in `agent-shared.ts`:
 
 ```typescript
 export const createAgentCommand = (templateName: string) =>
@@ -28,3 +28,18 @@ export const createAgentCommand = (templateName: string) =>
 ```
 
 Then each command file becomes trivial or could be eliminated entirely.
+
+## Goals
+
+(none)
+
+## Blocked by
+
+(none)
+
+## Definition of done
+
+- [ ] Factory function `createAgentCommand` exists in `agent-shared.ts`
+- [ ] All agent command files use the factory function
+- [ ] Tests pass
+- [ ] No code duplication across agent command files
