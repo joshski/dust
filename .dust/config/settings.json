@@ -38,7 +38,7 @@
     },
     {
       "name": "typecheck",
-      "command": "bunx tsc --noEmit --skipLibCheck --module esnext --moduleResolution bundler --target esnext lib/**/*.ts",
+      "command": "bunx tsc -p tsconfig.json --noEmit",
       "hints": [
         "Check type definitions in the files you modified",
         "Ensure all imports have proper type declarations"

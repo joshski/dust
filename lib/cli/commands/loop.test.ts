@@ -1,3 +1,4 @@
+import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
 import {
@@ -29,17 +30,20 @@ function createDependencies(
   }
 }
 
-function createMockSpawn(pullExitCode = 0) {
-  return () => {
-    const proc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter | null
-      stderr: EventEmitter
-    }
-    proc.stdout = null
-    proc.stderr = new EventEmitter()
-    setTimeout(() => proc.emit('close', pullExitCode), 0)
-    return proc
+function createMockChildProcess(exitCode = 0) {
+  const proc = new EventEmitter() as EventEmitter & {
+    stdout: EventEmitter | null
+    stderr: EventEmitter
   }
+  proc.stdout = null
+  proc.stderr = new EventEmitter()
+  setTimeout(() => proc.emit('close', exitCode), 0)
+  return proc as unknown as ChildProcess
+}
+
+function createMockSpawn(pullExitCode = 0) {
+  return (() =>
+    createMockChildProcess(pullExitCode)) as LoopDependencies['spawn']
 }
 
 class LoopBreaker extends Error {
@@ -71,7 +75,7 @@ describe('gitPull', () => {
   })
 
   test('returns failure with stderr on non-zero exit', async () => {
-    const spawn = () => {
+    const spawn = (() => {
       const proc = new EventEmitter() as EventEmitter & {
         stdout: EventEmitter | null
         stderr: EventEmitter
@@ -82,8 +86,8 @@ describe('gitPull', () => {
         proc.stderr.emit('data', Buffer.from('fatal: not a git repository'))
         proc.emit('close', 128)
       }, 0)
-      return proc
-    }
+      return proc as unknown as ChildProcess
+    }) as LoopDependencies['spawn']
     const result = await gitPull('/project', spawn)
     expect(result.success).toBe(false)
     expect(result.message).toContain('fatal: not a git repository')
@@ -97,7 +101,7 @@ describe('gitPull', () => {
   })
 
   test('handles spawn errors', async () => {
-    const spawn = () => {
+    const spawn = (() => {
       const proc = new EventEmitter() as EventEmitter & {
         stdout: EventEmitter | null
         stderr: EventEmitter
@@ -105,8 +109,8 @@ describe('gitPull', () => {
       proc.stdout = null
       proc.stderr = new EventEmitter()
       setTimeout(() => proc.emit('error', new Error('spawn ENOENT')), 0)
-      return proc
-    }
+      return proc as unknown as ChildProcess
+    }) as LoopDependencies['spawn']
     const result = await gitPull('/project', spawn)
     expect(result.success).toBe(false)
     expect(result.message).toBe('spawn ENOENT')
@@ -138,10 +142,10 @@ describe('runOneIteration', () => {
     const dependencies = createDependencies()
     let pullCalled = false
     const loopDeps: LoopDependencies = {
-      spawn: () => {
+      spawn: (() => {
         pullCalled = true
-        return createMockSpawn(0)()
-      },
+        return createMockChildProcess(0)
+      }) as LoopDependencies['spawn'],
       run: async () => {},
       sleep: async () => {},
     }
@@ -156,16 +160,19 @@ describe('runOneIteration', () => {
       typeof createContextEmulator
     >
     const loopDeps: LoopDependencies = {
-      spawn: () => {
-        const proc = new EventEmitter() as ReturnType<typeof createMockSpawn>
+      spawn: (() => {
+        const proc = new EventEmitter() as EventEmitter & {
+          stdout: EventEmitter | null
+          stderr: EventEmitter
+        }
         proc.stdout = null
         proc.stderr = new EventEmitter()
         setTimeout(() => {
           proc.stderr.emit('data', Buffer.from('no remote'))
           proc.emit('close', 1)
         }, 0)
-        return proc
-      },
+        return proc as unknown as ChildProcess
+      }) as LoopDependencies['spawn'],
       run: async () => {},
       sleep: async () => {},
     }
