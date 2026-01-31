@@ -207,6 +207,15 @@ export function createFileSystemEmulator(
 export const defaultTestSettings: DustSettings = { dustCommand: 'dust' }
 
 /**
+ * Strips ANSI escape codes from a string for cleaner test assertions.
+ * Useful when testing output that may contain colors or formatting.
+ */
+export function stripAnsi(str: string): string {
+  // eslint-disable-next-line no-control-regex
+  return str.replace(/\x1b\[[0-9;]*m/g, '')
+}
+
+/**
  * Creates command dependencies for testing, with captured output for assertions.
  *
  * @param settings - Optional DustSettings override

@@ -14,6 +14,15 @@ import type { CommandDependencies, CommandResult, FileSystem } from '../types'
 
 const DUST_DIRECTORIES = ['goals', 'ideas', 'tasks', 'facts', 'config']
 
+const colors = {
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  cyan: '\x1b[36m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+}
+
 /**
  * Generates starter settings based on detected project type.
  * Returns settings with appropriate dustCommand and checks.
@@ -45,7 +54,9 @@ export async function init(
   const agentInstruction = `Always immediately run \`${dustCommand} agent\` when you start working in this repository.`
 
   if (fileSystem.exists(dustPath)) {
-    context.stdout('Note: .dust directory already exists, skipping creation')
+    context.stdout(
+      `${colors.yellow}📦 Note:${colors.reset} ${colors.cyan}.dust${colors.reset} directory already exists, skipping creation`
+    )
   } else {
     await fileSystem.mkdir(dustPath, { recursive: true })
 
@@ -65,54 +76,70 @@ export async function init(
       `${JSON.stringify(settings, null, 2)}\n`
     )
 
-    context.stdout('Initialized Dust repository in .dust/')
-    context.stdout(`Created directories: ${DUST_DIRECTORIES.join(', ')}`)
-    context.stdout('Created initial fact: .dust/facts/use-dust-for-planning.md')
-    context.stdout('Created settings: .dust/config/settings.json')
+    context.stdout(
+      `${colors.green}✨ Initialized${colors.reset} Dust repository in ${colors.cyan}.dust/${colors.reset}`
+    )
+    context.stdout(
+      `${colors.green}📁 Created directories:${colors.reset} ${colors.dim}${DUST_DIRECTORIES.join(', ')}${colors.reset}`
+    )
+    context.stdout(
+      `${colors.green}📄 Created initial fact:${colors.reset} ${colors.cyan}.dust/facts/use-dust-for-planning.md${colors.reset}`
+    )
+    context.stdout(
+      `${colors.green}⚙️  Created settings:${colors.reset} ${colors.cyan}.dust/config/settings.json${colors.reset}`
+    )
   }
 
   // Create CLAUDE.md if it doesn't exist
   const claudeMdPath = `${context.cwd}/CLAUDE.md`
   if (fileSystem.exists(claudeMdPath)) {
     context.stdout(
-      `Warning: CLAUDE.md already exists. Consider adding: "${agentInstruction}"`
+      `${colors.yellow}⚠️  Warning:${colors.reset} ${colors.cyan}CLAUDE.md${colors.reset} already exists. Consider adding: ${colors.dim}"${agentInstruction}"${colors.reset}`
     )
   } else {
     const claudeContent = loadTemplate('claude-md', { dustCommand })
     await fileSystem.writeFile(claudeMdPath, claudeContent)
-    context.stdout('Created CLAUDE.md with agent instructions')
+    context.stdout(
+      `${colors.green}📄 Created${colors.reset} ${colors.cyan}CLAUDE.md${colors.reset} with agent instructions`
+    )
   }
 
   // Create AGENTS.md if it doesn't exist
   const agentsMdPath = `${context.cwd}/AGENTS.md`
   if (fileSystem.exists(agentsMdPath)) {
     context.stdout(
-      `Warning: AGENTS.md already exists. Consider adding: "${agentInstruction}"`
+      `${colors.yellow}⚠️  Warning:${colors.reset} ${colors.cyan}AGENTS.md${colors.reset} already exists. Consider adding: ${colors.dim}"${agentInstruction}"${colors.reset}`
     )
   } else {
     const agentsContent = loadTemplate('agents-md', { dustCommand })
     await fileSystem.writeFile(agentsMdPath, agentsContent)
-    context.stdout('Created AGENTS.md with agent instructions')
+    context.stdout(
+      `${colors.green}📄 Created${colors.reset} ${colors.cyan}AGENTS.md${colors.reset} with agent instructions`
+    )
   }
 
   // Show helpful suggestions for next steps
   const runner = dustCommand.split(' ')[0]
   context.stdout('')
-  context.stdout('Commit the changes if you are happy, then get planning!')
+  context.stdout(
+    `${colors.bold}🚀 Next steps:${colors.reset} Commit the changes if you are happy, then get planning!`
+  )
   context.stdout('')
   context.stdout(
-    'If this is a new repository, you can start adding ideas or tasks right away:'
+    `${colors.dim}If this is a new repository, you can start adding ideas or tasks right away:${colors.reset}`
   )
   context.stdout(
-    `> ${runner} claude "Idea: friendly UI for non-technical users"`
+    `   ${colors.cyan}>${colors.reset} ${runner} claude "Idea: friendly UI for non-technical users"`
   )
-  context.stdout(`> ${runner} codex "Task: set up code coverage"`)
+  context.stdout(
+    `   ${colors.cyan}>${colors.reset} ${runner} codex "Task: set up code coverage"`
+  )
   context.stdout('')
   context.stdout(
-    'If this is an existing codebase, you might want to backfill goals and facts:'
+    `${colors.dim}If this is an existing codebase, you might want to backfill goals and facts:${colors.reset}`
   )
   context.stdout(
-    `> ${runner} claude "Add goals and facts based on the code in this repository"`
+    `   ${colors.cyan}>${colors.reset} ${runner} claude "Add goals and facts based on the code in this repository"`
   )
 
   return { exitCode: 0 }
