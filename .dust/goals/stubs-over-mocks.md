@@ -8,4 +8,12 @@ Stubs (and especially in-memory emulators) push tests toward the contract: provi
 
 For external dependencies (databases, queues, object stores, HTTP services), the default choice should be an in-memory emulator: a drop-in replacement that is faithful enough to the real interface/semantics but runs entirely in-process. It gives most of the benefits of integration testing—realistic state transitions, error modes, concurrency behavior where relevant—without the cost, flakiness, and setup burden of booting real infrastructure. It also keeps the test environment hermetic (no network, no shared state), which improves determinism and makes tests fast.
 
-Still use mocks selectively—mainly to assert something is called (e.g., telemetry emission, “at most once” notifications, payment capture guarded by a feature flag) or when a dependency is impossible to emulate. But for most cases, stubs and in-memory emulators produce tests that are clearer, more resilient to refactoring, and better aligned with the system’s actual contracts.
+Still use mocks selectively—mainly to assert something is called (e.g., telemetry emission, "at most once" notifications, payment capture guarded by a feature flag) or when a dependency is impossible to emulate. But for most cases, stubs and in-memory emulators produce tests that are clearer, more resilient to refactoring, and better aligned with the system's actual contracts.
+
+## Parent Goal
+
+- [Decoupled Code](decoupled-code.md)
+
+## Sub-Goals
+
+- (none)

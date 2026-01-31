@@ -32,7 +32,7 @@ The validation should produce clear error messages when:
 
 ## Blocked by
 
-- [Add Goal Hierarchy Structure](../tasks/add-goal-hierarchy-structure.md)
+(none)
 
 ## Definition of done
 
