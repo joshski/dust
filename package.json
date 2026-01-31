@@ -24,7 +24,7 @@
   "author": "joshski",
   "license": "MIT",
   "scripts": {
-    "build": "bun build lib/cli/entry.ts --target node --outfile dist/dust.js && printf '%s\\n%s' '#!/usr/bin/env node' \"$(cat dist/dust.js)\" > dist/dust.js && cp -r lib/templates templates",
+    "build": "bun build lib/cli/run.ts --target node --outfile dist/dust.js && printf '%s\\n%s' '#!/usr/bin/env node' \"$(cat dist/dust.js)\" > dist/dust.js && cp -r lib/templates templates",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "eval": "bun run ./evals/run.ts"

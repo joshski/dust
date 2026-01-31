@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { afterEach, describe, expect, test } from 'vitest'
-import { restoreEnv, stubEnv } from '../cli/test-utilities'
+import { restoreEnv, stubEnv } from '../test/test-utilities'
 import { spawnClaudeCode } from './spawn-claude-code'
 import { streamEvents } from './streamer'
 import {

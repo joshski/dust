@@ -5,7 +5,10 @@
  * A task is blocked if its "## Blocked by" section references task files that still exist.
  */
 
-import { extractOpeningSentence, extractTitle } from '../markdown-utilities'
+import {
+  extractOpeningSentence,
+  extractTitle,
+} from '../../markdown/markdown-utilities'
 import type { CommandDependencies, CommandResult } from '../types'
 
 const colors = {
@@ -105,8 +108,9 @@ export async function next(
   context.stdout('📋 Next tasks')
   context.stdout('')
   for (const task of unblockedTasks) {
+    const parts = task.path.split('/')
     const displayTitle =
-      task.title || task.path.split('/').pop()!.replace('.md', '')
+      task.title || parts[parts.length - 1].replace('.md', '')
     context.stdout(`${colors.bold}# ${displayTitle}${colors.reset}`)
 
     if (task.openingSentence) {

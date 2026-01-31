@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
-import { createFileSystemEmulator } from '../cli/test-utilities'
 import type { DustSettings } from '../cli/types'
+import { createFileSystemEmulator } from '../test/test-utilities'
 import { createHooksManager } from './hooks'
 
 const defaultSettings: DustSettings = {

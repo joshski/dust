@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from 'vitest'
+import { restoreEnv, stubEnv } from '../test/test-utilities'
 import {
   type ConsolePrimitives,
   createFileSystem,
@@ -6,8 +7,7 @@ import {
   type FileSystemPrimitives,
   type ProcessPrimitives,
   wireEntry,
-} from './entry-wiring'
-import { restoreEnv, stubEnv } from './test-utilities'
+} from './wire'
 
 function createFsPrimitives(
   files: Map<string, string> = new Map()

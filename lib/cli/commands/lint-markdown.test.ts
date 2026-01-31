@@ -3,7 +3,7 @@ import {
   createContextEmulator,
   createFileSystemEmulator,
   type FileSystemEmulator,
-} from '../test-utilities'
+} from '../../test/test-utilities'
 import type { CommandContext, CommandDependencies } from '../types'
 import {
   lintMarkdown,

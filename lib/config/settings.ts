@@ -5,7 +5,7 @@
  */
 
 import { join } from 'node:path'
-import type { CheckConfig, DustSettings, FileSystem } from './types'
+import type { CheckConfig, DustSettings, FileSystem } from '../cli/types'
 
 // Re-export for backwards compatibility
 export type { CheckConfig, DustSettings }

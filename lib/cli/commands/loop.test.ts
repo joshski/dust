@@ -3,7 +3,7 @@ import { describe, expect, test } from 'vitest'
 import {
   createContextEmulator,
   createFileSystemEmulator,
-} from '../test-utilities'
+} from '../../test/test-utilities'
 import type { CommandDependencies } from '../types'
 import {
   createDefaultDependencies,

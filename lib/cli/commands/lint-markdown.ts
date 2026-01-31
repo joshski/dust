@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path'
 import {
   extractOpeningSentence,
   MARKDOWN_LINK_PATTERN,
-} from '../markdown-utilities'
+} from '../../markdown/markdown-utilities'
 import type {
   CommandDependencies,
   CommandResult,

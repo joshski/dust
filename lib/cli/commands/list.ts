@@ -2,7 +2,10 @@
  * dust list [type] - List tasks, ideas, goals, or facts
  */
 
-import { extractOpeningSentence, extractTitle } from '../markdown-utilities'
+import {
+  extractOpeningSentence,
+  extractTitle,
+} from '../../markdown/markdown-utilities'
 import type { CommandDependencies, CommandResult } from '../types'
 
 const VALID_TYPES = ['tasks', 'ideas', 'goals', 'facts'] as const

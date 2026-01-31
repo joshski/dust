@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { createCommandDependencies } from '../test-utilities'
+import { createCommandDependencies } from '../../test/test-utilities'
 import { agentUnderstandGoals } from './agent-understand-goals'
 
 describe('agent-understand-goals', () => {

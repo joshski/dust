@@ -12,7 +12,7 @@ import type {
   DustSettings,
   FileSystem,
   GlobScanner,
-} from './types'
+} from '../cli/types'
 
 /**
  * Recursive type for defining file system structure.

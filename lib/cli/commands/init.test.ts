@@ -4,7 +4,7 @@ import {
   createFileSystemEmulator,
   restoreEnv,
   stubEnv,
-} from '../test-utilities'
+} from '../../test/test-utilities'
 import type { CommandDependencies } from '../types'
 import { init } from './init'
 

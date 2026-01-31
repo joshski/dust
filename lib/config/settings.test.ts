@@ -1,11 +1,15 @@
 import { afterEach, describe, expect, test } from 'vitest'
 import {
+  createFileSystemEmulator,
+  restoreEnv,
+  stubEnv,
+} from '../test/test-utilities'
+import {
   detectDustCommand,
   detectInstallDependenciesHint,
   detectTestCommand,
   loadSettings,
 } from './settings'
-import { createFileSystemEmulator, restoreEnv, stubEnv } from './test-utilities'
 
 describe('detectDustCommand', () => {
   afterEach(() => {

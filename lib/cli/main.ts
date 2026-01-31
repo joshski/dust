@@ -8,6 +8,7 @@
  * For example, `dust agent new task` resolves to `agent-new-task` in the registry.
  */
 
+import { loadSettings } from '../config/settings'
 import { agent } from './commands/agent'
 import { agentHelp } from './commands/agent-help'
 import { agentImplementTask } from './commands/agent-implement-task'
@@ -24,7 +25,6 @@ import { list } from './commands/list'
 import { loopClaude } from './commands/loop'
 import { next } from './commands/next'
 import { prePush } from './commands/pre-push'
-import { loadSettings } from './settings'
 import type {
   CommandContext,
   CommandDependencies,

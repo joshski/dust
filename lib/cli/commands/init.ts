@@ -8,7 +8,7 @@ import {
   detectDustCommand,
   detectInstallDependenciesHint,
   detectTestCommand,
-} from '../settings'
+} from '../../config/settings'
 import { loadTemplate } from '../templates'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
 

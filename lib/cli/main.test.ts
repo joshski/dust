@@ -1,4 +1,11 @@
 import { afterEach, describe, expect, test } from 'vitest'
+import type { FileSystemEmulator } from '../test/test-utilities'
+import {
+  createContextEmulator,
+  createFileSystemEmulator,
+  restoreEnv,
+  stubEnv,
+} from '../test/test-utilities'
 import {
   COMMANDS,
   generateHelpText,
@@ -8,13 +15,6 @@ import {
   main,
   runCommand,
 } from './main'
-import type { FileSystemEmulator } from './test-utilities'
-import {
-  createContextEmulator,
-  createFileSystemEmulator,
-  restoreEnv,
-  stubEnv,
-} from './test-utilities'
 import type { CommandContext, CommandDependencies, DustSettings } from './types'
 
 function createDependencies(
