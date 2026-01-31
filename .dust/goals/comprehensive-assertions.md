@@ -37,3 +37,11 @@ The comprehensive form:
 ## How to evaluate
 
 Work supports this goal when tests use assertions that capture the complete expected result, allowing failures to reveal the actual state alongside the expected state.
+
+## Parent Goal
+
+- [Make Changes with Confidence](make-changes-with-confidence.md)
+
+## Sub-Goals
+
+- (none)

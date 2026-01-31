@@ -38,3 +38,11 @@ The nested form:
 ## How to evaluate
 
 Work supports this goal when test setup data uses structures that visually resemble what they represent, reducing cognitive load for readers.
+
+## Parent Goal
+
+- [Make Changes with Confidence](make-changes-with-confidence.md)
+
+## Sub-Goals
+
+- (none)
