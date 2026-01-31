@@ -9,14 +9,8 @@ import {
   extractOpeningSentence,
   extractTitle,
 } from '../../markdown/markdown-utilities'
+import { getColors } from '../colors'
 import type { CommandDependencies, CommandResult } from '../types'
-
-const colors = {
-  reset: '\x1b[0m',
-  bold: '\x1b[1m',
-  dim: '\x1b[2m',
-  cyan: '\x1b[36m',
-}
 
 function extractBlockedBy(content: string): string[] {
   // Find the "## Blocked by" section
@@ -52,6 +46,7 @@ export async function next(
 ): Promise<CommandResult> {
   const { context, fileSystem } = dependencies
   const dustPath = `${context.cwd}/.dust`
+  const colors = getColors()
 
   if (!fileSystem.exists(dustPath)) {
     context.stderr('Error: .dust directory not found')
