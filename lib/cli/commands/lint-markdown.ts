@@ -18,6 +18,7 @@ import type {
 export type { GlobScanner }
 
 const REQUIRED_HEADINGS = ['## Goals', '## Blocked by', '## Definition of done']
+const REQUIRED_GOAL_HEADINGS = ['## Parent Goal', '## Sub-Goals']
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.md$/
 
@@ -201,6 +202,230 @@ export function validateSemanticLinks(
   return violations
 }
 
+export function validateGoalHierarchySections(
+  filePath: string,
+  content: string
+): Violation[] {
+  const violations: Violation[] = []
+  for (const heading of REQUIRED_GOAL_HEADINGS) {
+    if (!content.includes(heading)) {
+      violations.push({
+        file: filePath,
+        message: `Missing required heading: "${heading}"`,
+      })
+    }
+  }
+  return violations
+}
+
+export function validateGoalHierarchyLinks(
+  filePath: string,
+  content: string
+): Violation[] {
+  const violations: Violation[] = []
+  const lines = content.split('\n')
+  const fileDir = dirname(filePath)
+
+  let currentSection: string | null = null
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+
+    if (line.startsWith('## ')) {
+      currentSection = line
+      continue
+    }
+
+    if (
+      currentSection !== '## Parent Goal' &&
+      currentSection !== '## Sub-Goals'
+    ) {
+      continue
+    }
+
+    const linkPattern = new RegExp(MARKDOWN_LINK_PATTERN.source, 'g')
+    let match: RegExpExecArray | null = linkPattern.exec(line)
+
+    while (match) {
+      const linkTarget = match[2]
+
+      if (linkTarget.startsWith('#')) {
+        violations.push({
+          file: filePath,
+          message: `Link in "${currentSection}" must point to a goal file, not an anchor: "${linkTarget}"`,
+          line: i + 1,
+        })
+        match = linkPattern.exec(line)
+        continue
+      }
+
+      if (
+        linkTarget.startsWith('http://') ||
+        linkTarget.startsWith('https://')
+      ) {
+        violations.push({
+          file: filePath,
+          message: `Link in "${currentSection}" must point to a goal file, not an external URL: "${linkTarget}"`,
+          line: i + 1,
+        })
+        match = linkPattern.exec(line)
+        continue
+      }
+
+      const targetPath = linkTarget.split('#')[0]
+      const resolvedPath = resolve(fileDir, targetPath)
+
+      if (!resolvedPath.includes('/.dust/goals/')) {
+        violations.push({
+          file: filePath,
+          message: `Link in "${currentSection}" must point to a goal file: "${linkTarget}"`,
+          line: i + 1,
+        })
+      }
+      match = linkPattern.exec(line)
+    }
+  }
+
+  return violations
+}
+
+export interface GoalRelationships {
+  filePath: string
+  parentGoals: string[]
+  subGoals: string[]
+}
+
+export function extractGoalRelationships(
+  filePath: string,
+  content: string
+): GoalRelationships {
+  const lines = content.split('\n')
+  const fileDir = dirname(filePath)
+  const parentGoals: string[] = []
+  const subGoals: string[] = []
+
+  let currentSection: string | null = null
+
+  for (const line of lines) {
+    if (line.startsWith('## ')) {
+      currentSection = line
+      continue
+    }
+
+    if (
+      currentSection !== '## Parent Goal' &&
+      currentSection !== '## Sub-Goals'
+    ) {
+      continue
+    }
+
+    const linkPattern = new RegExp(MARKDOWN_LINK_PATTERN.source, 'g')
+    let match: RegExpExecArray | null = linkPattern.exec(line)
+
+    while (match) {
+      const linkTarget = match[2]
+
+      if (
+        !linkTarget.startsWith('#') &&
+        !linkTarget.startsWith('http://') &&
+        !linkTarget.startsWith('https://')
+      ) {
+        const targetPath = linkTarget.split('#')[0]
+        const resolvedPath = resolve(fileDir, targetPath)
+
+        if (resolvedPath.includes('/.dust/goals/')) {
+          if (currentSection === '## Parent Goal') {
+            parentGoals.push(resolvedPath)
+          } else {
+            subGoals.push(resolvedPath)
+          }
+        }
+      }
+      match = linkPattern.exec(line)
+    }
+  }
+
+  return { filePath, parentGoals, subGoals }
+}
+
+export function validateBidirectionalLinks(
+  allGoalRelationships: GoalRelationships[]
+): Violation[] {
+  const violations: Violation[] = []
+  const relationshipMap = new Map<string, GoalRelationships>()
+
+  for (const rel of allGoalRelationships) {
+    relationshipMap.set(rel.filePath, rel)
+  }
+
+  for (const rel of allGoalRelationships) {
+    // Check each parent goal to ensure it lists this goal as a sub-goal
+    for (const parentPath of rel.parentGoals) {
+      const parentRel = relationshipMap.get(parentPath)
+      if (parentRel && !parentRel.subGoals.includes(rel.filePath)) {
+        violations.push({
+          file: rel.filePath,
+          message: `Parent goal "${parentPath}" does not list this goal as a sub-goal`,
+        })
+      }
+    }
+
+    // Check each sub-goal to ensure it lists this goal as its parent
+    for (const subGoalPath of rel.subGoals) {
+      const subGoalRel = relationshipMap.get(subGoalPath)
+      if (subGoalRel && !subGoalRel.parentGoals.includes(rel.filePath)) {
+        violations.push({
+          file: rel.filePath,
+          message: `Sub-goal "${subGoalPath}" does not list this goal as its parent`,
+        })
+      }
+    }
+  }
+
+  return violations
+}
+
+export function validateNoCycles(
+  allGoalRelationships: GoalRelationships[]
+): Violation[] {
+  const violations: Violation[] = []
+  const relationshipMap = new Map<string, GoalRelationships>()
+
+  for (const rel of allGoalRelationships) {
+    relationshipMap.set(rel.filePath, rel)
+  }
+
+  for (const rel of allGoalRelationships) {
+    const visited = new Set<string>()
+    const path: string[] = []
+    let current: string | null = rel.filePath
+
+    while (current) {
+      if (visited.has(current)) {
+        const cycleStart = path.indexOf(current)
+        const cyclePath = path.slice(cycleStart).concat(current)
+        violations.push({
+          file: rel.filePath,
+          message: `Cycle detected in goal hierarchy: ${cyclePath.join(' -> ')}`,
+        })
+        break
+      }
+
+      visited.add(current)
+      path.push(current)
+
+      const currentRel = relationshipMap.get(current)
+      if (currentRel && currentRel.parentGoals.length > 0) {
+        current = currentRel.parentGoals[0]
+      } else {
+        current = null
+      }
+    }
+  }
+
+  return violations
+}
+
 export async function lintMarkdown(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
@@ -269,6 +494,29 @@ export async function lintMarkdown(
       violations.push(...validateTaskHeadings(filePath, content))
       violations.push(...validateSemanticLinks(filePath, content))
     }
+  }
+
+  // Validate goal files hierarchy
+  const goalsPath = `${dustPath}/goals`
+  if (fileSystem.exists(goalsPath)) {
+    context.stdout('Validating goal hierarchy in .dust/goals/...')
+
+    const allGoalRelationships: GoalRelationships[] = []
+
+    for await (const file of glob.scan(goalsPath)) {
+      if (!file.endsWith('.md')) continue
+
+      const filePath = `${goalsPath}/${file}`
+      const content = await fileSystem.readFile(filePath)
+
+      violations.push(...validateGoalHierarchySections(filePath, content))
+      violations.push(...validateGoalHierarchyLinks(filePath, content))
+
+      allGoalRelationships.push(extractGoalRelationships(filePath, content))
+    }
+
+    violations.push(...validateBidirectionalLinks(allGoalRelationships))
+    violations.push(...validateNoCycles(allGoalRelationships))
   }
 
   if (violations.length === 0) {
