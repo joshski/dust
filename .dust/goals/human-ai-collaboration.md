@@ -15,4 +15,3 @@ The workflow respects human judgment for strategic decisions while leveraging AI
 - [Agent Autonomy](agent-autonomy.md)
 - [Easy Adoption](easy-adoption.md)
 - [Lightweight Planning](lightweight-planning.md)
-- [Make Changes with Confidence](make-changes-with-confidence.md)

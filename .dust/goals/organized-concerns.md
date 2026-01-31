@@ -6,7 +6,7 @@ When files that serve similar purposes are grouped together, the codebase become
 
 ## Parent Goal
 
-- [Lightweight Planning](lightweight-planning.md)
+- [Maintainable Codebase](maintainable-codebase.md)
 
 ## Sub-Goals
 

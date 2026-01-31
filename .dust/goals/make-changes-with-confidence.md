@@ -6,7 +6,7 @@ Tests, type checking, and other automated verification enable safe refactoring a
 
 ## Parent Goal
 
-- [Human-AI Collaboration](human-ai-collaboration.md)
+- [Maintainable Codebase](maintainable-codebase.md)
 
 ## Sub-Goals
 

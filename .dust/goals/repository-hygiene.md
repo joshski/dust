@@ -6,7 +6,7 @@ This includes proper gitignore configuration to exclude build artifacts, depende
 
 ## Parent Goal
 
-- [Lightweight Planning](lightweight-planning.md)
+- [Maintainable Codebase](maintainable-codebase.md)
 
 ## Sub-Goals
 
