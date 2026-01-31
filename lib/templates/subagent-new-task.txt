@@ -1,15 +1,5 @@
 ## Adding a New Task
 
-{{#if isClaudeCodeWeb}}
-Use sub-agents for task creation (run these steps serially, not in parallel):
-
-1. **Create the task definition** - Start a sub-agent with: "Run `{{bin}} subagent new task` and create a task for: [describe the task]. Research thoroughly, then create and commit the task file."
-
-2. **Wait for step 1 to complete**, then **implement the task** - Start a new sub-agent with: "Run `{{bin}} agent implement task` and implement the task in `.dust/tasks/[task-file].md`"
-
-Each sub-agent will handle the full workflow including commits and pushes.
-{{/if}}
-{{#unless isClaudeCodeWeb}}
 Follow these steps:
 
 1. Run `{{bin}} list ideas` to see all existing ideas
@@ -34,4 +24,3 @@ Follow these steps:
     - Deletion of any ideas that were fully realized
     - Updates to any ideas whose scope changed
 12. Push your commit to the remote repository
-{{/unless}}
