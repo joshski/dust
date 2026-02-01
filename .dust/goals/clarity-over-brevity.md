@@ -6,7 +6,7 @@ Abbreviated names like `ctx`, `deps`, `fs`, or `args` save a few keystrokes but 
 
 ## Parent Goal
 
-- [Organized Concerns](organized-concerns.md)
+- [Intuitive Directory Structure](intuitive-directory-structure.md)
 
 ## Sub-Goals
 
