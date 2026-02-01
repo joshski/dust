@@ -6,7 +6,7 @@ import {
 } from '../test/test-utilities'
 import {
   detectDustCommand,
-  detectInstallDependenciesHint,
+  detectInstallCommand,
   detectTestCommand,
   loadSettings,
 } from './settings'
@@ -78,57 +78,45 @@ describe('detectDustCommand', () => {
   })
 })
 
-describe('detectInstallDependenciesHint', () => {
+describe('detectInstallCommand', () => {
   test('returns bun install when bun.lockb exists', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'bun.lockb': '' },
     })
-    expect(detectInstallDependenciesHint('/project', fileSystem)).toBe(
-      'Run `bun install`'
-    )
+    expect(detectInstallCommand('/project', fileSystem)).toBe('bun install')
   })
 
   test('returns bun install when bun.lock exists', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'bun.lock': '' },
     })
-    expect(detectInstallDependenciesHint('/project', fileSystem)).toBe(
-      'Run `bun install`'
-    )
+    expect(detectInstallCommand('/project', fileSystem)).toBe('bun install')
   })
 
   test('returns pnpm install when pnpm-lock.yaml exists', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'pnpm-lock.yaml': '' },
     })
-    expect(detectInstallDependenciesHint('/project', fileSystem)).toBe(
-      'Run `pnpm install`'
-    )
+    expect(detectInstallCommand('/project', fileSystem)).toBe('pnpm install')
   })
 
   test('returns npm install when package-lock.json exists', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'package-lock.json': '' },
     })
-    expect(detectInstallDependenciesHint('/project', fileSystem)).toBe(
-      'Run `npm install`'
-    )
+    expect(detectInstallCommand('/project', fileSystem)).toBe('npm install')
   })
 
   test('returns yarn install when yarn.lock exists', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'yarn.lock': '' },
     })
-    expect(detectInstallDependenciesHint('/project', fileSystem)).toBe(
-      'Run `yarn install`'
-    )
+    expect(detectInstallCommand('/project', fileSystem)).toBe('yarn install')
   })
 
-  test('returns generic hint when no lockfile exists', () => {
+  test('returns empty string when no lockfile exists', () => {
     const fileSystem = createFileSystemEmulator()
-    expect(detectInstallDependenciesHint('/project', fileSystem)).toBe(
-      'Install any dependencies'
-    )
+    expect(detectInstallCommand('/project', fileSystem)).toBe('')
   })
 
   test('prioritizes bun.lockb over other lockfiles', () => {
@@ -140,9 +128,7 @@ describe('detectInstallDependenciesHint', () => {
         'yarn.lock': '',
       },
     })
-    expect(detectInstallDependenciesHint('/project', fileSystem)).toBe(
-      'Run `bun install`'
-    )
+    expect(detectInstallCommand('/project', fileSystem)).toBe('bun install')
   })
 
   test('prioritizes pnpm-lock.yaml over npm and yarn', () => {
@@ -153,9 +139,7 @@ describe('detectInstallDependenciesHint', () => {
         'yarn.lock': '',
       },
     })
-    expect(detectInstallDependenciesHint('/project', fileSystem)).toBe(
-      'Run `pnpm install`'
-    )
+    expect(detectInstallCommand('/project', fileSystem)).toBe('pnpm install')
   })
 
   test('prioritizes package-lock.json over yarn.lock', () => {
@@ -165,9 +149,7 @@ describe('detectInstallDependenciesHint', () => {
         'yarn.lock': '',
       },
     })
-    expect(detectInstallDependenciesHint('/project', fileSystem)).toBe(
-      'Run `npm install`'
-    )
+    expect(detectInstallCommand('/project', fileSystem)).toBe('npm install')
   })
 })
 
@@ -332,17 +314,17 @@ describe('loadSettings', () => {
     expect(settings.dustCommand).toBe('custom/dust')
   })
 
-  test('returns auto-detected installDependenciesHint when no config file exists', async () => {
+  test('returns auto-detected installCommand when no config file exists', async () => {
     stubEnv('BUN_INSTALL', '')
     const fileSystem = createFileSystemEmulator({
       project: { 'yarn.lock': '' },
     })
     const settings = await loadSettings('/project', fileSystem)
 
-    expect(settings.installDependenciesHint).toBe('Run `yarn install`')
+    expect(settings.installCommand).toBe('yarn install')
   })
 
-  test('auto-detects installDependenciesHint when not set in settings', async () => {
+  test('auto-detects installCommand when not set in settings', async () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -353,15 +335,15 @@ describe('loadSettings', () => {
     })
     const settings = await loadSettings('/project', fileSystem)
 
-    expect(settings.installDependenciesHint).toBe('Run `pnpm install`')
+    expect(settings.installCommand).toBe('pnpm install')
   })
 
-  test('uses explicit installDependenciesHint over auto-detection', async () => {
+  test('uses explicit installCommand over auto-detection', async () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           config: {
-            'settings.json': '{"installDependenciesHint": "Run `make deps`"}',
+            'settings.json': '{"installCommand": "make deps"}',
           },
         },
         'bun.lockb': '',
@@ -369,10 +351,10 @@ describe('loadSettings', () => {
     })
     const settings = await loadSettings('/project', fileSystem)
 
-    expect(settings.installDependenciesHint).toBe('Run `make deps`')
+    expect(settings.installCommand).toBe('make deps')
   })
 
-  test('returns auto-detected installDependenciesHint when config file is invalid JSON', async () => {
+  test('returns auto-detected installCommand when config file is invalid JSON', async () => {
     stubEnv('BUN_INSTALL', '')
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -384,7 +366,7 @@ describe('loadSettings', () => {
     })
     const settings = await loadSettings('/project', fileSystem)
 
-    expect(settings.installDependenciesHint).toBe('Run `npm install`')
+    expect(settings.installCommand).toBe('npm install')
   })
 })
 

@@ -1,12 +1,11 @@
 {
   "dustCommand": "bin/dust",
-  "installDependenciesHint": "Run `bun install`",
+  "installCommand": "bun install",
   "checks": [
     {
       "name": "lint typescript",
       "command": "bunx biome check .",
       "hints": [
-        "Run `bun install` if this is a fresh checkout",
         "Run `bunx biome check . --write` to auto-fix lint errors",
         "Check biome.json for rule configurations"
       ]
@@ -14,16 +13,12 @@
     {
       "name": "build",
       "command": "bun run build",
-      "hints": [
-        "Run `bun install` if this is a fresh checkout",
-        "Check for TypeScript errors in the files you modified"
-      ]
+      "hints": ["Check for TypeScript errors in the files you modified"]
     },
     {
       "name": "tests (vitest)",
       "command": "bun run test:coverage",
       "hints": [
-        "Run `bun install` if this is a fresh checkout",
         "Run `bun run test` to see detailed test output",
         "Check if new code needs corresponding tests"
       ]

@@ -14,13 +14,13 @@ The command used to invoke dust in agent instructions. Defaults to `dust` if not
 }
 ```
 
-### installDependenciesHint
+### installCommand
 
-A hint shown to agents about how to install dependencies. Defaults to "Install any dependencies" if not specified. On `dust init`, this is auto-detected based on project type (e.g., "Run \`npm install\`").
+A shell command to install dependencies, run automatically when `dust agent` is invoked. Auto-detected based on lockfiles (e.g., "npm install" for npm, "bun install" for bun). If no lockfile is found, defaults to an empty string (no install command run).
 
 ```json
 {
-  "installDependenciesHint": "Run `npm install`"
+  "installCommand": "npm install"
 }
 ```
 

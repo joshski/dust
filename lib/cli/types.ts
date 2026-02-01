@@ -34,7 +34,7 @@ export interface CheckConfig {
 export interface DustSettings {
   dustCommand: string
   checks?: CheckConfig[]
-  installDependenciesHint?: string
+  installCommand?: string
 }
 
 /**

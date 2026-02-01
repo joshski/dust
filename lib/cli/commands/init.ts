@@ -6,7 +6,7 @@ import {
   type CheckConfig,
   type DustSettings,
   detectDustCommand,
-  detectInstallDependenciesHint,
+  detectInstallCommand,
   detectTestCommand,
 } from '../../config/settings'
 import { loadTemplate } from '../templates'
@@ -29,7 +29,7 @@ const colors = {
  */
 function generateSettings(cwd: string, fileSystem: FileSystem): DustSettings {
   const dustCommand = detectDustCommand(cwd, fileSystem)
-  const installDependenciesHint = detectInstallDependenciesHint(cwd, fileSystem)
+  const installCommand = detectInstallCommand(cwd, fileSystem)
   const testCommand = detectTestCommand(cwd, fileSystem)
   const checks: CheckConfig[] = []
 
@@ -37,7 +37,7 @@ function generateSettings(cwd: string, fileSystem: FileSystem): DustSettings {
     checks.push({ name: 'test', command: testCommand })
   }
 
-  return { dustCommand, checks, installDependenciesHint }
+  return { dustCommand, checks, installCommand }
 }
 
 const USE_DUST_FACT = `# Use dust for planning
