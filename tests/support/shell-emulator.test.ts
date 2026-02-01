@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, test } from 'vitest'
 import {
   createShellEmulator,
   type ShellEmulator,
-} from './support/shell-emulator'
+} from './shell-emulator'
 
 describe('shell emulator', () => {
   let shell: ShellEmulator
