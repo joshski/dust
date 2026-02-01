@@ -64,7 +64,9 @@ export async function agent(
   // Run install command if configured
   if (settings.installCommand) {
     context.stdout('')
-    context.stdout(`Running: ${settings.installCommand}`)
+    context.stdout('Installing project dependencies:')
+    context.stdout('')
+    context.stdout(`> ${settings.installCommand}`)
     const { exitCode, output } = await installRunner.run(
       settings.installCommand,
       context.cwd
@@ -75,9 +77,8 @@ export async function agent(
     if (exitCode !== 0) {
       context.stderr(`Install command failed with exit code ${exitCode}`)
     } else {
-      context.stdout(
-        `Dependencies installed. Use \`${settings.installCommand}\` if you need to reinstall.`
-      )
+      context.stdout('')
+      context.stdout('✅ Dependencies installed, ready to roll!')
     }
   }
 

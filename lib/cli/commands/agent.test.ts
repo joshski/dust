@@ -179,10 +179,10 @@ describe('install command execution', () => {
 
     expect(runner.calls).toHaveLength(1)
     expect(runner.calls[0].command).toBe('npm install')
-    expect(context.stdoutLines.join('\n')).toContain('Running: npm install')
+    expect(context.stdoutLines.join('\n')).toContain('> npm install')
     expect(context.stdoutLines.join('\n')).toContain('installed packages')
     expect(context.stdoutLines.join('\n')).toContain(
-      'Use `npm install` if you need to reinstall'
+      'Dependencies installed, ready to roll!'
     )
   })
 
@@ -198,7 +198,7 @@ describe('install command execution', () => {
 
     const output = context.stdoutLines.join('\n')
     const greetingIndex = output.indexOf('welcome to dust')
-    const installIndex = output.indexOf('Running: npm install')
+    const installIndex = output.indexOf('Installing project dependencies')
     expect(greetingIndex).toBeLessThan(installIndex)
   })
 
@@ -209,7 +209,9 @@ describe('install command execution', () => {
     await agent(createDependencies(context, [], defaultSettings), runner)
 
     expect(runner.calls).toHaveLength(0)
-    expect(context.stdoutLines.join('\n')).not.toContain('Running:')
+    expect(context.stdoutLines.join('\n')).not.toContain(
+      'Installing project dependencies'
+    )
   })
 
   test('does not run install command when empty string', async () => {
