@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest'
 import { runSession } from '../run-session'
+import { buildGoal } from './content-builders'
 
 test('agent explores goals to understand project direction', async () => {
   const session = await runSession({
@@ -7,9 +8,14 @@ test('agent explores goals to understand project direction', async () => {
       project: {
         '.dust': {
           goals: {
-            'fast-feedback.md': '# Fast Feedback\n\nTests should run quickly.',
-            'maintainability.md':
-              '# Maintainability\n\nCode should be easy to change.',
+            'fast-feedback.md': buildGoal({
+              title: 'Fast Feedback',
+              description: 'Tests should run quickly.',
+            }),
+            'maintainability.md': buildGoal({
+              title: 'Maintainability',
+              description: 'Code should be easy to change.',
+            }),
           },
           ideas: {},
           tasks: {},

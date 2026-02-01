@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest'
 import { runSession } from '../run-session'
+import { buildTask } from './content-builders'
 
 test('agent sees only unblocked tasks when some are blocked', async () => {
   const session = await runSession({
@@ -9,38 +10,19 @@ test('agent sees only unblocked tasks when some are blocked', async () => {
           goals: {},
           ideas: {},
           tasks: {
-            'setup-database.md': `# Setup Database
-
-Create the database schema.
-
-## Goals
-
-(none)
-
-## Blocked by
-
-(none)
-
-## Definition of done
-
-- [ ] Schema created
-`,
-            'add-user-model.md': `# Add User Model
-
-Add the user model with authentication.
-
-## Goals
-
-(none)
-
-## Blocked by
-
-- [Setup Database](setup-database.md)
-
-## Definition of done
-
-- [ ] User model created
-`,
+            'setup-database.md': buildTask({
+              title: 'Setup Database',
+              description: 'Create the database schema.',
+              definitionOfDone: ['Schema created'],
+            }),
+            'add-user-model.md': buildTask({
+              title: 'Add User Model',
+              description: 'Add the user model with authentication.',
+              blockedBy: [
+                { name: 'Setup Database', path: 'setup-database.md' },
+              ],
+              definitionOfDone: ['User model created'],
+            }),
           },
           facts: {},
         },
@@ -70,22 +52,14 @@ test('blocked task becomes available when blocker is completed', async () => {
           ideas: {},
           tasks: {
             // Only the dependent task exists - blocker was deleted
-            'add-user-model.md': `# Add User Model
-
-Add the user model with authentication.
-
-## Goals
-
-(none)
-
-## Blocked by
-
-- [Setup Database](setup-database.md)
-
-## Definition of done
-
-- [ ] User model created
-`,
+            'add-user-model.md': buildTask({
+              title: 'Add User Model',
+              description: 'Add the user model with authentication.',
+              blockedBy: [
+                { name: 'Setup Database', path: 'setup-database.md' },
+              ],
+              definitionOfDone: ['User model created'],
+            }),
           },
           facts: {},
         },
@@ -112,49 +86,22 @@ test('task with multiple blockers waits for all to complete', async () => {
           goals: {},
           ideas: {},
           tasks: {
-            'setup-database.md': `# Setup Database
-
-## Goals
-
-(none)
-
-## Blocked by
-
-(none)
-
-## Definition of done
-
-- [ ] Done
-`,
-            'setup-auth.md': `# Setup Auth
-
-## Goals
-
-(none)
-
-## Blocked by
-
-(none)
-
-## Definition of done
-
-- [ ] Done
-`,
-            'add-user-api.md': `# Add User API
-
-## Goals
-
-(none)
-
-## Blocked by
-
-- [Setup Database](setup-database.md)
-- [Setup Auth](setup-auth.md)
-
-## Definition of done
-
-- [ ] Done
-`,
+            'setup-database.md': buildTask({
+              title: 'Setup Database',
+              definitionOfDone: ['Done'],
+            }),
+            'setup-auth.md': buildTask({
+              title: 'Setup Auth',
+              definitionOfDone: ['Done'],
+            }),
+            'add-user-api.md': buildTask({
+              title: 'Add User API',
+              blockedBy: [
+                { name: 'Setup Database', path: 'setup-database.md' },
+                { name: 'Setup Auth', path: 'setup-auth.md' },
+              ],
+              definitionOfDone: ['Done'],
+            }),
           },
           facts: {},
         },
@@ -184,48 +131,20 @@ test('chain of blocked tasks shows only the first available', async () => {
           goals: {},
           ideas: {},
           tasks: {
-            'step-one.md': `# Step One
-
-## Goals
-
-(none)
-
-## Blocked by
-
-(none)
-
-## Definition of done
-
-- [ ] Done
-`,
-            'step-two.md': `# Step Two
-
-## Goals
-
-(none)
-
-## Blocked by
-
-- [Step One](step-one.md)
-
-## Definition of done
-
-- [ ] Done
-`,
-            'step-three.md': `# Step Three
-
-## Goals
-
-(none)
-
-## Blocked by
-
-- [Step Two](step-two.md)
-
-## Definition of done
-
-- [ ] Done
-`,
+            'step-one.md': buildTask({
+              title: 'Step One',
+              definitionOfDone: ['Done'],
+            }),
+            'step-two.md': buildTask({
+              title: 'Step Two',
+              blockedBy: [{ name: 'Step One', path: 'step-one.md' }],
+              definitionOfDone: ['Done'],
+            }),
+            'step-three.md': buildTask({
+              title: 'Step Three',
+              blockedBy: [{ name: 'Step Two', path: 'step-two.md' }],
+              definitionOfDone: ['Done'],
+            }),
           },
           facts: {},
         },

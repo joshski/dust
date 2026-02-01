@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest'
 import { runSession } from '../run-session'
+import { buildGoal, buildIdea, buildTask } from './content-builders'
 
 test('check command reports error when no checks are configured', async () => {
   const session = await runSession({
@@ -45,26 +46,18 @@ test('check command validates markdown files in .dust directory', async () => {
       project: {
         '.dust': {
           goals: {
-            'valid-goal.md': '# Valid Goal\n\nA well-formed goal.',
+            'valid-goal.md': buildGoal({
+              title: 'Valid Goal',
+              description: 'A well-formed goal.',
+            }),
           },
           ideas: {},
           tasks: {
-            'valid-task.md': `# Valid Task
-
-A well-formed task.
-
-## Goals
-
-(none)
-
-## Blocked by
-
-(none)
-
-## Definition of done
-
-- [ ] Complete the task
-`,
+            'valid-task.md': buildTask({
+              title: 'Valid Task',
+              description: 'A well-formed task.',
+              definitionOfDone: ['Complete the task'],
+            }),
           },
           facts: {},
           config: {
@@ -104,11 +97,12 @@ test('check command fails when markdown files have validation errors', async () 
           goals: {},
           ideas: {},
           tasks: {
-            // Invalid filename (uppercase)
-            'InvalidTask.md': `# Invalid Task
-
-Missing required sections.
-`,
+            // Invalid filename (uppercase) - intentionally malformed
+            'InvalidTask.md': buildTask({
+              title: 'Invalid Task',
+              description: 'Missing required sections.',
+              definitionOfDone: ['Done'],
+            }),
           },
           facts: {},
           config: {
@@ -149,6 +143,7 @@ test('lint markdown command shows validation errors', async () => {
           goals: {},
           ideas: {},
           tasks: {
+            // Intentionally malformed - missing required sections for testing validation errors
             'missing-sections.md':
               '# Missing Sections\n\nNo required sections here.',
           },
@@ -186,40 +181,26 @@ test('lint markdown passes with valid files', async () => {
       project: {
         '.dust': {
           goals: {
-            // Goals require Parent Goal and Sub-Goals sections
-            'good-goal.md': `# Good Goal
-
-This is a proper goal.
-
-## Parent Goal
-
-(none)
-
-## Sub-Goals
-
-(none)
-`,
+            'good-goal.md': buildGoal({
+              title: 'Good Goal',
+              description: 'This is a proper goal.',
+              parentGoal: '(none)',
+              subGoals: '(none)',
+            }),
           },
           ideas: {
-            'good-idea.md': '# Good Idea\n\nThis is a proper idea.',
+            'good-idea.md': buildIdea({
+              title: 'Good Idea',
+              description: 'This is a proper idea.',
+            }),
           },
           tasks: {
-            'good-task.md': `# Good Task
-
-A proper task with all sections.
-
-## Goals
-
-- [Good Goal](../goals/good-goal.md)
-
-## Blocked by
-
-(none)
-
-## Definition of done
-
-- [ ] Task is complete
-`,
+            'good-task.md': buildTask({
+              title: 'Good Task',
+              description: 'A proper task with all sections.',
+              goals: [{ name: 'Good Goal', path: '../goals/good-goal.md' }],
+              definitionOfDone: ['Task is complete'],
+            }),
           },
           facts: {},
         },

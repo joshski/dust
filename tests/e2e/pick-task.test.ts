@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest'
 import { runSession } from '../run-session'
+import { buildGoal, buildTask } from './content-builders'
 
 test('agent picks task from backlog and gets implementation instructions', async () => {
   const session = await runSession({
@@ -7,28 +8,24 @@ test('agent picks task from backlog and gets implementation instructions', async
       project: {
         '.dust': {
           goals: {
-            'code-quality.md':
-              '# Code Quality\n\nMaintain high code quality standards.',
+            'code-quality.md': buildGoal({
+              title: 'Code Quality',
+              description: 'Maintain high code quality standards.',
+            }),
           },
           ideas: {},
           tasks: {
-            'add-logging.md': `# Add Logging
-
-Add structured logging throughout the application.
-
-## Goals
-
-- [Code Quality](../goals/code-quality.md)
-
-## Blocked by
-
-(none)
-
-## Definition of done
-
-- [ ] Logging library is installed
-- [ ] Key operations are logged
-`,
+            'add-logging.md': buildTask({
+              title: 'Add Logging',
+              description: 'Add structured logging throughout the application.',
+              goals: [
+                { name: 'Code Quality', path: '../goals/code-quality.md' },
+              ],
+              definitionOfDone: [
+                'Logging library is installed',
+                'Key operations are logged',
+              ],
+            }),
           },
           facts: {},
         },
@@ -73,12 +70,18 @@ test('agent can pick from multiple available tasks', async () => {
           goals: {},
           ideas: {},
           tasks: {
-            'task-a.md':
-              '# Task A\n\n## Goals\n\n(none)\n\n## Blocked by\n\n(none)\n\n## Definition of done\n\n- [ ] Done',
-            'task-b.md':
-              '# Task B\n\n## Goals\n\n(none)\n\n## Blocked by\n\n(none)\n\n## Definition of done\n\n- [ ] Done',
-            'task-c.md':
-              '# Task C\n\n## Goals\n\n(none)\n\n## Blocked by\n\n(none)\n\n## Definition of done\n\n- [ ] Done',
+            'task-a.md': buildTask({
+              title: 'Task A',
+              definitionOfDone: ['Done'],
+            }),
+            'task-b.md': buildTask({
+              title: 'Task B',
+              definitionOfDone: ['Done'],
+            }),
+            'task-c.md': buildTask({
+              title: 'Task C',
+              definitionOfDone: ['Done'],
+            }),
           },
           facts: {},
         },
