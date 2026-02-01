@@ -13,7 +13,6 @@ test('agent discovers available work through dust agent flow', async () => {
               description: 'Tests should run quickly.',
             }),
           },
-          ideas: {},
           tasks: {
             'implement-caching.md': buildTask({
               title: 'Implement Caching',
@@ -24,7 +23,6 @@ test('agent discovers available work through dust agent flow', async () => {
               definitionOfDone: ['Cache is implemented', 'Tests pass'],
             }),
           },
-          facts: {},
         },
       },
     },

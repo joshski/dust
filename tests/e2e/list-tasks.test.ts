@@ -7,8 +7,6 @@ test('agent lists tasks to understand current work', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {},
-          ideas: {},
           tasks: {
             'task-one.md': buildTask({
               title: 'Task One',
@@ -19,7 +17,6 @@ test('agent lists tasks to understand current work', async () => {
               definitionOfDone: ['Done'],
             }),
           },
-          facts: {},
         },
       },
     },

@@ -7,8 +7,6 @@ test('agent sees only unblocked tasks when some are blocked', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {},
-          ideas: {},
           tasks: {
             'setup-database.md': buildTask({
               title: 'Setup Database',
@@ -24,7 +22,6 @@ test('agent sees only unblocked tasks when some are blocked', async () => {
               definitionOfDone: ['User model created'],
             }),
           },
-          facts: {},
         },
       },
     },
@@ -48,8 +45,6 @@ test('blocked task becomes available when blocker is completed', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {},
-          ideas: {},
           tasks: {
             // Only the dependent task exists - blocker was deleted
             'add-user-model.md': buildTask({
@@ -61,7 +56,6 @@ test('blocked task becomes available when blocker is completed', async () => {
               definitionOfDone: ['User model created'],
             }),
           },
-          facts: {},
         },
       },
     },
@@ -83,8 +77,6 @@ test('task with multiple blockers waits for all to complete', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {},
-          ideas: {},
           tasks: {
             'setup-database.md': buildTask({
               title: 'Setup Database',
@@ -103,7 +95,6 @@ test('task with multiple blockers waits for all to complete', async () => {
               definitionOfDone: ['Done'],
             }),
           },
-          facts: {},
         },
       },
     },
@@ -128,8 +119,6 @@ test('chain of blocked tasks shows only the first available', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {},
-          ideas: {},
           tasks: {
             'step-one.md': buildTask({
               title: 'Step One',
@@ -146,7 +135,6 @@ test('chain of blocked tasks shows only the first available', async () => {
               definitionOfDone: ['Done'],
             }),
           },
-          facts: {},
         },
       },
     },

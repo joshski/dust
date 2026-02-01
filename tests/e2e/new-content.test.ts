@@ -6,12 +6,7 @@ test('agent gets instructions for creating a new task', async () => {
   const session = await runSession({
     fileSystemTree: {
       project: {
-        '.dust': {
-          goals: {},
-          ideas: {},
-          tasks: {},
-          facts: {},
-        },
+        '.dust': {},
       },
     },
     handlers: [
@@ -44,12 +39,7 @@ test('agent gets instructions for creating a new goal', async () => {
   const session = await runSession({
     fileSystemTree: {
       project: {
-        '.dust': {
-          goals: {},
-          ideas: {},
-          tasks: {},
-          facts: {},
-        },
+        '.dust': {},
       },
     },
     handlers: [
@@ -82,12 +72,7 @@ test('agent gets instructions for creating a new idea', async () => {
   const session = await runSession({
     fileSystemTree: {
       project: {
-        '.dust': {
-          goals: {},
-          ideas: {},
-          tasks: {},
-          facts: {},
-        },
+        '.dust': {},
       },
     },
     handlers: [
@@ -119,15 +104,12 @@ test('new task instructions include checking existing ideas', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {},
           ideas: {
             'improve-performance.md': buildIdea({
               title: 'Improve Performance',
               description: 'Make it faster.',
             }),
           },
-          tasks: {},
-          facts: {},
         },
       },
     },
@@ -156,9 +138,6 @@ test('new goal instructions include checking existing goals', async () => {
               description: 'Code should be easy to change.',
             }),
           },
-          ideas: {},
-          tasks: {},
-          facts: {},
         },
       },
     },
