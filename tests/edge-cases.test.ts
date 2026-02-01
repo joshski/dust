@@ -77,17 +77,14 @@ test('all tasks blocked shows no available work', async () => {
           tasks: {
             'blocker-task.md': buildTask({
               title: 'Blocker Task',
-              definitionOfDone: ['Done'],
             }),
             'blocked-task-a.md': buildTask({
               title: 'Blocked Task A',
               blockedBy: [{ name: 'Blocker Task', path: 'blocker-task.md' }],
-              definitionOfDone: ['Done'],
             }),
             'blocked-task-b.md': buildTask({
               title: 'Blocked Task B',
               blockedBy: [{ name: 'Blocker Task', path: 'blocker-task.md' }],
-              definitionOfDone: ['Done'],
             }),
           },
         },
@@ -214,7 +211,6 @@ test('agent handles task with special characters in filename', async () => {
           tasks: {
             'add-api-v2-endpoint.md': buildTask({
               title: 'Add API v2 Endpoint',
-              definitionOfDone: ['Done'],
             }),
           },
         },

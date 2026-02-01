@@ -80,11 +80,9 @@ test('task with multiple blockers waits for all to complete', async () => {
           tasks: {
             'setup-database.md': buildTask({
               title: 'Setup Database',
-              definitionOfDone: ['Done'],
             }),
             'setup-auth.md': buildTask({
               title: 'Setup Auth',
-              definitionOfDone: ['Done'],
             }),
             'add-user-api.md': buildTask({
               title: 'Add User API',
@@ -92,7 +90,6 @@ test('task with multiple blockers waits for all to complete', async () => {
                 { name: 'Setup Database', path: 'setup-database.md' },
                 { name: 'Setup Auth', path: 'setup-auth.md' },
               ],
-              definitionOfDone: ['Done'],
             }),
           },
         },
@@ -122,17 +119,14 @@ test('chain of blocked tasks shows only the first available', async () => {
           tasks: {
             'step-one.md': buildTask({
               title: 'Step One',
-              definitionOfDone: ['Done'],
             }),
             'step-two.md': buildTask({
               title: 'Step Two',
               blockedBy: [{ name: 'Step One', path: 'step-one.md' }],
-              definitionOfDone: ['Done'],
             }),
             'step-three.md': buildTask({
               title: 'Step Three',
               blockedBy: [{ name: 'Step Two', path: 'step-two.md' }],
-              definitionOfDone: ['Done'],
             }),
           },
         },

@@ -10,11 +10,9 @@ test('agent lists tasks to understand current work', async () => {
           tasks: {
             'task-one.md': buildTask({
               title: 'Task One',
-              definitionOfDone: ['Done'],
             }),
             'task-two.md': buildTask({
               title: 'Task Two',
-              definitionOfDone: ['Done'],
             }),
           },
         },
