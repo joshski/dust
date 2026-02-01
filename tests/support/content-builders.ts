@@ -10,7 +10,7 @@ interface TaskOptions {
   description?: string
   goals?: Link[] | '(none)'
   blockedBy?: Link[] | '(none)'
-  definitionOfDone: string[]
+  definitionOfDone?: string[]
 }
 
 interface GoalOptions {
@@ -47,7 +47,7 @@ export function buildTask(options: TaskOptions): string {
     description,
     goals = '(none)',
     blockedBy = '(none)',
-    definitionOfDone,
+    definitionOfDone = ['Task complete'],
   } = options
 
   const descriptionSection = description ? `\n${description}\n` : ''
