@@ -12,19 +12,19 @@ export type { CheckConfig, DustSettings }
 
 const DEFAULT_SETTINGS: DustSettings = {
   dustCommand: 'npx dust',
-  installDependenciesHint: 'Install any dependencies',
+  installCommand: '',
 }
 
 /**
- * Detects the appropriate install dependencies hint based on lockfiles.
+ * Detects the appropriate install command based on lockfiles.
  * Priority:
- * 1. bun.lockb or bun.lock exists → Run `bun install`
- * 2. pnpm-lock.yaml exists → Run `pnpm install`
- * 3. package-lock.json exists → Run `npm install`
- * 4. yarn.lock exists → Run `yarn install`
- * 5. No lockfile → Install any dependencies
+ * 1. bun.lockb or bun.lock exists → bun install
+ * 2. pnpm-lock.yaml exists → pnpm install
+ * 3. package-lock.json exists → npm install
+ * 4. yarn.lock exists → yarn install
+ * 5. No lockfile → empty string (no install command)
  */
-export function detectInstallDependenciesHint(
+export function detectInstallCommand(
   cwd: string,
   fileSystem: FileSystem
 ): string {
@@ -32,18 +32,18 @@ export function detectInstallDependenciesHint(
     fileSystem.exists(join(cwd, 'bun.lockb')) ||
     fileSystem.exists(join(cwd, 'bun.lock'))
   ) {
-    return 'Run `bun install`'
+    return 'bun install'
   }
   if (fileSystem.exists(join(cwd, 'pnpm-lock.yaml'))) {
-    return 'Run `pnpm install`'
+    return 'pnpm install'
   }
   if (fileSystem.exists(join(cwd, 'package-lock.json'))) {
-    return 'Run `npm install`'
+    return 'npm install'
   }
   if (fileSystem.exists(join(cwd, 'yarn.lock'))) {
-    return 'Run `yarn install`'
+    return 'yarn install'
   }
-  return 'Install any dependencies'
+  return ''
 }
 
 /**
@@ -119,7 +119,7 @@ export async function loadSettings(
   if (!fileSystem.exists(settingsPath)) {
     return {
       dustCommand: detectDustCommand(cwd, fileSystem),
-      installDependenciesHint: detectInstallDependenciesHint(cwd, fileSystem),
+      installCommand: detectInstallCommand(cwd, fileSystem),
     }
   }
 
@@ -134,18 +134,15 @@ export async function loadSettings(
     if (!parsed.dustCommand) {
       result.dustCommand = detectDustCommand(cwd, fileSystem)
     }
-    // Auto-detect installDependenciesHint if not explicitly set
-    if (!parsed.installDependenciesHint) {
-      result.installDependenciesHint = detectInstallDependenciesHint(
-        cwd,
-        fileSystem
-      )
+    // Auto-detect installCommand if not explicitly set
+    if (!parsed.installCommand) {
+      result.installCommand = detectInstallCommand(cwd, fileSystem)
     }
     return result
   } catch {
     return {
       dustCommand: detectDustCommand(cwd, fileSystem),
-      installDependenciesHint: detectInstallDependenciesHint(cwd, fileSystem),
+      installCommand: detectInstallCommand(cwd, fileSystem),
     }
   }
 }

@@ -38,8 +38,6 @@ export function templateVariables(
   return {
     bin: settings.dustCommand,
     agentName,
-    installDependenciesHint:
-      settings.installDependenciesHint || 'Install any dependencies',
     hooksInstalled: hooksInstalled ? 'true' : 'false',
     isClaudeCodeWeb: agentName === 'Claude Code Web' ? 'true' : '',
   }
