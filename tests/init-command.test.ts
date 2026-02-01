@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { createShellEmulator } from '../shell-emulator'
+import { createShellEmulator } from './support/shell-emulator'
 
 test('init command creates .dust directory structure', async () => {
   // Use shell emulator directly since init doesn't follow typical agent flow

@@ -6,13 +6,13 @@
  * instead of spawning subprocesses.
  */
 
-import { main } from '../lib/cli/main'
+import { main } from '../../lib/cli/main'
 import {
   createContextEmulator,
   createFileSystemEmulator,
   type FileSystemEmulator,
   type FileSystemTree,
-} from '../lib/test/test-utilities'
+} from '../../lib/test/test-utilities'
 
 export interface CommandResult {
   stdout: string
