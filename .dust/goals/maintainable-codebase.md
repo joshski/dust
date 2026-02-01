@@ -14,3 +14,4 @@ This goal governs how we develop and maintain dust itself, separate from the goa
 - [Minimal Dependencies](minimal-dependencies.md)
 - [Intuitive Directory Structure](intuitive-directory-structure.md)
 - [Repository Hygiene](repository-hygiene.md)
+- [Clarity Over Brevity](clarity-over-brevity.md)
