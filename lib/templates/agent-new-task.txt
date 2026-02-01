@@ -1,13 +1,10 @@
 ## Adding a New Task
 
-{{#if isClaudeCodeWeb}}
-Follow these steps to create the task definition, then spawn a sub-agent for implementation.
+{{#if isClaudeCodeWeb}}Follow these steps to create the task definition, then spawn a sub-agent for implementation.
 
 Use a todo list to track your progress through these steps.
-{{else}}
-Follow these steps:
-{{/if}}
-
+{{/if}}{{#unless isClaudeCodeWeb}}Follow these steps:
+{{/unless}}
 1. Run `{{bin}} list ideas` to see all existing ideas
 2. Determine which ideas (if any) should be:
    - **Deleted** - if the new task fully covers the idea
@@ -29,7 +26,5 @@ Follow these steps:
     - The new task file
     - Deletion of any ideas that were fully realized
     - Updates to any ideas whose scope changed
-12. Push your commit to the remote repository
-{{#if isClaudeCodeWeb}}
-13. **Start a sub-agent** to implement the task: "Run `{{bin}} agent implement task` and implement the task in `.dust/tasks/[task-file].md`"
-{{/if}}
+{{#unless isClaudeCodeWeb}}12. Push your commit to the remote repository
+{{/unless}}{{#if isClaudeCodeWeb}}12. **Start a sub-agent** to implement the task: "Run `{{bin}} agent implement task` and implement the task in `.dust/tasks/[task-file].md`"{{/if}}
