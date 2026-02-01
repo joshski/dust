@@ -1,8 +1,8 @@
 /**
- * dust github actions check - Execute quality checks with periodic health check task creation
+ * dust github actions check - Execute quality checks with periodic review task creation
  *
  * Runs all checks from `dust check` and, when running on the default branch in GitHub Actions,
- * creates a periodic health check task after 20+ commits since the task was last deleted.
+ * creates a periodic review task after 20+ commits since the task was last deleted.
  */
 
 import { type ChildProcess, spawn } from 'node:child_process'
@@ -20,7 +20,7 @@ export type GitSpawnFn = (
   options: { cwd: string }
 ) => ChildProcess
 
-const HEALTH_CHECK_TASK_PATH = '.dust/tasks/periodic-health-check.md'
+const REVIEW_TASK_PATH = '.dust/tasks/periodic-review.md'
 
 export interface GitRunner {
   run: (
@@ -74,14 +74,7 @@ async function getCommitsSinceLastDeletion(
 ): Promise<number> {
   // Find the commit where the file was last deleted
   const lastDeleteResult = await gitRunner.run(
-    [
-      'log',
-      '--diff-filter=D',
-      '--format=%H',
-      '-1',
-      '--',
-      HEALTH_CHECK_TASK_PATH,
-    ],
+    ['log', '--diff-filter=D', '--format=%H', '-1', '--', REVIEW_TASK_PATH],
     cwd
   )
 
@@ -104,35 +97,33 @@ async function getCommitsSinceLastDeletion(
   return Number.parseInt(commitsSinceResult.output.trim(), 10) || 0
 }
 
-async function createAndPushHealthCheckTask(
+async function createAndPushReviewTask(
   cwd: string,
   gitRunner: GitRunner,
   fileSystem: { writeFile: (path: string, content: string) => Promise<void> },
   context: { stdout: (msg: string) => void }
 ): Promise<void> {
-  const fullPath = `${cwd}/${HEALTH_CHECK_TASK_PATH}`
+  const fullPath = `${cwd}/${REVIEW_TASK_PATH}`
 
   // Write the file
-  const content = loadTemplate('periodic-health-check')
+  const content = loadTemplate('periodic-review')
   await fileSystem.writeFile(fullPath, content)
 
   // Stage the file
-  const addResult = await gitRunner.run(['add', HEALTH_CHECK_TASK_PATH], cwd)
+  const addResult = await gitRunner.run(['add', REVIEW_TASK_PATH], cwd)
   if (addResult.exitCode !== 0) {
-    context.stdout(
-      `Warning: Failed to stage health check task: ${addResult.output}`
-    )
+    context.stdout(`Warning: Failed to stage review task: ${addResult.output}`)
     return
   }
 
   // Commit
   const commitResult = await gitRunner.run(
-    ['commit', '-m', 'Add task: Periodic Health Check'],
+    ['commit', '-m', 'Add task: Periodic Review'],
     cwd
   )
   if (commitResult.exitCode !== 0) {
     context.stdout(
-      `Warning: Failed to commit health check task: ${commitResult.output}`
+      `Warning: Failed to commit review task: ${commitResult.output}`
     )
     return
   }
@@ -140,14 +131,12 @@ async function createAndPushHealthCheckTask(
   // Push
   const pushResult = await gitRunner.run(['push'], cwd)
   if (pushResult.exitCode !== 0) {
-    context.stdout(
-      `Warning: Failed to push health check task: ${pushResult.output}`
-    )
+    context.stdout(`Warning: Failed to push review task: ${pushResult.output}`)
     return
   }
 
   context.stdout('')
-  context.stdout('Created periodic health check task')
+  context.stdout('Created periodic review task')
 }
 
 export async function githubActionsCheck(
@@ -161,7 +150,7 @@ export async function githubActionsCheck(
   // Run all standard checks first
   const checkResult = await check(dependencies, bufferedRunner)
 
-  // If checks failed, don't proceed with health check task creation
+  // If checks failed, don't proceed with review task creation
   if (checkResult.exitCode !== 0) {
     return checkResult
   }
@@ -180,7 +169,7 @@ export async function githubActionsCheck(
   }
 
   // Check if the task file already exists
-  const taskPath = `${context.cwd}/${HEALTH_CHECK_TASK_PATH}`
+  const taskPath = `${context.cwd}/${REVIEW_TASK_PATH}`
   if (fileSystem.exists(taskPath)) {
     return checkResult
   }
@@ -193,12 +182,7 @@ export async function githubActionsCheck(
     )
 
     if (commitsSince >= 20) {
-      await createAndPushHealthCheckTask(
-        context.cwd,
-        gitRunner,
-        fileSystem,
-        context
-      )
+      await createAndPushReviewTask(context.cwd, gitRunner, fileSystem, context)
     }
   } catch (error) {
     // Log warning but don't fail the overall check

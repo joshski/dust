@@ -1,0 +1,18 @@
+# Periodic Review
+
+Review the `.dust/` directory and create individual tasks for any maintenance needed.
+
+## Goals
+
+(none)
+
+## Blocked by
+
+(none)
+
+## Definition of done
+
+- [ ] Review `.dust/ideas/` - create tasks for: promoting actionable ideas, refining unclear ones, deleting stale ones
+- [ ] Review `.dust/facts/` - create tasks for any facts that no longer reflect the codebase
+- [ ] Review `.dust/goals/` - create tasks for goals that need updating or better linking
+- [ ] Delete this task file when complete (deletion marks the start of the next 20-commit cycle)

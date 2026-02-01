@@ -1,19 +1,19 @@
 # GitHub Actions Integration
 
-The `dust github actions check` command is designed for CI environments. It runs all standard quality checks (`dust check`) and automatically creates periodic health check tasks.
+The `dust github actions check` command is designed for CI environments. It runs all standard quality checks (`dust check`) and automatically creates periodic review tasks.
 
 ```bash
 ./bin/dust github actions check
 ```
 
-## Periodic Health Check Task Creation
+## Periodic Review Task Creation
 
-When running on the default branch (`main`) during a `push` event, the command creates `.dust/tasks/periodic-health-check.md` if:
+When running on the default branch (`main`) during a `push` event, the command creates `.dust/tasks/periodic-review.md` if:
 
 1. The task file does not already exist
 2. At least 20 commits have passed since the file was last deleted
 
-This ensures regular maintenance reviews of the `.dust/` directory happen automatically without manual intervention.
+The periodic review task instructs an agent to review the `.dust/` directory and create individual tasks for any maintenance needed (stale ideas, outdated facts, goals needing updates, etc.).
 
 ## GitHub Actions Environment Variables
 

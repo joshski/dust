@@ -59,9 +59,9 @@ function createDependencies(
 }
 
 // Valid task content that passes markdown linting (title must match filename)
-const VALID_TASK_CONTENT = `# Periodic Health Check
+const VALID_TASK_CONTENT = `# Periodic Review
 
-Review and maintain dust planning artifacts.
+Review the .dust/ directory and create individual tasks for any maintenance needed.
 
 ## Goals
 
@@ -150,14 +150,14 @@ describe('githubActionsCheck', () => {
         'npm run lint': { exitCode: 0, output: '' },
       })
       const gitRunner = createMockGitRunner({
-        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-health-check.md':
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-review.md':
           {
             exitCode: 0,
             output: 'abc123',
           },
         'rev-list --count abc123..HEAD': { exitCode: 0, output: '25' },
-        'add .dust/tasks/periodic-health-check.md': { exitCode: 0, output: '' },
-        'commit -m Add task: Periodic Health Check': {
+        'add .dust/tasks/periodic-review.md': { exitCode: 0, output: '' },
+        'commit -m Add task: Periodic Review': {
           exitCode: 0,
           output: '',
         },
@@ -174,13 +174,9 @@ describe('githubActionsCheck', () => {
 
       expect(result.exitCode).toBe(0)
       expect(
-        fileSystem.writtenFiles.has(
-          '/project/.dust/tasks/periodic-health-check.md'
-        )
+        fileSystem.writtenFiles.has('/project/.dust/tasks/periodic-review.md')
       ).toBe(true)
-      expect(context.stdoutLines).toContain(
-        'Created periodic health check task'
-      )
+      expect(context.stdoutLines).toContain('Created periodic review task')
     })
 
     test('does not create task when file already exists', async () => {
@@ -193,7 +189,7 @@ describe('githubActionsCheck', () => {
         project: {
           '.dust': {
             tasks: {
-              'periodic-health-check.md': VALID_TASK_CONTENT,
+              'periodic-review.md': VALID_TASK_CONTENT,
             },
           },
         },
@@ -215,9 +211,7 @@ describe('githubActionsCheck', () => {
       // Should not check commit history when file exists
       expect(gitRunner.calls).toHaveLength(0)
       expect(
-        fileSystem.writtenFiles.has(
-          '/project/.dust/tasks/periodic-health-check.md'
-        )
+        fileSystem.writtenFiles.has('/project/.dust/tasks/periodic-review.md')
       ).toBe(false)
     })
 
@@ -232,7 +226,7 @@ describe('githubActionsCheck', () => {
         'npm run lint': { exitCode: 0, output: '' },
       })
       const gitRunner = createMockGitRunner({
-        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-health-check.md':
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-review.md':
           {
             exitCode: 0,
             output: 'abc123',
@@ -250,9 +244,7 @@ describe('githubActionsCheck', () => {
 
       expect(result.exitCode).toBe(0)
       expect(
-        fileSystem.writtenFiles.has(
-          '/project/.dust/tasks/periodic-health-check.md'
-        )
+        fileSystem.writtenFiles.has('/project/.dust/tasks/periodic-review.md')
       ).toBe(false)
     })
 
@@ -317,14 +309,14 @@ describe('githubActionsCheck', () => {
         'npm run lint': { exitCode: 0, output: '' },
       })
       const gitRunner = createMockGitRunner({
-        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-health-check.md':
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-review.md':
           {
             exitCode: 0,
             output: '', // No deletion found
           },
         'rev-list --count HEAD': { exitCode: 0, output: '50' },
-        'add .dust/tasks/periodic-health-check.md': { exitCode: 0, output: '' },
-        'commit -m Add task: Periodic Health Check': {
+        'add .dust/tasks/periodic-review.md': { exitCode: 0, output: '' },
+        'commit -m Add task: Periodic Review': {
           exitCode: 0,
           output: '',
         },
@@ -341,9 +333,7 @@ describe('githubActionsCheck', () => {
 
       expect(result.exitCode).toBe(0)
       expect(
-        fileSystem.writtenFiles.has(
-          '/project/.dust/tasks/periodic-health-check.md'
-        )
+        fileSystem.writtenFiles.has('/project/.dust/tasks/periodic-review.md')
       ).toBe(true)
     })
 
@@ -385,13 +375,13 @@ describe('githubActionsCheck', () => {
         'npm run lint': { exitCode: 0, output: '' },
       })
       const gitRunner = createMockGitRunner({
-        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-health-check.md':
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-review.md':
           {
             exitCode: 0,
             output: '',
           },
         'rev-list --count HEAD': { exitCode: 0, output: '25' },
-        'add .dust/tasks/periodic-health-check.md': {
+        'add .dust/tasks/periodic-review.md': {
           exitCode: 1,
           output: 'fatal: pathspec error',
         },
@@ -407,7 +397,7 @@ describe('githubActionsCheck', () => {
 
       expect(result.exitCode).toBe(0)
       expect(context.stdoutLines.join('\n')).toContain(
-        'Warning: Failed to stage health check task'
+        'Warning: Failed to stage review task'
       )
     })
 
@@ -422,14 +412,14 @@ describe('githubActionsCheck', () => {
         'npm run lint': { exitCode: 0, output: '' },
       })
       const gitRunner = createMockGitRunner({
-        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-health-check.md':
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-review.md':
           {
             exitCode: 0,
             output: '',
           },
         'rev-list --count HEAD': { exitCode: 0, output: '25' },
-        'add .dust/tasks/periodic-health-check.md': { exitCode: 0, output: '' },
-        'commit -m Add task: Periodic Health Check': {
+        'add .dust/tasks/periodic-review.md': { exitCode: 0, output: '' },
+        'commit -m Add task: Periodic Review': {
           exitCode: 1,
           output: 'nothing to commit',
         },
@@ -445,7 +435,7 @@ describe('githubActionsCheck', () => {
 
       expect(result.exitCode).toBe(0)
       expect(context.stdoutLines.join('\n')).toContain(
-        'Warning: Failed to commit health check task'
+        'Warning: Failed to commit review task'
       )
     })
 
@@ -460,14 +450,14 @@ describe('githubActionsCheck', () => {
         'npm run lint': { exitCode: 0, output: '' },
       })
       const gitRunner = createMockGitRunner({
-        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-health-check.md':
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-review.md':
           {
             exitCode: 0,
             output: '',
           },
         'rev-list --count HEAD': { exitCode: 0, output: '25' },
-        'add .dust/tasks/periodic-health-check.md': { exitCode: 0, output: '' },
-        'commit -m Add task: Periodic Health Check': {
+        'add .dust/tasks/periodic-review.md': { exitCode: 0, output: '' },
+        'commit -m Add task: Periodic Review': {
           exitCode: 0,
           output: '',
         },
@@ -484,7 +474,7 @@ describe('githubActionsCheck', () => {
 
       expect(result.exitCode).toBe(0)
       expect(context.stdoutLines.join('\n')).toContain(
-        'Warning: Failed to push health check task'
+        'Warning: Failed to push review task'
       )
     })
 
@@ -561,7 +551,7 @@ describe('githubActionsCheck', () => {
         'npm run lint': { exitCode: 0, output: '' },
       })
       const gitRunner = createMockGitRunner({
-        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-health-check.md':
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-review.md':
           {
             exitCode: 0,
             output: 'abc123',
@@ -583,9 +573,7 @@ describe('githubActionsCheck', () => {
       // Should return 0 for invalid output, which is < 20, so no task creation
       expect(result.exitCode).toBe(0)
       expect(
-        fileSystem.writtenFiles.has(
-          '/project/.dust/tasks/periodic-health-check.md'
-        )
+        fileSystem.writtenFiles.has('/project/.dust/tasks/periodic-review.md')
       ).toBe(false)
     })
 
@@ -600,7 +588,7 @@ describe('githubActionsCheck', () => {
         'npm run lint': { exitCode: 0, output: '' },
       })
       const gitRunner = createMockGitRunner({
-        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-health-check.md':
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-review.md':
           {
             exitCode: 0,
             output: '', // No deletion found
@@ -622,9 +610,7 @@ describe('githubActionsCheck', () => {
       // Should return 0 for invalid output, which is < 20, so no task creation
       expect(result.exitCode).toBe(0)
       expect(
-        fileSystem.writtenFiles.has(
-          '/project/.dust/tasks/periodic-health-check.md'
-        )
+        fileSystem.writtenFiles.has('/project/.dust/tasks/periodic-review.md')
       ).toBe(false)
     })
   })
