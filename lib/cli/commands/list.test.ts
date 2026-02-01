@@ -319,4 +319,173 @@ describe('list command', () => {
     )
     expect(output).toContain('No tasks found.')
   })
+
+  test('shows goal hierarchy with parent and sub-goals', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'parent-goal.md': `# Parent Goal
+
+This is a top-level goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- [Child Goal](child-goal.md)
+`,
+            'child-goal.md': `# Child Goal
+
+This is a child goal.
+
+## Parent Goal
+
+- [Parent Goal](parent-goal.md)
+
+## Sub-Goals
+
+- [Grandchild Goal](grandchild-goal.md)
+`,
+            'grandchild-goal.md': `# Grandchild Goal
+
+This is a grandchild goal.
+
+## Parent Goal
+
+- [Child Goal](child-goal.md)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['goals']))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('Hierarchy:')
+    expect(output).toContain('Parent Goal')
+    expect(output).toContain('Child Goal')
+    expect(output).toContain('Grandchild Goal')
+    // Check tree structure is present (└── for last/only children)
+    expect(output).toContain('└── Parent Goal')
+    expect(output).toContain('└── Child Goal')
+    expect(output).toContain('└── Grandchild Goal')
+  })
+
+  test('shows multiple root goals in hierarchy', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'root-one.md': `# Root One
+
+First root.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+            'root-two.md': `# Root Two
+
+Second root.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['goals']))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('Root One')
+    expect(output).toContain('Root Two')
+    // With multiple roots, the first one uses ├── and last uses └──
+    expect(output).toContain('├── Root One')
+    expect(output).toContain('└── Root Two')
+  })
+
+  test('handles sub-goal references to non-existent goals gracefully', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'parent-goal.md': `# Parent Goal
+
+This is a parent goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- [Non Existent](non-existent-goal.md)
+`,
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['goals']))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('Hierarchy:')
+    expect(output).toContain('Parent Goal')
+    // The non-existent goal should be shown with its basename
+    expect(output).toContain('non-existent-goal')
+  })
+
+  test('does not show hierarchy when all goals have parents', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'orphan-goal.md': `# Orphan Goal
+
+This goal has a parent that does not exist.
+
+## Parent Goal
+
+- [Missing Parent](missing-parent.md)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['goals']))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('🎯 Goals')
+    expect(output).toContain('Orphan Goal')
+    // No hierarchy because no root goals exist
+    expect(output).not.toContain('Hierarchy:')
+  })
 })
