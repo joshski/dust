@@ -2,8 +2,9 @@
 
 Goals are guiding principles that persist across tasks. They define the "why" behind the work.
 
-Follow these steps:
-
+{{#if isClaudeCodeWeb}}Follow these steps. Use a todo list to track your progress.
+{{/if}}{{#unless isClaudeCodeWeb}}Follow these steps:
+{{/unless}}
 1. Run `{{bin}} list goals` to see existing goals and avoid duplication
 2. Create a new markdown file in `.dust/goals/` with a descriptive kebab-case name (e.g., `cross-platform-support.md`)
 3. Add a title as the first line using an H1 heading (e.g., `# Cross-platform support`)
