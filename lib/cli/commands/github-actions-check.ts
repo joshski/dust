@@ -6,6 +6,7 @@
  */
 
 import { type ChildProcess, spawn } from 'node:child_process'
+import { loadTemplate } from '../templates'
 import type { CommandDependencies, CommandResult } from '../types'
 import {
   type BufferedProcessRunner,
@@ -20,27 +21,6 @@ export type GitSpawnFn = (
 ) => ChildProcess
 
 const HEALTH_CHECK_TASK_PATH = '.dust/tasks/periodic-health-check.md'
-
-const HEALTH_CHECK_TASK_CONTENT = `# Periodic Health Check
-
-Review and maintain dust planning artifacts to ensure the \`.dust/\` directory stays relevant and useful.
-
-## Goals
-
-- [Repository Hygiene](../goals/repository-hygiene.md)
-
-## Blocked by
-
-(none)
-
-## Definition of done
-
-- [ ] Run \`dust lint markdown\` and fix any issues
-- [ ] Review ideas in \`.dust/ideas/\` - promote actionable ones to tasks, refine unclear ones, delete stale ones
-- [ ] Verify facts in \`.dust/facts/\` still reflect the current codebase
-- [ ] Check goals in \`.dust/goals/\` are still relevant and properly linked
-- [ ] Delete this task file when complete (deletion marks the start of the next 20-commit cycle)
-`
 
 export interface GitRunner {
   run: (
@@ -133,7 +113,8 @@ async function createAndPushHealthCheckTask(
   const fullPath = `${cwd}/${HEALTH_CHECK_TASK_PATH}`
 
   // Write the file
-  await fileSystem.writeFile(fullPath, HEALTH_CHECK_TASK_CONTENT)
+  const content = loadTemplate('periodic-health-check')
+  await fileSystem.writeFile(fullPath, content)
 
   // Stage the file
   const addResult = await gitRunner.run(['add', HEALTH_CHECK_TASK_PATH], cwd)

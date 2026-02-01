@@ -65,7 +65,7 @@ Review and maintain dust planning artifacts.
 
 ## Goals
 
-- [Repository Hygiene](../goals/repository-hygiene.md)
+(none)
 
 ## Blocked by
 
@@ -194,10 +194,6 @@ describe('githubActionsCheck', () => {
           '.dust': {
             tasks: {
               'periodic-health-check.md': VALID_TASK_CONTENT,
-            },
-            goals: {
-              'repository-hygiene.md':
-                '# Repository Hygiene\n\nDescription.\n\n## Parent Goal\n\n(none)\n\n## Sub-Goals\n\n(none)\n',
             },
           },
         },

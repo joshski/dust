@@ -1,0 +1,19 @@
+# Periodic Health Check
+
+Review and maintain dust planning artifacts to ensure the `.dust/` directory stays relevant and useful.
+
+## Goals
+
+(none)
+
+## Blocked by
+
+(none)
+
+## Definition of done
+
+- [ ] Run `dust lint markdown` and fix any issues
+- [ ] Review ideas in `.dust/ideas/` - promote actionable ones to tasks, refine unclear ones, delete stale ones
+- [ ] Verify facts in `.dust/facts/` still reflect the current codebase
+- [ ] Check goals in `.dust/goals/` are still relevant and properly linked
+- [ ] Delete this task file when complete (deletion marks the start of the next 20-commit cycle)
