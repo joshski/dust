@@ -13,7 +13,6 @@ test('agent picks task from backlog and gets implementation instructions', async
               description: 'Maintain high code quality standards.',
             }),
           },
-          ideas: {},
           tasks: {
             'add-logging.md': buildTask({
               title: 'Add Logging',
@@ -27,7 +26,6 @@ test('agent picks task from backlog and gets implementation instructions', async
               ],
             }),
           },
-          facts: {},
         },
       },
     },
@@ -67,8 +65,6 @@ test('agent can pick from multiple available tasks', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {},
-          ideas: {},
           tasks: {
             'task-a.md': buildTask({
               title: 'Task A',
@@ -83,7 +79,6 @@ test('agent can pick from multiple available tasks', async () => {
               definitionOfDone: ['Done'],
             }),
           },
-          facts: {},
         },
       },
     },

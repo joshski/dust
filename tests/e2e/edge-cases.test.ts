@@ -14,9 +14,7 @@ test('empty backlog shows no tasks available', async () => {
               description: 'Code should be easy to change.',
             }),
           },
-          ideas: {},
           tasks: {},
-          facts: {},
         },
       },
     },
@@ -41,9 +39,6 @@ test('no goals defined shows empty goals list', async () => {
       project: {
         '.dust': {
           goals: {},
-          ideas: {},
-          tasks: {},
-          facts: {},
         },
       },
     },
@@ -79,8 +74,6 @@ test('all tasks blocked shows no available work', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {},
-          ideas: {},
           tasks: {
             'blocker-task.md': buildTask({
               title: 'Blocker Task',
@@ -97,7 +90,6 @@ test('all tasks blocked shows no available work', async () => {
               definitionOfDone: ['Done'],
             }),
           },
-          facts: {},
         },
       },
     },
@@ -122,8 +114,6 @@ test('task list handles tasks with no title gracefully', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {},
-          ideas: {},
           tasks: {
             // This is a special case - intentionally malformed markdown without H1
             'no-title.md': `No heading here, just content.
@@ -141,7 +131,6 @@ test('task list handles tasks with no title gracefully', async () => {
 - [ ] Done
 `,
           },
-          facts: {},
         },
       },
     },
@@ -160,12 +149,7 @@ test('help command is available when confused', async () => {
   const session = await runSession({
     fileSystemTree: {
       project: {
-        '.dust': {
-          goals: {},
-          ideas: {},
-          tasks: {},
-          facts: {},
-        },
+        '.dust': {},
       },
     },
     handlers: [
@@ -187,10 +171,7 @@ test('list ideas handles empty ideas directory', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {},
           ideas: {},
-          tasks: {},
-          facts: {},
         },
       },
     },
@@ -210,9 +191,6 @@ test('list facts handles empty facts directory', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {},
-          ideas: {},
-          tasks: {},
           facts: {},
         },
       },
@@ -233,15 +211,12 @@ test('agent handles task with special characters in filename', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {},
-          ideas: {},
           tasks: {
             'add-api-v2-endpoint.md': buildTask({
               title: 'Add API v2 Endpoint',
               definitionOfDone: ['Done'],
             }),
           },
-          facts: {},
         },
       },
     },

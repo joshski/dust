@@ -7,10 +7,6 @@ test('check command reports error when no checks are configured', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {},
-          ideas: {},
-          tasks: {},
-          facts: {},
           config: {
             'settings.json': JSON.stringify({ dustCommand: 'bin/dust' }),
           },
@@ -51,7 +47,6 @@ test('check command validates markdown files in .dust directory', async () => {
               description: 'A well-formed goal.',
             }),
           },
-          ideas: {},
           tasks: {
             'valid-task.md': buildTask({
               title: 'Valid Task',
@@ -59,7 +54,6 @@ test('check command validates markdown files in .dust directory', async () => {
               definitionOfDone: ['Complete the task'],
             }),
           },
-          facts: {},
           config: {
             'settings.json': JSON.stringify({
               dustCommand: 'bin/dust',
@@ -94,8 +88,6 @@ test('check command fails when markdown files have validation errors', async () 
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {},
-          ideas: {},
           tasks: {
             // Invalid filename (uppercase) - intentionally malformed
             'InvalidTask.md': buildTask({
@@ -104,7 +96,6 @@ test('check command fails when markdown files have validation errors', async () 
               definitionOfDone: ['Done'],
             }),
           },
-          facts: {},
           config: {
             'settings.json': JSON.stringify({
               dustCommand: 'bin/dust',
@@ -140,14 +131,11 @@ test('lint markdown command shows validation errors', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {},
-          ideas: {},
           tasks: {
             // Intentionally malformed - missing required sections for testing validation errors
             'missing-sections.md':
               '# Missing Sections\n\nNo required sections here.',
           },
-          facts: {},
         },
       },
     },
@@ -202,7 +190,6 @@ test('lint markdown passes with valid files', async () => {
               definitionOfDone: ['Task is complete'],
             }),
           },
-          facts: {},
         },
       },
     },

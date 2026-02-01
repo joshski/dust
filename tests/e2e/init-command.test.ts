@@ -117,12 +117,7 @@ test('init command warns when .dust already exists', async () => {
   const shell = await createShellEmulator({
     fileSystemTree: {
       project: {
-        '.dust': {
-          goals: {},
-          ideas: {},
-          tasks: {},
-          facts: {},
-        },
+        '.dust': {},
       },
     },
   })
