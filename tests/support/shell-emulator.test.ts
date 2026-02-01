@@ -3,10 +3,7 @@
  */
 
 import { beforeEach, describe, expect, test } from 'vitest'
-import {
-  createShellEmulator,
-  type ShellEmulator,
-} from './shell-emulator'
+import { createShellEmulator, type ShellEmulator } from './shell-emulator'
 
 describe('shell emulator', () => {
   let shell: ShellEmulator
