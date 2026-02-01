@@ -3,25 +3,25 @@
 Usage: {{bin}} <command> [options]
 
 Commands:
-  init                      Initialize a new Dust repository
-  lint markdown             Run lint checks on .dust/ files
-  list                      List all items (tasks, ideas, goals, facts)
-  tasks                     List tasks (actionable work with definitions of done)
-  ideas                     List ideas (vague proposals, convert to tasks when ready)
-  goals                     List goals (guiding principles, stable, rarely change)
-  facts                     List facts (documentation of current system state)
-  next                      Show tasks ready to work on (not blocked)
-  check                     Run project-defined quality gate hook
-  agent                     Agent greeting and routing instructions
-  pick task                 Pick the next task to work on
-  implement task            Implement a task
-  new task                  Create a new task
-  new goal                  Create a new goal
-  new idea                  Create a new idea
-  understand goals          Understanding goals
-  loop                      Run continuous Claude iteration on tasks
-  pre-push                  Git pre-push hook validation
-  help                      Show this help message
+  init              Initialize a new Dust repository
+  lint markdown     Run lint checks on .dust/ files
+  list              List all items (tasks, ideas, goals, facts)
+  tasks             List tasks (actionable work with definitions of done)
+  ideas             List ideas (vague proposals, convert to tasks when ready)
+  goals             List goals (guiding principles, stable, rarely change)
+  facts             List facts (documentation of current system state)
+  next              Show tasks ready to work on (not blocked)
+  check             Run project-defined quality gate hook
+  agent             Agent greeting and routing instructions
+  pick task         Pick the next task to work on
+  implement task    Implement a task
+  new task          Create a new task
+  new goal          Create a new goal
+  new idea          Create a new idea
+  understand goals  Understanding goals
+  loop              Run continuous Claude iteration on tasks
+  pre-push          Git pre-push hook validation
+  help              Show this help message
 
 🤖 Agent Guide
 
