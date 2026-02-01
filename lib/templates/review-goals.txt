@@ -1,0 +1,19 @@
+# Review Goals
+
+Review the goals hierarchy in `.dust/goals/` to ensure goals remain relevant, well-structured, and properly linked.
+
+## Goals
+
+(none)
+
+## Blocked by
+
+(none)
+
+## Definition of done
+
+- [ ] Verify each goal still reflects the project's current direction
+- [ ] Check parent/child relationships are correctly linked
+- [ ] Identify goals that should be split, merged, or retired
+- [ ] Ensure goal descriptions are clear and actionable
+- [ ] Delete this task file when complete

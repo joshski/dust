@@ -1,0 +1,19 @@
+# Review Facts
+
+Review facts in `.dust/facts/` to ensure they accurately reflect the current state of the codebase.
+
+## Goals
+
+(none)
+
+## Blocked by
+
+(none)
+
+## Definition of done
+
+- [ ] Verify each fact still accurately describes the codebase
+- [ ] Update facts that have become outdated due to code changes
+- [ ] Delete facts that are no longer relevant
+- [ ] Identify missing facts that should be documented
+- [ ] Delete this task file when complete

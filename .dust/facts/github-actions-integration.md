@@ -1,19 +1,26 @@
 # GitHub Actions Integration
 
-The `dust github actions check` command is designed for CI environments. It runs all standard quality checks (`dust check`) and automatically creates periodic review tasks.
+The `dust github actions check` command is designed for CI environments. It runs all standard quality checks (`dust check`) and automatically creates periodic review tasks based on commit patterns.
 
 ```bash
 ./bin/dust github actions check
 ```
 
-## Periodic Review Task Creation
+## Periodic Review Tasks
 
-When running on the default branch (`main`) during a `push` event, the command creates `.dust/tasks/periodic-review.md` if:
+Each review type monitors commits to a specific path pattern and creates a dedicated task when the threshold is reached:
 
+| Review Type | Task File | Monitors | Threshold |
+|-------------|-----------|----------|-----------|
+| Goals | `.dust/tasks/review-goals.md` | `.dust/goals/` | 20 commits |
+| Ideas | `.dust/tasks/review-ideas.md` | `.dust/ideas/` | 20 commits |
+| Facts | `.dust/tasks/review-facts.md` | `.dust/facts/` | 20 commits |
+
+Each task is created independently when:
 1. The task file does not already exist
-2. At least 20 commits have passed since the file was last deleted
+2. At least N commits (threshold) have touched the monitored path since the task was last deleted
 
-The periodic review task instructs an agent to review the `.dust/` directory and create individual tasks for any maintenance needed (stale ideas, outdated facts, goals needing updates, etc.).
+This pattern-based approach ensures focused reviews where each task gets the full attention of a single agent.
 
 ## GitHub Actions Environment Variables
 

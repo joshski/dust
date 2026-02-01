@@ -1,0 +1,19 @@
+# Review Ideas
+
+Review ideas in `.dust/ideas/` to promote actionable ones, refine unclear ones, and retire stale ones.
+
+## Goals
+
+(none)
+
+## Blocked by
+
+(none)
+
+## Definition of done
+
+- [ ] Identify ideas ready to become tasks and promote them
+- [ ] Refine ideas that are too vague to be actionable
+- [ ] Delete ideas that are no longer relevant or have been superseded
+- [ ] Ensure remaining ideas have clear descriptions
+- [ ] Delete this task file when complete

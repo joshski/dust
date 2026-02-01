@@ -15,9 +15,11 @@ import type {
 import type { BufferedProcessRunner } from './check'
 import {
   createGitRunner,
+  DEFAULT_REVIEW_TYPES,
   type GitRunner,
   getGitHubActionsEnvironment,
   githubActionsCheck,
+  type ReviewType,
 } from './github-actions-check'
 
 function createMockBufferedRunner(
@@ -58,10 +60,10 @@ function createDependencies(
   }
 }
 
-// Valid task content that passes markdown linting (title must match filename)
-const VALID_TASK_CONTENT = `# Periodic Review
+// Valid task content that passes markdown linting
+const VALID_GOALS_TASK = `# Review Goals
 
-Review the .dust/ directory and create individual tasks for any maintenance needed.
+Review the goals hierarchy.
 
 ## Goals
 
@@ -75,6 +77,16 @@ Review the .dust/ directory and create individual tasks for any maintenance need
 
 - [ ] Task item
 `
+
+// Single review type for focused testing
+const GOALS_REVIEW_TYPE: ReviewType = {
+  name: 'goals',
+  taskPath: '.dust/tasks/review-goals.md',
+  templateName: 'review-goals',
+  commitPattern: '.dust/goals/',
+  threshold: 20,
+  commitMessage: 'Add task: Review Goals',
+}
 
 describe('githubActionsCheck', () => {
   afterEach(() => {
@@ -103,7 +115,8 @@ describe('githubActionsCheck', () => {
         createDependencies(context, fileSystem, settings),
         bufferedRunner,
         gitRunner,
-        getEnv
+        getEnv,
+        []
       )
 
       expect(result.exitCode).toBe(0)
@@ -129,17 +142,18 @@ describe('githubActionsCheck', () => {
         createDependencies(context, fileSystem, settings),
         bufferedRunner,
         gitRunner,
-        getEnv
+        getEnv,
+        [GOALS_REVIEW_TYPE]
       )
 
       expect(result.exitCode).toBe(1)
-      // Should not attempt to create health check task when checks fail
+      // Should not attempt to create review task when checks fail
       expect(gitRunner.calls).toHaveLength(0)
     })
   })
 
-  describe('health check task creation', () => {
-    test('creates task when all conditions are met', async () => {
+  describe('review task creation with commit patterns', () => {
+    test('creates task when matching commits exceed threshold', async () => {
       const context = createContextEmulator()
       const settings: DustSettings = {
         dustCommand: 'dust',
@@ -150,17 +164,16 @@ describe('githubActionsCheck', () => {
         'npm run lint': { exitCode: 0, output: '' },
       })
       const gitRunner = createMockGitRunner({
-        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-review.md':
-          {
-            exitCode: 0,
-            output: 'abc123',
-          },
-        'rev-list --count abc123..HEAD': { exitCode: 0, output: '25' },
-        'add .dust/tasks/periodic-review.md': { exitCode: 0, output: '' },
-        'commit -m Add task: Periodic Review': {
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/review-goals.md': {
           exitCode: 0,
-          output: '',
+          output: 'abc123',
         },
+        'rev-list --count abc123..HEAD -- .dust/goals/': {
+          exitCode: 0,
+          output: '25',
+        },
+        'add .dust/tasks/review-goals.md': { exitCode: 0, output: '' },
+        'commit -m Add task: Review Goals': { exitCode: 0, output: '' },
         push: { exitCode: 0, output: '' },
       })
       const getEnv = () => ({ refName: 'main', eventName: 'push' })
@@ -169,14 +182,15 @@ describe('githubActionsCheck', () => {
         createDependencies(context, fileSystem, settings),
         bufferedRunner,
         gitRunner,
-        getEnv
+        getEnv,
+        [GOALS_REVIEW_TYPE]
       )
 
       expect(result.exitCode).toBe(0)
       expect(
-        fileSystem.writtenFiles.has('/project/.dust/tasks/periodic-review.md')
+        fileSystem.writtenFiles.has('/project/.dust/tasks/review-goals.md')
       ).toBe(true)
-      expect(context.stdoutLines).toContain('Created periodic review task')
+      expect(context.stdoutLines).toContain('Created review tasks: goals')
     })
 
     test('does not create task when file already exists', async () => {
@@ -189,7 +203,7 @@ describe('githubActionsCheck', () => {
         project: {
           '.dust': {
             tasks: {
-              'periodic-review.md': VALID_TASK_CONTENT,
+              'review-goals.md': VALID_GOALS_TASK,
             },
           },
         },
@@ -204,18 +218,16 @@ describe('githubActionsCheck', () => {
         createDependencies(context, fileSystem, settings),
         bufferedRunner,
         gitRunner,
-        getEnv
+        getEnv,
+        [GOALS_REVIEW_TYPE]
       )
 
       expect(result.exitCode).toBe(0)
       // Should not check commit history when file exists
       expect(gitRunner.calls).toHaveLength(0)
-      expect(
-        fileSystem.writtenFiles.has('/project/.dust/tasks/periodic-review.md')
-      ).toBe(false)
     })
 
-    test('does not create task when fewer than 20 commits since deletion', async () => {
+    test('does not create task when matching commits below threshold', async () => {
       const context = createContextEmulator()
       const settings: DustSettings = {
         dustCommand: 'dust',
@@ -226,12 +238,14 @@ describe('githubActionsCheck', () => {
         'npm run lint': { exitCode: 0, output: '' },
       })
       const gitRunner = createMockGitRunner({
-        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-review.md':
-          {
-            exitCode: 0,
-            output: 'abc123',
-          },
-        'rev-list --count abc123..HEAD': { exitCode: 0, output: '15' },
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/review-goals.md': {
+          exitCode: 0,
+          output: 'abc123',
+        },
+        'rev-list --count abc123..HEAD -- .dust/goals/': {
+          exitCode: 0,
+          output: '15',
+        },
       })
       const getEnv = () => ({ refName: 'main', eventName: 'push' })
 
@@ -239,13 +253,50 @@ describe('githubActionsCheck', () => {
         createDependencies(context, fileSystem, settings),
         bufferedRunner,
         gitRunner,
-        getEnv
+        getEnv,
+        [GOALS_REVIEW_TYPE]
       )
 
       expect(result.exitCode).toBe(0)
       expect(
-        fileSystem.writtenFiles.has('/project/.dust/tasks/periodic-review.md')
+        fileSystem.writtenFiles.has('/project/.dust/tasks/review-goals.md')
       ).toBe(false)
+    })
+
+    test('counts all matching commits when task was never deleted', async () => {
+      const context = createContextEmulator()
+      const settings: DustSettings = {
+        dustCommand: 'dust',
+        checks: [{ name: 'lint', command: 'npm run lint' }],
+      }
+      const fileSystem = createFileSystemEmulator()
+      const bufferedRunner = createMockBufferedRunner({
+        'npm run lint': { exitCode: 0, output: '' },
+      })
+      const gitRunner = createMockGitRunner({
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/review-goals.md': {
+          exitCode: 0,
+          output: '', // No deletion found
+        },
+        'rev-list --count HEAD -- .dust/goals/': { exitCode: 0, output: '50' },
+        'add .dust/tasks/review-goals.md': { exitCode: 0, output: '' },
+        'commit -m Add task: Review Goals': { exitCode: 0, output: '' },
+        push: { exitCode: 0, output: '' },
+      })
+      const getEnv = () => ({ refName: 'main', eventName: 'push' })
+
+      const result = await githubActionsCheck(
+        createDependencies(context, fileSystem, settings),
+        bufferedRunner,
+        gitRunner,
+        getEnv,
+        [GOALS_REVIEW_TYPE]
+      )
+
+      expect(result.exitCode).toBe(0)
+      expect(
+        fileSystem.writtenFiles.has('/project/.dust/tasks/review-goals.md')
+      ).toBe(true)
     })
 
     test('does not create task when not on default branch', async () => {
@@ -265,11 +316,11 @@ describe('githubActionsCheck', () => {
         createDependencies(context, fileSystem, settings),
         bufferedRunner,
         gitRunner,
-        getEnv
+        getEnv,
+        [GOALS_REVIEW_TYPE]
       )
 
       expect(result.exitCode).toBe(0)
-      // Should not check anything when not on main branch
       expect(gitRunner.calls).toHaveLength(0)
     })
 
@@ -290,51 +341,12 @@ describe('githubActionsCheck', () => {
         createDependencies(context, fileSystem, settings),
         bufferedRunner,
         gitRunner,
-        getEnv
+        getEnv,
+        [GOALS_REVIEW_TYPE]
       )
 
       expect(result.exitCode).toBe(0)
-      // Should not interact with git at all
       expect(gitRunner.calls).toHaveLength(0)
-    })
-
-    test('counts all commits when file was never deleted', async () => {
-      const context = createContextEmulator()
-      const settings: DustSettings = {
-        dustCommand: 'dust',
-        checks: [{ name: 'lint', command: 'npm run lint' }],
-      }
-      const fileSystem = createFileSystemEmulator()
-      const bufferedRunner = createMockBufferedRunner({
-        'npm run lint': { exitCode: 0, output: '' },
-      })
-      const gitRunner = createMockGitRunner({
-        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-review.md':
-          {
-            exitCode: 0,
-            output: '', // No deletion found
-          },
-        'rev-list --count HEAD': { exitCode: 0, output: '50' },
-        'add .dust/tasks/periodic-review.md': { exitCode: 0, output: '' },
-        'commit -m Add task: Periodic Review': {
-          exitCode: 0,
-          output: '',
-        },
-        push: { exitCode: 0, output: '' },
-      })
-      const getEnv = () => ({ refName: 'main', eventName: 'push' })
-
-      const result = await githubActionsCheck(
-        createDependencies(context, fileSystem, settings),
-        bufferedRunner,
-        gitRunner,
-        getEnv
-      )
-
-      expect(result.exitCode).toBe(0)
-      expect(
-        fileSystem.writtenFiles.has('/project/.dust/tasks/periodic-review.md')
-      ).toBe(true)
     })
 
     test('does not create task for pull request events', async () => {
@@ -354,12 +366,194 @@ describe('githubActionsCheck', () => {
         createDependencies(context, fileSystem, settings),
         bufferedRunner,
         gitRunner,
-        getEnv
+        getEnv,
+        [GOALS_REVIEW_TYPE]
       )
 
       expect(result.exitCode).toBe(0)
-      // Should not interact with git for PR events
       expect(gitRunner.calls).toHaveLength(0)
+    })
+  })
+
+  describe('multiple review types', () => {
+    test('creates multiple tasks when multiple thresholds exceeded', async () => {
+      const context = createContextEmulator()
+      const settings: DustSettings = {
+        dustCommand: 'dust',
+        checks: [{ name: 'lint', command: 'npm run lint' }],
+      }
+      const fileSystem = createFileSystemEmulator()
+      const bufferedRunner = createMockBufferedRunner({
+        'npm run lint': { exitCode: 0, output: '' },
+      })
+      const reviewTypes: ReviewType[] = [
+        { ...GOALS_REVIEW_TYPE },
+        {
+          name: 'ideas',
+          taskPath: '.dust/tasks/review-ideas.md',
+          templateName: 'review-ideas',
+          commitPattern: '.dust/ideas/',
+          threshold: 20,
+          commitMessage: 'Add task: Review Ideas',
+        },
+      ]
+      const gitRunner = createMockGitRunner({
+        // Goals review
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/review-goals.md': {
+          exitCode: 0,
+          output: '',
+        },
+        'rev-list --count HEAD -- .dust/goals/': { exitCode: 0, output: '25' },
+        'add .dust/tasks/review-goals.md': { exitCode: 0, output: '' },
+        'commit -m Add task: Review Goals': { exitCode: 0, output: '' },
+        // Ideas review
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/review-ideas.md': {
+          exitCode: 0,
+          output: '',
+        },
+        'rev-list --count HEAD -- .dust/ideas/': { exitCode: 0, output: '30' },
+        'add .dust/tasks/review-ideas.md': { exitCode: 0, output: '' },
+        'commit -m Add task: Review Ideas': { exitCode: 0, output: '' },
+        push: { exitCode: 0, output: '' },
+      })
+      const getEnv = () => ({ refName: 'main', eventName: 'push' })
+
+      const result = await githubActionsCheck(
+        createDependencies(context, fileSystem, settings),
+        bufferedRunner,
+        gitRunner,
+        getEnv,
+        reviewTypes
+      )
+
+      expect(result.exitCode).toBe(0)
+      expect(
+        fileSystem.writtenFiles.has('/project/.dust/tasks/review-goals.md')
+      ).toBe(true)
+      expect(
+        fileSystem.writtenFiles.has('/project/.dust/tasks/review-ideas.md')
+      ).toBe(true)
+      expect(context.stdoutLines).toContain(
+        'Created review tasks: goals, ideas'
+      )
+    })
+
+    test('only creates tasks for review types exceeding threshold', async () => {
+      const context = createContextEmulator()
+      const settings: DustSettings = {
+        dustCommand: 'dust',
+        checks: [{ name: 'lint', command: 'npm run lint' }],
+      }
+      const fileSystem = createFileSystemEmulator()
+      const bufferedRunner = createMockBufferedRunner({
+        'npm run lint': { exitCode: 0, output: '' },
+      })
+      const reviewTypes: ReviewType[] = [
+        { ...GOALS_REVIEW_TYPE },
+        {
+          name: 'ideas',
+          taskPath: '.dust/tasks/review-ideas.md',
+          templateName: 'review-ideas',
+          commitPattern: '.dust/ideas/',
+          threshold: 20,
+          commitMessage: 'Add task: Review Ideas',
+        },
+      ]
+      const gitRunner = createMockGitRunner({
+        // Goals review - above threshold
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/review-goals.md': {
+          exitCode: 0,
+          output: '',
+        },
+        'rev-list --count HEAD -- .dust/goals/': { exitCode: 0, output: '25' },
+        'add .dust/tasks/review-goals.md': { exitCode: 0, output: '' },
+        'commit -m Add task: Review Goals': { exitCode: 0, output: '' },
+        // Ideas review - below threshold
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/review-ideas.md': {
+          exitCode: 0,
+          output: '',
+        },
+        'rev-list --count HEAD -- .dust/ideas/': { exitCode: 0, output: '10' },
+        push: { exitCode: 0, output: '' },
+      })
+      const getEnv = () => ({ refName: 'main', eventName: 'push' })
+
+      const result = await githubActionsCheck(
+        createDependencies(context, fileSystem, settings),
+        bufferedRunner,
+        gitRunner,
+        getEnv,
+        reviewTypes
+      )
+
+      expect(result.exitCode).toBe(0)
+      expect(
+        fileSystem.writtenFiles.has('/project/.dust/tasks/review-goals.md')
+      ).toBe(true)
+      expect(
+        fileSystem.writtenFiles.has('/project/.dust/tasks/review-ideas.md')
+      ).toBe(false)
+      expect(context.stdoutLines).toContain('Created review tasks: goals')
+    })
+
+    test('skips review types where task already exists', async () => {
+      const context = createContextEmulator()
+      const settings: DustSettings = {
+        dustCommand: 'dust',
+        checks: [{ name: 'lint', command: 'npm run lint' }],
+      }
+      const fileSystem = createFileSystemEmulator({
+        project: {
+          '.dust': {
+            tasks: {
+              'review-goals.md': VALID_GOALS_TASK, // Already exists
+            },
+          },
+        },
+      })
+      const bufferedRunner = createMockBufferedRunner({
+        'npm run lint': { exitCode: 0, output: '' },
+      })
+      const reviewTypes: ReviewType[] = [
+        { ...GOALS_REVIEW_TYPE },
+        {
+          name: 'ideas',
+          taskPath: '.dust/tasks/review-ideas.md',
+          templateName: 'review-ideas',
+          commitPattern: '.dust/ideas/',
+          threshold: 20,
+          commitMessage: 'Add task: Review Ideas',
+        },
+      ]
+      const gitRunner = createMockGitRunner({
+        // Ideas review only (goals skipped)
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/review-ideas.md': {
+          exitCode: 0,
+          output: '',
+        },
+        'rev-list --count HEAD -- .dust/ideas/': { exitCode: 0, output: '25' },
+        'add .dust/tasks/review-ideas.md': { exitCode: 0, output: '' },
+        'commit -m Add task: Review Ideas': { exitCode: 0, output: '' },
+        push: { exitCode: 0, output: '' },
+      })
+      const getEnv = () => ({ refName: 'main', eventName: 'push' })
+
+      const result = await githubActionsCheck(
+        createDependencies(context, fileSystem, settings),
+        bufferedRunner,
+        gitRunner,
+        getEnv,
+        reviewTypes
+      )
+
+      expect(result.exitCode).toBe(0)
+      // Should not have checked goals (file exists)
+      expect(
+        gitRunner.calls.some(c =>
+          c.gitArgs.join(' ').includes('review-goals.md')
+        )
+      ).toBe(false)
+      expect(context.stdoutLines).toContain('Created review tasks: ideas')
     })
   })
 
@@ -375,13 +569,12 @@ describe('githubActionsCheck', () => {
         'npm run lint': { exitCode: 0, output: '' },
       })
       const gitRunner = createMockGitRunner({
-        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-review.md':
-          {
-            exitCode: 0,
-            output: '',
-          },
-        'rev-list --count HEAD': { exitCode: 0, output: '25' },
-        'add .dust/tasks/periodic-review.md': {
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/review-goals.md': {
+          exitCode: 0,
+          output: '',
+        },
+        'rev-list --count HEAD -- .dust/goals/': { exitCode: 0, output: '25' },
+        'add .dust/tasks/review-goals.md': {
           exitCode: 1,
           output: 'fatal: pathspec error',
         },
@@ -392,12 +585,13 @@ describe('githubActionsCheck', () => {
         createDependencies(context, fileSystem, settings),
         bufferedRunner,
         gitRunner,
-        getEnv
+        getEnv,
+        [GOALS_REVIEW_TYPE]
       )
 
       expect(result.exitCode).toBe(0)
       expect(context.stdoutLines.join('\n')).toContain(
-        'Warning: Failed to stage review task'
+        'Warning: Failed to stage goals review task'
       )
     })
 
@@ -412,14 +606,13 @@ describe('githubActionsCheck', () => {
         'npm run lint': { exitCode: 0, output: '' },
       })
       const gitRunner = createMockGitRunner({
-        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-review.md':
-          {
-            exitCode: 0,
-            output: '',
-          },
-        'rev-list --count HEAD': { exitCode: 0, output: '25' },
-        'add .dust/tasks/periodic-review.md': { exitCode: 0, output: '' },
-        'commit -m Add task: Periodic Review': {
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/review-goals.md': {
+          exitCode: 0,
+          output: '',
+        },
+        'rev-list --count HEAD -- .dust/goals/': { exitCode: 0, output: '25' },
+        'add .dust/tasks/review-goals.md': { exitCode: 0, output: '' },
+        'commit -m Add task: Review Goals': {
           exitCode: 1,
           output: 'nothing to commit',
         },
@@ -430,12 +623,13 @@ describe('githubActionsCheck', () => {
         createDependencies(context, fileSystem, settings),
         bufferedRunner,
         gitRunner,
-        getEnv
+        getEnv,
+        [GOALS_REVIEW_TYPE]
       )
 
       expect(result.exitCode).toBe(0)
       expect(context.stdoutLines.join('\n')).toContain(
-        'Warning: Failed to commit review task'
+        'Warning: Failed to commit goals review task'
       )
     })
 
@@ -450,17 +644,13 @@ describe('githubActionsCheck', () => {
         'npm run lint': { exitCode: 0, output: '' },
       })
       const gitRunner = createMockGitRunner({
-        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-review.md':
-          {
-            exitCode: 0,
-            output: '',
-          },
-        'rev-list --count HEAD': { exitCode: 0, output: '25' },
-        'add .dust/tasks/periodic-review.md': { exitCode: 0, output: '' },
-        'commit -m Add task: Periodic Review': {
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/review-goals.md': {
           exitCode: 0,
           output: '',
         },
+        'rev-list --count HEAD -- .dust/goals/': { exitCode: 0, output: '25' },
+        'add .dust/tasks/review-goals.md': { exitCode: 0, output: '' },
+        'commit -m Add task: Review Goals': { exitCode: 0, output: '' },
         push: { exitCode: 1, output: 'permission denied' },
       })
       const getEnv = () => ({ refName: 'main', eventName: 'push' })
@@ -469,12 +659,13 @@ describe('githubActionsCheck', () => {
         createDependencies(context, fileSystem, settings),
         bufferedRunner,
         gitRunner,
-        getEnv
+        getEnv,
+        [GOALS_REVIEW_TYPE]
       )
 
       expect(result.exitCode).toBe(0)
       expect(context.stdoutLines.join('\n')).toContain(
-        'Warning: Failed to push review task'
+        'Warning: Failed to push review tasks'
       )
     })
 
@@ -488,7 +679,6 @@ describe('githubActionsCheck', () => {
       const bufferedRunner = createMockBufferedRunner({
         'npm run lint': { exitCode: 0, output: '' },
       })
-      // Create a git runner that throws an exception
       const throwingGitRunner: GitRunner = {
         run: async () => {
           throw new Error('Git operation failed unexpectedly')
@@ -500,12 +690,13 @@ describe('githubActionsCheck', () => {
         createDependencies(context, fileSystem, settings),
         bufferedRunner,
         throwingGitRunner,
-        getEnv
+        getEnv,
+        [GOALS_REVIEW_TYPE]
       )
 
       expect(result.exitCode).toBe(0)
       expect(context.stdoutLines.join('\n')).toContain(
-        'Warning: Could not check commit history: Git operation failed unexpectedly'
+        'Warning: Could not check goals commit history: Git operation failed unexpectedly'
       )
     })
 
@@ -519,7 +710,6 @@ describe('githubActionsCheck', () => {
       const bufferedRunner = createMockBufferedRunner({
         'npm run lint': { exitCode: 0, output: '' },
       })
-      // Create a git runner that throws a non-Error value
       const throwingGitRunner: GitRunner = {
         run: async () => {
           throw 'string error message'
@@ -531,12 +721,13 @@ describe('githubActionsCheck', () => {
         createDependencies(context, fileSystem, settings),
         bufferedRunner,
         throwingGitRunner,
-        getEnv
+        getEnv,
+        [GOALS_REVIEW_TYPE]
       )
 
       expect(result.exitCode).toBe(0)
       expect(context.stdoutLines.join('\n')).toContain(
-        'Warning: Could not check commit history: string error message'
+        'Warning: Could not check goals commit history: string error message'
       )
     })
 
@@ -551,14 +742,13 @@ describe('githubActionsCheck', () => {
         'npm run lint': { exitCode: 0, output: '' },
       })
       const gitRunner = createMockGitRunner({
-        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-review.md':
-          {
-            exitCode: 0,
-            output: 'abc123',
-          },
-        'rev-list --count abc123..HEAD': {
+        'log --diff-filter=D --format=%H -1 -- .dust/tasks/review-goals.md': {
           exitCode: 0,
-          output: 'not-a-number', // Invalid output
+          output: 'abc123',
+        },
+        'rev-list --count abc123..HEAD -- .dust/goals/': {
+          exitCode: 0,
+          output: 'not-a-number',
         },
       })
       const getEnv = () => ({ refName: 'main', eventName: 'push' })
@@ -567,51 +757,35 @@ describe('githubActionsCheck', () => {
         createDependencies(context, fileSystem, settings),
         bufferedRunner,
         gitRunner,
-        getEnv
+        getEnv,
+        [GOALS_REVIEW_TYPE]
       )
 
-      // Should return 0 for invalid output, which is < 20, so no task creation
       expect(result.exitCode).toBe(0)
       expect(
-        fileSystem.writtenFiles.has('/project/.dust/tasks/periodic-review.md')
+        fileSystem.writtenFiles.has('/project/.dust/tasks/review-goals.md')
       ).toBe(false)
     })
+  })
 
-    test('handles non-numeric commit count when file never deleted', async () => {
-      const context = createContextEmulator()
-      const settings: DustSettings = {
-        dustCommand: 'dust',
-        checks: [{ name: 'lint', command: 'npm run lint' }],
+  describe('DEFAULT_REVIEW_TYPES', () => {
+    test('has expected review types defined', () => {
+      expect(DEFAULT_REVIEW_TYPES).toHaveLength(3)
+      expect(DEFAULT_REVIEW_TYPES.map(r => r.name)).toEqual([
+        'goals',
+        'ideas',
+        'facts',
+      ])
+    })
+
+    test('each review type has valid configuration', () => {
+      for (const reviewType of DEFAULT_REVIEW_TYPES) {
+        expect(reviewType.taskPath).toMatch(/^\.dust\/tasks\/review-\w+\.md$/)
+        expect(reviewType.templateName).toMatch(/^review-\w+$/)
+        expect(reviewType.commitPattern).toMatch(/^\.dust\/\w+\/$/)
+        expect(reviewType.threshold).toBeGreaterThan(0)
+        expect(reviewType.commitMessage).toMatch(/^Add task: Review \w+$/)
       }
-      const fileSystem = createFileSystemEmulator()
-      const bufferedRunner = createMockBufferedRunner({
-        'npm run lint': { exitCode: 0, output: '' },
-      })
-      const gitRunner = createMockGitRunner({
-        'log --diff-filter=D --format=%H -1 -- .dust/tasks/periodic-review.md':
-          {
-            exitCode: 0,
-            output: '', // No deletion found
-          },
-        'rev-list --count HEAD': {
-          exitCode: 0,
-          output: 'invalid-count', // Invalid output
-        },
-      })
-      const getEnv = () => ({ refName: 'main', eventName: 'push' })
-
-      const result = await githubActionsCheck(
-        createDependencies(context, fileSystem, settings),
-        bufferedRunner,
-        gitRunner,
-        getEnv
-      )
-
-      // Should return 0 for invalid output, which is < 20, so no task creation
-      expect(result.exitCode).toBe(0)
-      expect(
-        fileSystem.writtenFiles.has('/project/.dust/tasks/periodic-review.md')
-      ).toBe(false)
     })
   })
 })
@@ -622,11 +796,9 @@ describe('getGitHubActionsEnvironment', () => {
   })
 
   test('reads environment variables', () => {
-    // Save original values
     const originalRefName = process.env.GITHUB_REF_NAME
     const originalEventName = process.env.GITHUB_EVENT_NAME
 
-    // Set test values
     process.env.GITHUB_REF_NAME = 'test-branch'
     process.env.GITHUB_EVENT_NAME = 'push'
 
@@ -635,7 +807,6 @@ describe('getGitHubActionsEnvironment', () => {
     expect(env.refName).toBe('test-branch')
     expect(env.eventName).toBe('push')
 
-    // Restore original values
     if (originalRefName === undefined) {
       delete process.env.GITHUB_REF_NAME
     } else {

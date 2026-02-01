@@ -2,7 +2,8 @@
  * dust github actions check - Execute quality checks with periodic review task creation
  *
  * Runs all checks from `dust check` and, when running on the default branch in GitHub Actions,
- * creates a periodic review task after 20+ commits since the task was last deleted.
+ * creates periodic review tasks based on commit patterns. Each review type is triggered by
+ * commits matching specific path patterns.
  */
 
 import { type ChildProcess, spawn } from 'node:child_process'
@@ -20,7 +21,53 @@ export type GitSpawnFn = (
   options: { cwd: string }
 ) => ChildProcess
 
-const REVIEW_TASK_PATH = '.dust/tasks/periodic-review.md'
+/**
+ * Defines a periodic review type with its trigger conditions
+ */
+export interface ReviewType {
+  /** Unique identifier for this review type */
+  name: string
+  /** Path where the task file is created */
+  taskPath: string
+  /** Template to use for the task content */
+  templateName: string
+  /** Git path pattern - commits touching these paths count toward threshold */
+  commitPattern: string
+  /** Number of matching commits before creating the task */
+  threshold: number
+  /** Commit message when creating the task */
+  commitMessage: string
+}
+
+/**
+ * Default review types - each monitors a different part of .dust/
+ */
+export const DEFAULT_REVIEW_TYPES: ReviewType[] = [
+  {
+    name: 'goals',
+    taskPath: '.dust/tasks/review-goals.md',
+    templateName: 'review-goals',
+    commitPattern: '.dust/goals/',
+    threshold: 20,
+    commitMessage: 'Add task: Review Goals',
+  },
+  {
+    name: 'ideas',
+    taskPath: '.dust/tasks/review-ideas.md',
+    templateName: 'review-ideas',
+    commitPattern: '.dust/ideas/',
+    threshold: 20,
+    commitMessage: 'Add task: Review Ideas',
+  },
+  {
+    name: 'facts',
+    taskPath: '.dust/tasks/review-facts.md',
+    templateName: 'review-facts',
+    commitPattern: '.dust/facts/',
+    threshold: 20,
+    commitMessage: 'Add task: Review Facts',
+  },
+]
 
 export interface GitRunner {
   run: (
@@ -68,82 +115,78 @@ export function getGitHubActionsEnvironment(): GitHubActionsEnvironment {
   }
 }
 
-async function getCommitsSinceLastDeletion(
+/**
+ * Count commits matching a path pattern since a task was last deleted
+ */
+async function getMatchingCommitsSinceLastDeletion(
   cwd: string,
-  gitRunner: GitRunner
+  gitRunner: GitRunner,
+  taskPath: string,
+  commitPattern: string
 ): Promise<number> {
-  // Find the commit where the file was last deleted
+  // Find the commit where the task file was last deleted
   const lastDeleteResult = await gitRunner.run(
-    ['log', '--diff-filter=D', '--format=%H', '-1', '--', REVIEW_TASK_PATH],
+    ['log', '--diff-filter=D', '--format=%H', '-1', '--', taskPath],
     cwd
   )
 
   const lastDeleteCommit = lastDeleteResult.output.trim()
 
-  if (!lastDeleteCommit) {
-    // Never deleted, count all commits
-    const allCommitsResult = await gitRunner.run(
-      ['rev-list', '--count', 'HEAD'],
-      cwd
-    )
-    return Number.parseInt(allCommitsResult.output.trim(), 10) || 0
-  }
+  // Build the rev-list command to count commits matching the pattern
+  const revListArgs = lastDeleteCommit
+    ? ['rev-list', '--count', `${lastDeleteCommit}..HEAD`, '--', commitPattern]
+    : ['rev-list', '--count', 'HEAD', '--', commitPattern]
 
-  // Count commits since that deletion
-  const commitsSinceResult = await gitRunner.run(
-    ['rev-list', '--count', `${lastDeleteCommit}..HEAD`],
-    cwd
-  )
-  return Number.parseInt(commitsSinceResult.output.trim(), 10) || 0
+  const commitCountResult = await gitRunner.run(revListArgs, cwd)
+  return Number.parseInt(commitCountResult.output.trim(), 10) || 0
 }
 
+/**
+ * Create and push a review task for the given review type
+ */
 async function createAndPushReviewTask(
   cwd: string,
   gitRunner: GitRunner,
   fileSystem: { writeFile: (path: string, content: string) => Promise<void> },
-  context: { stdout: (msg: string) => void }
-): Promise<void> {
-  const fullPath = `${cwd}/${REVIEW_TASK_PATH}`
+  context: { stdout: (msg: string) => void },
+  reviewType: ReviewType
+): Promise<boolean> {
+  const fullPath = `${cwd}/${reviewType.taskPath}`
 
   // Write the file
-  const content = loadTemplate('periodic-review')
+  const content = loadTemplate(reviewType.templateName)
   await fileSystem.writeFile(fullPath, content)
 
   // Stage the file
-  const addResult = await gitRunner.run(['add', REVIEW_TASK_PATH], cwd)
+  const addResult = await gitRunner.run(['add', reviewType.taskPath], cwd)
   if (addResult.exitCode !== 0) {
-    context.stdout(`Warning: Failed to stage review task: ${addResult.output}`)
-    return
+    context.stdout(
+      `Warning: Failed to stage ${reviewType.name} review task: ${addResult.output}`
+    )
+    return false
   }
 
   // Commit
   const commitResult = await gitRunner.run(
-    ['commit', '-m', 'Add task: Periodic Review'],
+    ['commit', '-m', reviewType.commitMessage],
     cwd
   )
   if (commitResult.exitCode !== 0) {
     context.stdout(
-      `Warning: Failed to commit review task: ${commitResult.output}`
+      `Warning: Failed to commit ${reviewType.name} review task: ${commitResult.output}`
     )
-    return
+    return false
   }
 
-  // Push
-  const pushResult = await gitRunner.run(['push'], cwd)
-  if (pushResult.exitCode !== 0) {
-    context.stdout(`Warning: Failed to push review task: ${pushResult.output}`)
-    return
-  }
-
-  context.stdout('')
-  context.stdout('Created periodic review task')
+  return true
 }
 
 export async function githubActionsCheck(
   dependencies: CommandDependencies,
   bufferedRunner: BufferedProcessRunner = defaultBufferedRunner,
   gitRunner: GitRunner = defaultGitRunner,
-  getEnv: () => GitHubActionsEnvironment = getGitHubActionsEnvironment
+  getEnv: () => GitHubActionsEnvironment = getGitHubActionsEnvironment,
+  reviewTypes: ReviewType[] = DEFAULT_REVIEW_TYPES
 ): Promise<CommandResult> {
   const { context, fileSystem } = dependencies
 
@@ -168,26 +211,58 @@ export async function githubActionsCheck(
     return checkResult
   }
 
-  // Check if the task file already exists
-  const taskPath = `${context.cwd}/${REVIEW_TASK_PATH}`
-  if (fileSystem.exists(taskPath)) {
-    return checkResult
+  // Track which tasks were created (for batching the push)
+  const createdTasks: string[] = []
+
+  // Check each review type
+  for (const reviewType of reviewTypes) {
+    const taskPath = `${context.cwd}/${reviewType.taskPath}`
+
+    // Skip if task already exists
+    if (fileSystem.exists(taskPath)) {
+      continue
+    }
+
+    try {
+      const matchingCommits = await getMatchingCommitsSinceLastDeletion(
+        context.cwd,
+        gitRunner,
+        reviewType.taskPath,
+        reviewType.commitPattern
+      )
+
+      if (matchingCommits >= reviewType.threshold) {
+        const created = await createAndPushReviewTask(
+          context.cwd,
+          gitRunner,
+          fileSystem,
+          context,
+          reviewType
+        )
+        if (created) {
+          createdTasks.push(reviewType.name)
+        }
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+      context.stdout(
+        `Warning: Could not check ${reviewType.name} commit history: ${errorMessage}`
+      )
+    }
   }
 
-  // Count commits since the task was last deleted
-  try {
-    const commitsSince = await getCommitsSinceLastDeletion(
-      context.cwd,
-      gitRunner
-    )
-
-    if (commitsSince >= 20) {
-      await createAndPushReviewTask(context.cwd, gitRunner, fileSystem, context)
+  // Push all created tasks in one push
+  if (createdTasks.length > 0) {
+    const pushResult = await gitRunner.run(['push'], context.cwd)
+    if (pushResult.exitCode !== 0) {
+      context.stdout(
+        `Warning: Failed to push review tasks: ${pushResult.output}`
+      )
+    } else {
+      context.stdout('')
+      context.stdout(`Created review tasks: ${createdTasks.join(', ')}`)
     }
-  } catch (error) {
-    // Log warning but don't fail the overall check
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    context.stdout(`Warning: Could not check commit history: ${errorMessage}`)
   }
 
   return checkResult
