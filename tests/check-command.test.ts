@@ -51,7 +51,6 @@ test('check command validates markdown files in .dust directory', async () => {
             'valid-task.md': buildTask({
               title: 'Valid Task',
               description: 'A well-formed task.',
-              definitionOfDone: ['Complete the task'],
             }),
           },
           config: {
@@ -93,7 +92,6 @@ test('check command fails when markdown files have validation errors', async () 
             'InvalidTask.md': buildTask({
               title: 'Invalid Task',
               description: 'Missing required sections.',
-              definitionOfDone: ['Done'],
             }),
           },
           config: {
@@ -187,7 +185,6 @@ test('lint markdown passes with valid files', async () => {
               title: 'Good Task',
               description: 'A proper task with all sections.',
               goals: [{ name: 'Good Goal', path: '../goals/good-goal.md' }],
-              definitionOfDone: ['Task is complete'],
             }),
           },
         },

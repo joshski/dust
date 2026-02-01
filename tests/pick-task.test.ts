@@ -68,15 +68,12 @@ test('agent can pick from multiple available tasks', async () => {
           tasks: {
             'task-a.md': buildTask({
               title: 'Task A',
-              definitionOfDone: ['Done'],
             }),
             'task-b.md': buildTask({
               title: 'Task B',
-              definitionOfDone: ['Done'],
             }),
             'task-c.md': buildTask({
               title: 'Task C',
-              definitionOfDone: ['Done'],
             }),
           },
         },
