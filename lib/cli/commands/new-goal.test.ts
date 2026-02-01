@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'vitest'
 import { createCommandDependencies } from '../../test/test-utilities'
-import { agentNewGoal } from './agent-new-goal'
+import { newGoal } from './new-goal'
 
-describe('agent-new-goal', () => {
+describe('new-goal', () => {
   test('outputs goal creation instructions', async () => {
     const { context, dependencies } = createCommandDependencies()
-    const result = await agentNewGoal(dependencies)
+    const result = await newGoal(dependencies)
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain('Adding a New Goal')

@@ -37,14 +37,12 @@ describe('agent command', () => {
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toMatch(/Hello .+, welcome to dust/)
-    expect(context.stdoutLines.join('\n')).toContain('dust agent pick task')
-    expect(context.stdoutLines.join('\n')).toContain(
-      'dust agent implement task'
-    )
-    expect(context.stdoutLines.join('\n')).toContain('dust agent new task')
-    expect(context.stdoutLines.join('\n')).toContain('dust agent new goal')
-    expect(context.stdoutLines.join('\n')).toContain('dust agent new idea')
-    expect(context.stdoutLines.join('\n')).toContain('dust agent help')
+    expect(context.stdoutLines.join('\n')).toContain('dust pick task')
+    expect(context.stdoutLines.join('\n')).toContain('dust implement task')
+    expect(context.stdoutLines.join('\n')).toContain('dust new task')
+    expect(context.stdoutLines.join('\n')).toContain('dust new goal')
+    expect(context.stdoutLines.join('\n')).toContain('dust new idea')
+    expect(context.stdoutLines.join('\n')).toContain('dust help')
   })
 
   test('uses custom binary path in output', async () => {
@@ -53,7 +51,7 @@ describe('agent command', () => {
 
     await agent(createDependencies(context, [], settings))
 
-    expect(context.stdoutLines.join('\n')).toContain('bin/dust agent pick task')
+    expect(context.stdoutLines.join('\n')).toContain('bin/dust pick task')
   })
 })
 

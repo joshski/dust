@@ -13,15 +13,24 @@ Commands:
   next                      Show tasks ready to work on (not blocked)
   check                     Run project-defined quality gate hook
   agent                     Agent greeting and routing instructions
-  agent help                Show agent guidance
-  agent pick task           Pick the next task to work on
-  agent implement task      Implement a task
-  agent new task            Create a new task
-  agent new goal            Create a new goal
-  agent new idea            Create a new idea
-  agent understand goals    Understanding goals
+  pick task                 Pick the next task to work on
+  implement task            Implement a task
+  new task                  Create a new task
+  new goal                  Create a new goal
+  new idea                  Create a new idea
+  understand goals          Understanding goals
   loop                      Run continuous Claude iteration on tasks
   pre-push                  Git pre-push hook validation
   help                      Show this help message
 
-🤖 If you are an AI agent, run `{{bin}} agent` to get started!
+🤖 Agent Guide
+
+Dust is a lightweight planning system. The .dust/ directory contains:
+- goals/  - Guiding principles (stable, rarely change)
+- ideas/  - Proposals (convert to tasks when ready)
+- tasks/  - Actionable work with definitions of done
+- facts/  - Documentation of current system state
+
+Workflow: Pick a task → implement it → delete the task file → commit atomically.
+
+Run `{{bin}} agent` to get started!

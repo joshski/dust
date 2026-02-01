@@ -381,14 +381,14 @@ describe('COMMANDS', () => {
 })
 
 describe('multi-word command routing', () => {
-  test('routes agent new task correctly', async () => {
+  test('routes new task correctly', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: { '.dust': {} },
     })
 
     const result = await main({
-      commandArguments: ['agent', 'new', 'task'],
+      commandArguments: ['new', 'task'],
       context,
       fileSystem,
       glob: fileSystem,
@@ -398,21 +398,21 @@ describe('multi-word command routing', () => {
     expect(context.stdoutLines.join('\n')).toContain('Adding a New Task')
   })
 
-  test('routes agent help correctly', async () => {
+  test('routes pick task correctly', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: { '.dust': {} },
     })
 
     const result = await main({
-      commandArguments: ['agent', 'help'],
+      commandArguments: ['pick', 'task'],
       context,
       fileSystem,
       glob: fileSystem,
     })
 
     expect(result.exitCode).toBe(0)
-    expect(context.stdoutLines.join('\n')).toContain('Dust Agent Guide')
+    expect(context.stdoutLines.join('\n')).toContain('Pick a Task')
   })
 
   test('routes pre push correctly', async () => {
@@ -441,15 +441,15 @@ describe('multi-word command routing', () => {
     })
 
     const result = await main({
-      commandArguments: ['agent', 'unknown', 'subcommand'],
+      commandArguments: ['new', 'unknown', 'subcommand'],
       context,
       fileSystem,
       glob: fileSystem,
     })
 
-    // Should fall back to 'agent' command since 'agent unknown subcommand' doesn't exist
-    expect(result.exitCode).toBe(0)
-    expect(context.stdoutLines.join('\n')).toMatch(/Hello .+, welcome to dust/)
+    // Should fall back to error since 'new unknown subcommand' and 'new unknown' don't exist
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('Unknown command')
   })
 })
 
@@ -477,6 +477,6 @@ describe('generateHelpText', () => {
 
   test('uses custom binary path in agent pointer', () => {
     const helpText = generateHelpText({ dustCommand: 'bin/dust' })
-    expect(helpText).toContain('run `bin/dust agent`')
+    expect(helpText).toContain('Run `bin/dust agent`')
   })
 })

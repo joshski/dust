@@ -10,23 +10,22 @@
 
 import { loadSettings } from '../config/settings'
 import { agent } from './commands/agent'
-import { agentHelp } from './commands/agent-help'
-import { agentImplementTask } from './commands/agent-implement-task'
-import { agentNewGoal } from './commands/agent-new-goal'
-import { agentNewIdea } from './commands/agent-new-idea'
-import { agentNewTask } from './commands/agent-new-task'
-import { agentPickTask } from './commands/agent-pick-task'
-import { agentUnderstandGoals } from './commands/agent-understand-goals'
 import { check } from './commands/check'
 import { generateHelpText, help } from './commands/help'
+import { implementTask } from './commands/implement-task'
 import { init } from './commands/init'
 import { lintMarkdown } from './commands/lint-markdown'
 import { list } from './commands/list'
 import { loopClaude } from './commands/loop'
+import { newGoal } from './commands/new-goal'
+import { newIdea } from './commands/new-idea'
+import { newTask } from './commands/new-task'
 import { next } from './commands/next'
+import { pickTask } from './commands/pick-task'
 import { prePush } from './commands/pre-push'
-import { subagentNewTask } from './commands/subagent-new-task'
+import { subagentTask } from './commands/subagent-task'
 import { facts, goals, ideas, tasks } from './commands/type-list'
+import { understandGoals } from './commands/understand-goals'
 import type {
   CommandContext,
   CommandDependencies,
@@ -40,7 +39,7 @@ import type {
  * Adding a new command only requires adding an entry here.
  *
  * Multi-word command names use spaces to match CLI invocation:
- * - `dust agent new task` -> `agent new task`
+ * - `dust new task` -> `new task`
  * - `dust pre push` -> `pre push`
  */
 export const commandRegistry = {
@@ -54,14 +53,13 @@ export const commandRegistry = {
   next,
   check,
   agent,
-  'agent help': agentHelp,
-  'agent new task': agentNewTask,
-  'agent new goal': agentNewGoal,
-  'agent new idea': agentNewIdea,
-  'agent implement task': agentImplementTask,
-  'agent pick task': agentPickTask,
-  'agent understand goals': agentUnderstandGoals,
-  'subagent new task': subagentNewTask,
+  'new task': newTask,
+  'new goal': newGoal,
+  'new idea': newIdea,
+  'implement task': implementTask,
+  'pick task': pickTask,
+  'understand goals': understandGoals,
+  'subagent task': subagentTask,
   'loop claude': loopClaude,
   'pre push': prePush,
   help,

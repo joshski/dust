@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'vitest'
 import { createCommandDependencies } from '../../test/test-utilities'
-import { agentPickTask } from './agent-pick-task'
+import { pickTask } from './pick-task'
 
-describe('agent-pick-task', () => {
+describe('pick-task', () => {
   test('outputs pick task instructions', async () => {
     const { context, dependencies } = createCommandDependencies()
-    const result = await agentPickTask(dependencies)
+    const result = await pickTask(dependencies)
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain('Pick a Task')
