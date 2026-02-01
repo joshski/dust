@@ -7,11 +7,11 @@ import {
   createAgentEmulator,
   createScenarioAgent,
   NoHandlerMatchError,
-} from './support/agent-emulator'
+} from './agent-emulator'
 import {
   createShellEmulator,
   type ShellEmulator,
-} from './support/shell-emulator'
+} from './shell-emulator'
 
 describe('agent emulator', () => {
   let shell: ShellEmulator
