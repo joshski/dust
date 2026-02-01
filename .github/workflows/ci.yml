@@ -24,4 +24,4 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run quality checks
-        run: ./bin/dust check
+        run: ./bin/dust github actions check

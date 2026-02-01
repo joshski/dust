@@ -11,6 +11,7 @@
 import { loadSettings } from '../config/settings'
 import { agent } from './commands/agent'
 import { check } from './commands/check'
+import { githubActionsCheck } from './commands/github-actions-check'
 import { generateHelpText, help } from './commands/help'
 import { implementTask } from './commands/implement-task'
 import { init } from './commands/init'
@@ -60,6 +61,7 @@ export const commandRegistry = {
   'understand goals': understandGoals,
   'loop claude': loopClaude,
   'pre push': prePush,
+  'github actions check': githubActionsCheck,
   help,
 }
 
