@@ -23,7 +23,6 @@ import { newTask } from './commands/new-task'
 import { next } from './commands/next'
 import { pickTask } from './commands/pick-task'
 import { prePush } from './commands/pre-push'
-import { subagentTask } from './commands/subagent-task'
 import { facts, goals, ideas, tasks } from './commands/type-list'
 import { understandGoals } from './commands/understand-goals'
 import type {
@@ -59,7 +58,6 @@ export const commandRegistry = {
   'implement task': implementTask,
   'pick task': pickTask,
   'understand goals': understandGoals,
-  'subagent task': subagentTask,
   'loop claude': loopClaude,
   'pre push': prePush,
   help,
