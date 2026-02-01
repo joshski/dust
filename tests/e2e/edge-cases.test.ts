@@ -1,6 +1,7 @@
 import { expect, test } from 'vitest'
 import { runSession } from '../run-session'
 import { createShellEmulator } from '../shell-emulator'
+import { buildGoal, buildTask } from './content-builders'
 
 test('empty backlog shows no tasks available', async () => {
   const session = await runSession({
@@ -8,8 +9,10 @@ test('empty backlog shows no tasks available', async () => {
       project: {
         '.dust': {
           goals: {
-            'maintainability.md':
-              '# Maintainability\n\nCode should be easy to change.',
+            'maintainability.md': buildGoal({
+              title: 'Maintainability',
+              description: 'Code should be easy to change.',
+            }),
           },
           ideas: {},
           tasks: {},
@@ -79,48 +82,20 @@ test('all tasks blocked shows no available work', async () => {
           goals: {},
           ideas: {},
           tasks: {
-            'blocker-task.md': `# Blocker Task
-
-## Goals
-
-(none)
-
-## Blocked by
-
-(none)
-
-## Definition of done
-
-- [ ] Done
-`,
-            'blocked-task-a.md': `# Blocked Task A
-
-## Goals
-
-(none)
-
-## Blocked by
-
-- [Blocker Task](blocker-task.md)
-
-## Definition of done
-
-- [ ] Done
-`,
-            'blocked-task-b.md': `# Blocked Task B
-
-## Goals
-
-(none)
-
-## Blocked by
-
-- [Blocker Task](blocker-task.md)
-
-## Definition of done
-
-- [ ] Done
-`,
+            'blocker-task.md': buildTask({
+              title: 'Blocker Task',
+              definitionOfDone: ['Done'],
+            }),
+            'blocked-task-a.md': buildTask({
+              title: 'Blocked Task A',
+              blockedBy: [{ name: 'Blocker Task', path: 'blocker-task.md' }],
+              definitionOfDone: ['Done'],
+            }),
+            'blocked-task-b.md': buildTask({
+              title: 'Blocked Task B',
+              blockedBy: [{ name: 'Blocker Task', path: 'blocker-task.md' }],
+              definitionOfDone: ['Done'],
+            }),
           },
           facts: {},
         },
@@ -150,6 +125,7 @@ test('task list handles tasks with no title gracefully', async () => {
           goals: {},
           ideas: {},
           tasks: {
+            // This is a special case - intentionally malformed markdown without H1
             'no-title.md': `No heading here, just content.
 
 ## Goals
@@ -260,20 +236,10 @@ test('agent handles task with special characters in filename', async () => {
           goals: {},
           ideas: {},
           tasks: {
-            'add-api-v2-endpoint.md': `# Add API v2 Endpoint
-
-## Goals
-
-(none)
-
-## Blocked by
-
-(none)
-
-## Definition of done
-
-- [ ] Done
-`,
+            'add-api-v2-endpoint.md': buildTask({
+              title: 'Add API v2 Endpoint',
+              definitionOfDone: ['Done'],
+            }),
           },
           facts: {},
         },

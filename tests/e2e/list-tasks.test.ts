@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest'
 import { runSession } from '../run-session'
+import { buildTask } from './content-builders'
 
 test('agent lists tasks to understand current work', async () => {
   const session = await runSession({
@@ -9,10 +10,14 @@ test('agent lists tasks to understand current work', async () => {
           goals: {},
           ideas: {},
           tasks: {
-            'task-one.md':
-              '# Task One\n\n## Goals\n\n(none)\n\n## Blocked by\n\n(none)\n\n## Definition of done\n\n- [ ] Done',
-            'task-two.md':
-              '# Task Two\n\n## Goals\n\n(none)\n\n## Blocked by\n\n(none)\n\n## Definition of done\n\n- [ ] Done',
+            'task-one.md': buildTask({
+              title: 'Task One',
+              definitionOfDone: ['Done'],
+            }),
+            'task-two.md': buildTask({
+              title: 'Task Two',
+              definitionOfDone: ['Done'],
+            }),
           },
           facts: {},
         },

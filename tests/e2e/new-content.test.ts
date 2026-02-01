@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest'
 import { runSession } from '../run-session'
+import { buildGoal, buildIdea } from './content-builders'
 
 test('agent gets instructions for creating a new task', async () => {
   const session = await runSession({
@@ -120,8 +121,10 @@ test('new task instructions include checking existing ideas', async () => {
         '.dust': {
           goals: {},
           ideas: {
-            'improve-performance.md':
-              '# Improve Performance\n\nMake it faster.',
+            'improve-performance.md': buildIdea({
+              title: 'Improve Performance',
+              description: 'Make it faster.',
+            }),
           },
           tasks: {},
           facts: {},
@@ -148,8 +151,10 @@ test('new goal instructions include checking existing goals', async () => {
       project: {
         '.dust': {
           goals: {
-            'maintainability.md':
-              '# Maintainability\n\nCode should be easy to change.',
+            'maintainability.md': buildGoal({
+              title: 'Maintainability',
+              description: 'Code should be easy to change.',
+            }),
           },
           ideas: {},
           tasks: {},

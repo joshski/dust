@@ -1,5 +1,6 @@
 import { expect, test } from 'vitest'
 import { runSession } from '../run-session'
+import { buildGoal, buildTask } from './content-builders'
 
 test('agent discovers available work through dust agent flow', async () => {
   const session = await runSession({
@@ -7,27 +8,21 @@ test('agent discovers available work through dust agent flow', async () => {
       project: {
         '.dust': {
           goals: {
-            'fast-feedback.md': '# Fast Feedback\n\nTests should run quickly.',
+            'fast-feedback.md': buildGoal({
+              title: 'Fast Feedback',
+              description: 'Tests should run quickly.',
+            }),
           },
           ideas: {},
           tasks: {
-            'implement-caching.md': `# Implement Caching
-
-Add caching to improve performance.
-
-## Goals
-
-- [Fast Feedback](../goals/fast-feedback.md)
-
-## Blocked by
-
-(none)
-
-## Definition of done
-
-- [ ] Cache is implemented
-- [ ] Tests pass
-`,
+            'implement-caching.md': buildTask({
+              title: 'Implement Caching',
+              description: 'Add caching to improve performance.',
+              goals: [
+                { name: 'Fast Feedback', path: '../goals/fast-feedback.md' },
+              ],
+              definitionOfDone: ['Cache is implemented', 'Tests pass'],
+            }),
           },
           facts: {},
         },
