@@ -1,4 +1,4 @@
-# Stubs over mocks
+# Stubs Over Mocks
 
 Prefer hand-rolled stubs over mocks, in unit tests. Stubs keep tests focused on observable behavior instead of implementation details.
 

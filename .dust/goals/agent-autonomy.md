@@ -1,4 +1,4 @@
-# Agent autonomy
+# Agent Autonomy
 
 Dust exists to enable AI agents to produce work autonomously.
 
