@@ -1,4 +1,4 @@
-# Organized Concerns
+# Intuitive Directory Structure
 
 Code should be organized around related concerns in clearly named directories.
 
