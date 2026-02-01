@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest'
-import { runSession } from '../run-session'
-import { createShellEmulator } from '../shell-emulator'
-import { buildGoal, buildTask } from './content-builders'
+import { buildGoal, buildTask } from './support/content-builders'
+import { runSession } from './support/run-session'
+import { createShellEmulator } from './support/shell-emulator'
 
 test('empty backlog shows no tasks available', async () => {
   const session = await runSession({

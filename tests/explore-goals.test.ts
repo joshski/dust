@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
-import { runSession } from '../run-session'
-import { buildGoal } from './content-builders'
+import { buildGoal } from './support/content-builders'
+import { runSession } from './support/run-session'
 
 test('agent explores goals to understand project direction', async () => {
   const session = await runSession({

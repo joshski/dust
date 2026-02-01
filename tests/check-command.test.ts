@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
-import { runSession } from '../run-session'
-import { buildGoal, buildIdea, buildTask } from './content-builders'
+import { buildGoal, buildIdea, buildTask } from './support/content-builders'
+import { runSession } from './support/run-session'
 
 test('check command reports error when no checks are configured', async () => {
   const session = await runSession({

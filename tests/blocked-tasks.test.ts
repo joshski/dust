@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
-import { runSession } from '../run-session'
-import { buildTask } from './content-builders'
+import { buildTask } from './support/content-builders'
+import { runSession } from './support/run-session'
 
 test('agent sees only unblocked tasks when some are blocked', async () => {
   const session = await runSession({

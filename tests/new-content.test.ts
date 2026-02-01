@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
-import { runSession } from '../run-session'
-import { buildGoal, buildIdea } from './content-builders'
+import { buildGoal, buildIdea } from './support/content-builders'
+import { runSession } from './support/run-session'
 
 test('agent gets instructions for creating a new task', async () => {
   const session = await runSession({
