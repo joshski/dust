@@ -10,4 +10,4 @@ Decoupled code is easier to test, understand, and modify. Dependencies are passe
 
 ## Sub-Goals
 
-- [Stubs over Mocks](stubs-over-mocks.md)
+- [Stubs Over Mocks](stubs-over-mocks.md)
