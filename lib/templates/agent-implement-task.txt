@@ -1,7 +1,8 @@
 ## Implement a Task
 
-Follow these steps:
-
+{{#if isClaudeCodeWeb}}Follow these steps. Use a todo list to track your progress.
+{{/if}}{{#unless isClaudeCodeWeb}}Follow these steps:
+{{/unless}}
 1. Run `{{bin}} next` to identify the (unblocked) task the user is referring to
 2. Run `{{bin}} check` to verify the project is in a good state
 3. Implement the task
