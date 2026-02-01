@@ -12,4 +12,4 @@ The system avoids the staleness problem by deferring detail until the last respo
 
 ## Sub-Goals
 
-- [Atomic Commits](atomic-commits.md)
+- (none)

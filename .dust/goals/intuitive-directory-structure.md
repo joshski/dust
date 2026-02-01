@@ -10,4 +10,4 @@ When files that serve similar purposes are grouped together, the codebase become
 
 ## Sub-Goals
 
-- [Clarity Over Brevity](clarity-over-brevity.md)
+- (none)

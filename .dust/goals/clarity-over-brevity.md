@@ -6,7 +6,7 @@ Abbreviated names like `ctx`, `deps`, `fs`, or `args` save a few keystrokes but 
 
 ## Parent Goal
 
-- [Intuitive Directory Structure](intuitive-directory-structure.md)
+- [Maintainable Codebase](maintainable-codebase.md)
 
 ## Sub-Goals
 

@@ -10,4 +10,4 @@ This includes proper gitignore configuration to exclude build artifacts, depende
 
 ## Sub-Goals
 
-- (none)
+- [Atomic Commits](atomic-commits.md)
