@@ -18,7 +18,6 @@ Commands:
   new task          Create a new task
   new goal          Create a new goal
   new idea          Create a new idea
-  understand goals  Understanding goals
   loop claude       Run continuous Claude iteration on tasks
   pre push          Git pre-push hook validation
   help              Show this help message
