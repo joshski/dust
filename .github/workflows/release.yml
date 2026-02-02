@@ -38,3 +38,31 @@ jobs:
 
       - name: Publish to npm
         run: npm publish --access public
+
+  smoke-test:
+    name: Smoke test published package
+    needs: publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Wait for npm propagation
+        run: sleep 30
+
+      - name: Install published package
+        run: |
+          mkdir smoke-test && cd smoke-test
+          npm init -y
+          npm install @joshski/dust@${{ github.ref_name }}
+
+      - name: Verify help command
+        run: |
+          cd smoke-test
+          OUTPUT=$(npx @joshski/dust help)
+          echo "$OUTPUT"
+          echo "$OUTPUT" | grep -q "dust"
+          echo "$OUTPUT" | grep -q "Usage:"
