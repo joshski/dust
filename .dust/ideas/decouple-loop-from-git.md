@@ -4,4 +4,4 @@ The `dust loop claude` command currently has git dependencies that could be abst
 
 Decoupling from git would allow dust to work with other version control systems or even non-VCS workflows.
 
-Related to [VCS Agnostic](../goals/vcs-agnostic.md).
+Related to [VCS Independence](../goals/vcs-independence.md).

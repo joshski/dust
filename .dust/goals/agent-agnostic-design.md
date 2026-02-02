@@ -1,4 +1,4 @@
-# Agent Agnostic
+# Agent-Agnostic Design
 
 Dust should work with multiple agents without favoring one.
 

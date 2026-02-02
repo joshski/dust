@@ -11,7 +11,7 @@ With sufficient planning and small enough units, this works much better in pract
 ## Sub-Goals
 
 - [Actionable Errors](actionable-errors.md)
-- [Agent Agnostic](agent-agnostic.md)
+- [Agent-Agnostic Design](agent-agnostic-design.md)
 - [Agent Context Inference](agent-context-inference.md)
 - [Agent-Specific Enhancement](agent-specific-enhancement.md)
 - [Context Window Efficiency](context-window-efficiency.md)
