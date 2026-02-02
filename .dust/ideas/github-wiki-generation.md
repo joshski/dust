@@ -1,6 +1,6 @@
 # GitHub Wiki Generation
 
-A `dust generate github wiki` command that synchronizes content from the `.dust/` directory to a repository's GitHub wiki, suitable for use in GitHub Actions.
+A command to synchronize `.dust/` content to a repository's GitHub wiki, suitable for GitHub Actions.
 
 ## How GitHub Wikis Work
 

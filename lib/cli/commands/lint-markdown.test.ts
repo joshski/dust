@@ -16,6 +16,7 @@ import {
   validateLinks,
   validateNoCycles,
   validateOpeningSentence,
+  validateOpeningSentenceLength,
   validateSemanticLinks,
   validateTaskHeadings,
   validateTitleFilenameMatch,
@@ -175,6 +176,36 @@ describe('validateOpeningSentence', () => {
     const content = '# Title\n\nNo sentence ending here'
     const violation = validateOpeningSentence('file.md', content)
     expect(violation).not.toBeNull()
+  })
+})
+
+describe('validateOpeningSentenceLength', () => {
+  test('returns null for sentence within limit', () => {
+    const content = '# Title\n\nThis is a short sentence.'
+    expect(validateOpeningSentenceLength('file.md', content)).toBeNull()
+  })
+
+  test('returns null for sentence exactly at limit', () => {
+    // Create a sentence exactly 150 characters long (including the period)
+    const sentence = `${'A'.repeat(149)}.`
+    const content = `# Title\n\n${sentence}`
+    expect(validateOpeningSentenceLength('file.md', content)).toBeNull()
+  })
+
+  test('returns violation for sentence exceeding limit', () => {
+    // Create a sentence 151 characters long
+    const sentence = `${'A'.repeat(150)}.`
+    const content = `# Title\n\n${sentence}`
+    const violation = validateOpeningSentenceLength('file.md', content)
+    expect(violation).not.toBeNull()
+    expect(violation?.message).toContain('151 characters')
+    expect(violation?.message).toContain('max 150')
+  })
+
+  test('returns null when opening sentence is missing', () => {
+    // Missing sentence is handled by validateOpeningSentence, not this function
+    const content = '# Title\n\n## Another Heading'
+    expect(validateOpeningSentenceLength('file.md', content)).toBeNull()
   })
 })
 
@@ -578,6 +609,31 @@ This is a task.
     expect(output).toContain('does not match slug-style')
     // Should not have a colon before the message (no line number)
     expect(output).toMatch(/BadName\.md\n/)
+  })
+
+  test('reports opening sentence length violations', async () => {
+    const context = createContextEmulator()
+    // Create a sentence that exceeds 150 characters
+    const longSentence = `${'A'.repeat(150)}.`
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'long-sentence.md': `# Long Sentence
+
+${longSentence}
+`,
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    const output = context.stderrLines.join('\n')
+    expect(output).toContain('151 characters')
+    expect(output).toContain('max 150')
   })
 
   test('skips task validation when tasks directory does not exist', async () => {
