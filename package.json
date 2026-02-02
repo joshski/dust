@@ -1,7 +1,7 @@
 {
   "name": "@joshski/dust",
   "version": "0.1.13",
-  "description": "A lightweight planning system for human-AI collaboration",
+  "description": "Flow state for AI coding agents",
   "type": "module",
   "bin": {
     "dust": "./dist/dust.js"
