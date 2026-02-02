@@ -12,4 +12,4 @@ Clean commit history is essential because archaeology depends on it. Future huma
 
 ## Sub-Goals
 
-- (none)
+- [Traceable Decisions](traceable-decisions.md)
