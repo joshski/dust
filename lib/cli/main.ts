@@ -24,7 +24,6 @@ import { next } from './commands/next'
 import { pickTask } from './commands/pick-task'
 import { prePush } from './commands/pre-push'
 import { facts, goals, ideas, tasks } from './commands/type-list'
-import { understandGoals } from './commands/understand-goals'
 import type {
   CommandContext,
   CommandDependencies,
@@ -57,7 +56,6 @@ export const commandRegistry = {
   'new idea': newIdea,
   'implement task': implementTask,
   'pick task': pickTask,
-  'understand goals': understandGoals,
   'loop claude': loopClaude,
   'pre push': prePush,
   help,
