@@ -1,4 +1,4 @@
-# VCS Agnostic
+# VCS Independence
 
 Dust should work independently of any specific version control system.
 
