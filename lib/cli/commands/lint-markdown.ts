@@ -5,6 +5,7 @@
 import { dirname, resolve } from 'node:path'
 import {
   extractOpeningSentence,
+  extractTitle,
   MARKDOWN_LINK_PATTERN,
 } from '../../markdown/markdown-utilities'
 import type {
@@ -37,6 +38,48 @@ export function validateFilename(filePath: string): Violation | null {
       message: `Filename "${filename}" does not match slug-style naming`,
     }
   }
+  return null
+}
+
+/**
+ * Converts a markdown title to the expected filename using deterministic rules:
+ * 1. Convert to lowercase
+ * 2. Replace dots with hyphens (before removing other special chars)
+ * 3. Remove characters that aren't alphanumeric, spaces, or hyphens
+ * 4. Replace spaces with hyphens
+ * 5. Collapse multiple consecutive hyphens
+ * 6. Add .md extension
+ */
+export function titleToFilename(title: string): string {
+  return `${title
+    .toLowerCase()
+    .replace(/\./g, '-')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')}.md`
+}
+
+export function validateTitleFilenameMatch(
+  filePath: string,
+  content: string
+): Violation | null {
+  const title = extractTitle(content)
+  if (!title) {
+    return null // No title to validate against
+  }
+
+  const parts = filePath.split('/')
+  const actualFilename = parts[parts.length - 1]
+  const expectedFilename = titleToFilename(title)
+
+  if (actualFilename !== expectedFilename) {
+    return {
+      file: filePath,
+      message: `Filename "${actualFilename}" does not match title "${title}" (expected "${expectedFilename}")`,
+    }
+  }
+
   return null
 }
 
@@ -451,9 +494,9 @@ export async function lintMarkdown(
     violations.push(...validateLinks(filePath, content, fileSystem))
   }
 
-  // Validate opening sentences in all content directories
+  // Validate opening sentences and title-filename matching in all content directories
   const contentDirs = ['goals', 'facts', 'ideas', 'tasks']
-  context.stdout('Validating opening sentences...')
+  context.stdout('Validating content files...')
 
   for (const dir of contentDirs) {
     const dirPath = `${dustPath}/${dir}`
@@ -471,6 +514,14 @@ export async function lintMarkdown(
       )
       if (openingSentenceViolation) {
         violations.push(openingSentenceViolation)
+      }
+
+      const titleFilenameViolation = validateTitleFilenameMatch(
+        filePath,
+        content
+      )
+      if (titleFilenameViolation) {
+        violations.push(titleFilenameViolation)
       }
     }
   }

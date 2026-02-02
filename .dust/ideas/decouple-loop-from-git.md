@@ -1,4 +1,4 @@
-# Decouple `dust loop claude` from git
+# Decouple Loop from Git
 
 The `dust loop claude` command currently has git dependencies that could be abstracted away.
 
