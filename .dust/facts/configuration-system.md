@@ -14,16 +14,6 @@ The command used to invoke dust in agent instructions. Defaults to `dust` if not
 }
 ```
 
-### installCommand
-
-A shell command to install dependencies, run automatically when `dust agent` is invoked. Auto-detected based on lockfiles (e.g., "npm install" for npm, "bun install" for bun). If no lockfile is found, defaults to an empty string (no install command run).
-
-```json
-{
-  "installCommand": "npm install"
-}
-```
-
 ### checks
 
 An array of quality gate checks run by `dust check`. Each check has a `name` and `command`:
