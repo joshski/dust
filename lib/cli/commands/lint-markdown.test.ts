@@ -8,6 +8,7 @@ import type { CommandContext, CommandDependencies } from '../types'
 import {
   extractGoalRelationships,
   lintMarkdown,
+  titleToFilename,
   validateBidirectionalLinks,
   validateFilename,
   validateGoalHierarchyLinks,
@@ -17,6 +18,7 @@ import {
   validateOpeningSentence,
   validateSemanticLinks,
   validateTaskHeadings,
+  validateTitleFilenameMatch,
 } from './lint-markdown'
 
 function createDependencies(
@@ -45,6 +47,106 @@ describe('validateFilename', () => {
     expect(validateFilename('my_task.md')).not.toBeNull()
     expect(validateFilename('-task.md')).not.toBeNull()
     expect(validateFilename('task-.md')).not.toBeNull()
+  })
+})
+
+describe('titleToFilename', () => {
+  test('converts simple titles to filenames', () => {
+    expect(titleToFilename('Make Software Development Joyful')).toBe(
+      'make-software-development-joyful.md'
+    )
+    expect(titleToFilename('Commit Log Observations')).toBe(
+      'commit-log-observations.md'
+    )
+  })
+
+  test('preserves existing hyphens', () => {
+    expect(titleToFilename('Agent-Agnostic Design')).toBe(
+      'agent-agnostic-design.md'
+    )
+  })
+
+  test('removes special characters', () => {
+    expect(titleToFilename('Title with `backticks`')).toBe(
+      'title-with-backticks.md'
+    )
+    expect(titleToFilename("It's a title!")).toBe('its-a-title.md')
+  })
+
+  test('handles multiple spaces', () => {
+    expect(titleToFilename('Multiple   Spaces')).toBe('multiple-spaces.md')
+  })
+
+  test('collapses multiple hyphens', () => {
+    expect(titleToFilename('Title - With - Dashes')).toBe(
+      'title-with-dashes.md'
+    )
+  })
+
+  test('trims leading and trailing hyphens', () => {
+    expect(titleToFilename('-Leading Title')).toBe('leading-title.md')
+    expect(titleToFilename('Trailing Title-')).toBe('trailing-title.md')
+  })
+
+  test('handles numbers', () => {
+    expect(titleToFilename('Task V2')).toBe('task-v2.md')
+  })
+
+  test('converts dots to hyphens', () => {
+    expect(titleToFilename('AGENTS.md Instruction')).toBe(
+      'agents-md-instruction.md'
+    )
+    expect(titleToFilename('File.Name.With.Dots')).toBe(
+      'file-name-with-dots.md'
+    )
+  })
+})
+
+describe('validateTitleFilenameMatch', () => {
+  test('returns null when title matches filename', () => {
+    const content = '# Make Software Development Joyful\n\nDescription.'
+    expect(
+      validateTitleFilenameMatch(
+        '/path/to/make-software-development-joyful.md',
+        content
+      )
+    ).toBeNull()
+  })
+
+  test('returns violation when title does not match filename', () => {
+    const content = '# Make Software Development Joyful\n\nDescription.'
+    const violation = validateTitleFilenameMatch(
+      '/path/to/wrong-filename.md',
+      content
+    )
+    expect(violation).not.toBeNull()
+    expect(violation?.message).toContain('wrong-filename.md')
+    expect(violation?.message).toContain('Make Software Development Joyful')
+    expect(violation?.message).toContain('make-software-development-joyful.md')
+  })
+
+  test('returns null when no title exists', () => {
+    const content = 'No heading in this file.'
+    expect(
+      validateTitleFilenameMatch('/path/to/some-file.md', content)
+    ).toBeNull()
+  })
+
+  test('handles hyphens in titles correctly', () => {
+    const content = '# Agent-Agnostic Design\n\nDescription.'
+    expect(
+      validateTitleFilenameMatch('/path/to/agent-agnostic-design.md', content)
+    ).toBeNull()
+  })
+
+  test('handles special characters in titles', () => {
+    const content = '# Decouple `dust loop claude` from git\n\nDescription.'
+    expect(
+      validateTitleFilenameMatch(
+        '/path/to/decouple-dust-loop-claude-from-git.md',
+        content
+      )
+    ).toBeNull()
   })
 })
 
@@ -329,7 +431,7 @@ This is a goal.
 `,
           },
           tasks: {
-            'my-task.md': `# Task
+            'my-task.md': `# My Task
 
 This is a task.
 
@@ -408,7 +510,7 @@ This is a goal.
 `,
           },
           tasks: {
-            'my-task.md': `# Task
+            'my-task.md': `# My Task
 
 This is a task.
 
@@ -1020,7 +1122,7 @@ describe('lintMarkdown goal hierarchy validation', () => {
       project: {
         '.dust': {
           goals: {
-            'parent.md': `# Parent Goal
+            'parent-goal.md': `# Parent Goal
 
 This is the parent goal.
 
@@ -1030,15 +1132,15 @@ This is the parent goal.
 
 ## Sub-Goals
 
-- [Child](child.md)
+- [Child](child-goal.md)
 `,
-            'child.md': `# Child Goal
+            'child-goal.md': `# Child Goal
 
 This is the child goal.
 
 ## Parent Goal
 
-- [Parent](parent.md)
+- [Parent](parent-goal.md)
 
 ## Sub-Goals
 
