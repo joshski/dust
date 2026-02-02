@@ -34,9 +34,9 @@ A limit of 120 characters (soft) to 150 characters (hard) would capture 94% of e
 
 ## Definition of done
 
-- [ ] Add `validateOpeningSentenceLength()` function in `lib/cli/commands/lint-markdown.ts`
-- [ ] Define a `MAX_OPENING_SENTENCE_LENGTH` constant (150 characters)
-- [ ] Integrate the new validation into the `lintMarkdown()` function alongside existing `validateOpeningSentence()`
-- [ ] Add unit tests for the new validation function in `lib/cli/commands/lint-markdown.test.ts`
-- [ ] Verify any existing artifacts that exceed the limit are updated or the limit is adjusted
-- [ ] Run `dust lint markdown` to confirm the validation works
+- [x] Add `validateOpeningSentenceLength()` function in `lib/cli/commands/lint-markdown.ts`
+- [x] Define a `MAX_OPENING_SENTENCE_LENGTH` constant (150 characters)
+- [x] Integrate the new validation into the `lintMarkdown()` function alongside existing `validateOpeningSentence()`
+- [x] Add unit tests for the new validation function in `lib/cli/commands/lint-markdown.test.ts`
+- [x] Verify any existing artifacts that exceed the limit are updated or the limit is adjusted
+- [x] Run `dust lint markdown` to confirm the validation works

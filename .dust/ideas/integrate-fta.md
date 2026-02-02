@@ -1,6 +1,8 @@
 # Integrate FTA
 
-Integrate [FTA (Fast TypeScript Analyzer)](https://ftaproject.dev/docs/getting-started) into dust workflows to measure code complexity and maintainability.
+Integrate FTA (Fast TypeScript Analyzer) into dust workflows to measure code complexity.
+
+See [FTA documentation](https://ftaproject.dev/docs/getting-started) for details.
 
 ## Current Analysis
 

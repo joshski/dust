@@ -23,6 +23,8 @@ const REQUIRED_GOAL_HEADINGS = ['## Parent Goal', '## Sub-Goals']
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.md$/
 
+const MAX_OPENING_SENTENCE_LENGTH = 150
+
 export interface Violation {
   file: string
   message: string
@@ -92,6 +94,23 @@ export function validateOpeningSentence(
     return {
       file: filePath,
       message: 'Missing or malformed opening sentence after H1 heading',
+    }
+  }
+  return null
+}
+
+export function validateOpeningSentenceLength(
+  filePath: string,
+  content: string
+): Violation | null {
+  const openingSentence = extractOpeningSentence(content)
+  if (!openingSentence) {
+    return null // Missing sentence is handled by validateOpeningSentence
+  }
+  if (openingSentence.length > MAX_OPENING_SENTENCE_LENGTH) {
+    return {
+      file: filePath,
+      message: `Opening sentence is ${openingSentence.length} characters (max ${MAX_OPENING_SENTENCE_LENGTH})`,
     }
   }
   return null
@@ -514,6 +533,14 @@ export async function lintMarkdown(
       )
       if (openingSentenceViolation) {
         violations.push(openingSentenceViolation)
+      }
+
+      const openingSentenceLengthViolation = validateOpeningSentenceLength(
+        filePath,
+        content
+      )
+      if (openingSentenceLengthViolation) {
+        violations.push(openingSentenceLengthViolation)
       }
 
       const titleFilenameViolation = validateTitleFilenameMatch(
