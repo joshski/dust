@@ -11,7 +11,11 @@ Determine the user's intent and run the matching command NOW:
    User mentions a particular task by name. Examples: "implement the auth task", "work on caching"
 
 3. **Capture a new task** → `{{bin}} new task`
-   User has concrete work to add. Keywords: "task: ..." or "add a task ..."
+   User has concrete work to add. Includes:
+   - Explicit keywords: "task: ...", "add a task ..."
+   - Imperative sentences (commands): "Add authentication", "Fix the login bug",
+     "Implement caching", "Refactor the database layer"
+   Imperative sentences that describe specific actionable work should map to new tasks.
 
 4. **Capture a new goal** → `{{bin}} new goal`
    User has a higher-level objective to add. Keywords: "goal: ..." or "add a goal ..."
