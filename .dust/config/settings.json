@@ -1,6 +1,5 @@
 {
   "dustCommand": "bin/dust",
-  "installCommand": "bun install",
   "checks": [
     {
       "name": "lint typescript",

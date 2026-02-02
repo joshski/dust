@@ -1,4 +1,3 @@
-import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
 import {
   createContextEmulator,
@@ -10,7 +9,7 @@ import type {
   CommandDependencies,
   DustSettings,
 } from '../types'
-import { agent, createInstallRunner, type InstallRunner } from './agent'
+import { agent } from './agent'
 
 function createDependencies(
   context: CommandContext,
@@ -28,122 +27,13 @@ function createDependencies(
   }
 }
 
-function createMockInstallRunner(
-  exitCode = 0,
-  output = ''
-): InstallRunner & { calls: Array<{ command: string; cwd: string }> } {
-  const calls: Array<{ command: string; cwd: string }> = []
-  return {
-    calls,
-    run: async (command: string, cwd: string) => {
-      calls.push({ command, cwd })
-      return { exitCode, output }
-    },
-  }
-}
-
 const defaultSettings: DustSettings = { dustCommand: 'dust' }
-
-describe('createInstallRunner', () => {
-  test('runs command and captures stdout', async () => {
-    const mockProc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter
-      stderr: EventEmitter
-    }
-    mockProc.stdout = new EventEmitter()
-    mockProc.stderr = new EventEmitter()
-
-    const mockSpawn = () => mockProc
-
-    const runner = createInstallRunner(mockSpawn as never)
-
-    const promise = runner.run('echo test', '/test')
-
-    // Simulate stdout data
-    mockProc.stdout.emit('data', Buffer.from('test output'))
-    mockProc.emit('close', 0)
-
-    const result = await promise
-    expect(result.exitCode).toBe(0)
-    expect(result.output).toBe('test output')
-  })
-
-  test('runs command and captures stderr', async () => {
-    const mockProc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter
-      stderr: EventEmitter
-    }
-    mockProc.stdout = new EventEmitter()
-    mockProc.stderr = new EventEmitter()
-
-    const mockSpawn = () => mockProc
-
-    const runner = createInstallRunner(mockSpawn as never)
-
-    const promise = runner.run('failing-command', '/test')
-
-    // Simulate stderr data
-    mockProc.stderr.emit('data', Buffer.from('error message'))
-    mockProc.emit('close', 1)
-
-    const result = await promise
-    expect(result.exitCode).toBe(1)
-    expect(result.output).toBe('error message')
-  })
-
-  test('handles process error', async () => {
-    const mockProc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter
-      stderr: EventEmitter
-    }
-    mockProc.stdout = new EventEmitter()
-    mockProc.stderr = new EventEmitter()
-
-    const mockSpawn = () => mockProc
-
-    const runner = createInstallRunner(mockSpawn as never)
-
-    const promise = runner.run('bad-command', '/test')
-
-    // Simulate error
-    mockProc.emit('error', new Error('spawn error'))
-
-    const result = await promise
-    expect(result.exitCode).toBe(1)
-    expect(result.output).toBe('spawn error')
-  })
-
-  test('defaults exit code to 1 when close code is null', async () => {
-    const mockProc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter
-      stderr: EventEmitter
-    }
-    mockProc.stdout = new EventEmitter()
-    mockProc.stderr = new EventEmitter()
-
-    const mockSpawn = () => mockProc
-
-    const runner = createInstallRunner(mockSpawn as never)
-
-    const promise = runner.run('command', '/test')
-
-    // Simulate close with null code
-    mockProc.emit('close', null)
-
-    const result = await promise
-    expect(result.exitCode).toBe(1)
-  })
-})
 
 describe('agent command', () => {
   test('outputs greeting with routing instructions', async () => {
     const context = createContextEmulator()
-    const runner = createMockInstallRunner()
 
-    const result = await agent(
-      createDependencies(context, [], defaultSettings),
-      runner
-    )
+    const result = await agent(createDependencies(context, [], defaultSettings))
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toMatch(/Hello .+, welcome to dust/)
@@ -158,122 +48,10 @@ describe('agent command', () => {
   test('uses custom binary path in output', async () => {
     const context = createContextEmulator()
     const settings: DustSettings = { dustCommand: 'bin/dust' }
-    const runner = createMockInstallRunner()
 
-    await agent(createDependencies(context, [], settings), runner)
+    await agent(createDependencies(context, [], settings))
 
     expect(context.stdoutLines.join('\n')).toContain('bin/dust pick task')
-  })
-})
-
-describe('install command execution', () => {
-  test('runs install command when configured', async () => {
-    const context = createContextEmulator()
-    const settings: DustSettings = {
-      dustCommand: 'dust',
-      installCommand: 'npm install',
-    }
-    const runner = createMockInstallRunner(0, 'installed packages')
-
-    await agent(createDependencies(context, [], settings), runner)
-
-    expect(runner.calls).toHaveLength(1)
-    expect(runner.calls[0].command).toBe('npm install')
-    expect(context.stdoutLines.join('\n')).toContain('> npm install')
-    expect(context.stdoutLines.join('\n')).toContain('installed packages')
-    expect(context.stdoutLines.join('\n')).toContain(
-      'Dependencies installed, ready to roll!'
-    )
-  })
-
-  test('shows greeting before running install command', async () => {
-    const context = createContextEmulator()
-    const settings: DustSettings = {
-      dustCommand: 'dust',
-      installCommand: 'npm install',
-    }
-    const runner = createMockInstallRunner(0, '')
-
-    await agent(createDependencies(context, [], settings), runner)
-
-    const output = context.stdoutLines.join('\n')
-    const greetingIndex = output.indexOf('welcome to dust')
-    const installIndex = output.indexOf('Installing project dependencies')
-    expect(greetingIndex).toBeLessThan(installIndex)
-  })
-
-  test('does not run install command when not configured', async () => {
-    const context = createContextEmulator()
-    const runner = createMockInstallRunner()
-
-    await agent(createDependencies(context, [], defaultSettings), runner)
-
-    expect(runner.calls).toHaveLength(0)
-    expect(context.stdoutLines.join('\n')).not.toContain(
-      'Installing project dependencies'
-    )
-  })
-
-  test('does not run install command when empty string', async () => {
-    const context = createContextEmulator()
-    const settings: DustSettings = {
-      dustCommand: 'dust',
-      installCommand: '',
-    }
-    const runner = createMockInstallRunner()
-
-    await agent(createDependencies(context, [], settings), runner)
-
-    expect(runner.calls).toHaveLength(0)
-  })
-
-  test('shows error message when install command fails', async () => {
-    const context = createContextEmulator()
-    const settings: DustSettings = {
-      dustCommand: 'dust',
-      installCommand: 'npm install',
-    }
-    const runner = createMockInstallRunner(1, 'error output')
-
-    await agent(createDependencies(context, [], settings), runner)
-
-    expect(context.stderrLines.join('\n')).toContain(
-      'Install command failed with exit code 1'
-    )
-    // Should not show success message on failure
-    expect(context.stdoutLines.join('\n')).not.toContain(
-      'Dependencies installed'
-    )
-  })
-
-  test('still shows greeting even when install command fails', async () => {
-    const context = createContextEmulator()
-    const settings: DustSettings = {
-      dustCommand: 'dust',
-      installCommand: 'npm install',
-    }
-    const runner = createMockInstallRunner(1, '')
-
-    const result = await agent(
-      createDependencies(context, [], settings),
-      runner
-    )
-
-    expect(result.exitCode).toBe(0)
-    expect(context.stdoutLines.join('\n')).toMatch(/Hello .+, welcome to dust/)
-  })
-
-  test('passes correct working directory to install runner', async () => {
-    const context = createContextEmulator()
-    const settings: DustSettings = {
-      dustCommand: 'dust',
-      installCommand: 'bun install',
-    }
-    const runner = createMockInstallRunner()
-
-    await agent(createDependencies(context, [], settings), runner)
-
-    expect(runner.calls[0].cwd).toBe('/project')
   })
 })
 
@@ -283,12 +61,8 @@ describe('git hooks management', () => {
     const fileSystem = createFileSystemEmulator({
       project: { '.git': { hooks: {} } },
     })
-    const runner = createMockInstallRunner()
 
-    await agent(
-      createDependencies(context, [], defaultSettings, fileSystem),
-      runner
-    )
+    await agent(createDependencies(context, [], defaultSettings, fileSystem))
 
     // Hook file should be created
     expect(fileSystem.writtenFiles.has('/project/.git/hooks/pre-push')).toBe(
@@ -303,12 +77,8 @@ describe('git hooks management', () => {
   test('does not install hooks when not a git repo', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator()
-    const runner = createMockInstallRunner()
 
-    await agent(
-      createDependencies(context, [], defaultSettings, fileSystem),
-      runner
-    )
+    await agent(createDependencies(context, [], defaultSettings, fileSystem))
 
     // No hook file should be created
     expect(fileSystem.writtenFiles.has('/project/.git/hooks/pre-push')).toBe(
@@ -329,9 +99,8 @@ describe('git hooks management', () => {
       },
     })
     const settings: DustSettings = { dustCommand: 'new/path' }
-    const runner = createMockInstallRunner()
 
-    await agent(createDependencies(context, [], settings, fileSystem), runner)
+    await agent(createDependencies(context, [], settings, fileSystem))
 
     // Hook should be updated with new path
     const hookContent = fileSystem.writtenFiles.get(
@@ -353,12 +122,8 @@ describe('git hooks management', () => {
         },
       },
     })
-    const runner = createMockInstallRunner()
 
-    await agent(
-      createDependencies(context, [], defaultSettings, fileSystem),
-      runner
-    )
+    await agent(createDependencies(context, [], defaultSettings, fileSystem))
 
     // Hook should not be updated (paths match)
     expect(fileSystem.writtenFiles.has('/project/.git/hooks/pre-push')).toBe(
