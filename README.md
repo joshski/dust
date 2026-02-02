@@ -1,8 +1,8 @@
 # Dust
 
-**A tool for keeping AI coding agents on track.**
+**Flow state for AI coding agents.**
 
-Dust provides a CLI that agents use to progressively explore your priorities and knowledge.
+Dust provides a CLI that agents use to systematically blitz through your work queue.
 
 [![CI](https://github.com/joshski/dust/actions/workflows/ci.yml/badge.svg)](https://github.com/joshski/dust/actions/workflows/ci.yml)
 
