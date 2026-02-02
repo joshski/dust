@@ -6,7 +6,7 @@ This goal governs how we develop and maintain dust itself, separate from the goa
 
 ## Parent Goal
 
-- (none)
+- [Make Software Development Joyful](make-software-development-joyful.md)
 
 ## Sub-Goals
 

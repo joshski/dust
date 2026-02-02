@@ -8,7 +8,7 @@ The workflow respects human judgment for strategic decisions while leveraging AI
 
 ## Parent Goal
 
-- (none)
+- [Make Software Development Joyful](make-software-development-joyful.md)
 
 ## Sub-Goals
 
