@@ -14,3 +14,4 @@ Tests, type checking, and other automated verification enable safe refactoring a
 - [Decoupled Code](decoupled-code.md)
 - [Fast Feedback](fast-feedback.md)
 - [Readable Test Data](readable-test-data.md)
+- [Test Isolation](test-isolation.md)
