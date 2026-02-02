@@ -2,7 +2,7 @@
 
 **Flow state for AI coding agents.**
 
-Dust provides a CLI that agents use to systematically blitz through your work queue.
+Dust provides a CLI that agents use to systematically blaze through your backlog.
 
 [![CI](https://github.com/joshski/dust/actions/workflows/ci.yml/badge.svg)](https://github.com/joshski/dust/actions/workflows/ci.yml)
 
