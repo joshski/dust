@@ -1,6 +1,6 @@
 # GitHub Wiki Generation
 
-A `dust generate github-wiki` command that synchronizes content from the `.dust/` directory to a repository's GitHub wiki, suitable for use in GitHub Actions.
+A `dust generate github wiki` command that synchronizes content from the `.dust/` directory to a repository's GitHub wiki, suitable for use in GitHub Actions.
 
 ## How GitHub Wikis Work
 
@@ -46,7 +46,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - run: npx @joshski/dust generate github-wiki
+      - run: npx @joshski/dust generate github wiki
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -55,7 +55,7 @@ The `GITHUB_TOKEN` has sufficient permissions when `contents: write` is set.
 
 ## Existing Solutions
 
-The [Update Wiki](https://github.com/marketplace/actions/update-wiki) GitHub Action already syncs a directory to a wiki, but requires the wiki to be cloned into the repo. A `dust generate github-wiki` command could either:
+The [Update Wiki](https://github.com/marketplace/actions/update-wiki) GitHub Action already syncs a directory to a wiki, but requires the wiki to be cloned into the repo. A `dust generate github wiki` command could either:
 
 - Generate files for use with that action
 - Handle the full clone/transform/push workflow itself
