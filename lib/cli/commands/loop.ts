@@ -262,7 +262,7 @@ export type IterationResult =
   | 'resolved_pull_conflict'
 
 export interface IterationOptions {
-  emitRawEvents?: boolean
+  onRawEvent?: (rawEvent: Record<string, unknown>) => void
 }
 
 export async function runOneIteration(
@@ -274,12 +274,7 @@ export async function runOneIteration(
   const { context } = dependencies
   const { spawn, run } = loopDependencies
 
-  // Create raw event callback if emitRawEvents is enabled
-  const onRawEvent = options.emitRawEvents
-    ? (rawEvent: Record<string, unknown>) => {
-        emit({ type: 'claude.raw_event', rawEvent })
-      }
-    : undefined
+  const { onRawEvent } = options
 
   // Step 1: Sync with remote
   emit({ type: 'loop.syncing' })
@@ -401,9 +396,13 @@ export async function loopClaude(
   context.stdout('')
 
   let completedIterations = 0
-  const iterationOptions: IterationOptions = {
-    emitRawEvents: settings.emitRawEvents,
-  }
+  const iterationOptions: IterationOptions = eventsUrl
+    ? {
+        onRawEvent: (rawEvent: Record<string, unknown>) => {
+          emit({ type: 'claude.raw_event', rawEvent })
+        },
+      }
+    : {}
 
   while (completedIterations < maxIterations) {
     const result = await runOneIteration(

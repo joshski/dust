@@ -7,8 +7,7 @@ When `eventsUrl` is configured in `.dust/config/settings.json`, dust commands wi
 ```json
 {
   "dustCommand": "npx dust",
-  "eventsUrl": "https://example.com/events",
-  "emitRawEvents": true
+  "eventsUrl": "https://example.com/events"
 }
 ```
 
@@ -16,8 +15,7 @@ When `eventsUrl` is configured in `.dust/config/settings.json`, dust commands wi
 
 | Setting | Type | Default | Description |
 |---------|------|---------|-------------|
-| `eventsUrl` | `string` | - | URL to POST events to |
-| `emitRawEvents` | `boolean` | `false` | When true, emit raw Claude streaming events (`claude.raw_event`) |
+| `eventsUrl` | `string` | - | URL to POST events to. When set, all events including raw Claude streaming events are emitted. |
 
 ## Wire Format
 
@@ -55,7 +53,7 @@ Events are a discriminated union with a `type` field:
 | `loop.tasks_found` | - | Tasks available, starting agent |
 | `claude.started` | - | Claude session started |
 | `claude.ended` | `success: boolean`, `error?: string` | Claude session ended |
-| `claude.raw_event` | `rawEvent: object` | Raw Claude streaming event (requires `emitRawEvents: true`) |
+| `claude.raw_event` | `rawEvent: object` | Raw Claude streaming event |
 | `loop.iteration_complete` | `iteration: number`, `maxIterations: number` | Iteration finished |
 | `loop.ended` | `maxIterations: number` | Loop completed |
 
@@ -107,7 +105,7 @@ Claude ended event (error):
 }
 ```
 
-Claude raw event (requires `emitRawEvents: true`):
+Claude raw event:
 ```json
 {
   "sequence": 7,
@@ -127,7 +125,7 @@ Claude raw event (requires `emitRawEvents: true`):
 }
 ```
 
-**Note:** Raw events are high-volume (many events per response) and contain response content. Enable `emitRawEvents` only when real-time streaming visibility is required.
+**Note:** Raw events are high-volume (many events per response) and contain response content.
 
 ## Delivery Semantics
 

@@ -35,7 +35,6 @@ export interface DustSettings {
   dustCommand: string
   checks?: CheckConfig[]
   eventsUrl?: string
-  emitRawEvents?: boolean
 }
 
 /**

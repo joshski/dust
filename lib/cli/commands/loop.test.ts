@@ -586,7 +586,7 @@ describe('runOneIteration', () => {
     )
   })
 
-  test('passes onRawEvent callback when emitRawEvents is true', async () => {
+  test('passes onRawEvent callback to Claude run when provided', async () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
@@ -595,6 +595,7 @@ describe('runOneIteration', () => {
       },
     })
     const emit = createStubEmit()
+    const rawEvents: Record<string, unknown>[] = []
 
     const loopDeps = createLoopDeps({
       run: async (_prompt, options) => {
@@ -609,20 +610,19 @@ describe('runOneIteration', () => {
       },
     })
 
-    await runOneIteration(dependencies, loopDeps, emit, { emitRawEvents: true })
+    await runOneIteration(dependencies, loopDeps, emit, {
+      onRawEvent: rawEvent => rawEvents.push(rawEvent),
+    })
 
-    // Verify the raw event was emitted
-    const rawEvent = emit.events.find(e => e.type === 'claude.raw_event')
-    expect(rawEvent).toBeDefined()
-    expect(
-      (rawEvent as { rawEvent: Record<string, unknown> }).rawEvent
-    ).toEqual({
+    // Verify the raw event was received by the callback
+    expect(rawEvents).toHaveLength(1)
+    expect(rawEvents[0]).toEqual({
       type: 'text_delta',
       text: 'Hello',
     })
   })
 
-  test('does not pass onRawEvent callback when emitRawEvents is false', async () => {
+  test('does not pass onRawEvent callback when not provided', async () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
@@ -639,9 +639,7 @@ describe('runOneIteration', () => {
       },
     })
 
-    await runOneIteration(dependencies, loopDeps, emit, {
-      emitRawEvents: false,
-    })
+    await runOneIteration(dependencies, loopDeps, emit)
 
     expect(capturedOnRawEvent).toBeUndefined()
   })
@@ -1046,7 +1044,7 @@ describe('loopClaude', () => {
     expect(context.stderrLines.join('\n')).toContain('string error from POST')
   })
 
-  test('does not emit raw events when emitRawEvents is false', async () => {
+  test('does not emit raw events when eventsUrl is not configured', async () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
@@ -1057,26 +1055,20 @@ describe('loopClaude', () => {
     dependencies.arguments = ['1']
     dependencies.settings = {
       dustCommand: 'dust',
-      eventsUrl: 'http://example.com/events',
-      emitRawEvents: false,
     }
-    const postedEvents: { url: string; payload: EventPayload }[] = []
+    let capturedOnRawEvent: unknown = 'not-set'
     const loopDeps = createLoopDeps({
-      run: async () => {},
-      postEvent: async (url, payload) => {
-        postedEvents.push({ url, payload })
+      run: async (_prompt, options) => {
+        capturedOnRawEvent = (options as { onRawEvent?: unknown })?.onRawEvent
       },
     })
 
     await loopClaude(dependencies, loopDeps)
 
-    const rawEvents = postedEvents.filter(
-      e => e.payload.event.type === 'claude.raw_event'
-    )
-    expect(rawEvents.length).toBe(0)
+    expect(capturedOnRawEvent).toBeUndefined()
   })
 
-  test('emits raw events and does not output them to console when emitRawEvents is true', async () => {
+  test('emits raw events automatically when eventsUrl is configured', async () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
@@ -1088,7 +1080,6 @@ describe('loopClaude', () => {
     dependencies.settings = {
       dustCommand: 'dust',
       eventsUrl: 'http://example.com/events',
-      emitRawEvents: true,
     }
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
@@ -1166,7 +1157,6 @@ describe('integration: HTTP event posting', () => {
       dependencies.settings = {
         dustCommand: 'dust',
         eventsUrl,
-        emitRawEvents: true,
       }
 
       // Use real postEvent (via fetch) to test HTTP integration
