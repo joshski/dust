@@ -78,7 +78,11 @@ export async function hasAvailableTasks(
   return hasOutput
 }
 
-export type IterationResult = 'no_tasks' | 'ran_claude' | 'claude_error'
+export type IterationResult =
+  | 'no_tasks'
+  | 'ran_claude'
+  | 'claude_error'
+  | 'resolved_pull_conflict'
 
 export async function runOneIteration(
   dependencies: CommandDependencies,
@@ -91,7 +95,37 @@ export async function runOneIteration(
   context.stdout('🔄 Syncing with remote...')
   const pullResult = await gitPull(context.cwd, spawn)
   if (!pullResult.success) {
-    context.stdout(`Note: git pull skipped (${pullResult.message})`)
+    context.stdout(`⚠️  git pull failed: ${pullResult.message}`)
+    context.stdout('')
+    context.stdout('🤖 Starting Claude to resolve the conflict...')
+    context.stdout('')
+
+    const prompt = `git pull failed with the following error:
+
+${pullResult.message}
+
+Please resolve this issue. Common approaches:
+1. If there are merge conflicts, resolve them
+2. If local commits need to be rebased, use git rebase
+3. After resolving, commit any changes and push to remote
+
+Make sure the repository is in a clean state and synced with remote before finishing.`
+
+    try {
+      await run(prompt, { cwd: context.cwd, dangerouslySkipPermissions: true })
+      context.stdout('')
+      context.stdout(
+        '✅ Claude resolved the git pull conflict. Continuing loop...'
+      )
+      context.stdout('')
+      return 'resolved_pull_conflict'
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      context.stderr(`Claude failed to resolve git pull conflict: ${message}`)
+      context.stdout('')
+      context.stdout('⚠️  Continuing loop despite unresolved conflict...')
+      context.stdout('')
+    }
   }
 
   // Step 2: Check for available tasks
@@ -161,7 +195,7 @@ export async function loopClaude(
     if (result === 'no_tasks') {
       await loopDependencies.sleep(SLEEP_INTERVAL_MS)
     } else {
-      // Only count iterations where Claude actually ran (ran_claude or claude_error)
+      // Count iterations where Claude actually ran (ran_claude, claude_error, resolved_pull_conflict)
       completedIterations++
       context.stdout(
         `📋 Completed iteration ${completedIterations}/${maxIterations}`

@@ -16,10 +16,13 @@ npx dust loop claude 5    # Run up to 5 iterations
 ```
 
 The loop:
-1. Checks for available tasks (`dust next`)
-2. If a task exists, runs Claude to implement it
-3. Increments the iteration counter
-4. Waits briefly, then repeats
+1. Syncs with remote (`git pull`)
+   - If git pull fails (e.g., merge conflicts), Claude is spawned to resolve the issue
+   - Claude receives the error message and is instructed to resolve and push
+2. Checks for available tasks (`dust next`)
+3. If a task exists, runs Claude to implement it
+4. Increments the iteration counter
+5. Waits briefly, then repeats
 
 The loop exits when max iterations are reached or you interrupt it (Ctrl+C).
 

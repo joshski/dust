@@ -154,7 +154,75 @@ describe('runOneIteration', () => {
     expect(pullCalled).toBe(true)
   })
 
-  test('logs git pull failures', async () => {
+  test('spawns Claude to resolve git pull failures', async () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    let claudePrompt: string | undefined
+    const loopDeps: LoopDependencies = {
+      spawn: (() => {
+        const proc = new EventEmitter() as EventEmitter & {
+          stdout: EventEmitter | null
+          stderr: EventEmitter
+        }
+        proc.stdout = null
+        proc.stderr = new EventEmitter()
+        setTimeout(() => {
+          proc.stderr.emit('data', Buffer.from('merge conflict'))
+          proc.emit('close', 1)
+        }, 0)
+        return proc as unknown as ChildProcess
+      }) as LoopDependencies['spawn'],
+      run: async prompt => {
+        claudePrompt = prompt
+      },
+      sleep: async () => {},
+    }
+
+    const result = await runOneIteration(dependencies, loopDeps)
+    expect(result).toBe('resolved_pull_conflict')
+    expect(context.stdoutLines.join('\n')).toContain('git pull failed')
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Starting Claude to resolve'
+    )
+    expect(claudePrompt).toContain('merge conflict')
+    expect(claudePrompt).toContain('git pull failed')
+  })
+
+  test('includes error message in Claude prompt for git pull failure', async () => {
+    const dependencies = createDependencies()
+    let claudePrompt: string | undefined
+    const loopDeps: LoopDependencies = {
+      spawn: (() => {
+        const proc = new EventEmitter() as EventEmitter & {
+          stdout: EventEmitter | null
+          stderr: EventEmitter
+        }
+        proc.stdout = null
+        proc.stderr = new EventEmitter()
+        setTimeout(() => {
+          proc.stderr.emit(
+            'data',
+            Buffer.from('CONFLICT (content): Merge conflict in file.txt')
+          )
+          proc.emit('close', 1)
+        }, 0)
+        return proc as unknown as ChildProcess
+      }) as LoopDependencies['spawn'],
+      run: async prompt => {
+        claudePrompt = prompt
+      },
+      sleep: async () => {},
+    }
+
+    await runOneIteration(dependencies, loopDeps)
+    expect(claudePrompt).toContain(
+      'CONFLICT (content): Merge conflict in file.txt'
+    )
+  })
+
+  test('continues loop after Claude resolves git pull conflict', async () => {
     const dependencies = createDependencies()
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
@@ -168,7 +236,7 @@ describe('runOneIteration', () => {
         proc.stdout = null
         proc.stderr = new EventEmitter()
         setTimeout(() => {
-          proc.stderr.emit('data', Buffer.from('no remote'))
+          proc.stderr.emit('data', Buffer.from('conflict'))
           proc.emit('close', 1)
         }, 0)
         return proc as unknown as ChildProcess
@@ -178,7 +246,76 @@ describe('runOneIteration', () => {
     }
 
     await runOneIteration(dependencies, loopDeps)
-    expect(context.stdoutLines.join('\n')).toContain('git pull skipped')
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Claude resolved the git pull conflict'
+    )
+    expect(context.stdoutLines.join('\n')).toContain('Continuing loop')
+  })
+
+  test('handles Claude failure when resolving git pull conflict', async () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const loopDeps: LoopDependencies = {
+      spawn: (() => {
+        const proc = new EventEmitter() as EventEmitter & {
+          stdout: EventEmitter | null
+          stderr: EventEmitter
+        }
+        proc.stdout = null
+        proc.stderr = new EventEmitter()
+        setTimeout(() => {
+          proc.stderr.emit('data', Buffer.from('conflict'))
+          proc.emit('close', 1)
+        }, 0)
+        return proc as unknown as ChildProcess
+      }) as LoopDependencies['spawn'],
+      run: async () => {
+        throw new Error('Claude crashed')
+      },
+      sleep: async () => {},
+    }
+
+    const result = await runOneIteration(dependencies, loopDeps)
+    // Should still return no_tasks and continue the loop
+    expect(result).toBe('no_tasks')
+    expect(context.stderrLines.join('\n')).toContain(
+      'Claude failed to resolve git pull conflict'
+    )
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Continuing loop despite unresolved conflict'
+    )
+  })
+
+  test('handles non-Error throws from Claude when resolving git pull conflict', async () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const loopDeps: LoopDependencies = {
+      spawn: (() => {
+        const proc = new EventEmitter() as EventEmitter & {
+          stdout: EventEmitter | null
+          stderr: EventEmitter
+        }
+        proc.stdout = null
+        proc.stderr = new EventEmitter()
+        setTimeout(() => {
+          proc.stderr.emit('data', Buffer.from('conflict'))
+          proc.emit('close', 1)
+        }, 0)
+        return proc as unknown as ChildProcess
+      }) as LoopDependencies['spawn'],
+      run: async () => {
+        throw 'string error'
+      },
+      sleep: async () => {},
+    }
+
+    const result = await runOneIteration(dependencies, loopDeps)
+    expect(result).toBe('no_tasks')
+    expect(context.stderrLines.join('\n')).toContain('string error')
   })
 
   test('returns no_tasks when no tasks available', async () => {
