@@ -2,7 +2,7 @@
   "dustCommand": "bin/dust",
   "checks": [
     {
-      "name": "lint typescript",
+      "name": "lint (biome)",
       "command": "bunx biome check .",
       "hints": [
         "Run `bunx biome check . --write` to auto-fix lint errors",
