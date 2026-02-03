@@ -56,4 +56,5 @@ export interface SpawnOptions {
   systemPrompt?: string
   sessionId?: string
   dangerouslySkipPermissions?: boolean
+  env?: Record<string, string>
 }

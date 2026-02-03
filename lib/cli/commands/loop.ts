@@ -112,7 +112,11 @@ Please resolve this issue. Common approaches:
 Make sure the repository is in a clean state and synced with remote before finishing.`
 
     try {
-      await run(prompt, { cwd: context.cwd, dangerouslySkipPermissions: true })
+      await run(prompt, {
+        cwd: context.cwd,
+        dangerouslySkipPermissions: true,
+        env: { DUST_UNATTENDED: '1' },
+      })
       context.stdout('')
       context.stdout(
         '✅ Claude resolved the git pull conflict. Continuing loop...'
@@ -145,7 +149,11 @@ Make sure the repository is in a clean state and synced with remote before finis
   context.stdout('')
 
   try {
-    await run('go', { cwd: context.cwd, dangerouslySkipPermissions: true })
+    await run('go', {
+      cwd: context.cwd,
+      dangerouslySkipPermissions: true,
+      env: { DUST_UNATTENDED: '1' },
+    })
     context.stdout('')
     context.stdout('✅ Claude session complete. Continuing loop...')
     context.stdout('')

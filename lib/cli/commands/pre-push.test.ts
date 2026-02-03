@@ -238,6 +238,202 @@ describe('analyzeChangesForTaskOnlyPattern', () => {
 })
 
 describe('prePush command', () => {
+  describe('uncommitted changes in unattended mode', () => {
+    const unattendedEnv = { DUST_UNATTENDED: '1' }
+
+    test('blocks push when uncommitted changes exist in unattended mode', async () => {
+      const context = createContextEmulator()
+      const fileSystem = createFileSystemEmulator()
+      const gitRunner = createMockGitRunner({
+        'status --porcelain': {
+          exitCode: 0,
+          output: ' M src/index.ts\n?? new-file.ts\n',
+        },
+      })
+
+      const result = await prePush(
+        createDependencies(context, fileSystem, defaultSettings),
+        gitRunner,
+        unattendedEnv
+      )
+
+      expect(result.exitCode).toBe(1)
+      const output = context.stderrLines.join('\n')
+      expect(output).toContain(
+        'uncommitted changes detected in unattended mode'
+      )
+      expect(output).toContain('src/index.ts')
+      expect(output).toContain('new-file.ts')
+      expect(output).toContain('Commit or discard these changes')
+    })
+
+    test('allows push when no uncommitted changes in unattended mode', async () => {
+      const context = createContextEmulator()
+      const fileSystem = createFileSystemEmulator({
+        project: { '.dust': {} },
+      })
+      fileSystem.readFile = async () =>
+        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+      const gitRunner = createMockGitRunner({
+        'status --porcelain': {
+          exitCode: 0,
+          output: '',
+        },
+        'rev-list HEAD --not --remotes': {
+          exitCode: 0,
+          output: '',
+        },
+      })
+
+      await prePush(
+        createDependencies(context, fileSystem, defaultSettings),
+        gitRunner,
+        unattendedEnv
+      )
+
+      // Should proceed to check (exitCode depends on check results)
+      expect(context.stderrLines.join('\n')).not.toContain(
+        'uncommitted changes detected'
+      )
+    })
+
+    test('allows push with uncommitted changes when NOT in unattended mode', async () => {
+      const context = createContextEmulator()
+      const fileSystem = createFileSystemEmulator({
+        project: { '.dust': {} },
+      })
+      fileSystem.readFile = async () =>
+        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+      const gitRunner = createMockGitRunner({
+        'rev-list HEAD --not --remotes': {
+          exitCode: 0,
+          output: '',
+        },
+      })
+
+      // No DUST_UNATTENDED env var
+      await prePush(
+        createDependencies(context, fileSystem, defaultSettings),
+        gitRunner,
+        {}
+      )
+
+      // Should not block (git status not even called)
+      expect(context.stderrLines.join('\n')).not.toContain(
+        'uncommitted changes detected'
+      )
+    })
+
+    test('shows all uncommitted files in error message', async () => {
+      const context = createContextEmulator()
+      const fileSystem = createFileSystemEmulator()
+      const gitRunner = createMockGitRunner({
+        'status --porcelain': {
+          exitCode: 0,
+          output: [
+            ' M lib/modified.ts',
+            'A  lib/staged.ts',
+            '?? lib/untracked.ts',
+            'MM lib/both.ts',
+          ].join('\n'),
+        },
+      })
+
+      const result = await prePush(
+        createDependencies(context, fileSystem, defaultSettings),
+        gitRunner,
+        unattendedEnv
+      )
+
+      expect(result.exitCode).toBe(1)
+      const output = context.stderrLines.join('\n')
+      expect(output).toContain('lib/modified.ts')
+      expect(output).toContain('lib/staged.ts')
+      expect(output).toContain('lib/untracked.ts')
+      expect(output).toContain('lib/both.ts')
+    })
+
+    test('proceeds when git status fails in unattended mode', async () => {
+      const context = createContextEmulator()
+      const fileSystem = createFileSystemEmulator({
+        project: { '.dust': {} },
+      })
+      fileSystem.readFile = async () =>
+        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+      const gitRunner = createMockGitRunner({
+        'status --porcelain': {
+          exitCode: 1,
+          output: 'error: not a git repository',
+        },
+        'rev-list HEAD --not --remotes': {
+          exitCode: 0,
+          output: '',
+        },
+      })
+
+      await prePush(
+        createDependencies(context, fileSystem, defaultSettings),
+        gitRunner,
+        unattendedEnv
+      )
+
+      // Should not block (git status failed, assume clean)
+      expect(context.stderrLines.join('\n')).not.toContain(
+        'uncommitted changes detected'
+      )
+    })
+
+    test('handles renamed files in uncommitted changes', async () => {
+      const context = createContextEmulator()
+      const fileSystem = createFileSystemEmulator()
+      const gitRunner = createMockGitRunner({
+        'status --porcelain': {
+          exitCode: 0,
+          // R = renamed, format is "R  old-name -> new-name"
+          output: 'R  src/old.ts -> src/new.ts\n',
+        },
+      })
+
+      const result = await prePush(
+        createDependencies(context, fileSystem, defaultSettings),
+        gitRunner,
+        unattendedEnv
+      )
+
+      expect(result.exitCode).toBe(1)
+      const output = context.stderrLines.join('\n')
+      // Should show the new name (destination) of the renamed file
+      expect(output).toContain('src/new.ts')
+      // Should not show the old name
+      expect(output).not.toContain('src/old.ts')
+    })
+
+    test('ignores malformed short lines in git status output', async () => {
+      const context = createContextEmulator()
+      const fileSystem = createFileSystemEmulator()
+      const gitRunner = createMockGitRunner({
+        'status --porcelain': {
+          exitCode: 0,
+          // Include a valid line and a malformed short line (less than 4 chars)
+          output: ' M src/valid.ts\nXY\n?? another.ts\n',
+        },
+      })
+
+      const result = await prePush(
+        createDependencies(context, fileSystem, defaultSettings),
+        gitRunner,
+        unattendedEnv
+      )
+
+      expect(result.exitCode).toBe(1)
+      const output = context.stderrLines.join('\n')
+      // Should include the valid files
+      expect(output).toContain('src/valid.ts')
+      expect(output).toContain('another.ts')
+      // The short line "XY" should be ignored (no error)
+    })
+  })
+
   describe('task-only detection for Claude Code Web', () => {
     const claudeCodeWebEnv = {
       CLAUDECODE: '1',

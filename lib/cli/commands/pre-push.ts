@@ -184,12 +184,70 @@ async function getChangesFromRemote(
   return parseGitDiffNameStatus(diffResult.output)
 }
 
+/**
+ * Gets the list of uncommitted files (staged and unstaged changes, plus untracked files)
+ */
+async function getUncommittedFiles(
+  cwd: string,
+  gitRunner: GitRunner
+): Promise<string[]> {
+  const result = await gitRunner.run(['status', '--porcelain'], cwd)
+  if (result.exitCode !== 0 || !result.output.trim()) {
+    return []
+  }
+
+  const files: string[] = []
+  // Split by newlines but preserve leading spaces (don't use trim() on the whole output)
+  const lines = result.output.split('\n').filter(line => line.length > 0)
+  for (const line of lines) {
+    // git status --porcelain format: XY PATH
+    // where X is index status, Y is worktree status (2 chars total)
+    // followed by a space, then the file path
+    // For renames/copies: XY ORIG -> DEST (we take the destination)
+    if (line.length > 3) {
+      const path = line.substring(3)
+      // Handle renames: "XY old -> new" - take the new path
+      const arrowIndex = path.indexOf(' -> ')
+      if (arrowIndex !== -1) {
+        files.push(path.substring(arrowIndex + 4))
+      } else {
+        files.push(path)
+      }
+    }
+  }
+  return files
+}
+
 export async function prePush(
   dependencies: CommandDependencies,
   gitRunner: GitRunner = defaultGitRunner,
   env: NodeJS.ProcessEnv = process.env
 ): Promise<CommandResult> {
   const { context } = dependencies
+
+  // Block push when running unattended with uncommitted changes
+  if (env.DUST_UNATTENDED) {
+    const uncommittedFiles = await getUncommittedFiles(context.cwd, gitRunner)
+    if (uncommittedFiles.length > 0) {
+      context.stderr('')
+      context.stderr(
+        '⚠️  Push blocked: uncommitted changes detected in unattended mode.'
+      )
+      context.stderr('')
+      context.stderr(
+        'You are running in unattended mode (DUST_UNATTENDED=1) and have uncommitted files:'
+      )
+      for (const file of uncommittedFiles) {
+        context.stderr(`  → ${file}`)
+      }
+      context.stderr('')
+      context.stderr(
+        'Commit or discard these changes before pushing to avoid broken builds.'
+      )
+      context.stderr('')
+      return { exitCode: 1 }
+    }
+  }
 
   // Analyze the changes being pushed
   const changes = await getChangesFromRemote(context.cwd, gitRunner)

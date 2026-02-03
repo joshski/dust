@@ -25,6 +25,7 @@ export async function* spawnClaudeCode(
     systemPrompt,
     sessionId,
     dangerouslySkipPermissions,
+    env,
   } = options
 
   const claudeArguments = [
@@ -58,6 +59,7 @@ export async function* spawnClaudeCode(
   const proc = dependencies.spawn('claude', claudeArguments, {
     cwd,
     stdio: ['ignore', 'pipe', 'pipe'],
+    env: { ...process.env, ...env },
   })
 
   if (!proc.stdout) {
