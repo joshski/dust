@@ -34,6 +34,7 @@ export interface CheckConfig {
 export interface DustSettings {
   dustCommand: string
   checks?: CheckConfig[]
+  eventsUrl?: string
 }
 
 /**
