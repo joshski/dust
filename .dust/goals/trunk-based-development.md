@@ -16,4 +16,4 @@ See: https://trunkbaseddevelopment.com/
 
 ## Sub-Goals
 
-- [Atomic Commits](atomic-commits.md)
+(none)

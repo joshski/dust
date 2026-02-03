@@ -10,5 +10,6 @@ This includes proper gitignore configuration to exclude build artifacts, depende
 
 ## Sub-Goals
 
+- [Atomic Commits](atomic-commits.md)
 - [Consistent Naming](consistent-naming.md)
 - [Trunk-Based Development](trunk-based-development.md)

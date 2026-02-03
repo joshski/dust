@@ -8,7 +8,7 @@ Clean commit history is essential because archaeology depends on it. Future huma
 
 ## Parent Goal
 
-- [Trunk-Based Development](trunk-based-development.md)
+- [Repository Hygiene](repository-hygiene.md)
 
 ## Sub-Goals
 
