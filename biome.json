@@ -3,7 +3,7 @@
   "plugins": ["./biome/no-abbreviated-names.grit"],
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!node_modules", "!dist", "!coverage"]
+    "includes": ["**", "!node_modules", "!dist", "!coverage", "!.claude"]
   },
   "linter": {
     "rules": {
