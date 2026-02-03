@@ -8,6 +8,10 @@ import {
 import type { CommandDependencies } from '../types'
 import {
   createDefaultDependencies,
+  createEventPoster,
+  type DustWireEvent,
+  type EmitFn,
+  type EventPayload,
   gitPull,
   hasAvailableTasks,
   type LoopDependencies,
@@ -52,18 +56,179 @@ class LoopBreaker extends Error {
   }
 }
 
+function createLoopDeps(
+  overrides: Partial<LoopDependencies> = {}
+): LoopDependencies {
+  return {
+    spawn: createMockSpawn(),
+    run: async () => {},
+    sleep: async () => {},
+    postEvent: async () => {},
+    ...overrides,
+  }
+}
+
+function createStubEmit(): EmitFn & { events: DustWireEvent[] } {
+  const events: DustWireEvent[] = []
+  const emit: EmitFn = (event: DustWireEvent) => {
+    events.push(event)
+  }
+  return Object.assign(emit, { events })
+}
+
 describe('createDefaultDependencies', () => {
-  test('returns object with spawn, run, and sleep functions', () => {
+  test('returns object with spawn, run, sleep, and postEvent functions', () => {
     const loopDependencies = createDefaultDependencies()
     expect(typeof loopDependencies.spawn).toBe('function')
     expect(typeof loopDependencies.run).toBe('function')
     expect(typeof loopDependencies.sleep).toBe('function')
+    expect(typeof loopDependencies.postEvent).toBe('function')
   })
 
   test('sleep function resolves after given time', async () => {
     const loopDependencies = createDefaultDependencies()
     // Use 0ms to avoid actual delay in tests
     await expect(loopDependencies.sleep(0)).resolves.toBeUndefined()
+  })
+})
+
+describe('createEventPoster', () => {
+  const testSessionId = 'test-session-123'
+
+  test('does not post when eventsUrl is undefined', async () => {
+    let postCalled = false
+    const postEvent = async () => {
+      postCalled = true
+    }
+    const poster = createEventPoster(
+      undefined,
+      testSessionId,
+      postEvent,
+      () => {}
+    )
+    poster({ type: 'loop.syncing' })
+    await Promise.resolve()
+    expect(postCalled).toBe(false)
+  })
+
+  test('posts event with sessionId, sequence number and timestamp', async () => {
+    const postedEvents: EventPayload[] = []
+    const postEvent = async (_url: string, payload: EventPayload) => {
+      postedEvents.push(payload)
+    }
+    const poster = createEventPoster(
+      'http://example.com',
+      testSessionId,
+      postEvent,
+      () => {}
+    )
+    poster({ type: 'loop.syncing' })
+    poster({ type: 'loop.started', maxIterations: 5 })
+    await Promise.resolve()
+    expect(postedEvents).toHaveLength(2)
+    expect(postedEvents[0].sequence).toBe(1)
+    expect(postedEvents[0].sessionId).toBe(testSessionId)
+    expect(postedEvents[0].event.type).toBe('loop.syncing')
+    expect(postedEvents[1].sequence).toBe(2)
+    expect(postedEvents[1].sessionId).toBe(testSessionId)
+    expect(postedEvents[1].event.type).toBe('loop.started')
+    expect(
+      (postedEvents[1].event as { maxIterations: number }).maxIterations
+    ).toBe(5)
+  })
+
+  test('includes ISO timestamp in posted events', async () => {
+    const postedEvents: EventPayload[] = []
+    const postEvent = async (_url: string, payload: EventPayload) => {
+      postedEvents.push(payload)
+    }
+    const poster = createEventPoster(
+      'http://example.com',
+      testSessionId,
+      postEvent,
+      () => {}
+    )
+    poster({ type: 'loop.syncing' })
+    await Promise.resolve()
+    expect(postedEvents[0].timestamp).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/
+    )
+  })
+
+  test('generates agentSessionId for claude.started and includes in claude events', async () => {
+    const postedEvents: EventPayload[] = []
+    const postEvent = async (_url: string, payload: EventPayload) => {
+      postedEvents.push(payload)
+    }
+    const poster = createEventPoster(
+      'http://example.com',
+      testSessionId,
+      postEvent,
+      () => {}
+    )
+    poster({ type: 'loop.tasks_found' })
+    poster({ type: 'claude.started' })
+    poster({ type: 'claude.ended', success: true })
+    await Promise.resolve()
+
+    // loop.tasks_found should not have agent info
+    expect(postedEvents[0].agentSessionId).toBeUndefined()
+    expect(postedEvents[0].agentType).toBeUndefined()
+
+    // claude.started should have agent info
+    expect(postedEvents[1].agentSessionId).toBeDefined()
+    expect(postedEvents[1].agentType).toBe('claude')
+
+    // claude.ended should have same agentSessionId
+    expect(postedEvents[2].agentSessionId).toBe(postedEvents[1].agentSessionId)
+    expect(postedEvents[2].agentType).toBe('claude')
+  })
+
+  test('generates new agentSessionId for each claude session', async () => {
+    const postedEvents: EventPayload[] = []
+    const postEvent = async (_url: string, payload: EventPayload) => {
+      postedEvents.push(payload)
+    }
+    const poster = createEventPoster(
+      'http://example.com',
+      testSessionId,
+      postEvent,
+      () => {}
+    )
+    // First claude session
+    poster({ type: 'claude.started' })
+    poster({ type: 'claude.ended', success: true })
+    // Second claude session
+    poster({ type: 'claude.started' })
+    poster({ type: 'claude.ended', success: true })
+    await Promise.resolve()
+
+    const firstSessionId = postedEvents[0].agentSessionId
+    const secondSessionId = postedEvents[2].agentSessionId
+
+    expect(firstSessionId).toBeDefined()
+    expect(secondSessionId).toBeDefined()
+    expect(firstSessionId).not.toBe(secondSessionId)
+  })
+
+  test('calls onError when post fails', async () => {
+    const errors: unknown[] = []
+    const postEvent = async () => {
+      throw new Error('Network error')
+    }
+    const poster = createEventPoster(
+      'http://example.com',
+      testSessionId,
+      postEvent,
+      (error: unknown) => {
+        errors.push(error)
+      }
+    )
+    poster({ type: 'loop.syncing' })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(errors).toHaveLength(1)
+    expect((errors[0] as Error).message).toBe('Network error')
   })
 })
 
@@ -141,26 +306,22 @@ describe('runOneIteration', () => {
   test('syncs with git pull', async () => {
     const dependencies = createDependencies()
     let pullCalled = false
-    const loopDeps: LoopDependencies = {
+    const loopDeps = createLoopDeps({
       spawn: (() => {
         pullCalled = true
         return createMockChildProcess(0)
       }) as LoopDependencies['spawn'],
-      run: async () => {},
-      sleep: async () => {},
-    }
+    })
+    const emit = createStubEmit()
 
-    await runOneIteration(dependencies, loopDeps)
+    await runOneIteration(dependencies, loopDeps, emit)
     expect(pullCalled).toBe(true)
   })
 
-  test('spawns Claude to resolve git pull failures', async () => {
+  test('spawns Claude to resolve git pull failures and emits events', async () => {
     const dependencies = createDependencies()
-    const context = dependencies.context as ReturnType<
-      typeof createContextEmulator
-    >
     let claudePrompt: string | undefined
-    const loopDeps: LoopDependencies = {
+    const loopDeps = createLoopDeps({
       spawn: (() => {
         const proc = new EventEmitter() as EventEmitter & {
           stdout: EventEmitter | null
@@ -177,79 +338,28 @@ describe('runOneIteration', () => {
       run: async prompt => {
         claudePrompt = prompt
       },
-      sleep: async () => {},
-    }
+    })
+    const emit = createStubEmit()
 
-    const result = await runOneIteration(dependencies, loopDeps)
+    const result = await runOneIteration(dependencies, loopDeps, emit)
     expect(result).toBe('resolved_pull_conflict')
-    expect(context.stdoutLines.join('\n')).toContain('git pull failed')
-    expect(context.stdoutLines.join('\n')).toContain(
-      'Starting Claude to resolve'
-    )
     expect(claudePrompt).toContain('merge conflict')
     expect(claudePrompt).toContain('git pull failed')
-  })
 
-  test('includes error message in Claude prompt for git pull failure', async () => {
-    const dependencies = createDependencies()
-    let claudePrompt: string | undefined
-    const loopDeps: LoopDependencies = {
-      spawn: (() => {
-        const proc = new EventEmitter() as EventEmitter & {
-          stdout: EventEmitter | null
-          stderr: EventEmitter
-        }
-        proc.stdout = null
-        proc.stderr = new EventEmitter()
-        setTimeout(() => {
-          proc.stderr.emit(
-            'data',
-            Buffer.from('CONFLICT (content): Merge conflict in file.txt')
-          )
-          proc.emit('close', 1)
-        }, 0)
-        return proc as unknown as ChildProcess
-      }) as LoopDependencies['spawn'],
-      run: async prompt => {
-        claudePrompt = prompt
-      },
-      sleep: async () => {},
-    }
-
-    await runOneIteration(dependencies, loopDeps)
-    expect(claudePrompt).toContain(
-      'CONFLICT (content): Merge conflict in file.txt'
+    // Check events
+    const syncSkippedEvent = emit.events.find(
+      event => event.type === 'loop.sync_skipped'
     )
-  })
-
-  test('continues loop after Claude resolves git pull conflict', async () => {
-    const dependencies = createDependencies()
-    const context = dependencies.context as ReturnType<
-      typeof createContextEmulator
-    >
-    const loopDeps: LoopDependencies = {
-      spawn: (() => {
-        const proc = new EventEmitter() as EventEmitter & {
-          stdout: EventEmitter | null
-          stderr: EventEmitter
-        }
-        proc.stdout = null
-        proc.stderr = new EventEmitter()
-        setTimeout(() => {
-          proc.stderr.emit('data', Buffer.from('conflict'))
-          proc.emit('close', 1)
-        }, 0)
-        return proc as unknown as ChildProcess
-      }) as LoopDependencies['spawn'],
-      run: async () => {},
-      sleep: async () => {},
-    }
-
-    await runOneIteration(dependencies, loopDeps)
-    expect(context.stdoutLines.join('\n')).toContain(
-      'Claude resolved the git pull conflict'
+    expect(syncSkippedEvent).toBeDefined()
+    const claudeStarted = emit.events.find(
+      event => event.type === 'claude.started'
     )
-    expect(context.stdoutLines.join('\n')).toContain('Continuing loop')
+    const claudeEnded = emit.events.find(event => event.type === 'claude.ended')
+    expect(claudeStarted).toBeDefined()
+    expect(claudeEnded).toBeDefined()
+    expect((claudeEnded as { success: boolean } | undefined)?.success).toBe(
+      true
+    )
   })
 
   test('handles Claude failure when resolving git pull conflict', async () => {
@@ -257,7 +367,7 @@ describe('runOneIteration', () => {
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
-    const loopDeps: LoopDependencies = {
+    const loopDeps = createLoopDeps({
       spawn: (() => {
         const proc = new EventEmitter() as EventEmitter & {
           stdout: EventEmitter | null
@@ -274,17 +384,21 @@ describe('runOneIteration', () => {
       run: async () => {
         throw new Error('Claude crashed')
       },
-      sleep: async () => {},
-    }
+    })
+    const emit = createStubEmit()
 
-    const result = await runOneIteration(dependencies, loopDeps)
+    const result = await runOneIteration(dependencies, loopDeps, emit)
     // Should still return no_tasks and continue the loop
     expect(result).toBe('no_tasks')
     expect(context.stderrLines.join('\n')).toContain(
       'Claude failed to resolve git pull conflict'
     )
-    expect(context.stdoutLines.join('\n')).toContain(
-      'Continuing loop despite unresolved conflict'
+
+    // Check claude.ended event with error
+    const claudeEnded = emit.events.find(event => event.type === 'claude.ended')
+    expect(claudeEnded).toBeDefined()
+    expect((claudeEnded as { success: boolean } | undefined)?.success).toBe(
+      false
     )
   })
 
@@ -293,7 +407,7 @@ describe('runOneIteration', () => {
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
-    const loopDeps: LoopDependencies = {
+    const loopDeps = createLoopDeps({
       spawn: (() => {
         const proc = new EventEmitter() as EventEmitter & {
           stdout: EventEmitter | null
@@ -310,23 +424,20 @@ describe('runOneIteration', () => {
       run: async () => {
         throw 'string error'
       },
-      sleep: async () => {},
-    }
+    })
+    const emit = createStubEmit()
 
-    const result = await runOneIteration(dependencies, loopDeps)
+    const result = await runOneIteration(dependencies, loopDeps, emit)
     expect(result).toBe('no_tasks')
     expect(context.stderrLines.join('\n')).toContain('string error')
   })
 
   test('returns no_tasks when no tasks available', async () => {
     const dependencies = createDependencies()
-    const loopDeps: LoopDependencies = {
-      spawn: createMockSpawn(),
-      run: async () => {},
-      sleep: async () => {},
-    }
+    const loopDeps = createLoopDeps()
+    const emit = createStubEmit()
 
-    const result = await runOneIteration(dependencies, loopDeps)
+    const result = await runOneIteration(dependencies, loopDeps, emit)
     expect(result).toBe('no_tasks')
   })
 
@@ -339,15 +450,14 @@ describe('runOneIteration', () => {
       },
     })
     let claudeCalled = false
-    const loopDeps: LoopDependencies = {
-      spawn: createMockSpawn(),
+    const loopDeps = createLoopDeps({
       run: async () => {
         claudeCalled = true
       },
-      sleep: async () => {},
-    }
+    })
+    const emit = createStubEmit()
 
-    const result = await runOneIteration(dependencies, loopDeps)
+    const result = await runOneIteration(dependencies, loopDeps, emit)
     expect(claudeCalled).toBe(true)
     expect(result).toBe('ran_claude')
   })
@@ -361,15 +471,14 @@ describe('runOneIteration', () => {
       },
     })
     let capturedCwd: string | undefined
-    const loopDeps: LoopDependencies = {
-      spawn: createMockSpawn(),
+    const loopDeps = createLoopDeps({
       run: async (_prompt, options) => {
         capturedCwd = options?.cwd
       },
-      sleep: async () => {},
-    }
+    })
+    const emit = createStubEmit()
 
-    await runOneIteration(dependencies, loopDeps)
+    await runOneIteration(dependencies, loopDeps, emit)
     expect(capturedCwd).toBe('/project')
   })
 
@@ -384,15 +493,14 @@ describe('runOneIteration', () => {
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
-    const loopDeps: LoopDependencies = {
-      spawn: createMockSpawn(),
+    const loopDeps = createLoopDeps({
       run: async () => {
         throw new Error('Claude crashed')
       },
-      sleep: async () => {},
-    }
+    })
+    const emit = createStubEmit()
 
-    const result = await runOneIteration(dependencies, loopDeps)
+    const result = await runOneIteration(dependencies, loopDeps, emit)
     expect(result).toBe('claude_error')
     expect(context.stderrLines.join('\n')).toContain('Claude exited with error')
     expect(context.stderrLines.join('\n')).toContain('Claude crashed')
@@ -409,17 +517,69 @@ describe('runOneIteration', () => {
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
-    const loopDeps: LoopDependencies = {
-      spawn: createMockSpawn(),
+    const loopDeps = createLoopDeps({
       run: async () => {
         throw 'string error'
       },
-      sleep: async () => {},
-    }
+    })
+    const emit = createStubEmit()
 
-    const result = await runOneIteration(dependencies, loopDeps)
+    const result = await runOneIteration(dependencies, loopDeps, emit)
     expect(result).toBe('claude_error')
     expect(context.stderrLines.join('\n')).toContain('string error')
+  })
+
+  test('emits claude.started and claude.ended events', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
+    const loopDeps = createLoopDeps({
+      run: async () => {},
+    })
+    const emit = createStubEmit()
+
+    await runOneIteration(dependencies, loopDeps, emit)
+
+    const startedEvent = emit.events.find(
+      event => event.type === 'claude.started'
+    )
+    const endedEvent = emit.events.find(event => event.type === 'claude.ended')
+    expect(startedEvent).toBeDefined()
+    expect(startedEvent?.type).toBe('claude.started')
+    expect(endedEvent).toBeDefined()
+    expect(endedEvent?.type).toBe('claude.ended')
+    expect((endedEvent as { success: boolean } | undefined)?.success).toBe(true)
+  })
+
+  test('emits claude.ended with error message on failure', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
+    const loopDeps = createLoopDeps({
+      run: async () => {
+        throw new Error('Claude crashed')
+      },
+    })
+    const emit = createStubEmit()
+
+    await runOneIteration(dependencies, loopDeps, emit)
+
+    const endedEvent = emit.events.find(event => event.type === 'claude.ended')
+    expect(endedEvent).toBeDefined()
+    expect((endedEvent as { success: boolean } | undefined)?.success).toBe(
+      false
+    )
+    expect((endedEvent as { error: string } | undefined)?.error).toBe(
+      'Claude crashed'
+    )
   })
 })
 
@@ -447,13 +607,11 @@ describe('loopClaude', () => {
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
-    const loopDeps: LoopDependencies = {
-      spawn: createMockSpawn(),
-      run: async () => {},
+    const loopDeps = createLoopDeps({
       sleep: async () => {
         throw new LoopBreaker()
       },
-    }
+    })
 
     try {
       await loopClaude(dependencies, loopDeps)
@@ -470,14 +628,12 @@ describe('loopClaude', () => {
   test('sleeps when no tasks available', async () => {
     const dependencies = createDependencies()
     let sleepCalled = false
-    const loopDeps: LoopDependencies = {
-      spawn: createMockSpawn(),
-      run: async () => {},
+    const loopDeps = createLoopDeps({
       sleep: async () => {
         sleepCalled = true
         throw new LoopBreaker()
       },
-    }
+    })
 
     try {
       await loopClaude(dependencies, loopDeps)
@@ -499,15 +655,14 @@ describe('loopClaude', () => {
     dependencies.arguments = ['1']
     let sleepCalled = false
     let runCount = 0
-    const loopDeps: LoopDependencies = {
-      spawn: createMockSpawn(),
+    const loopDeps = createLoopDeps({
       run: async () => {
         runCount++
       },
       sleep: async () => {
         sleepCalled = true
       },
-    }
+    })
 
     await loopClaude(dependencies, loopDeps)
 
@@ -528,13 +683,11 @@ describe('loopClaude', () => {
       typeof createContextEmulator
     >
     let runCount = 0
-    const loopDeps: LoopDependencies = {
-      spawn: createMockSpawn(),
+    const loopDeps = createLoopDeps({
       run: async () => {
         runCount++
       },
-      sleep: async () => {},
-    }
+    })
 
     const result = await loopClaude(dependencies, loopDeps)
 
@@ -572,8 +725,7 @@ describe('loopClaude', () => {
     let sleepCount = 0
     let runCount = 0
 
-    const loopDeps: LoopDependencies = {
-      spawn: createMockSpawn(),
+    const loopDeps = createLoopDeps({
       run: async () => {
         runCount++
       },
@@ -587,7 +739,7 @@ describe('loopClaude', () => {
           )
         }
       },
-    }
+    })
 
     const result = await loopClaude(dependencies, loopDeps)
 
@@ -610,17 +762,201 @@ describe('loopClaude', () => {
       typeof createContextEmulator
     >
     let runCount = 0
-    const loopDeps: LoopDependencies = {
-      spawn: createMockSpawn(),
+    const loopDeps = createLoopDeps({
       run: async () => {
         runCount++
       },
-      sleep: async () => {},
-    }
+    })
 
     await loopClaude(dependencies, loopDeps)
 
     expect(runCount).toBe(10)
     expect(context.stdoutLines.join('\n')).toContain('max 10 iterations')
+  })
+
+  test('outputs formatted claude.ended error message when Claude fails', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
+    dependencies.arguments = ['1']
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const loopDeps = createLoopDeps({
+      run: async () => {
+        throw new Error('Claude crashed')
+      },
+    })
+
+    await loopClaude(dependencies, loopDeps)
+
+    expect(context.stdoutLines.join('\n')).toContain(
+      '🤖 Claude session ended (error: Claude crashed)'
+    )
+  })
+
+  test('outputs formatted sync_skipped message when git pull fails', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
+    dependencies.arguments = ['1']
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const loopDeps = createLoopDeps({
+      spawn: (() => {
+        const proc = new EventEmitter() as EventEmitter & {
+          stdout: EventEmitter | null
+          stderr: EventEmitter
+        }
+        proc.stdout = null
+        proc.stderr = new EventEmitter()
+        setTimeout(() => {
+          proc.stderr.emit('data', Buffer.from('no remote configured'))
+          proc.emit('close', 1)
+        }, 0)
+        return proc as unknown as ChildProcess
+      }) as LoopDependencies['spawn'],
+      run: async () => {},
+    })
+
+    await loopClaude(dependencies, loopDeps)
+
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Note: git pull skipped (no remote configured)'
+    )
+  })
+
+  test('posts events with types when eventsUrl is configured in settings', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
+    dependencies.arguments = ['1']
+    dependencies.settings = {
+      dustCommand: 'dust',
+      eventsUrl: 'http://example.com/events',
+    }
+    const postedEvents: { url: string; payload: EventPayload }[] = []
+    const loopDeps = createLoopDeps({
+      run: async () => {},
+      postEvent: async (url, payload) => {
+        postedEvents.push({ url, payload })
+      },
+    })
+
+    await loopClaude(dependencies, loopDeps)
+
+    expect(postedEvents.length).toBeGreaterThan(0)
+    expect(postedEvents[0].url).toBe('http://example.com/events')
+    expect(postedEvents[0].payload.sequence).toBe(1)
+    expect(postedEvents[0].payload.event.type).toBe('loop.warning')
+    expect(postedEvents[1].payload.sequence).toBe(2)
+    expect(postedEvents[1].payload.event.type).toBe('loop.started')
+
+    // Check for claude.started and claude.ended events
+    const claudeStarted = postedEvents.find(
+      event => event.payload.event.type === 'claude.started'
+    )
+    const claudeEnded = postedEvents.find(
+      event => event.payload.event.type === 'claude.ended'
+    )
+    expect(claudeStarted).toBeDefined()
+    expect(claudeEnded).toBeDefined()
+  })
+
+  test('does not post events when eventsUrl is not configured', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
+    dependencies.arguments = ['1']
+    let postCalled = false
+    const loopDeps = createLoopDeps({
+      run: async () => {},
+      postEvent: async () => {
+        postCalled = true
+      },
+    })
+
+    await loopClaude(dependencies, loopDeps)
+
+    expect(postCalled).toBe(false)
+  })
+
+  test('logs error to stderr when event POST fails', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
+    dependencies.arguments = ['1']
+    dependencies.settings = {
+      dustCommand: 'dust',
+      eventsUrl: 'http://example.com/events',
+    }
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const loopDeps = createLoopDeps({
+      run: async () => {},
+      postEvent: async () => {
+        throw new Error('Network timeout')
+      },
+    })
+
+    await loopClaude(dependencies, loopDeps)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(context.stderrLines.join('\n')).toContain('Event POST failed')
+    expect(context.stderrLines.join('\n')).toContain('Network timeout')
+  })
+
+  test('handles non-Error throws from event POST', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
+    dependencies.arguments = ['1']
+    dependencies.settings = {
+      dustCommand: 'dust',
+      eventsUrl: 'http://example.com/events',
+    }
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const loopDeps = createLoopDeps({
+      run: async () => {},
+      postEvent: async () => {
+        throw 'string error from POST'
+      },
+    })
+
+    await loopClaude(dependencies, loopDeps)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(context.stderrLines.join('\n')).toContain('Event POST failed')
+    expect(context.stderrLines.join('\n')).toContain('string error from POST')
   })
 })

@@ -11,6 +11,9 @@
  * Usage: dust loop claude [max-iterations]
  * - max-iterations: Maximum number of task iterations (default: 10)
  * - Sleep iterations (when no tasks) don't count toward max
+ *
+ * Settings (.dust/config/settings.json):
+ * - eventsUrl: When set, HTTP POST every event to this URL with sequence number
  */
 
 import { spawn as nodeSpawn } from 'node:child_process'
@@ -18,17 +21,181 @@ import { run as claudeRun } from '../../claude/run'
 import type { CommandDependencies, CommandResult } from '../types'
 import { next } from './next'
 
+// Strongly typed events - discriminated union
+export interface LoopWarningEvent {
+  type: 'loop.warning'
+}
+
+export interface LoopStartedEvent {
+  type: 'loop.started'
+  maxIterations: number
+}
+
+export interface LoopSyncingEvent {
+  type: 'loop.syncing'
+}
+
+export interface LoopSyncSkippedEvent {
+  type: 'loop.sync_skipped'
+  reason: string
+}
+
+export interface LoopCheckingTasksEvent {
+  type: 'loop.checking_tasks'
+}
+
+export interface LoopNoTasksEvent {
+  type: 'loop.no_tasks'
+}
+
+export interface LoopTasksFoundEvent {
+  type: 'loop.tasks_found'
+}
+
+export interface ClaudeStartedEvent {
+  type: 'claude.started'
+}
+
+export interface ClaudeEndedEvent {
+  type: 'claude.ended'
+  success: boolean
+  error?: string
+}
+
+export interface LoopIterationCompleteEvent {
+  type: 'loop.iteration_complete'
+  iteration: number
+  maxIterations: number
+}
+
+export interface LoopEndedEvent {
+  type: 'loop.ended'
+  maxIterations: number
+}
+
+export type DustWireEvent =
+  | LoopWarningEvent
+  | LoopStartedEvent
+  | LoopSyncingEvent
+  | LoopSyncSkippedEvent
+  | LoopCheckingTasksEvent
+  | LoopNoTasksEvent
+  | LoopTasksFoundEvent
+  | ClaudeStartedEvent
+  | ClaudeEndedEvent
+  | LoopIterationCompleteEvent
+  | LoopEndedEvent
+
+export type EmitFn = (event: DustWireEvent) => void
+
+// Format event for console output
+export function formatEvent(event: DustWireEvent): string {
+  switch (event.type) {
+    case 'loop.warning':
+      return '⚠️  WARNING: This command skips all permission checks. Only use in a sandbox environment!'
+    case 'loop.started':
+      return `🔄 Starting dust loop claude (max ${event.maxIterations} iterations)...`
+    case 'loop.syncing':
+      return '🔄 Syncing with remote...'
+    case 'loop.sync_skipped':
+      return `Note: git pull skipped (${event.reason})`
+    case 'loop.checking_tasks':
+      return '🔍 Checking for available tasks...'
+    case 'loop.no_tasks':
+      return '💤 No tasks available. Sleeping...'
+    case 'loop.tasks_found':
+      return '✨ Found task(s). 🤖 Starting Claude...'
+    case 'claude.started':
+      return '🤖 Claude session started'
+    case 'claude.ended':
+      return event.success
+        ? '🤖 Claude session ended (success)'
+        : `🤖 Claude session ended (error: ${event.error})`
+    case 'loop.iteration_complete':
+      return `📋 Completed iteration ${event.iteration}/${event.maxIterations}`
+    case 'loop.ended':
+      return `🏁 Reached max iterations (${event.maxIterations}). Exiting.`
+  }
+}
+
+// Wire format for HTTP POST (dust event protocol)
+export interface EventPayload {
+  sequence: number
+  timestamp: string
+  sessionId: string
+  agentSessionId?: string
+  agentType?: string
+  event: DustWireEvent
+}
+
+export type PostEventFn = (url: string, payload: EventPayload) => Promise<void>
+
 export interface LoopDependencies {
   spawn: typeof nodeSpawn
   run: typeof claudeRun
   sleep: (ms: number) => Promise<void>
+  postEvent: PostEventFn
 }
+
+/* v8 ignore start - thin wrapper around fetch, tested via integration */
+async function defaultPostEvent(
+  url: string,
+  payload: EventPayload
+): Promise<void> {
+  await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+/* v8 ignore stop */
 
 export function createDefaultDependencies(): LoopDependencies {
   return {
     spawn: nodeSpawn,
     run: claudeRun,
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
+    postEvent: defaultPostEvent,
+  }
+}
+
+export function createEventPoster(
+  eventsUrl: string | undefined,
+  sessionId: string,
+  postEvent: PostEventFn,
+  onError: (error: unknown) => void
+): (event: DustWireEvent) => void {
+  let sequence = 0
+  let currentAgentSessionId: string | undefined
+
+  return (event: DustWireEvent) => {
+    if (!eventsUrl) return
+    sequence++
+
+    // Track agent sessions
+    if (event.type === 'claude.started') {
+      currentAgentSessionId = crypto.randomUUID()
+    }
+
+    const payload: EventPayload = {
+      sequence,
+      timestamp: new Date().toISOString(),
+      sessionId,
+      event,
+    }
+
+    // Include agent info for claude.* events
+    if (event.type.startsWith('claude.') && currentAgentSessionId) {
+      payload.agentSessionId = currentAgentSessionId
+      payload.agentType = 'claude'
+    }
+
+    postEvent(eventsUrl, payload).catch(onError)
+
+    // Clear agent session after ended event is sent
+    if (event.type === 'claude.ended') {
+      currentAgentSessionId = undefined
+    }
   }
 }
 
@@ -86,20 +253,23 @@ export type IterationResult =
 
 export async function runOneIteration(
   dependencies: CommandDependencies,
-  loopDependencies: LoopDependencies
+  loopDependencies: LoopDependencies,
+  emit: EmitFn
 ): Promise<IterationResult> {
   const { context } = dependencies
   const { spawn, run } = loopDependencies
 
   // Step 1: Sync with remote
-  context.stdout('🔄 Syncing with remote...')
+  emit({ type: 'loop.syncing' })
   const pullResult = await gitPull(context.cwd, spawn)
   if (!pullResult.success) {
-    context.stdout(`⚠️  git pull failed: ${pullResult.message}`)
-    context.stdout('')
-    context.stdout('🤖 Starting Claude to resolve the conflict...')
-    context.stdout('')
+    emit({
+      type: 'loop.sync_skipped',
+      /* v8 ignore next - message is always set when success is false */
+      reason: pullResult.message ?? 'unknown error',
+    })
 
+    emit({ type: 'claude.started' })
     const prompt = `git pull failed with the following error:
 
 ${pullResult.message}
@@ -117,36 +287,30 @@ Make sure the repository is in a clean state and synced with remote before finis
         dangerouslySkipPermissions: true,
         env: { DUST_UNATTENDED: '1' },
       })
-      context.stdout('')
-      context.stdout(
-        '✅ Claude resolved the git pull conflict. Continuing loop...'
-      )
-      context.stdout('')
+      emit({ type: 'claude.ended', success: true })
       return 'resolved_pull_conflict'
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      context.stderr(`Claude failed to resolve git pull conflict: ${message}`)
-      context.stdout('')
-      context.stdout('⚠️  Continuing loop despite unresolved conflict...')
-      context.stdout('')
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+      context.stderr(
+        `Claude failed to resolve git pull conflict: ${errorMessage}`
+      )
+      emit({ type: 'claude.ended', success: false, error: errorMessage })
     }
   }
 
   // Step 2: Check for available tasks
-  context.stdout('🔍 Checking for available tasks...')
+  emit({ type: 'loop.checking_tasks' })
   const hasTasks = await hasAvailableTasks(dependencies)
 
   if (!hasTasks) {
-    context.stdout('💤 No tasks available. Sleeping...')
-    context.stdout('')
+    emit({ type: 'loop.no_tasks' })
     return 'no_tasks'
   }
 
   // Step 3: Invoke Claude Code
-  context.stdout('✨ Found a task!')
-  context.stdout('')
-  context.stdout('🤖 Starting Claude...')
-  context.stdout('')
+  emit({ type: 'loop.tasks_found' })
+  emit({ type: 'claude.started' })
 
   try {
     await run('go', {
@@ -154,16 +318,12 @@ Make sure the repository is in a clean state and synced with remote before finis
       dangerouslySkipPermissions: true,
       env: { DUST_UNATTENDED: '1' },
     })
-    context.stdout('')
-    context.stdout('✅ Claude session complete. Continuing loop...')
-    context.stdout('')
+    emit({ type: 'claude.ended', success: true })
     return 'ran_claude'
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error)
-    context.stderr(`Claude exited with error: ${message}`)
-    context.stdout('')
-    context.stdout('✅ Claude session complete. Continuing loop...')
-    context.stdout('')
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    context.stderr(`Claude exited with error: ${errorMessage}`)
+    emit({ type: 'claude.ended', success: false, error: errorMessage })
     return 'claude_error'
   }
 }
@@ -183,35 +343,49 @@ export async function loopClaude(
   dependencies: CommandDependencies,
   loopDependencies: LoopDependencies = createDefaultDependencies()
 ): Promise<CommandResult> {
-  const { context } = dependencies
+  const { context, settings } = dependencies
+  const { postEvent } = loopDependencies
   const maxIterations = parseMaxIterations(dependencies.arguments)
 
-  context.stdout(
-    '⚠️  WARNING: This command skips all permission checks. Only use in a sandbox environment!'
+  const eventsUrl = settings.eventsUrl
+  const sessionId = crypto.randomUUID()
+  const postTypedEvent = createEventPoster(
+    eventsUrl,
+    sessionId,
+    postEvent,
+    error => {
+      const message = error instanceof Error ? error.message : String(error)
+      context.stderr(`Event POST failed: ${message}`)
+    }
   )
-  context.stdout('')
-  context.stdout(
-    `🔄 Starting dust loop claude (max ${maxIterations} iterations)...`
-  )
+
+  const emit: EmitFn = event => {
+    context.stdout(formatEvent(event))
+    postTypedEvent(event)
+  }
+
+  emit({ type: 'loop.warning' })
+  emit({ type: 'loop.started', maxIterations })
   context.stdout('   Press Ctrl+C to stop')
   context.stdout('')
 
   let completedIterations = 0
 
   while (completedIterations < maxIterations) {
-    const result = await runOneIteration(dependencies, loopDependencies)
+    const result = await runOneIteration(dependencies, loopDependencies, emit)
     if (result === 'no_tasks') {
       await loopDependencies.sleep(SLEEP_INTERVAL_MS)
     } else {
       // Count iterations where Claude actually ran (ran_claude, claude_error, resolved_pull_conflict)
       completedIterations++
-      context.stdout(
-        `📋 Completed iteration ${completedIterations}/${maxIterations}`
-      )
-      context.stdout('')
+      emit({
+        type: 'loop.iteration_complete',
+        iteration: completedIterations,
+        maxIterations,
+      })
     }
   }
 
-  context.stdout(`🏁 Reached max iterations (${maxIterations}). Exiting.`)
+  emit({ type: 'loop.ended', maxIterations })
   return { exitCode: 0 }
 }
