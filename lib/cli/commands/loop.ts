@@ -105,7 +105,9 @@ export async function runOneIteration(
   }
 
   // Step 3: Invoke Claude Code
-  context.stdout('✨ Found task(s). 🤖 Starting Claude...')
+  context.stdout('✨ Found a task!')
+  context.stdout('')
+  context.stdout('🤖 Starting Claude...')
   context.stdout('')
 
   try {
