@@ -47,17 +47,16 @@ describe('streamer', () => {
     expect(contentLine.text).toContain('Hello from Claude!')
   })
 
-  test('shows tool results with character count', async () => {
+  test('shows tool results with content', async () => {
     const cassette = loadCassette('write-read-echo')
     const sink = createRecordingSink()
 
     await streamEvents(replayEvents(cassette), sink)
 
-    const resultLines = sink.operations.filter(
-      op => op.op === 'line' && op.text.includes('✅ Result')
+    const resultHeaderLines = sink.operations.filter(
+      op => op.op === 'line' && op.text === 'Result:'
     )
-    expect(resultLines.length).toBeGreaterThan(0)
-    expect(resultLines[0].text).toMatch(/✅ Result \(\d+ chars\)/)
+    expect(resultHeaderLines.length).toBeGreaterThan(0)
   })
 
   test('shows done message with turns and cost', async () => {

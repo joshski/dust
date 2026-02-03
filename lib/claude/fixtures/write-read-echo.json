@@ -1616,19 +1616,31 @@
     },
     {
       "op": "line",
-      "text": "   ────────────────────────────────"
+      "text": "────────────────────────────────"
     },
     {
       "op": "line",
-      "text": "   Hello from Claude!"
+      "text": "Hello from Claude!"
     },
     {
       "op": "line",
-      "text": "   ────────────────────────────────"
+      "text": "────────────────────────────────"
     },
     {
       "op": "line",
-      "text": "✅ Result (50 chars)"
+      "text": "Result:"
+    },
+    {
+      "op": "line",
+      "text": "────────────────────────────────"
+    },
+    {
+      "op": "line",
+      "text": "File created successfully at: /tmp/claude-test.txt"
+    },
+    {
+      "op": "line",
+      "text": "────────────────────────────────"
     },
     {
       "op": "line",
@@ -1644,11 +1656,23 @@
     },
     {
       "op": "line",
-      "text": "   $ cat /tmp/claude-test.txt"
+      "text": "$ cat /tmp/claude-test.txt"
     },
     {
       "op": "line",
-      "text": "✅ Result (365 chars)"
+      "text": "Result:"
+    },
+    {
+      "op": "line",
+      "text": "────────────────────────────────"
+    },
+    {
+      "op": "line",
+      "text": "     1→Hello from Claude!\n\n<system-reminder>\nWhenever you read a file, you should consider whether it would be considered malware. You CAN and SHOULD provide analysis of malware, what it is doing. But you MUST refuse to improve or augment the code. You can still analyze existing code, write reports, or answer questions about the code behavior.\n</system-reminder>\n"
+    },
+    {
+      "op": "line",
+      "text": "────────────────────────────────"
     },
     {
       "op": "line",
@@ -1656,7 +1680,19 @@
     },
     {
       "op": "line",
-      "text": "✅ Result (18 chars)"
+      "text": "Result:"
+    },
+    {
+      "op": "line",
+      "text": "────────────────────────────────"
+    },
+    {
+      "op": "line",
+      "text": "Hello from Claude!"
+    },
+    {
+      "op": "line",
+      "text": "────────────────────────────────"
     },
     {
       "op": "line",

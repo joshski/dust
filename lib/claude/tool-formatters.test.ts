@@ -11,7 +11,7 @@ describe('formatToolUse', () => {
 
       expect(lines[0]).toBe('🔧 Write: /path/to/file.txt')
       expect(lines[1]).toContain('────')
-      expect(lines[2]).toBe('   Hello World')
+      expect(lines[2]).toBe('Hello World')
       expect(lines[3]).toContain('────')
     })
 
@@ -21,9 +21,9 @@ describe('formatToolUse', () => {
         content: 'Line 1\nLine 2\nLine 3',
       })
 
-      expect(lines).toContain('   Line 1')
-      expect(lines).toContain('   Line 2')
-      expect(lines).toContain('   Line 3')
+      expect(lines).toContain('Line 1')
+      expect(lines).toContain('Line 2')
+      expect(lines).toContain('Line 3')
     })
 
     test('shows unrecognized arguments', () => {
@@ -65,10 +65,10 @@ describe('formatToolUse', () => {
       })
 
       expect(lines[0]).toBe('🔧 Edit: /path/to/file.ts')
-      expect(lines).toContain('   Replace:')
-      expect(lines).toContain('   const x = 1')
-      expect(lines).toContain('   With:')
-      expect(lines).toContain('   const x = 2')
+      expect(lines).toContain('Replace:')
+      expect(lines).toContain('const x = 1')
+      expect(lines).toContain('With:')
+      expect(lines).toContain('const x = 2')
     })
 
     test('handles multiline replacements', () => {
@@ -78,11 +78,11 @@ describe('formatToolUse', () => {
         new_string: 'new1\nnew2\nnew3',
       })
 
-      expect(lines).toContain('   line1')
-      expect(lines).toContain('   line2')
-      expect(lines).toContain('   new1')
-      expect(lines).toContain('   new2')
-      expect(lines).toContain('   new3')
+      expect(lines).toContain('line1')
+      expect(lines).toContain('line2')
+      expect(lines).toContain('new1')
+      expect(lines).toContain('new2')
+      expect(lines).toContain('new3')
     })
 
     test('ignores replace_all in unrecognized args', () => {
@@ -111,8 +111,8 @@ describe('formatToolUse', () => {
       })
 
       expect(lines[0]).toBe('🔧 Edit: /path/to/file.ts')
-      expect(lines).toContain('   Replace:')
-      expect(lines).toContain('   With:')
+      expect(lines).toContain('Replace:')
+      expect(lines).toContain('With:')
       // Should have dividers but no content between them
       const dividerCount = lines.filter(l => l.includes('────')).length
       expect(dividerCount).toBe(4)
@@ -171,7 +171,7 @@ describe('formatToolUse', () => {
       })
 
       expect(lines[0]).toBe('🔧 Bash: List files')
-      expect(lines[1]).toBe('   $ ls -la')
+      expect(lines[1]).toBe('$ ls -la')
     })
 
     test('uses default header without description', () => {
@@ -180,7 +180,7 @@ describe('formatToolUse', () => {
       })
 
       expect(lines[0]).toBe('🔧 Bash: Run command')
-      expect(lines[1]).toBe('   $ git status')
+      expect(lines[1]).toBe('$ git status')
     })
 
     test('handles missing command', () => {
@@ -226,9 +226,9 @@ describe('formatToolUse', () => {
       })
 
       expect(lines[0]).toBe('🔧 TodoWrite: 3 items')
-      expect(lines[1]).toBe('   ☐ First task')
-      expect(lines[2]).toBe('   ☑ Second task')
-      expect(lines[3]).toBe('   ☐ Third task')
+      expect(lines[1]).toBe('☐ First task')
+      expect(lines[2]).toBe('☑ Second task')
+      expect(lines[3]).toBe('☐ Third task')
     })
 
     test('shows singular item count', () => {
@@ -358,7 +358,7 @@ describe('formatToolUse', () => {
       })
 
       expect(lines[0]).toBe('🔧 Task: Search codebase')
-      expect(lines[1]).toBe('   "Find all API endpoints"')
+      expect(lines[1]).toBe('"Find all API endpoints"')
     })
 
     test('uses subagent_type when no description', () => {
@@ -401,7 +401,7 @@ describe('formatToolUse', () => {
       })
 
       expect(lines[0]).toBe('🔧 Task: task')
-      expect(lines[1]).toBe('   "Do something"')
+      expect(lines[1]).toBe('"Do something"')
     })
 
     test('handles missing prompt', () => {

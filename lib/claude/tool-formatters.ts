@@ -18,13 +18,13 @@ function formatWrite(input: Record<string, unknown>): FormatterResult {
 
   const lines: string[] = []
   lines.push(`🔧 Write: ${filePath ?? '(unknown)'}`)
-  lines.push(`   ${DIVIDER}`)
+  lines.push(DIVIDER)
   if (content !== undefined) {
     for (const line of content.split('\n')) {
-      lines.push(`   ${line}`)
+      lines.push(line)
     }
   }
-  lines.push(`   ${DIVIDER}`)
+  lines.push(DIVIDER)
   appendOtherArgs(lines, others)
   return lines
 }
@@ -42,22 +42,22 @@ function formatEdit(input: Record<string, unknown>): FormatterResult {
 
   const lines: string[] = []
   lines.push(`🔧 Edit: ${filePath ?? '(unknown)'}`)
-  lines.push('   Replace:')
-  lines.push(`   ${DIVIDER}`)
+  lines.push('Replace:')
+  lines.push(DIVIDER)
   if (oldString !== undefined) {
     for (const line of oldString.split('\n')) {
-      lines.push(`   ${line}`)
+      lines.push(line)
     }
   }
-  lines.push(`   ${DIVIDER}`)
-  lines.push('   With:')
-  lines.push(`   ${DIVIDER}`)
+  lines.push(DIVIDER)
+  lines.push('With:')
+  lines.push(DIVIDER)
   if (newString !== undefined) {
     for (const line of newString.split('\n')) {
-      lines.push(`   ${line}`)
+      lines.push(line)
     }
   }
-  lines.push(`   ${DIVIDER}`)
+  lines.push(DIVIDER)
   appendOtherArgs(lines, others)
   return lines
 }
@@ -97,7 +97,7 @@ function formatBash(input: Record<string, unknown>): FormatterResult {
   const header = description ?? 'Run command'
   lines.push(`🔧 Bash: ${header}`)
   if (command !== undefined) {
-    lines.push(`   $ ${command}`)
+    lines.push(`$ ${command}`)
   }
   appendOtherArgs(lines, others)
   return lines
@@ -119,7 +119,7 @@ function formatTodoWrite(input: Record<string, unknown>): FormatterResult {
   if (todos) {
     for (const todo of todos) {
       const icon = todo.status === 'completed' ? '☑' : '☐'
-      lines.push(`   ${icon} ${todo.content}`)
+      lines.push(`${icon} ${todo.content}`)
     }
   }
   appendOtherArgs(lines, others)
@@ -193,7 +193,7 @@ function formatTask(input: Record<string, unknown>): FormatterResult {
   if (prompt !== undefined) {
     const truncated =
       prompt.length > 100 ? `${prompt.slice(0, 100)}...` : prompt
-    lines.push(`   "${truncated}"`)
+    lines.push(`"${truncated}"`)
   }
   appendOtherArgs(lines, others)
   return lines
@@ -205,9 +205,7 @@ function formatFallback(
 ): FormatterResult {
   const lines: string[] = []
   lines.push(`🔧 Tool: ${name}`)
-  lines.push(
-    `   Input: ${JSON.stringify(input, null, 2).replace(/\n/g, '\n   ')}`
-  )
+  lines.push(`Input: ${JSON.stringify(input, null, 2)}`)
   return lines
 }
 
@@ -256,6 +254,6 @@ function appendOtherArgs(
 ): void {
   if (Object.keys(others).length > 0) {
     lines.push('')
-    lines.push(`   (Other arguments: ${JSON.stringify(others)})`)
+    lines.push(`(Other arguments: ${JSON.stringify(others)})`)
   }
 }

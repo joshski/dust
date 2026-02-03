@@ -2,6 +2,8 @@ import { parseRawEvent } from './event-parser'
 import { formatToolUse } from './tool-formatters'
 import type { ClaudeEvent, OutputSink, RawEvent } from './types'
 
+const DIVIDER = '────────────────────────────────'
+
 /**
  * Process a stream of raw events and write output to the sink.
  * This is the core streaming logic, separated from I/O concerns.
@@ -49,7 +51,10 @@ export function processEvent(
       break
 
     case 'tool_result':
-      sink.line(`✅ Result (${event.content.length} chars)`)
+      sink.line('Result:')
+      sink.line(DIVIDER)
+      sink.line(event.content)
+      sink.line(DIVIDER)
       sink.line('')
       break
 
