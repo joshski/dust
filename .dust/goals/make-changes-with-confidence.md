@@ -13,5 +13,6 @@ Tests, type checking, and other automated verification enable safe refactoring a
 - [Comprehensive Assertions](comprehensive-assertions.md)
 - [Decoupled Code](decoupled-code.md)
 - [Fast Feedback](fast-feedback.md)
+- [Lint Everything](lint-everything.md)
 - [Readable Test Data](readable-test-data.md)
 - [Test Isolation](test-isolation.md)
