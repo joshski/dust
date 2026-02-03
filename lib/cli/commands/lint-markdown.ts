@@ -110,7 +110,7 @@ export function validateOpeningSentenceLength(
   if (openingSentence.length > MAX_OPENING_SENTENCE_LENGTH) {
     return {
       file: filePath,
-      message: `Opening sentence is ${openingSentence.length} characters (max ${MAX_OPENING_SENTENCE_LENGTH})`,
+      message: `Opening sentence is ${openingSentence.length} characters (max ${MAX_OPENING_SENTENCE_LENGTH}). Split into multiple sentences; only the first sentence is checked.`,
     }
   }
   return null
