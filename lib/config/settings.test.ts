@@ -233,6 +233,90 @@ describe('loadSettings', () => {
 
     expect(settings.dustCommand).toBe('custom/dust')
   })
+
+  test('loads eventsUrl from settings.json', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {
+            'settings.json': '{"eventsUrl": "https://example.com/events"}',
+          },
+        },
+      },
+    })
+    const settings = await loadSettings('/project', fileSystem)
+
+    expect(settings.eventsUrl).toBe('https://example.com/events')
+  })
+
+  test('DUST_EVENTS_URL env var overrides settings.json value', async () => {
+    stubEnv('DUST_EVENTS_URL', 'https://env.example.com/events')
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {
+            'settings.json':
+              '{"eventsUrl": "https://config.example.com/events"}',
+          },
+        },
+      },
+    })
+    const settings = await loadSettings('/project', fileSystem)
+
+    expect(settings.eventsUrl).toBe('https://env.example.com/events')
+  })
+
+  test('DUST_EVENTS_URL env var works when settings.json has no eventsUrl', async () => {
+    stubEnv('DUST_EVENTS_URL', 'https://env.example.com/events')
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: { 'settings.json': '{}' },
+        },
+      },
+    })
+    const settings = await loadSettings('/project', fileSystem)
+
+    expect(settings.eventsUrl).toBe('https://env.example.com/events')
+  })
+
+  test('DUST_EVENTS_URL env var works when no settings.json exists', async () => {
+    stubEnv('DUST_EVENTS_URL', 'https://env.example.com/events')
+    stubEnv('BUN_INSTALL', '')
+    const fileSystem = createFileSystemEmulator()
+    const settings = await loadSettings('/project', fileSystem)
+
+    expect(settings.eventsUrl).toBe('https://env.example.com/events')
+  })
+
+  test('eventsUrl is undefined when neither env var nor config is set', async () => {
+    stubEnv('DUST_EVENTS_URL', '')
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: { 'settings.json': '{}' },
+        },
+      },
+    })
+    const settings = await loadSettings('/project', fileSystem)
+
+    expect(settings.eventsUrl).toBeUndefined()
+  })
+
+  test('DUST_EVENTS_URL env var works when settings.json is invalid JSON', async () => {
+    stubEnv('DUST_EVENTS_URL', 'https://env.example.com/events')
+    stubEnv('BUN_INSTALL', '')
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: { 'settings.json': 'not valid json' },
+        },
+      },
+    })
+    const settings = await loadSettings('/project', fileSystem)
+
+    expect(settings.eventsUrl).toBe('https://env.example.com/events')
+  })
 })
 
 describe('stubEnv and restoreEnv', () => {

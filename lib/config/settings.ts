@@ -85,9 +85,14 @@ export async function loadSettings(
   const settingsPath = join(cwd, '.dust', 'config', 'settings.json')
 
   if (!fileSystem.exists(settingsPath)) {
-    return {
+    const result: DustSettings = {
       dustCommand: detectDustCommand(cwd, fileSystem),
     }
+    // Override eventsUrl with env var if set
+    if (process.env.DUST_EVENTS_URL) {
+      result.eventsUrl = process.env.DUST_EVENTS_URL
+    }
+    return result
   }
 
   try {
@@ -101,10 +106,19 @@ export async function loadSettings(
     if (!parsed.dustCommand) {
       result.dustCommand = detectDustCommand(cwd, fileSystem)
     }
+    // Override eventsUrl with env var if set
+    if (process.env.DUST_EVENTS_URL) {
+      result.eventsUrl = process.env.DUST_EVENTS_URL
+    }
     return result
   } catch {
-    return {
+    const result: DustSettings = {
       dustCommand: detectDustCommand(cwd, fileSystem),
     }
+    // Override eventsUrl with env var if set
+    if (process.env.DUST_EVENTS_URL) {
+      result.eventsUrl = process.env.DUST_EVENTS_URL
+    }
+    return result
   }
 }
