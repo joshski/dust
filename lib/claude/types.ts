@@ -58,3 +58,5 @@ export interface SpawnOptions {
   dangerouslySkipPermissions?: boolean
   env?: Record<string, string>
 }
+
+export type RawEventCallback = (event: RawEvent) => void

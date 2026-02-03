@@ -1,20 +1,30 @@
 import { parseRawEvent } from './event-parser'
 import { formatToolUse } from './tool-formatters'
-import type { ClaudeEvent, OutputSink, RawEvent } from './types'
+import type {
+  ClaudeEvent,
+  OutputSink,
+  RawEvent,
+  RawEventCallback,
+} from './types'
 
 const DIVIDER = '────────────────────────────────'
 
 /**
  * Process a stream of raw events and write output to the sink.
  * This is the core streaming logic, separated from I/O concerns.
+ * @param events - Stream of raw events from Claude Code
+ * @param sink - Output sink for formatted display
+ * @param onRawEvent - Optional callback invoked for each raw event before processing
  */
 export async function streamEvents(
   events: AsyncIterable<RawEvent>,
-  sink: OutputSink
+  sink: OutputSink,
+  onRawEvent?: RawEventCallback
 ): Promise<void> {
   let hadTextOutput = false
 
   for await (const raw of events) {
+    onRawEvent?.(raw)
     for (const event of parseRawEvent(raw)) {
       processEvent(event, sink, { hadTextOutput })
       if (event.type === 'text_delta') {

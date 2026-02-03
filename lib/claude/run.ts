@@ -3,7 +3,12 @@ import {
   createStdoutSink as defaultCreateStdoutSink,
   streamEvents as defaultStreamEvents,
 } from './streamer'
-import type { SpawnOptions } from './types'
+import type { RawEventCallback, SpawnOptions } from './types'
+
+export interface RunOptions {
+  spawnOptions?: SpawnOptions
+  onRawEvent?: RawEventCallback
+}
 
 export interface RunnerDependencies {
   spawnClaudeCode: typeof defaultSpawnClaudeCode
@@ -19,10 +24,19 @@ export const defaultRunnerDependencies: RunnerDependencies = {
 
 export async function run(
   prompt: string,
-  options: SpawnOptions = {},
+  options: SpawnOptions | RunOptions = {},
   dependencies: RunnerDependencies = defaultRunnerDependencies
 ): Promise<void> {
-  const events = dependencies.spawnClaudeCode(prompt, options)
+  // Support both legacy SpawnOptions and new RunOptions
+  const isRunOptions = (opt: SpawnOptions | RunOptions): opt is RunOptions =>
+    'spawnOptions' in opt || 'onRawEvent' in opt
+
+  const spawnOptions = isRunOptions(options)
+    ? (options.spawnOptions ?? {})
+    : options
+  const onRawEvent = isRunOptions(options) ? options.onRawEvent : undefined
+
+  const events = dependencies.spawnClaudeCode(prompt, spawnOptions)
   const sink = dependencies.createStdoutSink()
-  await dependencies.streamEvents(events, sink)
+  await dependencies.streamEvents(events, sink, onRawEvent)
 }

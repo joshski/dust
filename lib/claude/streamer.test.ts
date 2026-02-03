@@ -75,6 +75,62 @@ describe('streamer', () => {
   })
 })
 
+describe('streamEvents with onRawEvent callback', () => {
+  test('calls onRawEvent for each raw event', async () => {
+    const cassette = loadCassette('write-read-echo')
+    const sink = createRecordingSink()
+    const rawEvents: Record<string, unknown>[] = []
+
+    await streamEvents(replayEvents(cassette), sink, event => {
+      rawEvents.push(event)
+    })
+
+    expect(rawEvents.length).toBe(cassette.rawEvents.length)
+    expect(rawEvents[0]).toEqual(cassette.rawEvents[0])
+  })
+
+  test('calls onRawEvent before processing event', async () => {
+    const eventOrder: string[] = []
+    const mockSink = {
+      write: () => {
+        eventOrder.push('sink.write')
+      },
+      line: () => {
+        eventOrder.push('sink.line')
+      },
+    }
+    const events = [
+      {
+        type: 'assistant',
+        message: { content: [{ type: 'text', text: 'Hello' }] },
+      },
+    ]
+
+    await streamEvents(
+      (async function* () {
+        for (const e of events) yield e
+      })(),
+      mockSink,
+      () => {
+        eventOrder.push('onRawEvent')
+      }
+    )
+
+    // onRawEvent should be called before any sink operations
+    expect(eventOrder[0]).toBe('onRawEvent')
+  })
+
+  test('works without onRawEvent callback', async () => {
+    const cassette = loadCassette('write-read-echo')
+    const sink = createRecordingSink()
+
+    // Should not throw when callback is undefined
+    await streamEvents(replayEvents(cassette), sink)
+
+    expect(sink.operations.length).toBeGreaterThan(0)
+  })
+})
+
 describe('createStdoutSink', () => {
   test('write calls process.stdout.write', () => {
     const calls: string[] = []

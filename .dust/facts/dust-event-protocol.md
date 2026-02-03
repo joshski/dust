@@ -7,9 +7,17 @@ When `eventsUrl` is configured in `.dust/config/settings.json`, dust commands wi
 ```json
 {
   "dustCommand": "npx dust",
-  "eventsUrl": "https://example.com/events"
+  "eventsUrl": "https://example.com/events",
+  "emitRawEvents": true
 }
 ```
+
+### Settings
+
+| Setting | Type | Default | Description |
+|---------|------|---------|-------------|
+| `eventsUrl` | `string` | - | URL to POST events to |
+| `emitRawEvents` | `boolean` | `false` | When true, emit raw Claude streaming events (`claude.raw_event`) |
 
 ## Wire Format
 
@@ -47,6 +55,7 @@ Events are a discriminated union with a `type` field:
 | `loop.tasks_found` | - | Tasks available, starting agent |
 | `claude.started` | - | Claude session started |
 | `claude.ended` | `success: boolean`, `error?: string` | Claude session ended |
+| `claude.raw_event` | `rawEvent: object` | Raw Claude streaming event (requires `emitRawEvents: true`) |
 | `loop.iteration_complete` | `iteration: number`, `maxIterations: number` | Iteration finished |
 | `loop.ended` | `maxIterations: number` | Loop completed |
 
@@ -97,6 +106,28 @@ Claude ended event (error):
   "event": { "type": "claude.ended", "success": false, "error": "Process exited with code 1" }
 }
 ```
+
+Claude raw event (requires `emitRawEvents: true`):
+```json
+{
+  "sequence": 7,
+  "timestamp": "2025-01-15T10:30:31.000Z",
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "agentSessionId": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+  "agentType": "claude",
+  "event": {
+    "type": "claude.raw_event",
+    "rawEvent": {
+      "type": "assistant",
+      "message": {
+        "content": [{ "type": "text", "text": "Hello!" }]
+      }
+    }
+  }
+}
+```
+
+**Note:** Raw events are high-volume (many events per response) and contain response content. Enable `emitRawEvents` only when real-time streaming visibility is required.
 
 ## Delivery Semantics
 

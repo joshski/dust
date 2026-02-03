@@ -12,6 +12,7 @@ import {
   type DustWireEvent,
   type EmitFn,
   type EventPayload,
+  formatEvent,
   gitPull,
   hasAvailableTasks,
   type LoopDependencies,
@@ -473,7 +474,9 @@ describe('runOneIteration', () => {
     let capturedCwd: string | undefined
     const loopDeps = createLoopDeps({
       run: async (_prompt, options) => {
-        capturedCwd = options?.cwd
+        // Options is now RunOptions with spawnOptions inside
+        const runOptions = options as { spawnOptions?: { cwd?: string } }
+        capturedCwd = runOptions?.spawnOptions?.cwd
       },
     })
     const emit = createStubEmit()
@@ -579,6 +582,88 @@ describe('runOneIteration', () => {
     )
     expect((endedEvent as { error: string } | undefined)?.error).toBe(
       'Claude crashed'
+    )
+  })
+
+  test('passes onRawEvent callback when emitRawEvents is true', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
+    const emit = createStubEmit()
+
+    const loopDeps = createLoopDeps({
+      run: async (_prompt, options) => {
+        // Check if onRawEvent is passed in RunOptions format and call it
+        const onRawEvent = (
+          options as { onRawEvent?: (e: Record<string, unknown>) => void }
+        )?.onRawEvent
+        if (onRawEvent) {
+          // Invoke the callback with a test event
+          onRawEvent({ type: 'text_delta', text: 'Hello' })
+        }
+      },
+    })
+
+    await runOneIteration(dependencies, loopDeps, emit, { emitRawEvents: true })
+
+    // Verify the raw event was emitted
+    const rawEvent = emit.events.find(e => e.type === 'claude.raw_event')
+    expect(rawEvent).toBeDefined()
+    expect(
+      (rawEvent as { rawEvent: Record<string, unknown> }).rawEvent
+    ).toEqual({
+      type: 'text_delta',
+      text: 'Hello',
+    })
+  })
+
+  test('does not pass onRawEvent callback when emitRawEvents is false', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
+    const emit = createStubEmit()
+    let capturedOnRawEvent: unknown = 'not-set'
+
+    const loopDeps = createLoopDeps({
+      run: async (_prompt, options) => {
+        capturedOnRawEvent = (options as { onRawEvent?: unknown })?.onRawEvent
+      },
+    })
+
+    await runOneIteration(dependencies, loopDeps, emit, {
+      emitRawEvents: false,
+    })
+
+    expect(capturedOnRawEvent).toBeUndefined()
+  })
+})
+
+describe('formatEvent', () => {
+  test('returns null for claude.raw_event', () => {
+    const result = formatEvent({
+      type: 'claude.raw_event',
+      rawEvent: { type: 'text_delta', text: 'Hello' },
+    })
+    expect(result).toBeNull()
+  })
+
+  test('returns string for other event types', () => {
+    expect(formatEvent({ type: 'loop.syncing' })).toBe(
+      '🔄 Syncing with remote...'
+    )
+    expect(formatEvent({ type: 'loop.started', maxIterations: 5 })).toBe(
+      '🔄 Starting dust loop claude (max 5 iterations)...'
+    )
+    expect(formatEvent({ type: 'claude.started' })).toBe(
+      '🤖 Claude session started'
     )
   })
 })
@@ -958,5 +1043,85 @@ describe('loopClaude', () => {
 
     expect(context.stderrLines.join('\n')).toContain('Event POST failed')
     expect(context.stderrLines.join('\n')).toContain('string error from POST')
+  })
+
+  test('does not emit raw events when emitRawEvents is false', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
+    dependencies.arguments = ['1']
+    dependencies.settings = {
+      dustCommand: 'dust',
+      eventsUrl: 'http://example.com/events',
+      emitRawEvents: false,
+    }
+    const postedEvents: { url: string; payload: EventPayload }[] = []
+    const loopDeps = createLoopDeps({
+      run: async () => {},
+      postEvent: async (url, payload) => {
+        postedEvents.push({ url, payload })
+      },
+    })
+
+    await loopClaude(dependencies, loopDeps)
+
+    const rawEvents = postedEvents.filter(
+      e => e.payload.event.type === 'claude.raw_event'
+    )
+    expect(rawEvents.length).toBe(0)
+  })
+
+  test('emits raw events and does not output them to console when emitRawEvents is true', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+        },
+      },
+    })
+    dependencies.arguments = ['1']
+    dependencies.settings = {
+      dustCommand: 'dust',
+      eventsUrl: 'http://example.com/events',
+      emitRawEvents: true,
+    }
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const postedEvents: { url: string; payload: EventPayload }[] = []
+    const loopDeps = createLoopDeps({
+      run: async (_prompt, options) => {
+        // Simulate raw events from Claude by calling the callback
+        const onRawEvent = (
+          options as { onRawEvent?: (e: Record<string, unknown>) => void }
+        )?.onRawEvent
+        if (onRawEvent) {
+          onRawEvent({ type: 'text_delta', text: 'Hello' })
+        }
+      },
+      postEvent: async (url, payload) => {
+        postedEvents.push({ url, payload })
+      },
+    })
+
+    await loopClaude(dependencies, loopDeps)
+
+    // Verify raw events were posted
+    const rawEvents = postedEvents.filter(
+      e => e.payload.event.type === 'claude.raw_event'
+    )
+    expect(rawEvents.length).toBe(1)
+    expect(
+      (rawEvents[0].payload.event as { rawEvent: Record<string, unknown> })
+        .rawEvent
+    ).toEqual({ type: 'text_delta', text: 'Hello' })
+
+    // Verify raw events are NOT output to console (formatEvent returns null)
+    expect(context.stdoutLines.join('\n')).not.toContain('text_delta')
+    expect(context.stdoutLines.join('\n')).not.toContain('raw_event')
   })
 })

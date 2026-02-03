@@ -171,10 +171,12 @@ describe('loadSettings', () => {
 
   test('returns auto-detected dustCommand when no config file exists', async () => {
     stubEnv('BUN_INSTALL', '')
+    stubEnv('DUST_EVENTS_URL', '')
     const fileSystem = createFileSystemEmulator()
     const settings = await loadSettings('/project', fileSystem)
 
     expect(settings.dustCommand).toBe('npx dust')
+    expect(settings.eventsUrl).toBeUndefined()
     // Exercise the readFile fallback for non-existent files
     expect(await fileSystem.readFile('/non-existent')).toBe('')
   })
@@ -194,6 +196,7 @@ describe('loadSettings', () => {
 
   test('returns auto-detected dustCommand when config file is invalid JSON', async () => {
     stubEnv('BUN_INSTALL', '')
+    stubEnv('DUST_EVENTS_URL', '')
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -204,6 +207,7 @@ describe('loadSettings', () => {
     const settings = await loadSettings('/project', fileSystem)
 
     expect(settings.dustCommand).toBe('npx dust')
+    expect(settings.eventsUrl).toBeUndefined()
   })
 
   test('auto-detects dustCommand when not set in settings', async () => {
@@ -235,6 +239,7 @@ describe('loadSettings', () => {
   })
 
   test('loads eventsUrl from settings.json', async () => {
+    stubEnv('DUST_EVENTS_URL', '') // Clear env var to test config file only
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {

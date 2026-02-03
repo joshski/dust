@@ -62,6 +62,11 @@ export interface ClaudeEndedEvent {
   error?: string
 }
 
+export interface ClaudeRawEvent {
+  type: 'claude.raw_event'
+  rawEvent: Record<string, unknown>
+}
+
 export interface LoopIterationCompleteEvent {
   type: 'loop.iteration_complete'
   iteration: number
@@ -83,13 +88,15 @@ export type DustWireEvent =
   | LoopTasksFoundEvent
   | ClaudeStartedEvent
   | ClaudeEndedEvent
+  | ClaudeRawEvent
   | LoopIterationCompleteEvent
   | LoopEndedEvent
 
 export type EmitFn = (event: DustWireEvent) => void
 
 // Format event for console output
-export function formatEvent(event: DustWireEvent): string {
+// Returns null for events that should not be displayed to console
+export function formatEvent(event: DustWireEvent): string | null {
   switch (event.type) {
     case 'loop.warning':
       return '⚠️  WARNING: This command skips all permission checks. Only use in a sandbox environment!'
@@ -111,6 +118,9 @@ export function formatEvent(event: DustWireEvent): string {
       return event.success
         ? '🤖 Claude session ended (success)'
         : `🤖 Claude session ended (error: ${event.error})`
+    case 'claude.raw_event':
+      // Raw events are high-volume and not displayed to console
+      return null
     case 'loop.iteration_complete':
       return `📋 Completed iteration ${event.iteration}/${event.maxIterations}`
     case 'loop.ended':
@@ -251,13 +261,25 @@ export type IterationResult =
   | 'claude_error'
   | 'resolved_pull_conflict'
 
+export interface IterationOptions {
+  emitRawEvents?: boolean
+}
+
 export async function runOneIteration(
   dependencies: CommandDependencies,
   loopDependencies: LoopDependencies,
-  emit: EmitFn
+  emit: EmitFn,
+  options: IterationOptions = {}
 ): Promise<IterationResult> {
   const { context } = dependencies
   const { spawn, run } = loopDependencies
+
+  // Create raw event callback if emitRawEvents is enabled
+  const onRawEvent = options.emitRawEvents
+    ? (rawEvent: Record<string, unknown>) => {
+        emit({ type: 'claude.raw_event', rawEvent })
+      }
+    : undefined
 
   // Step 1: Sync with remote
   emit({ type: 'loop.syncing' })
@@ -283,9 +305,12 @@ Make sure the repository is in a clean state and synced with remote before finis
 
     try {
       await run(prompt, {
-        cwd: context.cwd,
-        dangerouslySkipPermissions: true,
-        env: { DUST_UNATTENDED: '1' },
+        spawnOptions: {
+          cwd: context.cwd,
+          dangerouslySkipPermissions: true,
+          env: { DUST_UNATTENDED: '1' },
+        },
+        onRawEvent,
       })
       emit({ type: 'claude.ended', success: true })
       return 'resolved_pull_conflict'
@@ -314,9 +339,12 @@ Make sure the repository is in a clean state and synced with remote before finis
 
   try {
     await run('go', {
-      cwd: context.cwd,
-      dangerouslySkipPermissions: true,
-      env: { DUST_UNATTENDED: '1' },
+      spawnOptions: {
+        cwd: context.cwd,
+        dangerouslySkipPermissions: true,
+        env: { DUST_UNATTENDED: '1' },
+      },
+      onRawEvent,
     })
     emit({ type: 'claude.ended', success: true })
     return 'ran_claude'
@@ -360,7 +388,10 @@ export async function loopClaude(
   )
 
   const emit: EmitFn = event => {
-    context.stdout(formatEvent(event))
+    const formatted = formatEvent(event)
+    if (formatted !== null) {
+      context.stdout(formatted)
+    }
     postTypedEvent(event)
   }
 
@@ -370,9 +401,17 @@ export async function loopClaude(
   context.stdout('')
 
   let completedIterations = 0
+  const iterationOptions: IterationOptions = {
+    emitRawEvents: settings.emitRawEvents,
+  }
 
   while (completedIterations < maxIterations) {
-    const result = await runOneIteration(dependencies, loopDependencies, emit)
+    const result = await runOneIteration(
+      dependencies,
+      loopDependencies,
+      emit,
+      iterationOptions
+    )
     if (result === 'no_tasks') {
       await loopDependencies.sleep(SLEEP_INTERVAL_MS)
     } else {
