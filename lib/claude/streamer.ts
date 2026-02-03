@@ -1,4 +1,5 @@
 import { parseRawEvent } from './event-parser'
+import { formatToolUse } from './tool-formatters'
 import type { ClaudeEvent, OutputSink, RawEvent } from './types'
 
 /**
@@ -42,10 +43,9 @@ export function processEvent(
         sink.line('')
         sink.line('')
       }
-      sink.line(`🔧 Tool: ${event.name}`)
-      sink.line(
-        `   Input: ${JSON.stringify(event.input, null, 2).replace(/\n/g, '\n   ')}`
-      )
+      for (const line of formatToolUse(event.name, event.input)) {
+        sink.line(line)
+      }
       break
 
     case 'tool_result':

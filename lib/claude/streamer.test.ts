@@ -24,23 +24,27 @@ describe('streamer', () => {
     expect(textWrites[0]).toEqual({ op: 'write', text: "I'll write" })
   })
 
-  test('shows tool use with formatted input', async () => {
+  test('shows tool use with human-readable format', async () => {
     const cassette = loadCassette('write-read-echo')
     const sink = createRecordingSink()
 
     await streamEvents(replayEvents(cassette), sink)
 
-    // Find the Write tool line
+    // Find the Write tool line with file path
     const writeToolIndex = sink.operations.findIndex(
-      op => op.op === 'line' && op.text === '🔧 Tool: Write'
+      op => op.op === 'line' && op.text === '🔧 Write: /tmp/claude-test.txt'
     )
     expect(writeToolIndex).toBeGreaterThan(0)
 
-    // Next line should be the formatted input
-    const inputLine = sink.operations[writeToolIndex + 1]
-    expect(inputLine.op).toBe('line')
-    expect(inputLine.text).toContain('file_path')
-    expect(inputLine.text).toContain('/tmp/claude-test.txt')
+    // Should have a divider after the header
+    const dividerLine = sink.operations[writeToolIndex + 1]
+    expect(dividerLine.op).toBe('line')
+    expect(dividerLine.text).toContain('────')
+
+    // Should have content after the divider
+    const contentLine = sink.operations[writeToolIndex + 2]
+    expect(contentLine.op).toBe('line')
+    expect(contentLine.text).toContain('Hello from Claude!')
   })
 
   test('shows tool results with character count', async () => {

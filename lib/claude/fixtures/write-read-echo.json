@@ -1612,11 +1612,19 @@
     },
     {
       "op": "line",
-      "text": "🔧 Tool: Write"
+      "text": "🔧 Write: /tmp/claude-test.txt"
     },
     {
       "op": "line",
-      "text": "   Input: {\n     \"file_path\": \"/tmp/claude-test.txt\",\n     \"content\": \"Hello from Claude!\"\n   }"
+      "text": "   ────────────────────────────────"
+    },
+    {
+      "op": "line",
+      "text": "   Hello from Claude!"
+    },
+    {
+      "op": "line",
+      "text": "   ────────────────────────────────"
     },
     {
       "op": "line",
@@ -1628,19 +1636,15 @@
     },
     {
       "op": "line",
-      "text": "🔧 Tool: Read"
+      "text": "🔧 Read: /tmp/claude-test.txt"
     },
     {
       "op": "line",
-      "text": "   Input: {\n     \"file_path\": \"/tmp/claude-test.txt\"\n   }"
+      "text": "🔧 Bash: Echo contents of the test file"
     },
     {
       "op": "line",
-      "text": "🔧 Tool: Bash"
-    },
-    {
-      "op": "line",
-      "text": "   Input: {\n     \"command\": \"cat /tmp/claude-test.txt\",\n     \"description\": \"Echo contents of the test file\"\n   }"
+      "text": "   $ cat /tmp/claude-test.txt"
     },
     {
       "op": "line",
