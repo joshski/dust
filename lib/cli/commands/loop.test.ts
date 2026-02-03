@@ -17,6 +17,7 @@ import {
   hasAvailableTasks,
   type LoopDependencies,
   loopClaude,
+  type PostEventFn,
   parseMaxIterations,
   runOneIteration,
 } from './loop'
@@ -1123,5 +1124,114 @@ describe('loopClaude', () => {
     // Verify raw events are NOT output to console (formatEvent returns null)
     expect(context.stdoutLines.join('\n')).not.toContain('text_delta')
     expect(context.stdoutLines.join('\n')).not.toContain('raw_event')
+  })
+})
+
+describe('integration: HTTP event posting', () => {
+  test('posts events to actual HTTP endpoint', async () => {
+    const { createServer } = await import('node:http')
+
+    // Create a mock HTTP server that collects posted events
+    const receivedEvents: EventPayload[] = []
+    const server = createServer((request, response) => {
+      if (request.method === 'POST') {
+        let body = ''
+        request.on('data', chunk => {
+          body += chunk.toString()
+        })
+        request.on('end', () => {
+          receivedEvents.push(JSON.parse(body))
+          response.writeHead(200)
+          response.end()
+        })
+      }
+    })
+
+    // Start server on random available port
+    await new Promise<void>(resolve => {
+      server.listen(0, '127.0.0.1', resolve)
+    })
+    const address = server.address() as { port: number }
+    const eventsUrl = `http://127.0.0.1:${address.port}/events`
+
+    try {
+      const dependencies = createDependencies({
+        project: {
+          '.dust': {
+            tasks: { 'task.md': '# Task\n\n## Blocked by\n\n(none)' },
+          },
+        },
+      })
+      dependencies.arguments = ['1']
+      dependencies.settings = {
+        dustCommand: 'dust',
+        eventsUrl,
+        emitRawEvents: true,
+      }
+
+      // Use real postEvent (via fetch) to test HTTP integration
+      const realPostEvent: PostEventFn = async (url, payload) => {
+        await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+      }
+
+      const loopDeps = createLoopDeps({
+        postEvent: realPostEvent,
+        run: async (_prompt, options) => {
+          // Simulate raw events
+          const onRawEvent = (
+            options as { onRawEvent?: (e: Record<string, unknown>) => void }
+          )?.onRawEvent
+          if (onRawEvent) {
+            onRawEvent({ type: 'text_delta', text: 'Integration test' })
+          }
+        },
+      })
+
+      await loopClaude(dependencies, loopDeps)
+
+      // Allow time for async POSTs to complete
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Verify events were received by the HTTP server
+      expect(receivedEvents.length).toBeGreaterThan(0)
+
+      // Verify event structure
+      const firstEvent = receivedEvents[0]
+      expect(firstEvent.sequence).toBe(1)
+      expect(firstEvent.sessionId).toBeDefined()
+      expect(firstEvent.timestamp).toMatch(
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/
+      )
+      expect(firstEvent.event.type).toBeDefined()
+
+      // Verify raw event was received
+      const rawEvent = receivedEvents.find(
+        e => e.event.type === 'claude.raw_event'
+      )
+      expect(rawEvent).toBeDefined()
+      expect(
+        (rawEvent?.event as { rawEvent: Record<string, unknown> }).rawEvent
+      ).toEqual({
+        type: 'text_delta',
+        text: 'Integration test',
+      })
+
+      // Verify agent session tracking
+      const claudeStarted = receivedEvents.find(
+        e => e.event.type === 'claude.started'
+      )
+      const claudeEnded = receivedEvents.find(
+        e => e.event.type === 'claude.ended'
+      )
+      expect(claudeStarted?.agentSessionId).toBeDefined()
+      expect(claudeEnded?.agentSessionId).toBe(claudeStarted?.agentSessionId)
+      expect(rawEvent?.agentSessionId).toBe(claudeStarted?.agentSessionId)
+    } finally {
+      server.close()
+    }
   })
 })
