@@ -7,6 +7,7 @@
  */
 
 import { type ChildProcess, spawn } from 'node:child_process'
+import { detectAgent } from '../../agents/detection'
 import type { CommandDependencies, CommandResult } from '../types'
 import { check } from './check'
 
@@ -185,7 +186,8 @@ async function getChangesFromRemote(
 
 export async function prePush(
   dependencies: CommandDependencies,
-  gitRunner: GitRunner = defaultGitRunner
+  gitRunner: GitRunner = defaultGitRunner,
+  env: NodeJS.ProcessEnv = process.env
 ): Promise<CommandResult> {
   const { context } = dependencies
 
@@ -194,8 +196,9 @@ export async function prePush(
 
   if (changes.length > 0) {
     const analysis = analyzeChangesForTaskOnlyPattern(changes)
+    const agent = detectAgent(env)
 
-    if (analysis.isTaskOnly) {
+    if (analysis.isTaskOnly && agent.type === 'claude-code-web') {
       context.stderr('')
       context.stderr(
         '⚠️  Task-only commit detected! You added a task but did not implement it.'

@@ -238,7 +238,12 @@ describe('analyzeChangesForTaskOnlyPattern', () => {
 })
 
 describe('prePush command', () => {
-  describe('task-only detection', () => {
+  describe('task-only detection for Claude Code Web', () => {
+    const claudeCodeWebEnv = {
+      CLAUDECODE: '1',
+      CLAUDE_CODE_ENTRYPOINT: 'remote',
+    }
+
     test('fails with helpful message when only task files are added', async () => {
       const context = createContextEmulator()
       const fileSystem = createFileSystemEmulator()
@@ -255,7 +260,8 @@ describe('prePush command', () => {
 
       const result = await prePush(
         createDependencies(context, fileSystem, defaultSettings),
-        gitRunner
+        gitRunner,
+        claudeCodeWebEnv
       )
 
       expect(result.exitCode).toBe(1)
@@ -284,7 +290,8 @@ describe('prePush command', () => {
 
       const result = await prePush(
         createDependencies(context, fileSystem, defaultSettings),
-        gitRunner
+        gitRunner,
+        claudeCodeWebEnv
       )
 
       expect(result.exitCode).toBe(1)
@@ -314,13 +321,103 @@ describe('prePush command', () => {
 
       const result = await prePush(
         createDependencies(context, fileSystem, defaultSettings),
-        gitRunner
+        gitRunner,
+        claudeCodeWebEnv
       )
 
       expect(result.exitCode).toBe(1)
       const output = context.stderrLines.join('\n')
       expect(output).toContain('.dust/tasks/task-one.md')
       expect(output).toContain('.dust/tasks/task-two.md')
+    })
+  })
+
+  describe('task-only commits allowed for non-web agents', () => {
+    test('allows task-only commits for Claude Code CLI', async () => {
+      const context = createContextEmulator()
+      const fileSystem = createFileSystemEmulator({
+        project: { '.dust': {} },
+      })
+      fileSystem.readFile = async () =>
+        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+      const gitRunner = createMockGitRunner({
+        'rev-list HEAD --not --remotes': {
+          exitCode: 0,
+          output: 'abc123\n',
+        },
+        'diff --name-status abc123^..HEAD': {
+          exitCode: 0,
+          output: 'A\t.dust/tasks/new-feature.md',
+        },
+      })
+
+      await prePush(
+        createDependencies(context, fileSystem, defaultSettings),
+        gitRunner,
+        { CLAUDECODE: '1' }
+      )
+
+      expect(context.stderrLines.join('\n')).not.toContain(
+        'Task-only commit detected'
+      )
+    })
+
+    test('allows task-only commits for Codex', async () => {
+      const context = createContextEmulator()
+      const fileSystem = createFileSystemEmulator({
+        project: { '.dust': {} },
+      })
+      fileSystem.readFile = async () =>
+        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+      const gitRunner = createMockGitRunner({
+        'rev-list HEAD --not --remotes': {
+          exitCode: 0,
+          output: 'abc123\n',
+        },
+        'diff --name-status abc123^..HEAD': {
+          exitCode: 0,
+          output: 'A\t.dust/tasks/new-feature.md',
+        },
+      })
+
+      await prePush(
+        createDependencies(context, fileSystem, defaultSettings),
+        gitRunner,
+        { CODEX_HOME: '/home/user/.codex' }
+      )
+
+      expect(context.stderrLines.join('\n')).not.toContain(
+        'Task-only commit detected'
+      )
+    })
+
+    test('allows task-only commits for unknown agents', async () => {
+      const context = createContextEmulator()
+      const fileSystem = createFileSystemEmulator({
+        project: { '.dust': {} },
+      })
+      fileSystem.readFile = async () =>
+        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+      const gitRunner = createMockGitRunner({
+        'rev-list HEAD --not --remotes': {
+          exitCode: 0,
+          output: 'abc123\n',
+        },
+        'diff --name-status abc123^..HEAD': {
+          exitCode: 0,
+          output: 'A\t.dust/tasks/new-feature.md',
+        },
+      })
+
+      await prePush(
+        createDependencies(context, fileSystem, defaultSettings),
+        gitRunner,
+        {}
+      )
+
+      expect(context.stderrLines.join('\n')).not.toContain(
+        'Task-only commit detected'
+      )
     })
   })
 
@@ -503,7 +600,7 @@ describe('prePush command', () => {
       )
     })
 
-    test('handles multiple unpushed commits correctly', async () => {
+    test('handles multiple unpushed commits correctly (blocks Claude Code Web)', async () => {
       const context = createContextEmulator()
       const fileSystem = createFileSystemEmulator()
       const gitRunner = createMockGitRunner({
@@ -519,7 +616,8 @@ describe('prePush command', () => {
 
       const result = await prePush(
         createDependencies(context, fileSystem, defaultSettings),
-        gitRunner
+        gitRunner,
+        { CLAUDECODE: '1', CLAUDE_CODE_ENTRYPOINT: 'remote' }
       )
 
       expect(result.exitCode).toBe(1)
@@ -528,7 +626,7 @@ describe('prePush command', () => {
       )
     })
 
-    test('handles initial commit (no parent) by diffing against empty tree', async () => {
+    test('handles initial commit (no parent) by diffing against empty tree (blocks Claude Code Web)', async () => {
       const context = createContextEmulator()
       const fileSystem = createFileSystemEmulator()
       const gitRunner = createMockGitRunner({
@@ -548,7 +646,8 @@ describe('prePush command', () => {
 
       const result = await prePush(
         createDependencies(context, fileSystem, defaultSettings),
-        gitRunner
+        gitRunner,
+        { CLAUDECODE: '1', CLAUDE_CODE_ENTRYPOINT: 'remote' }
       )
 
       expect(result.exitCode).toBe(1)

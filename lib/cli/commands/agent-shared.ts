@@ -4,42 +4,21 @@
  * Provides common functionality used across all agent-* command files.
  */
 
+import { detectAgent } from '../../agents/detection'
 import { createHooksManager } from '../../git/hooks'
 import type { CommandDependencies, DustSettings } from '../types'
-
-/**
- * Detects which agent environment is running based on environment variables.
- *
- * Detection priority:
- * 1. CLAUDECODE + CLAUDE_CODE_ENTRYPOINT=remote → "Claude Code Web"
- * 2. CLAUDECODE alone → "Claude Code"
- * 3. CODEX_HOME → "Codex"
- * 4. Fallback → "Agent"
- */
-export function detectAgent(env: NodeJS.ProcessEnv = process.env): string {
-  if (env.CLAUDECODE) {
-    if (env.CLAUDE_CODE_ENTRYPOINT === 'remote') {
-      return 'Claude Code Web'
-    }
-    return 'Claude Code'
-  }
-  if (env.CODEX_HOME) {
-    return 'Codex'
-  }
-  return 'Agent'
-}
 
 export function templateVariables(
   settings: DustSettings,
   hooksInstalled: boolean,
   env: NodeJS.ProcessEnv = process.env
 ) {
-  const agentName = detectAgent(env)
+  const agent = detectAgent(env)
   return {
     bin: settings.dustCommand,
-    agentName,
+    agentName: agent.name,
     hooksInstalled: hooksInstalled ? 'true' : 'false',
-    isClaudeCodeWeb: agentName === 'Claude Code Web' ? 'true' : '',
+    isClaudeCodeWeb: agent.type === 'claude-code-web' ? 'true' : '',
   }
 }
 
