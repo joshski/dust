@@ -1,42 +1,39 @@
 # Code Review Policies
 
-A generic system for periodic, policy-driven code review that generates tasks rather than blocking commits.
+Built-in periodic review that generates tasks rather than blocking commits.
 
 ## Concept
 
-Review policies are prompts that run against commit history on a configurable cadence. Instead of immediate correction (linting), policies enable latent reflection — observing patterns that emerge over time and creating actionable follow-up work.
+Dust periodically reviews commit history against existing `.dust/` artifacts. Instead of immediate correction (linting), policies enable latent reflection — observing patterns that emerge over time and creating actionable follow-up work.
 
-## Structure
+## Built-in Policies
 
-```
-.dust/policies/
-  goal-alignment.md        # "Do recent changes align with our stated goals?"
-  style-drift.md           # "Are we drifting from our conventions?"
-  technical-debt.md        # "What debt has accumulated?"
-  test-coverage-gaps.md    # "What new code lacks adequate tests?"
-```
+Since dust already understands goals, facts, and ideas, reviews can be automatic:
 
-Each policy file contains a prompt describing what to look for.
+- **Goal alignment**: Do recent commits align with `.dust/goals/`?
+- **Fact staleness**: Do `.dust/facts/` still reflect the codebase?
+- **Idea relevance**: Should any `.dust/ideas/` be promoted or pruned?
+- **Pattern detection**: Are there repeated changes suggesting missing abstractions?
 
 ## Mechanism
 
-1. Track commits since each policy last ran (similar to `periodic-health-check-hook.md`)
-2. When commit threshold is reached, run the policy prompt against recent changes
-3. Policy outputs zero or more tasks to `.dust/tasks/`
+1. Track commits since last review (similar to `periodic-health-check-hook.md`)
+2. When commit threshold is reached, run built-in policies against recent changes
+3. Generate zero or more tasks to `.dust/tasks/`
 
 ## Key Insight
 
 Policies can detect patterns that per-commit linting cannot:
 - "We've accumulated 5 similar utilities that should be unified"
 - "Recent changes have drifted from the dependency injection goal"
-- "Test coverage has declined in the auth module over the last 20 commits"
+- "The authentication fact no longer matches the code"
 
 ## Trade-offs
 
 **Benefits:**
 - Non-blocking — maintains agent flow/velocity
 - Contextual — sees the forest, not just trees
-- Configurable — different projects have different concerns
+- Zero configuration — uses existing `.dust/` structure
 - Asynchronous — reflection happens with broader context
 
 **Risks:**
