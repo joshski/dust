@@ -8,19 +8,11 @@ import {
   detectDustCommand,
   detectTestCommand,
 } from '../../config/settings'
+import { getColors } from '../colors'
 import { loadTemplate } from '../templates'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
 
 const DUST_DIRECTORIES = ['goals', 'ideas', 'tasks', 'facts', 'config']
-
-const colors = {
-  reset: '\x1b[0m',
-  bold: '\x1b[1m',
-  dim: '\x1b[2m',
-  cyan: '\x1b[36m',
-  green: '\x1b[32m',
-  yellow: '\x1b[33m',
-}
 
 /**
  * Generates starter settings based on detected project type.
@@ -47,6 +39,7 @@ export async function init(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
   const { context, fileSystem } = dependencies
+  const colors = getColors()
   const dustPath = `${context.cwd}/.dust`
   const dustCommand = detectDustCommand(context.cwd, fileSystem)
   const agentInstruction = `Always immediately run \`${dustCommand} agent\` when you start working in this repository.`
