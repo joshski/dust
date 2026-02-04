@@ -588,7 +588,7 @@ describe('check command timing display', () => {
     }
     const fileSystem = createFileSystemEmulator()
     // Create a custom runner that simulates slow execution
-    const slowRunner: BufferedProcessRunner = {
+    const slowRunner: ShellRunner = {
       run: async () => {
         // Simulate 1.5 second delay
         await new Promise(resolve => setTimeout(resolve, 1500))
@@ -611,7 +611,7 @@ describe('check command timing display', () => {
     }
     const fileSystem = createFileSystemEmulator()
     // Create a custom runner that simulates slow execution and fails
-    const slowRunner: BufferedProcessRunner = {
+    const slowRunner: ShellRunner = {
       run: async () => {
         // Simulate 1.2 second delay
         await new Promise(resolve => setTimeout(resolve, 1200))
