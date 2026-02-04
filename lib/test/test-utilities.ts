@@ -245,23 +245,38 @@ export function stripAnsi(text: string): string {
 }
 
 /**
+ * Options for createCommandDependencies
+ */
+export interface CommandDependenciesOptions {
+  /** File system tree structure */
+  files?: FileSystemEmulatorOptions
+  /** Command arguments */
+  args?: string[]
+  /** Dust settings */
+  settings?: DustSettings
+}
+
+/**
  * Creates command dependencies for testing, with captured output for assertions.
  *
- * @param settings - Optional DustSettings override
- * @returns Object with context (for assertions) and dependencies (for command invocation)
+ * @param options - Optional configuration for files, args, and settings
+ * @returns Object with context, fileSystem (for assertions), and dependencies (for command invocation)
  */
 export function createCommandDependencies(
-  settings: DustSettings = defaultTestSettings
+  options: CommandDependenciesOptions = {}
 ): {
   context: ContextEmulator
+  fileSystem: FileSystemEmulator
   dependencies: CommandDependencies
 } {
+  const { files = {}, args = [], settings = defaultTestSettings } = options
   const context = createContextEmulator()
-  const fileSystem = createFileSystemEmulator()
+  const fileSystem = createFileSystemEmulator(files)
   return {
     context,
+    fileSystem,
     dependencies: {
-      arguments: [],
+      arguments: args,
       context,
       fileSystem,
       globScanner: fileSystem,

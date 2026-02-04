@@ -1,332 +1,271 @@
 import { describe, expect, test } from 'vitest'
-import {
-  createContextEmulator,
-  createFileSystemEmulator,
-  type FileSystemEmulator,
-} from '../../test/test-utilities'
-import type { CommandContext, CommandDependencies } from '../types'
+import { createCommandDependencies } from '../../test/test-utilities'
 import { list } from './list'
 
-function createDependencies(
-  context: CommandContext,
-  fileSystem: FileSystemEmulator,
-  commandArguments: string[] = []
-): CommandDependencies {
-  return {
-    arguments: commandArguments,
-    context,
-    fileSystem,
-    globScanner: fileSystem,
-    settings: { dustCommand: 'dust' },
-  }
+function output(context: { stdoutLines: string[] }) {
+  return context.stdoutLines.join('\n')
 }
 
 describe('list command', () => {
   test('fails if .dust not found', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator()
+    const { context, dependencies } = createCommandDependencies()
 
-    const result = await list(createDependencies(context, fileSystem))
+    const result = await list(dependencies)
 
     expect(result.exitCode).toBe(1)
-    expect(context.stderrLines.join('\n')).toContain(
-      '.dust directory not found'
-    )
+    expect(context.stderrLines.join('\n')).toContain('.dust directory not found')
   })
 
   test('lists all types when no argument given', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          goals: { 'goal.md': '# My Goal' },
-          ideas: { 'idea.md': '# My Idea' },
-          tasks: { 'task.md': '# My Task' },
-          facts: { 'fact.md': '# My Fact' },
-        },
-      },
-    })
-
-    const result = await list(createDependencies(context, fileSystem))
-
-    expect(result.exitCode).toBe(0)
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain('🎯 Goals')
-    expect(output).toContain('💡 Ideas')
-    expect(output).toContain('📋 Tasks')
-    expect(output).toContain('📄 Facts')
-  })
-
-  test('lists only specified type', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          goals: { 'goal.md': '# My Goal' },
-          ideas: { 'idea.md': '# My Idea' },
-        },
-      },
-    })
-
-    const result = await list(
-      createDependencies(context, fileSystem, ['goals'])
-    )
-
-    expect(result.exitCode).toBe(0)
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain('🎯 Goals')
-    expect(output).not.toContain('💡 Ideas')
-  })
-
-  test('shows relative path and opening sentence', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          goals: {
-            'my-goal.md': '# My Goal Title\n\nThis is the opening sentence.',
+    const { context, dependencies } = createCommandDependencies({
+      files: {
+        project: {
+          '.dust': {
+            goals: { 'goal.md': '# My Goal' },
+            ideas: { 'idea.md': '# My Idea' },
+            tasks: { 'task.md': '# My Task' },
+            facts: { 'fact.md': '# My Fact' },
           },
         },
       },
     })
 
-    await list(createDependencies(context, fileSystem, ['goals']))
+    const result = await list(dependencies)
 
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain('.dust/goals/my-goal.md')
-    expect(output).toContain('This is the opening sentence.')
+    expect(result.exitCode).toBe(0)
+    expect(output(context)).toContain('🎯 Goals')
+    expect(output(context)).toContain('💡 Ideas')
+    expect(output(context)).toContain('📋 Tasks')
+    expect(output(context)).toContain('📄 Facts')
+  })
+
+  test('lists only specified type', async () => {
+    const { context, dependencies } = createCommandDependencies({
+      files: {
+        project: {
+          '.dust': {
+            goals: { 'goal.md': '# My Goal' },
+            ideas: { 'idea.md': '# My Idea' },
+          },
+        },
+      },
+      args: ['goals'],
+    })
+
+    const result = await list(dependencies)
+
+    expect(result.exitCode).toBe(0)
+    expect(output(context)).toContain('🎯 Goals')
+    expect(output(context)).not.toContain('💡 Ideas')
+  })
+
+  test('shows relative path and opening sentence', async () => {
+    const { context, dependencies } = createCommandDependencies({
+      files: {
+        project: {
+          '.dust': {
+            goals: {
+              'my-goal.md': '# My Goal Title\n\nThis is the opening sentence.',
+            },
+          },
+        },
+      },
+      args: ['goals'],
+    })
+
+    await list(dependencies)
+
+    expect(output(context)).toContain('.dust/goals/my-goal.md')
+    expect(output(context)).toContain('This is the opening sentence.')
   })
 
   test('shows only file name if no title', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          goals: { 'my-goal.md': 'No heading here' },
+    const { context, dependencies } = createCommandDependencies({
+      files: {
+        project: {
+          '.dust': {
+            goals: { 'my-goal.md': 'No heading here' },
+          },
         },
       },
+      args: ['goals'],
     })
 
-    await list(createDependencies(context, fileSystem, ['goals']))
+    await list(dependencies)
 
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain('my-goal')
+    expect(output(context)).toContain('my-goal')
   })
 
   test('rejects invalid type', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          goals: { 'g.md': '' },
-        },
-      },
+    const { context, dependencies } = createCommandDependencies({
+      files: { project: { '.dust': { goals: { 'g.md': '' } } } },
+      args: ['invalid'],
     })
 
-    const result = await list(
-      createDependencies(context, fileSystem, ['invalid'])
-    )
+    const result = await list(dependencies)
 
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain('Invalid type')
   })
 
   test('shows valid types on error', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          goals: { 'g.md': '' },
-        },
-      },
+    const { context, dependencies } = createCommandDependencies({
+      files: { project: { '.dust': { goals: { 'g.md': '' } } } },
+      args: ['invalid'],
     })
 
-    await list(createDependencies(context, fileSystem, ['invalid']))
+    await list(dependencies)
 
-    const output = context.stderrLines.join('\n')
-    expect(output).toContain('tasks')
-    expect(output).toContain('ideas')
-    expect(output).toContain('goals')
-    expect(output).toContain('facts')
+    const stderr = context.stderrLines.join('\n')
+    expect(stderr).toContain('tasks')
+    expect(stderr).toContain('ideas')
+    expect(stderr).toContain('goals')
+    expect(stderr).toContain('facts')
   })
 
   test('skips type directories that do not exist', async () => {
-    const context = createContextEmulator()
-    // Only goals directory exists, tasks/ideas/facts do not
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          goals: { 'my-goal.md': '# My Goal' },
+    const { context, dependencies } = createCommandDependencies({
+      files: {
+        project: {
+          '.dust': {
+            goals: { 'my-goal.md': '# My Goal' },
+          },
         },
       },
     })
 
-    const result = await list(createDependencies(context, fileSystem))
+    const result = await list(dependencies)
 
     expect(result.exitCode).toBe(0)
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain('🎯 Goals')
-    expect(output).toContain('My Goal')
-    // Other types should not appear because their directories don't exist
-    expect(output).not.toContain('📋 Tasks')
-    expect(output).not.toContain('💡 Ideas')
-    expect(output).not.toContain('📄 Facts')
+    expect(output(context)).toContain('🎯 Goals')
+    expect(output(context)).toContain('My Goal')
+    expect(output(context)).not.toContain('📋 Tasks')
+    expect(output(context)).not.toContain('💡 Ideas')
+    expect(output(context)).not.toContain('📄 Facts')
   })
 
   test('skips type directories with no markdown files', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          goals: { 'my-goal.md': '# My Goal' },
-          ideas: {},
+    const { context, dependencies } = createCommandDependencies({
+      files: {
+        project: {
+          '.dust': {
+            goals: { 'my-goal.md': '# My Goal' },
+            ideas: {},
+          },
         },
       },
     })
 
-    const result = await list(createDependencies(context, fileSystem))
+    const result = await list(dependencies)
 
     expect(result.exitCode).toBe(0)
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain('🎯 Goals')
-    // ideas exists but has no .md files, so should not be listed
-    expect(output).not.toContain('💡 Ideas')
+    expect(output(context)).toContain('🎯 Goals')
+    expect(output(context)).not.toContain('💡 Ideas')
   })
 
   test('shows "No tasks found." when listing tasks and none exist', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          goals: { 'my-goal.md': '# My Goal' },
+    const { context, dependencies } = createCommandDependencies({
+      files: {
+        project: {
+          '.dust': {
+            goals: { 'my-goal.md': '# My Goal' },
+          },
         },
       },
+      args: ['tasks'],
     })
 
-    const result = await list(
-      createDependencies(context, fileSystem, ['tasks'])
-    )
+    const result = await list(dependencies)
 
     expect(result.exitCode).toBe(0)
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain('📋 Tasks')
-    expect(output).toContain('No tasks found.')
+    expect(output(context)).toContain('📋 Tasks')
+    expect(output(context)).toContain('No tasks found.')
   })
 
   test('shows "No ideas found." when listing ideas and none exist', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          ideas: {},
-        },
-      },
+    const { context, dependencies } = createCommandDependencies({
+      files: { project: { '.dust': { ideas: {} } } },
+      args: ['ideas'],
     })
 
-    const result = await list(
-      createDependencies(context, fileSystem, ['ideas'])
-    )
+    const result = await list(dependencies)
 
     expect(result.exitCode).toBe(0)
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain('💡 Ideas')
-    expect(output).toContain('No ideas found.')
+    expect(output(context)).toContain('💡 Ideas')
+    expect(output(context)).toContain('No ideas found.')
   })
 
   test('shows type explanation for tasks', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          tasks: { 'task.md': '# My Task' },
-        },
-      },
+    const { context, dependencies } = createCommandDependencies({
+      files: { project: { '.dust': { tasks: { 'task.md': '# My Task' } } } },
+      args: ['tasks'],
     })
 
-    await list(createDependencies(context, fileSystem, ['tasks']))
+    await list(dependencies)
 
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain(
+    expect(output(context)).toContain(
       'Tasks are detailed work plans with dependencies and completion criteria'
     )
   })
 
   test('shows type explanation for ideas', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          ideas: { 'idea.md': '# My Idea' },
-        },
-      },
+    const { context, dependencies } = createCommandDependencies({
+      files: { project: { '.dust': { ideas: { 'idea.md': '# My Idea' } } } },
+      args: ['ideas'],
     })
 
-    await list(createDependencies(context, fileSystem, ['ideas']))
+    await list(dependencies)
 
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain('Ideas are future feature notes and proposals')
+    expect(output(context)).toContain(
+      'Ideas are future feature notes and proposals'
+    )
   })
 
   test('shows type explanation for goals', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          goals: { 'goal.md': '# My Goal' },
-        },
-      },
+    const { context, dependencies } = createCommandDependencies({
+      files: { project: { '.dust': { goals: { 'goal.md': '# My Goal' } } } },
+      args: ['goals'],
     })
 
-    await list(createDependencies(context, fileSystem, ['goals']))
+    await list(dependencies)
 
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain(
+    expect(output(context)).toContain(
       'Goals are mission statements and guiding principles'
     )
   })
 
   test('shows type explanation for facts', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          facts: { 'fact.md': '# My Fact' },
-        },
-      },
+    const { context, dependencies } = createCommandDependencies({
+      files: { project: { '.dust': { facts: { 'fact.md': '# My Fact' } } } },
+      args: ['facts'],
     })
 
-    await list(createDependencies(context, fileSystem, ['facts']))
+    await list(dependencies)
 
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain('Facts are current state documentation')
+    expect(output(context)).toContain('Facts are current state documentation')
   })
 
   test('shows type explanation even when no items exist', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          tasks: {},
-        },
-      },
+    const { context, dependencies } = createCommandDependencies({
+      files: { project: { '.dust': { tasks: {} } } },
+      args: ['tasks'],
     })
 
-    await list(createDependencies(context, fileSystem, ['tasks']))
+    await list(dependencies)
 
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain(
+    expect(output(context)).toContain(
       'Tasks are detailed work plans with dependencies and completion criteria'
     )
-    expect(output).toContain('No tasks found.')
+    expect(output(context)).toContain('No tasks found.')
   })
 
   test('shows goal hierarchy with parent and sub-goals', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          goals: {
-            'parent-goal.md': `# Parent Goal
+    const { context, dependencies } = createCommandDependencies({
+      files: {
+        project: {
+          '.dust': {
+            goals: {
+              'parent-goal.md': `# Parent Goal
 
 This is a top-level goal.
 
@@ -338,7 +277,7 @@ This is a top-level goal.
 
 - [Child Goal](child-goal.md)
 `,
-            'child-goal.md': `# Child Goal
+              'child-goal.md': `# Child Goal
 
 This is a child goal.
 
@@ -350,7 +289,7 @@ This is a child goal.
 
 - [Grandchild Goal](grandchild-goal.md)
 `,
-            'grandchild-goal.md': `# Grandchild Goal
+              'grandchild-goal.md': `# Grandchild Goal
 
 This is a grandchild goal.
 
@@ -362,31 +301,31 @@ This is a grandchild goal.
 
 - (none)
 `,
+            },
           },
         },
       },
+      args: ['goals'],
     })
 
-    await list(createDependencies(context, fileSystem, ['goals']))
+    await list(dependencies)
 
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain('Hierarchy:')
-    expect(output).toContain('Parent Goal')
-    expect(output).toContain('Child Goal')
-    expect(output).toContain('Grandchild Goal')
-    // Check tree structure is present (└── for last/only children)
-    expect(output).toContain('└── Parent Goal')
-    expect(output).toContain('└── Child Goal')
-    expect(output).toContain('└── Grandchild Goal')
+    expect(output(context)).toContain('Hierarchy:')
+    expect(output(context)).toContain('Parent Goal')
+    expect(output(context)).toContain('Child Goal')
+    expect(output(context)).toContain('Grandchild Goal')
+    expect(output(context)).toContain('└── Parent Goal')
+    expect(output(context)).toContain('└── Child Goal')
+    expect(output(context)).toContain('└── Grandchild Goal')
   })
 
   test('shows multiple root goals in hierarchy', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          goals: {
-            'root-one.md': `# Root One
+    const { context, dependencies } = createCommandDependencies({
+      files: {
+        project: {
+          '.dust': {
+            goals: {
+              'root-one.md': `# Root One
 
 First root.
 
@@ -398,7 +337,7 @@ First root.
 
 - (none)
 `,
-            'root-two.md': `# Root Two
+              'root-two.md': `# Root Two
 
 Second root.
 
@@ -410,28 +349,28 @@ Second root.
 
 - (none)
 `,
+            },
           },
         },
       },
+      args: ['goals'],
     })
 
-    await list(createDependencies(context, fileSystem, ['goals']))
+    await list(dependencies)
 
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain('Root One')
-    expect(output).toContain('Root Two')
-    // With multiple roots, the first one uses ├── and last uses └──
-    expect(output).toContain('├── Root One')
-    expect(output).toContain('└── Root Two')
+    expect(output(context)).toContain('Root One')
+    expect(output(context)).toContain('Root Two')
+    expect(output(context)).toContain('├── Root One')
+    expect(output(context)).toContain('└── Root Two')
   })
 
   test('handles sub-goal references to non-existent goals gracefully', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          goals: {
-            'parent-goal.md': `# Parent Goal
+    const { context, dependencies } = createCommandDependencies({
+      files: {
+        project: {
+          '.dust': {
+            goals: {
+              'parent-goal.md': `# Parent Goal
 
 This is a parent goal.
 
@@ -443,27 +382,27 @@ This is a parent goal.
 
 - [Non Existent](non-existent-goal.md)
 `,
+            },
           },
         },
       },
+      args: ['goals'],
     })
 
-    await list(createDependencies(context, fileSystem, ['goals']))
+    await list(dependencies)
 
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain('Hierarchy:')
-    expect(output).toContain('Parent Goal')
-    // The non-existent goal should be shown with its basename
-    expect(output).toContain('non-existent-goal')
+    expect(output(context)).toContain('Hierarchy:')
+    expect(output(context)).toContain('Parent Goal')
+    expect(output(context)).toContain('non-existent-goal')
   })
 
   test('does not show hierarchy when all goals have parents', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          goals: {
-            'orphan-goal.md': `# Orphan Goal
+    const { context, dependencies } = createCommandDependencies({
+      files: {
+        project: {
+          '.dust': {
+            goals: {
+              'orphan-goal.md': `# Orphan Goal
 
 This goal has a parent that does not exist.
 
@@ -475,17 +414,17 @@ This goal has a parent that does not exist.
 
 - (none)
 `,
+            },
           },
         },
       },
+      args: ['goals'],
     })
 
-    await list(createDependencies(context, fileSystem, ['goals']))
+    await list(dependencies)
 
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain('🎯 Goals')
-    expect(output).toContain('Orphan Goal')
-    // No hierarchy because no root goals exist
-    expect(output).not.toContain('Hierarchy:')
+    expect(output(context)).toContain('🎯 Goals')
+    expect(output(context)).toContain('Orphan Goal')
+    expect(output(context)).not.toContain('Hierarchy:')
   })
 })
