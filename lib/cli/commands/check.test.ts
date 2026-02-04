@@ -483,7 +483,7 @@ describe('check with validation', () => {
       project: { '.dust': {} },
     })
     fileSystem.readFile = async () =>
-      '# Test\n## Goals\n## Blocked by\n## Definition of done'
+      '# Test\n## Goals\n## Blocked By\n## Definition of Done'
     const bufferedRunner = createMockBufferedRunner({
       'npm run lint': { exitCode: 0, output: '' },
     })
@@ -513,7 +513,7 @@ describe('check with validation', () => {
         '.dust': {
           tasks: {
             'InvalidName.md':
-              '# Test\n## Goals\n## Blocked by\n## Definition of done',
+              '# Test\n## Goals\n## Blocked By\n## Definition of Done',
           },
         },
       },

@@ -119,11 +119,11 @@ test('task list handles tasks with no title gracefully', async () => {
 
 (none)
 
-## Blocked by
+## Blocked By
 
 (none)
 
-## Definition of done
+## Definition of Done
 
 - [ ] Done
 `,

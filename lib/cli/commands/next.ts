@@ -2,7 +2,7 @@
  * dust next - List tasks that are ready to work on
  *
  * Displays tasks from .dust/tasks/ that are not blocked by any incomplete tasks.
- * A task is blocked if its "## Blocked by" section references task files that still exist.
+ * A task is blocked if its "## Blocked By" section references task files that still exist.
  */
 
 import {
@@ -13,9 +13,9 @@ import { getColors } from '../colors'
 import type { CommandDependencies, CommandResult } from '../types'
 
 function extractBlockedBy(content: string): string[] {
-  // Find the "## Blocked by" section
+  // Find the "## Blocked By" section
   const blockedByMatch = content.match(
-    /^## Blocked by\s*\n([\s\S]*?)(?=\n## |\n*$)/m
+    /^## Blocked By\s*\n([\s\S]*?)(?=\n## |\n*$)/m
   )
   if (!blockedByMatch) {
     return []

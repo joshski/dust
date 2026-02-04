@@ -47,11 +47,11 @@ Review and maintain dust planning artifacts.
 
 - [Repository Hygiene](../goals/repository-hygiene.md)
 
-## Blocked by
+## Blocked By
 
 (none)
 
-## Definition of done
+## Definition of Done
 
 - [ ] Run `dust lint markdown` and fix any issues
 - [ ] Review ideas in `.dust/ideas/` - promote, refine, or delete stale ones

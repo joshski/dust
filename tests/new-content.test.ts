@@ -27,7 +27,7 @@ test('agent gets instructions for creating a new task', async () => {
           exitCode: 0,
           // Verify the instructions include key steps
           stdout: expect.stringMatching(
-            /Adding a New Task.*\.dust\/tasks\/.*Definition of done/s
+            /Adding a New Task.*\.dust\/tasks\/.*Definition of Done/s
           ),
         },
       },
