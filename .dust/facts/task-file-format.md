@@ -7,8 +7,8 @@ Task files in `.dust/tasks/` must follow a specific structure.
 Every task file must contain these three headings in any order:
 
 - `## Goals` - Links to goal documents this task supports
-- `## Blocked by` - Links to tasks that must complete first (can be empty)
-- `## Definition of done` - Criteria for determining task completion
+- `## Blocked By` - Links to tasks that must complete first (can be empty)
+- `## Definition of Done` - Criteria for determining task completion
 
 ## Naming Convention
 

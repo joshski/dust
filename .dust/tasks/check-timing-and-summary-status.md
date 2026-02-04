@@ -45,11 +45,11 @@ Update `lib/cli/commands/check.test.ts`:
 - [Fast Feedback](../goals/fast-feedback.md)
 - [Progressive Disclosure](../goals/progressive-disclosure.md)
 
-## Blocked by
+## Blocked By
 
 (none)
 
-## Definition of done
+## Definition of Done
 
 - [ ] `CheckResult` interface includes `durationMs` field
 - [ ] Check timing is tracked for both configured checks and built-in validation

@@ -58,11 +58,11 @@ ${descriptionSection}
 
 ${formatLinks(goals)}
 
-## Blocked by
+## Blocked By
 
 ${formatLinks(blockedBy)}
 
-## Definition of done
+## Definition of Done
 
 ${formatChecklist(definitionOfDone)}
 `

@@ -18,7 +18,7 @@ import type {
 // Re-export for backwards compatibility
 export type { GlobScanner }
 
-const REQUIRED_HEADINGS = ['## Goals', '## Blocked by', '## Definition of done']
+const REQUIRED_HEADINGS = ['## Goals', '## Blocked By', '## Definition of Done']
 const REQUIRED_GOAL_HEADINGS = ['## Parent Goal', '## Sub-Goals']
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.md$/
@@ -185,7 +185,7 @@ const SEMANTIC_RULES: SemanticRule[] = [
     description: 'goal',
   },
   {
-    section: '## Blocked by',
+    section: '## Blocked By',
     requiredPath: '/.dust/tasks/',
     description: 'task',
   },

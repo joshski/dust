@@ -273,7 +273,7 @@ describe('prePush command', () => {
         project: { '.dust': {} },
       })
       fileSystem.readFile = async () =>
-        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+        '# Test\n## Goals\n## Blocked By\n## Definition of Done'
       const gitRunner = createMockGitRunner({
         'status --porcelain': {
           exitCode: 0,
@@ -303,7 +303,7 @@ describe('prePush command', () => {
         project: { '.dust': {} },
       })
       fileSystem.readFile = async () =>
-        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+        '# Test\n## Goals\n## Blocked By\n## Definition of Done'
       const gitRunner = createMockGitRunner({
         'rev-list HEAD --not --remotes': {
           exitCode: 0,
@@ -359,7 +359,7 @@ describe('prePush command', () => {
         project: { '.dust': {} },
       })
       fileSystem.readFile = async () =>
-        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+        '# Test\n## Goals\n## Blocked By\n## Definition of Done'
       const gitRunner = createMockGitRunner({
         'status --porcelain': {
           exitCode: 1,
@@ -535,7 +535,7 @@ describe('prePush command', () => {
         project: { '.dust': {} },
       })
       fileSystem.readFile = async () =>
-        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+        '# Test\n## Goals\n## Blocked By\n## Definition of Done'
       const gitRunner = createMockGitRunner({
         'rev-list HEAD --not --remotes': {
           exitCode: 0,
@@ -564,7 +564,7 @@ describe('prePush command', () => {
         project: { '.dust': {} },
       })
       fileSystem.readFile = async () =>
-        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+        '# Test\n## Goals\n## Blocked By\n## Definition of Done'
       const gitRunner = createMockGitRunner({
         'rev-list HEAD --not --remotes': {
           exitCode: 0,
@@ -593,7 +593,7 @@ describe('prePush command', () => {
         project: { '.dust': {} },
       })
       fileSystem.readFile = async () =>
-        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+        '# Test\n## Goals\n## Blocked By\n## Definition of Done'
       const gitRunner = createMockGitRunner({
         'rev-list HEAD --not --remotes': {
           exitCode: 0,
@@ -624,7 +624,7 @@ describe('prePush command', () => {
         project: { '.dust': {} },
       })
       fileSystem.readFile = async () =>
-        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+        '# Test\n## Goals\n## Blocked By\n## Definition of Done'
       const gitRunner = createMockGitRunner({
         'rev-list HEAD --not --remotes': {
           exitCode: 0,
@@ -658,7 +658,7 @@ describe('prePush command', () => {
         project: { '.dust': {} },
       })
       fileSystem.readFile = async () =>
-        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+        '# Test\n## Goals\n## Blocked By\n## Definition of Done'
       const gitRunner = createMockGitRunner({
         'rev-list HEAD --not --remotes': {
           exitCode: 0,
@@ -686,7 +686,7 @@ describe('prePush command', () => {
         project: { '.dust': {} },
       })
       fileSystem.readFile = async () =>
-        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+        '# Test\n## Goals\n## Blocked By\n## Definition of Done'
       const gitRunner = createMockGitRunner({
         'rev-list HEAD --not --remotes': {
           exitCode: 0,
@@ -719,7 +719,7 @@ describe('prePush command', () => {
         project: { '.dust': {} },
       })
       fileSystem.readFile = async () =>
-        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+        '# Test\n## Goals\n## Blocked By\n## Definition of Done'
       const gitRunner = createMockGitRunner({
         'rev-list HEAD --not --remotes': {
           exitCode: 0,
@@ -744,7 +744,7 @@ describe('prePush command', () => {
         project: { '.dust': {} },
       })
       fileSystem.readFile = async () =>
-        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+        '# Test\n## Goals\n## Blocked By\n## Definition of Done'
       const gitRunner = createMockGitRunner({
         'rev-list HEAD --not --remotes': {
           exitCode: 1,
@@ -769,7 +769,7 @@ describe('prePush command', () => {
         project: { '.dust': {} },
       })
       fileSystem.readFile = async () =>
-        '# Test\n## Goals\n## Blocked by\n## Definition of done'
+        '# Test\n## Goals\n## Blocked By\n## Definition of Done'
       const gitRunner = createMockGitRunner({
         'rev-list HEAD --not --remotes': {
           exitCode: 0,

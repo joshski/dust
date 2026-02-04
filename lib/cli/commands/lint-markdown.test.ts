@@ -213,8 +213,8 @@ describe('validateTaskHeadings', () => {
   test('returns no violations for valid task', () => {
     const content = `# Task
 ## Goals
-## Blocked by
-## Definition of done`
+## Blocked By
+## Definition of Done`
 
     const violations = validateTaskHeadings('task.md', content)
     expect(violations).toHaveLength(0)
@@ -305,8 +305,8 @@ describe('validateSemanticLinks', () => {
     const content = `# Task
 ## Goals
 [Goal](../goals/my-goal.md)
-## Blocked by
-## Definition of done`
+## Blocked By
+## Definition of Done`
 
     const violations = validateSemanticLinks(
       '/project/.dust/tasks/task.md',
@@ -319,8 +319,8 @@ describe('validateSemanticLinks', () => {
     const content = `# Task
 ## Goals
 [Task](../tasks/other-task.md)
-## Blocked by
-## Definition of done`
+## Blocked By
+## Definition of Done`
 
     const violations = validateSemanticLinks(
       '/project/.dust/tasks/task.md',
@@ -335,9 +335,9 @@ describe('validateSemanticLinks', () => {
   test('returns no violations when Blocked by link points to tasks directory', () => {
     const content = `# Task
 ## Goals
-## Blocked by
+## Blocked By
 [Blocker](../tasks/blocker-task.md)
-## Definition of done`
+## Definition of Done`
 
     const violations = validateSemanticLinks(
       '/project/.dust/tasks/task.md',
@@ -349,16 +349,16 @@ describe('validateSemanticLinks', () => {
   test('returns violation when Blocked by link points to goals directory', () => {
     const content = `# Task
 ## Goals
-## Blocked by
+## Blocked By
 [Goal](../goals/my-goal.md)
-## Definition of done`
+## Definition of Done`
 
     const violations = validateSemanticLinks(
       '/project/.dust/tasks/task.md',
       content
     )
     expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('## Blocked by')
+    expect(violations[0].message).toContain('## Blocked By')
     expect(violations[0].message).toContain('task file')
     expect(violations[0].line).toBe(4)
   })
@@ -367,8 +367,8 @@ describe('validateSemanticLinks', () => {
     const content = `# Task
 ## Goals
 [External](https://example.com)
-## Blocked by
-## Definition of done`
+## Blocked By
+## Definition of Done`
 
     const violations = validateSemanticLinks(
       '/project/.dust/tasks/task.md',
@@ -384,8 +384,8 @@ describe('validateSemanticLinks', () => {
     const content = `# Task
 ## Goals
 [Section](#section)
-## Blocked by
-## Definition of done`
+## Blocked By
+## Definition of Done`
 
     const violations = validateSemanticLinks(
       '/project/.dust/tasks/task.md',
@@ -400,8 +400,8 @@ describe('validateSemanticLinks', () => {
   test('ignores links in other sections', () => {
     const content = `# Task
 ## Goals
-## Blocked by
-## Definition of done
+## Blocked By
+## Definition of Done
 [Any Link](../random/file.md)`
 
     const violations = validateSemanticLinks(
@@ -417,8 +417,8 @@ describe('validateSemanticLinks', () => {
 [Goal1](../goals/goal1.md)
 [Goal2](../tasks/wrong.md)
 [Goal3](../goals/goal3.md)
-## Blocked by
-## Definition of done`
+## Blocked By
+## Definition of Done`
 
     const violations = validateSemanticLinks(
       '/project/.dust/tasks/task.md',
@@ -468,8 +468,8 @@ This is a task.
 
 ## Goals
 [Goal](../goals/goal.md)
-## Blocked by
-## Definition of done`,
+## Blocked By
+## Definition of Done`,
           },
         },
       },
@@ -505,8 +505,8 @@ This is a task.
           tasks: {
             'BadFileName.md': `# Task
 ## Goals
-## Blocked by
-## Definition of done`,
+## Blocked By
+## Definition of Done`,
           },
         },
       },
@@ -546,8 +546,8 @@ This is a goal.
 This is a task.
 
 ## Goals
-## Blocked by
-## Definition of done`,
+## Blocked By
+## Definition of Done`,
             README: '',
           },
           'some-file.txt': '',
@@ -571,8 +571,8 @@ This is a task.
             'my-task.md': `# Task
 ## Goals
 [Broken](../missing.md)
-## Blocked by
-## Definition of done`,
+## Blocked By
+## Definition of Done`,
           },
         },
       },
@@ -594,8 +594,8 @@ This is a task.
           tasks: {
             'BadName.md': `# Task
 ## Goals
-## Blocked by
-## Definition of done`,
+## Blocked By
+## Definition of Done`,
           },
         },
       },
@@ -679,8 +679,8 @@ This is a goal.
             'my-task.md': `# Task
 ## Goals
 [Wrong](../tasks/other-task.md)
-## Blocked by
-## Definition of done`,
+## Blocked By
+## Definition of Done`,
           },
         },
       },
@@ -703,9 +703,9 @@ This is a goal.
           tasks: {
             'my-task.md': `# Task
 ## Goals
-## Blocked by
+## Blocked By
 [Wrong](../goals/goal.md)
-## Definition of done`,
+## Definition of Done`,
           },
         },
       },
@@ -715,7 +715,7 @@ This is a goal.
 
     expect(result.exitCode).toBe(1)
     const output = context.stderrLines.join('\n')
-    expect(output).toContain('## Blocked by')
+    expect(output).toContain('## Blocked By')
     expect(output).toContain('task file')
   })
 })

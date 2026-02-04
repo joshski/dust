@@ -89,7 +89,7 @@ describe('next command', () => {
         '.dust': {
           tasks: {
             'blocked-task.md':
-              '# Blocked Task\n\n## Blocked by\n\n- [Blocker](blocker-task.md)',
+              '# Blocked Task\n\n## Blocked By\n\n- [Blocker](blocker-task.md)',
             'blocker-task.md': '# Blocker Task\n\nDo first.',
           },
         },
@@ -112,7 +112,7 @@ describe('next command', () => {
         '.dust': {
           tasks: {
             'unblocked-task.md':
-              '# Unblocked Task\n\nThis task is now unblocked.\n\n## Blocked by\n\n- [Completed Task](completed-task.md)',
+              '# Unblocked Task\n\nThis task is now unblocked.\n\n## Blocked By\n\n- [Completed Task](completed-task.md)',
           },
         },
       },
@@ -134,7 +134,7 @@ describe('next command', () => {
         '.dust': {
           tasks: {
             'ready-task.md':
-              '# Ready Task\n\nThis task is ready to work on.\n\n## Blocked by\n\n(none)',
+              '# Ready Task\n\nThis task is ready to work on.\n\n## Blocked By\n\n(none)',
           },
         },
       },
@@ -174,8 +174,8 @@ describe('next command', () => {
       project: {
         '.dust': {
           tasks: {
-            'task-a.md': '# Task A\n\n## Blocked by\n\n- [Task B](task-b.md)',
-            'task-b.md': '# Task B\n\n## Blocked by\n\n- [Task A](task-a.md)',
+            'task-a.md': '# Task A\n\n## Blocked By\n\n- [Task B](task-b.md)',
+            'task-b.md': '# Task B\n\n## Blocked By\n\n- [Task A](task-a.md)',
           },
         },
       },
@@ -195,7 +195,7 @@ describe('next command', () => {
         '.dust': {
           tasks: {
             'multi-blocked.md':
-              '# Multi Blocked\n\n## Blocked by\n\n- [Done](done.md), [Still Exists](still-exists.md)',
+              '# Multi Blocked\n\n## Blocked By\n\n- [Done](done.md), [Still Exists](still-exists.md)',
             'still-exists.md': '# Still Exists',
           },
         },
