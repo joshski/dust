@@ -12,6 +12,8 @@ interface Colors {
   bold: string
   dim: string
   cyan: string
+  green: string
+  yellow: string
 }
 
 const ANSI_COLORS: Colors = {
@@ -19,6 +21,8 @@ const ANSI_COLORS: Colors = {
   bold: '\x1b[1m',
   dim: '\x1b[2m',
   cyan: '\x1b[36m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
 }
 
 const NO_COLORS: Colors = {
@@ -26,6 +30,8 @@ const NO_COLORS: Colors = {
   bold: '',
   dim: '',
   cyan: '',
+  green: '',
+  yellow: '',
 }
 
 /**

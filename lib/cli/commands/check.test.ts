@@ -6,20 +6,17 @@ import {
   createFileSystemEmulator,
   type FileSystemEmulator,
 } from '../../test/test-utilities'
+import { createShellRunner, type ShellRunner } from '../process-runner'
 import type {
   CommandContext,
   CommandDependencies,
   DustSettings,
 } from '../types'
-import {
-  type BufferedProcessRunner,
-  check,
-  createBufferedRunner,
-} from './check'
+import { check } from './check'
 
 function createMockBufferedRunner(
   results: Record<string, { exitCode: number; output: string }>
-): BufferedProcessRunner & {
+): ShellRunner & {
   calls: Array<{ command: string; cwd: string; startTime: number }>
 } {
   const calls: Array<{ command: string; cwd: string; startTime: number }> = []
@@ -375,7 +372,7 @@ describe('check command when no checks configured', () => {
   })
 })
 
-describe('createBufferedRunner', () => {
+describe('createShellRunner', () => {
   test('captures stdout and stderr', async () => {
     const mockProc = new EventEmitter() as EventEmitter & {
       stdout: EventEmitter
@@ -385,7 +382,7 @@ describe('createBufferedRunner', () => {
     mockProc.stderr = new EventEmitter()
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
-    const runner = createBufferedRunner(mockSpawn)
+    const runner = createShellRunner(mockSpawn)
 
     const promise = runner.run('cmd', '/')
     mockProc.stdout.emit('data', Buffer.from('stdout output\n'))
@@ -406,7 +403,7 @@ describe('createBufferedRunner', () => {
     mockProc.stderr = new EventEmitter()
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
-    const runner = createBufferedRunner(mockSpawn)
+    const runner = createShellRunner(mockSpawn)
 
     const promise = runner.run('cmd', '/')
     mockProc.emit('close', 42)
@@ -424,7 +421,7 @@ describe('createBufferedRunner', () => {
     mockProc.stderr = new EventEmitter()
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
-    const runner = createBufferedRunner(mockSpawn)
+    const runner = createShellRunner(mockSpawn)
 
     const promise = runner.run('cmd', '/')
     mockProc.emit('close', null)
@@ -442,7 +439,7 @@ describe('createBufferedRunner', () => {
     mockProc.stderr = new EventEmitter()
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
-    const runner = createBufferedRunner(mockSpawn)
+    const runner = createShellRunner(mockSpawn)
 
     const promise = runner.run('cmd', '/')
     mockProc.emit('error', new Error('spawn failed'))
@@ -461,7 +458,7 @@ describe('createBufferedRunner', () => {
     mockProc.stderr = null
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
-    const runner = createBufferedRunner(mockSpawn)
+    const runner = createShellRunner(mockSpawn)
 
     const promise = runner.run('cmd', '/')
     mockProc.emit('close', 0)

@@ -6,6 +6,7 @@ import {
   createFileSystemEmulator,
   type FileSystemEmulator,
 } from '../../test/test-utilities'
+import { createGitRunner, type GitRunner } from '../process-runner'
 import type {
   CommandContext,
   CommandDependencies,
@@ -13,9 +14,7 @@ import type {
 } from '../types'
 import {
   analyzeChangesForTaskOnlyPattern,
-  createGitRunner,
   type FileChange,
-  type GitRunner,
   parseGitDiffNameStatus,
   prePush,
 } from './pre-push'

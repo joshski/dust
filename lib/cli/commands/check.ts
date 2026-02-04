@@ -5,7 +5,7 @@
  * in parallel with buffered output.
  */
 
-import { type ChildProcess, spawn } from 'node:child_process'
+import { defaultShellRunner, type ShellRunner } from '../process-runner'
 import type {
   CheckConfig,
   CommandContext,
@@ -24,51 +24,10 @@ export interface CheckResult {
   durationMs?: number
 }
 
-export interface BufferedProcessRunner {
-  run: (
-    command: string,
-    cwd: string
-  ) => Promise<{ exitCode: number; output: string }>
-}
-
-export type SpawnFn = (
-  command: string,
-  commandArguments: string[],
-  options: { cwd: string; shell?: boolean }
-) => ChildProcess
-
-export function createBufferedRunner(spawnFn: SpawnFn): BufferedProcessRunner {
-  return {
-    run: (command, cwd) => {
-      return new Promise(resolve => {
-        const proc = spawnFn(command, [], { cwd, shell: true })
-        const chunks: string[] = []
-
-        proc.stdout?.on('data', (data: Buffer) => {
-          chunks.push(data.toString())
-        })
-        proc.stderr?.on('data', (data: Buffer) => {
-          chunks.push(data.toString())
-        })
-
-        proc.on('close', code => {
-          resolve({ exitCode: code ?? 1, output: chunks.join('') })
-        })
-        proc.on('error', error => {
-          resolve({ exitCode: 1, output: error.message })
-        })
-      })
-    },
-  }
-}
-
-export const defaultBufferedRunner: BufferedProcessRunner =
-  createBufferedRunner(spawn)
-
 async function runConfiguredChecks(
   checks: CheckConfig[],
   cwd: string,
-  runner: BufferedProcessRunner
+  runner: ShellRunner
 ): Promise<CheckResult[]> {
   const promises = checks.map(async check => {
     const startTime = Date.now()
@@ -162,7 +121,7 @@ function displayResults(
 
 export async function check(
   dependencies: CommandDependencies,
-  bufferedRunner: BufferedProcessRunner = defaultBufferedRunner
+  shellRunner: ShellRunner = defaultShellRunner
 ): Promise<CommandResult> {
   const { context, fileSystem, settings } = dependencies
 
@@ -190,7 +149,7 @@ export async function check(
 
   // Add configured checks
   checkPromises.push(
-    runConfiguredChecks(settings.checks, context.cwd, bufferedRunner)
+    runConfiguredChecks(settings.checks, context.cwd, shellRunner)
   )
 
   const promiseResults = await Promise.all(checkPromises)

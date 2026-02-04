@@ -6,53 +6,10 @@
  * (with optional idea deletions) and reminds them to implement the task.
  */
 
-import { type ChildProcess, spawn } from 'node:child_process'
 import { detectAgent } from '../../agents/detection'
+import { defaultGitRunner, type GitRunner } from '../process-runner'
 import type { CommandDependencies, CommandResult } from '../types'
 import { check } from './check'
-
-/**
- * Interface for running git commands (allows testing)
- */
-export interface GitRunner {
-  run: (
-    gitArguments: string[],
-    cwd: string
-  ) => Promise<{ exitCode: number; output: string }>
-}
-
-export type SpawnFn = (
-  command: string,
-  commandArguments: string[],
-  options: { cwd: string }
-) => ChildProcess
-
-export function createGitRunner(spawnFn: SpawnFn): GitRunner {
-  return {
-    run: (gitArguments, cwd) => {
-      return new Promise(resolve => {
-        const proc = spawnFn('git', gitArguments, { cwd })
-        const chunks: string[] = []
-
-        proc.stdout?.on('data', (data: Buffer) => {
-          chunks.push(data.toString())
-        })
-        proc.stderr?.on('data', (data: Buffer) => {
-          chunks.push(data.toString())
-        })
-
-        proc.on('close', code => {
-          resolve({ exitCode: code ?? 1, output: chunks.join('') })
-        })
-        proc.on('error', error => {
-          resolve({ exitCode: 1, output: error.message })
-        })
-      })
-    },
-  }
-}
-
-export const defaultGitRunner: GitRunner = createGitRunner(spawn)
 
 /**
  * Represents a file change in a commit
