@@ -1,4 +1,10 @@
 🤖 Hello {{agentName}}, welcome to dust!
+{{#if agentInstructions}}
+
+## Project Instructions
+
+{{agentInstructions}}
+{{/if}}
 
 CRITICAL: You MUST run exactly ONE of the commands below before doing anything else.
 

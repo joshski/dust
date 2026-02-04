@@ -6,15 +6,23 @@
 
 import { loadTemplate } from '../templates'
 import type { CommandDependencies, CommandResult } from '../types'
-import { manageGitHooks, templateVariables } from './agent-shared'
+import {
+  manageGitHooks,
+  templateVariablesWithInstructions,
+} from './agent-shared'
 
 export async function agent(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
-  const { context, settings } = dependencies
+  const { context, fileSystem, settings } = dependencies
   const hooksInstalled = await manageGitHooks(dependencies)
 
-  const vars = templateVariables(settings, hooksInstalled)
+  const vars = await templateVariablesWithInstructions(
+    context.cwd,
+    fileSystem,
+    settings,
+    hooksInstalled
+  )
   context.stdout(loadTemplate('agent-greeting', vars))
 
   return { exitCode: 0 }
