@@ -10,4 +10,5 @@ Decoupled code is easier to test, understand, and modify. Dependencies are passe
 
 ## Sub-Goals
 
+- [Dependency Injection](dependency-injection.md)
 - [Stubs Over Mocks](stubs-over-mocks.md)
