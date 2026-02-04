@@ -26,8 +26,8 @@ Example output:
 
 Modify the summary line to include a visual pass/fail indicator:
 
-- All passed: `3/3 checks passed ✓`
-- Any failed: `2/3 checks passed ✗`
+- All passed: `✓ 3/3 checks passed`
+- Any failed: `✗ 2/3 checks passed`
 
 ### Test updates
 
