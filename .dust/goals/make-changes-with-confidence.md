@@ -16,3 +16,4 @@ Tests, type checking, and other automated verification enable safe refactoring a
 - [Lint Everything](lint-everything.md)
 - [Readable Test Data](readable-test-data.md)
 - [Test Isolation](test-isolation.md)
+- [Unit Test Coverage](unit-test-coverage.md)
