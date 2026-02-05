@@ -649,16 +649,24 @@ describe('formatEvent', () => {
     expect(result).toBeNull()
   })
 
+  test('returns null for loop.checking_tasks', () => {
+    const result = formatEvent({ type: 'loop.checking_tasks' })
+    expect(result).toBeNull()
+  })
+
   test('returns string for other event types', () => {
-    expect(formatEvent({ type: 'loop.syncing' })).toBe(
-      '🔄 Syncing with remote...'
-    )
+    expect(formatEvent({ type: 'loop.syncing' })).toBe('🌍 Syncing with remote')
     expect(formatEvent({ type: 'loop.started', maxIterations: 5 })).toBe(
       '🔄 Starting dust loop claude (max 5 iterations)...'
     )
     expect(formatEvent({ type: 'claude.started' })).toBe(
       '🤖 Claude session started'
     )
+  })
+
+  test('returns no_tasks message with trailing newline', () => {
+    const result = formatEvent({ type: 'loop.no_tasks' })
+    expect(result).toBe('😴 No tasks available. Sleeping...\n')
   })
 })
 

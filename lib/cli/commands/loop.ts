@@ -103,13 +103,13 @@ export function formatEvent(event: DustWireEvent): string | null {
     case 'loop.started':
       return `🔄 Starting dust loop claude (max ${event.maxIterations} iterations)...`
     case 'loop.syncing':
-      return '🔄 Syncing with remote...'
+      return '🌍 Syncing with remote'
     case 'loop.sync_skipped':
       return `Note: git pull skipped (${event.reason})`
     case 'loop.checking_tasks':
-      return '🔍 Checking for available tasks...'
+      return null
     case 'loop.no_tasks':
-      return '💤 No tasks available. Sleeping...'
+      return '😴 No tasks available. Sleeping...\n'
     case 'loop.tasks_found':
       return '✨ Found task(s). 🤖 Starting Claude...'
     case 'claude.started':
