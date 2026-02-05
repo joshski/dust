@@ -84,7 +84,12 @@ describe('init command', () => {
   test('shows notification when .dust already exists', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
-      project: { '.dust': {} },
+      project: {
+        '.dust': {
+          facts: { 'use-dust-for-planning.md': '# Existing fact' },
+          config: { 'settings.json': '{}' },
+        },
+      },
     })
     const dependencies: CommandDependencies = {
       arguments: [],
@@ -501,5 +506,105 @@ describe('init command', () => {
     const output = stripAnsi(context.stdoutLines.join('\n'))
     expect(output).toContain('> pnpx claude')
     expect(output).toContain('> pnpx codex')
+  })
+
+  test('rethrows non-EEXIST errors when writing fact file', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
+    fileSystem.writeFile = async () => {
+      const error = new Error('EACCES: permission denied')
+      ;(error as NodeJS.ErrnoException).code = 'EACCES'
+      throw error
+    }
+    const dependencies: CommandDependencies = {
+      arguments: [],
+      context,
+      fileSystem,
+      globScanner: fileSystem,
+      settings: { dustCommand: 'dust' },
+    }
+
+    await expect(init(dependencies)).rejects.toThrow('EACCES')
+  })
+
+  test('rethrows non-EEXIST errors when writing settings.json', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
+    let callCount = 0
+    const originalWriteFile = fileSystem.writeFile.bind(fileSystem)
+    fileSystem.writeFile = async (path, content, options) => {
+      callCount++
+      // Let the first write (fact file) succeed
+      if (callCount === 1) {
+        return originalWriteFile(path, content, options)
+      }
+      // Second write (settings.json) throws a permission error
+      const error = new Error('EACCES: permission denied')
+      ;(error as NodeJS.ErrnoException).code = 'EACCES'
+      throw error
+    }
+    const dependencies: CommandDependencies = {
+      arguments: [],
+      context,
+      fileSystem,
+      globScanner: fileSystem,
+      settings: { dustCommand: 'dust' },
+    }
+
+    await expect(init(dependencies)).rejects.toThrow('EACCES')
+  })
+
+  test('rethrows non-EEXIST errors when writing CLAUDE.md', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
+    let callCount = 0
+    const originalWriteFile = fileSystem.writeFile.bind(fileSystem)
+    fileSystem.writeFile = async (path, content, options) => {
+      callCount++
+      // Let the first two writes (fact file and settings.json) succeed
+      if (callCount <= 2) {
+        return originalWriteFile(path, content, options)
+      }
+      // Third write (CLAUDE.md) throws a permission error
+      const error = new Error('EACCES: permission denied')
+      ;(error as NodeJS.ErrnoException).code = 'EACCES'
+      throw error
+    }
+    const dependencies: CommandDependencies = {
+      arguments: [],
+      context,
+      fileSystem,
+      globScanner: fileSystem,
+      settings: { dustCommand: 'dust' },
+    }
+
+    await expect(init(dependencies)).rejects.toThrow('EACCES')
+  })
+
+  test('rethrows non-EEXIST errors when writing AGENTS.md', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
+    let callCount = 0
+    const originalWriteFile = fileSystem.writeFile.bind(fileSystem)
+    fileSystem.writeFile = async (path, content, options) => {
+      callCount++
+      // Let the first three writes succeed
+      if (callCount <= 3) {
+        return originalWriteFile(path, content, options)
+      }
+      // Fourth write (AGENTS.md) throws a permission error
+      const error = new Error('EACCES: permission denied')
+      ;(error as NodeJS.ErrnoException).code = 'EACCES'
+      throw error
+    }
+    const dependencies: CommandDependencies = {
+      arguments: [],
+      context,
+      fileSystem,
+      globScanner: fileSystem,
+      settings: { dustCommand: 'dust' },
+    }
+
+    await expect(init(dependencies)).rejects.toThrow('EACCES')
   })
 })

@@ -12,10 +12,18 @@ export interface CommandResult {
   exitCode: number
 }
 
+export interface WriteOptions {
+  flag?: 'w' | 'wx' // 'w' = overwrite (default), 'wx' = exclusive create (fail if exists)
+}
+
 export interface FileSystem {
   exists: (path: string) => boolean
   readFile: (path: string) => Promise<string>
-  writeFile: (path: string, content: string) => Promise<void>
+  writeFile: (
+    path: string,
+    content: string,
+    options?: WriteOptions
+  ) => Promise<void>
   mkdir: (path: string, options?: { recursive?: boolean }) => Promise<void>
   readdir: (path: string) => Promise<string[]>
   chmod: (path: string, mode: number) => Promise<void>

@@ -1384,4 +1384,275 @@ This is a goal.
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain('All validations passed')
   })
+
+  test('rethrows non-ENOENT errors when reading files in .dust root', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          'readme.md': '# Readme',
+        },
+      },
+    })
+    const originalReadFile = fileSystem.readFile.bind(fileSystem)
+    fileSystem.readFile = async (path: string) => {
+      if (path.endsWith('.md')) {
+        throw new Error('Permission denied')
+      }
+      return originalReadFile(path)
+    }
+
+    await expect(
+      lintMarkdown(createDependencies(context, fileSystem))
+    ).rejects.toThrow('Permission denied')
+  })
+
+  test('skips files that disappear in .dust root (ENOENT)', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          'readme.md': '# Readme',
+        },
+      },
+    })
+    const originalReadFile = fileSystem.readFile.bind(fileSystem)
+    fileSystem.readFile = async (path: string) => {
+      if (path.endsWith('.md') && path.includes('.dust')) {
+        const error = new Error('ENOENT: file deleted')
+        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
+        throw error
+      }
+      return originalReadFile(path)
+    }
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+    expect(result.exitCode).toBe(0)
+  })
+
+  test('rethrows non-ENOENT errors when reading content files in subdirs', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'idea.md': '# Idea',
+          },
+        },
+      },
+    })
+    const originalReadFile = fileSystem.readFile.bind(fileSystem)
+    let ideaReadCount = 0
+    fileSystem.readFile = async (path: string) => {
+      if (path.includes('/ideas/')) {
+        ideaReadCount++
+        // Ideas are read at:
+        // 1. Line 544: .dust root links validation
+        // 2. Line 568: content validation
+        // Throw on the 2nd read (content validation) to hit line 574
+        if (ideaReadCount === 2) {
+          throw new Error('Permission denied')
+        }
+      }
+      return originalReadFile(path)
+    }
+
+    await expect(
+      lintMarkdown(createDependencies(context, fileSystem))
+    ).rejects.toThrow('Permission denied')
+  })
+
+  test('skips content files that disappear between scan and read (ENOENT)', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'idea.md': '# Idea\n\nThis is an idea.',
+          },
+        },
+      },
+    })
+    const originalReadFile = fileSystem.readFile.bind(fileSystem)
+    let ideaReadCount = 0
+    fileSystem.readFile = async (path: string) => {
+      if (path.includes('/ideas/')) {
+        ideaReadCount++
+        // Throw ENOENT on the 2nd read (content validation) to hit lines 571-572
+        if (ideaReadCount === 2) {
+          const error = new Error('ENOENT: file deleted')
+          ;(error as NodeJS.ErrnoException).code = 'ENOENT'
+          throw error
+        }
+      }
+      return originalReadFile(path)
+    }
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+    expect(result.exitCode).toBe(0)
+  })
+
+  test('rethrows non-ENOENT errors when scanning directories', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {},
+        },
+      },
+    })
+    // Make the scan function throw a non-ENOENT error
+    // biome-ignore lint/correctness/useYield: Intentionally throwing before yielding to test error handling
+    fileSystem.scan = async function* () {
+      throw new Error('Permission denied')
+    }
+
+    await expect(
+      lintMarkdown(createDependencies(context, fileSystem))
+    ).rejects.toThrow('Permission denied')
+  })
+
+  test('rethrows non-ENOENT errors when reading task files during task validation', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md': '# Task',
+          },
+        },
+      },
+    })
+    const originalReadFile = fileSystem.readFile.bind(fileSystem)
+    let taskReadCount = 0
+    fileSystem.readFile = async (path: string) => {
+      if (path.includes('/tasks/')) {
+        taskReadCount++
+        // Task files are read 3 times:
+        // 1. Line 544: .dust root links validation
+        // 2. Line 568: content validation
+        // 3. Line 615: task-specific validation
+        // We want to throw non-ENOENT on the 3rd read to test line 621
+        if (taskReadCount === 3) {
+          throw new Error('Permission denied')
+        }
+      }
+      return originalReadFile(path)
+    }
+
+    await expect(
+      lintMarkdown(createDependencies(context, fileSystem))
+    ).rejects.toThrow('Permission denied')
+  })
+
+  test('rethrows non-ENOENT errors when reading goal files during goal hierarchy validation', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md':
+              '# Goal\n\nThis is a goal.\n\n## Parent Goal\n\n## Sub-Goals\n',
+          },
+        },
+      },
+    })
+    const originalReadFile = fileSystem.readFile.bind(fileSystem)
+    let goalReadCount = 0
+    fileSystem.readFile = async (path: string) => {
+      if (path.includes('/goals/')) {
+        goalReadCount++
+        // Goal files are read 3 times:
+        // 1. Line 544: .dust root links validation
+        // 2. Line 568: content validation
+        // 3. Line 648: goal hierarchy validation
+        // We want to throw non-ENOENT on the 3rd read to test line 654
+        if (goalReadCount === 3) {
+          throw new Error('Permission denied')
+        }
+      }
+      return originalReadFile(path)
+    }
+
+    await expect(
+      lintMarkdown(createDependencies(context, fileSystem))
+    ).rejects.toThrow('Permission denied')
+  })
+
+  test('skips task files that disappear between scan and task-specific validation (ENOENT)', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md': `# Task
+
+This is a task.
+
+## Goals
+## Blocked By
+## Definition of Done`,
+          },
+        },
+      },
+    })
+    const originalReadFile = fileSystem.readFile.bind(fileSystem)
+    let taskReadCount = 0
+    fileSystem.readFile = async (path: string) => {
+      if (path.includes('/tasks/')) {
+        taskReadCount++
+        // Task files are read 3 times:
+        // 1. Line 544: .dust root links validation
+        // 2. Line 568: content validation
+        // 3. Line 615: task-specific validation
+        // We want to throw ENOENT on the 3rd read to test line 618-619
+        if (taskReadCount === 3) {
+          const error = new Error('ENOENT: file deleted')
+          ;(error as NodeJS.ErrnoException).code = 'ENOENT'
+          throw error
+        }
+      }
+      return originalReadFile(path)
+    }
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+    // Should complete without error (file gracefully skipped)
+    expect(result.exitCode).toBe(0)
+  })
+
+  test('skips goal files that disappear between scan and hierarchy validation (ENOENT)', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md':
+              '# Goal\n\nThis is a goal.\n\n## Parent Goal\n\n## Sub-Goals\n',
+          },
+        },
+      },
+    })
+    const originalReadFile = fileSystem.readFile.bind(fileSystem)
+    let goalReadCount = 0
+    fileSystem.readFile = async (path: string) => {
+      if (path.includes('/goals/')) {
+        goalReadCount++
+        // Goal files are read 3 times:
+        // 1. Line 544: .dust root links validation
+        // 2. Line 568: content validation
+        // 3. Line 648: goal hierarchy validation
+        // We want to throw ENOENT on the 3rd read to test line 651-652
+        if (goalReadCount === 3) {
+          const error = new Error('ENOENT: file deleted')
+          ;(error as NodeJS.ErrnoException).code = 'ENOENT'
+          throw error
+        }
+      }
+      return originalReadFile(path)
+    }
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+    // Should complete without error (file gracefully skipped)
+    expect(result.exitCode).toBe(0)
+  })
 })

@@ -51,29 +51,49 @@ export async function init(
   const dustCommand = detectDustCommand(context.cwd, fileSystem)
   const agentInstruction = `Always immediately run \`${dustCommand} agent\` when you start working in this repository.`
 
-  if (fileSystem.exists(dustPath)) {
-    context.stdout(
-      `${colors.yellow}📦 Note:${colors.reset} ${colors.cyan}.dust${colors.reset} directory already exists, skipping creation`
-    )
-  } else {
-    await fileSystem.mkdir(dustPath, { recursive: true })
+  // Try to create .dust directory atomically
+  // mkdir with recursive:true is idempotent - safe even if directory exists
+  await fileSystem.mkdir(dustPath, { recursive: true })
 
-    for (const dir of DUST_DIRECTORIES) {
-      await fileSystem.mkdir(`${dustPath}/${dir}`, { recursive: true })
-    }
+  for (const dir of DUST_DIRECTORIES) {
+    await fileSystem.mkdir(`${dustPath}/${dir}`, { recursive: true })
+  }
 
+  // Use exclusive write (wx flag) to atomically check-and-create files
+  // This prevents TOCTOU race conditions where another process could create the file
+  // between our exists() check and writeFile() call
+  let dustDirCreated = false
+
+  try {
     await fileSystem.writeFile(
       `${dustPath}/facts/use-dust-for-planning.md`,
-      USE_DUST_FACT
+      USE_DUST_FACT,
+      { flag: 'wx' }
     )
+    dustDirCreated = true
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+      throw error
+    }
+    // File already exists - .dust was previously initialized
+  }
 
+  try {
     // Generate and write settings.json
     const settings = generateSettings(context.cwd, fileSystem)
     await fileSystem.writeFile(
       `${dustPath}/config/settings.json`,
-      `${JSON.stringify(settings, null, 2)}\n`
+      `${JSON.stringify(settings, null, 2)}\n`,
+      { flag: 'wx' }
     )
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+      throw error
+    }
+    // File already exists - settings were previously created
+  }
 
+  if (dustDirCreated) {
     context.stdout(
       `${colors.green}✨ Initialized${colors.reset} Dust repository in ${colors.cyan}.dust/${colors.reset}`
     )
@@ -86,34 +106,46 @@ export async function init(
     context.stdout(
       `${colors.green}⚙️  Created settings:${colors.reset} ${colors.cyan}.dust/config/settings.json${colors.reset}`
     )
+  } else {
+    context.stdout(
+      `${colors.yellow}📦 Note:${colors.reset} ${colors.cyan}.dust${colors.reset} directory already exists, skipping creation`
+    )
   }
 
-  // Create CLAUDE.md if it doesn't exist
+  // Create CLAUDE.md atomically if it doesn't exist
   const claudeMdPath = `${context.cwd}/CLAUDE.md`
-  if (fileSystem.exists(claudeMdPath)) {
-    context.stdout(
-      `${colors.yellow}⚠️  Warning:${colors.reset} ${colors.cyan}CLAUDE.md${colors.reset} already exists. Consider adding: ${colors.dim}"${agentInstruction}"${colors.reset}`
-    )
-  } else {
+  try {
     const claudeContent = loadTemplate('claude-md', { dustCommand })
-    await fileSystem.writeFile(claudeMdPath, claudeContent)
+    await fileSystem.writeFile(claudeMdPath, claudeContent, { flag: 'wx' })
     context.stdout(
       `${colors.green}📄 Created${colors.reset} ${colors.cyan}CLAUDE.md${colors.reset} with agent instructions`
     )
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+      context.stdout(
+        `${colors.yellow}⚠️  Warning:${colors.reset} ${colors.cyan}CLAUDE.md${colors.reset} already exists. Consider adding: ${colors.dim}"${agentInstruction}"${colors.reset}`
+      )
+    } else {
+      throw error
+    }
   }
 
-  // Create AGENTS.md if it doesn't exist
+  // Create AGENTS.md atomically if it doesn't exist
   const agentsMdPath = `${context.cwd}/AGENTS.md`
-  if (fileSystem.exists(agentsMdPath)) {
-    context.stdout(
-      `${colors.yellow}⚠️  Warning:${colors.reset} ${colors.cyan}AGENTS.md${colors.reset} already exists. Consider adding: ${colors.dim}"${agentInstruction}"${colors.reset}`
-    )
-  } else {
+  try {
     const agentsContent = loadTemplate('agents-md', { dustCommand })
-    await fileSystem.writeFile(agentsMdPath, agentsContent)
+    await fileSystem.writeFile(agentsMdPath, agentsContent, { flag: 'wx' })
     context.stdout(
       `${colors.green}📄 Created${colors.reset} ${colors.cyan}AGENTS.md${colors.reset} with agent instructions`
     )
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+      context.stdout(
+        `${colors.yellow}⚠️  Warning:${colors.reset} ${colors.cyan}AGENTS.md${colors.reset} already exists. Consider adding: ${colors.dim}"${agentInstruction}"${colors.reset}`
+      )
+    } else {
+      throw error
+    }
   }
 
   // Show helpful suggestions for next steps

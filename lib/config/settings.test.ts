@@ -177,8 +177,11 @@ describe('loadSettings', () => {
 
     expect(settings.dustCommand).toBe('npx dust')
     expect(settings.eventsUrl).toBeUndefined()
-    // Exercise the readFile fallback for non-existent files
-    expect(await fileSystem.readFile('/non-existent')).toBe('')
+  })
+
+  test('readFile throws ENOENT for non-existent files', async () => {
+    const fileSystem = createFileSystemEmulator()
+    await expect(fileSystem.readFile('/non-existent')).rejects.toThrow('ENOENT')
   })
 
   test('loads dustCommand from settings.json', async () => {

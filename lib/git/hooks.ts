@@ -62,28 +62,26 @@ export function createHooksManager(
     isGitRepo: () => fileSystem.exists(gitDir),
 
     isHookInstalled: async () => {
-      if (!fileSystem.exists(prePushPath)) {
-        return false
-      }
       try {
         const content = await fileSystem.readFile(prePushPath)
         return content.includes(DUST_HOOK_START)
-      } catch {
-        return false
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          return false
+        }
+        throw error
       }
     },
 
     installHook: async () => {
-      // Ensure hooks directory exists
-      if (!fileSystem.exists(hooksDir)) {
-        await fileSystem.mkdir(hooksDir, { recursive: true })
-      }
+      // Ensure hooks directory exists (mkdir with recursive is idempotent)
+      await fileSystem.mkdir(hooksDir, { recursive: true })
 
       const hookContent = generateHookContent(settings.dustCommand)
       let finalContent: string
 
-      if (fileSystem.exists(prePushPath)) {
-        // Append to existing hook
+      // Try to read existing hook file - if it doesn't exist, we'll create a new one
+      try {
         const existingContent = await fileSystem.readFile(prePushPath)
         if (existingContent.includes(DUST_HOOK_START)) {
           // Already installed, update it
@@ -95,9 +93,13 @@ export function createHooksManager(
           // Append to existing hook
           finalContent = `${existingContent.trimEnd()}\n\n${hookContent}\n`
         }
-      } else {
-        // Create new hook file
-        finalContent = `#!/bin/sh\n\n${hookContent}\n`
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          // Create new hook file
+          finalContent = `#!/bin/sh\n\n${hookContent}\n`
+        } else {
+          throw error
+        }
       }
 
       await fileSystem.writeFile(prePushPath, finalContent)
@@ -105,9 +107,6 @@ export function createHooksManager(
     },
 
     getHookBinaryPath: async () => {
-      if (!fileSystem.exists(prePushPath)) {
-        return null
-      }
       try {
         const content = await fileSystem.readFile(prePushPath)
         const dustSection = extractDustSection(content)
@@ -117,16 +116,25 @@ export function createHooksManager(
         // Extract the command from the dust section
         const match = dustSection.match(/^(.+) pre push$/m)
         return match ? match[1] : null
-      } catch {
-        return null
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          return null
+        }
+        throw error
       }
     },
 
     updateHookBinaryPath: async (newPath: string) => {
-      if (!fileSystem.exists(prePushPath)) {
-        return
+      let content: string
+      try {
+        content = await fileSystem.readFile(prePushPath)
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          // No hook file exists, nothing to update
+          return
+        }
+        throw error
       }
-      const content = await fileSystem.readFile(prePushPath)
       const dustSection = extractDustSection(content)
       if (!dustSection) {
         return

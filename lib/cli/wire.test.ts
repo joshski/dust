@@ -53,13 +53,13 @@ describe('createFileSystem', () => {
   test('writeFile delegates with utf-8 encoding', async () => {
     let writtenPath = ''
     let writtenContent = ''
-    let writtenEncoding = ''
+    let writtenOptions: { encoding: string; flag?: string } | undefined
 
     const primitives = createFsPrimitives()
-    primitives.writeFile = async (path, content, encoding) => {
+    primitives.writeFile = async (path, content, options) => {
       writtenPath = path
       writtenContent = content
-      writtenEncoding = encoding
+      writtenOptions = options
     }
     const fileSystem = createFileSystem(primitives)
 
@@ -67,7 +67,21 @@ describe('createFileSystem', () => {
 
     expect(writtenPath).toBe('/out.txt')
     expect(writtenContent).toBe('test content')
-    expect(writtenEncoding).toBe('utf-8')
+    expect(writtenOptions).toEqual({ encoding: 'utf-8', flag: undefined })
+  })
+
+  test('writeFile passes flag option', async () => {
+    let writtenOptions: { encoding: string; flag?: string } | undefined
+
+    const primitives = createFsPrimitives()
+    primitives.writeFile = async (_path, _content, options) => {
+      writtenOptions = options
+    }
+    const fileSystem = createFileSystem(primitives)
+
+    await fileSystem.writeFile('/out.txt', 'test content', { flag: 'wx' })
+
+    expect(writtenOptions).toEqual({ encoding: 'utf-8', flag: 'wx' })
   })
 
   test('mkdir delegates to primitive', async () => {

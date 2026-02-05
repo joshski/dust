@@ -452,17 +452,14 @@ describe('createHooksManager', () => {
   })
 
   describe('error handling', () => {
-    test('isHookInstalled returns false when readFile throws', async () => {
+    test('isHookInstalled returns false when file does not exist (ENOENT)', async () => {
       const fileSystem = createFileSystemEmulator({
         project: {
           '.git': {
-            hooks: { 'pre-push': '' },
+            hooks: {},
           },
         },
       })
-      fileSystem.readFile = async () => {
-        throw new Error('Read error')
-      }
       const manager = createHooksManager(
         '/project',
         fileSystem,
@@ -472,7 +469,7 @@ describe('createHooksManager', () => {
       expect(await manager.isHookInstalled()).toBe(false)
     })
 
-    test('getHookBinaryPath returns null when readFile throws', async () => {
+    test('isHookInstalled rethrows non-ENOENT errors', async () => {
       const fileSystem = createFileSystemEmulator({
         project: {
           '.git': {
@@ -481,7 +478,7 @@ describe('createHooksManager', () => {
         },
       })
       fileSystem.readFile = async () => {
-        throw new Error('Read error')
+        throw new Error('Permission denied')
       }
       const manager = createHooksManager(
         '/project',
@@ -489,7 +486,90 @@ describe('createHooksManager', () => {
         defaultSettings
       )
 
+      await expect(manager.isHookInstalled()).rejects.toThrow(
+        'Permission denied'
+      )
+    })
+
+    test('getHookBinaryPath returns null when file does not exist (ENOENT)', async () => {
+      const fileSystem = createFileSystemEmulator({
+        project: {
+          '.git': {
+            hooks: {},
+          },
+        },
+      })
+      const manager = createHooksManager(
+        '/project',
+        fileSystem,
+        defaultSettings
+      )
+
       expect(await manager.getHookBinaryPath()).toBe(null)
+    })
+
+    test('getHookBinaryPath rethrows non-ENOENT errors', async () => {
+      const fileSystem = createFileSystemEmulator({
+        project: {
+          '.git': {
+            hooks: { 'pre-push': '' },
+          },
+        },
+      })
+      fileSystem.readFile = async () => {
+        throw new Error('Permission denied')
+      }
+      const manager = createHooksManager(
+        '/project',
+        fileSystem,
+        defaultSettings
+      )
+
+      await expect(manager.getHookBinaryPath()).rejects.toThrow(
+        'Permission denied'
+      )
+    })
+
+    test('installHook rethrows non-ENOENT errors when reading existing hook', async () => {
+      const fileSystem = createFileSystemEmulator({
+        project: {
+          '.git': {
+            hooks: { 'pre-push': '' },
+          },
+        },
+      })
+      fileSystem.readFile = async () => {
+        throw new Error('Permission denied')
+      }
+      const manager = createHooksManager(
+        '/project',
+        fileSystem,
+        defaultSettings
+      )
+
+      await expect(manager.installHook()).rejects.toThrow('Permission denied')
+    })
+
+    test('updateHookBinaryPath rethrows non-ENOENT errors', async () => {
+      const fileSystem = createFileSystemEmulator({
+        project: {
+          '.git': {
+            hooks: { 'pre-push': '' },
+          },
+        },
+      })
+      fileSystem.readFile = async () => {
+        throw new Error('Permission denied')
+      }
+      const manager = createHooksManager(
+        '/project',
+        fileSystem,
+        defaultSettings
+      )
+
+      await expect(manager.updateHookBinaryPath('/new/path')).rejects.toThrow(
+        'Permission denied'
+      )
     })
   })
 })

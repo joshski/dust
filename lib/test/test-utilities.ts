@@ -12,6 +12,7 @@ import type {
   DustSettings,
   FileSystem,
   GlobScanner,
+  WriteOptions,
 } from '../cli/types'
 
 /**
@@ -169,9 +170,29 @@ export function createFileSystemEmulator(
 
   return {
     exists: (path: string) => paths.has(path),
-    readFile: async (path: string) => files.get(path) ?? '',
-    writeFile: async (path: string, content: string) => {
+    readFile: async (path: string) => {
+      if (!files.has(path)) {
+        const error = new Error(
+          `ENOENT: no such file or directory, open '${path}'`
+        )
+        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
+        throw error
+      }
+      return files.get(path) as string
+    },
+    writeFile: async (
+      path: string,
+      content: string,
+      options?: WriteOptions
+    ) => {
+      if (options?.flag === 'wx' && paths.has(path)) {
+        const error = new Error(`EEXIST: file already exists, open '${path}'`)
+        ;(error as NodeJS.ErrnoException).code = 'EEXIST'
+        throw error
+      }
       writtenFiles.set(path, content)
+      paths.add(path)
+      files.set(path, content)
     },
     mkdir: async (path: string) => {
       createdDirs.push(path)
@@ -187,6 +208,14 @@ export function createFileSystemEmulator(
       permissions.set(path, mode)
     },
     scan: async function* (dir: string) {
+      // Check if directory exists (it's in paths if it was created or is a parent of any file)
+      if (!paths.has(dir)) {
+        const error = new Error(
+          `ENOENT: no such file or directory, scandir '${dir}'`
+        )
+        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
+        throw error
+      }
       const prefix = `${dir}/`
       for (const file of files.keys()) {
         if (file.startsWith(prefix)) {

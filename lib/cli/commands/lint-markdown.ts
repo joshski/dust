@@ -488,29 +488,67 @@ export function validateNoCycles(
   return violations
 }
 
+interface ScanResult {
+  files: string[]
+  exists: boolean
+}
+
+/**
+ * Safely scans a directory for files, handling the case where the directory doesn't exist.
+ * This avoids TOCTOU race conditions where a directory could be deleted between
+ * an existence check and the scan operation.
+ */
+async function safeScanDir(
+  glob: GlobScanner,
+  dirPath: string
+): Promise<ScanResult> {
+  const files: string[] = []
+  try {
+    for await (const file of glob.scan(dirPath)) {
+      files.push(file)
+    }
+    return { files, exists: true }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return { files: [], exists: false }
+    }
+    throw error
+  }
+}
+
 export async function lintMarkdown(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
   const { context, fileSystem, globScanner: glob } = dependencies
   const dustPath = `${context.cwd}/.dust`
 
-  if (!fileSystem.exists(dustPath)) {
+  // Try to scan the .dust directory - if it doesn't exist, report the error
+  const dustScan = await safeScanDir(glob, dustPath)
+  if (!dustScan.exists) {
     context.stderr('Error: .dust directory not found')
     context.stderr("Run 'dust init' to initialize a Dust repository")
     return { exitCode: 1 }
   }
+  const dustFiles = dustScan.files
 
   const violations: Violation[] = []
 
   // Validate all markdown files for links
   context.stdout('Validating links in .dust/...')
 
-  for await (const file of glob.scan(dustPath)) {
+  for (const file of dustFiles) {
     if (!file.endsWith('.md')) continue
 
     const filePath = `${dustPath}/${file}`
-    const content = await fileSystem.readFile(filePath)
-    violations.push(...validateLinks(filePath, content, fileSystem))
+    try {
+      const content = await fileSystem.readFile(filePath)
+      violations.push(...validateLinks(filePath, content, fileSystem))
+    } catch (error) {
+      // File may have been deleted between scan and read - skip it
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error
+      }
+    }
   }
 
   // Validate opening sentences and title-filename matching in all content directories
@@ -519,13 +557,22 @@ export async function lintMarkdown(
 
   for (const dir of contentDirs) {
     const dirPath = `${dustPath}/${dir}`
-    if (!fileSystem.exists(dirPath)) continue
+    const { files } = await safeScanDir(glob, dirPath)
 
-    for await (const file of glob.scan(dirPath)) {
+    for (const file of files) {
       if (!file.endsWith('.md')) continue
 
       const filePath = `${dirPath}/${file}`
-      const content = await fileSystem.readFile(filePath)
+      let content: string
+      try {
+        content = await fileSystem.readFile(filePath)
+      } catch (error) {
+        // File may have been deleted between scan and read - skip it
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          continue
+        }
+        throw error
+      }
 
       const openingSentenceViolation = validateOpeningSentence(
         filePath,
@@ -555,14 +602,24 @@ export async function lintMarkdown(
 
   // Validate task files specifically
   const tasksPath = `${dustPath}/tasks`
-  if (fileSystem.exists(tasksPath)) {
+  const { files: taskFiles } = await safeScanDir(glob, tasksPath)
+  if (taskFiles.length > 0) {
     context.stdout('Validating task files in .dust/tasks/...')
 
-    for await (const file of glob.scan(tasksPath)) {
+    for (const file of taskFiles) {
       if (!file.endsWith('.md')) continue
 
       const filePath = `${tasksPath}/${file}`
-      const content = await fileSystem.readFile(filePath)
+      let content: string
+      try {
+        content = await fileSystem.readFile(filePath)
+      } catch (error) {
+        // File may have been deleted between scan and read - skip it
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          continue
+        }
+        throw error
+      }
 
       const filenameViolation = validateFilename(filePath)
       if (filenameViolation) {
@@ -576,16 +633,26 @@ export async function lintMarkdown(
 
   // Validate goal files hierarchy
   const goalsPath = `${dustPath}/goals`
-  if (fileSystem.exists(goalsPath)) {
+  const { files: goalFiles } = await safeScanDir(glob, goalsPath)
+  if (goalFiles.length > 0) {
     context.stdout('Validating goal hierarchy in .dust/goals/...')
 
     const allGoalRelationships: GoalRelationships[] = []
 
-    for await (const file of glob.scan(goalsPath)) {
+    for (const file of goalFiles) {
       if (!file.endsWith('.md')) continue
 
       const filePath = `${goalsPath}/${file}`
-      const content = await fileSystem.readFile(filePath)
+      let content: string
+      try {
+        content = await fileSystem.readFile(filePath)
+      } catch (error) {
+        // File may have been deleted between scan and read - skip it
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          continue
+        }
+        throw error
+      }
 
       violations.push(...validateGoalHierarchySections(filePath, content))
       violations.push(...validateGoalHierarchyLinks(filePath, content))

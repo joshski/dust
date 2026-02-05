@@ -14,7 +14,11 @@ import type { FileSystem } from './types'
 export interface FileSystemPrimitives {
   existsSync: (path: string) => boolean
   readFile: (path: string, encoding: 'utf-8') => Promise<string>
-  writeFile: (path: string, content: string, encoding: 'utf-8') => Promise<void>
+  writeFile: (
+    path: string,
+    content: string,
+    options?: { encoding: 'utf-8'; flag?: string }
+  ) => Promise<void>
   mkdir: (
     path: string,
     options?: { recursive?: boolean }
@@ -50,7 +54,11 @@ export function createFileSystem(primitives: FileSystemPrimitives): FileSystem {
   return {
     exists: primitives.existsSync,
     readFile: path => primitives.readFile(path, 'utf-8'),
-    writeFile: (path, content) => primitives.writeFile(path, content, 'utf-8'),
+    writeFile: (path, content, options) =>
+      primitives.writeFile(path, content, {
+        encoding: 'utf-8',
+        flag: options?.flag,
+      }),
     mkdir: async (path, options) => {
       await primitives.mkdir(path, options)
     },
