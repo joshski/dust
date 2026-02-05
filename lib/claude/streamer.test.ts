@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { createStdoutSink, streamEvents } from './streamer'
+import type { RawEvent } from './types'
 import { createRecordingSink, loadCassette, replayEvents } from './vcr'
 
 describe('streamer', () => {
@@ -79,7 +80,7 @@ describe('streamEvents with onRawEvent callback', () => {
   test('calls onRawEvent for each raw event', async () => {
     const cassette = loadCassette('write-read-echo')
     const sink = createRecordingSink()
-    const rawEvents: Record<string, unknown>[] = []
+    const rawEvents: RawEvent[] = []
 
     await streamEvents(replayEvents(cassette), sink, event => {
       rawEvents.push(event)
@@ -99,7 +100,7 @@ describe('streamEvents with onRawEvent callback', () => {
         eventOrder.push('sink.line')
       },
     }
-    const events = [
+    const events: RawEvent[] = [
       {
         type: 'assistant',
         message: { content: [{ type: 'text', text: 'Hello' }] },

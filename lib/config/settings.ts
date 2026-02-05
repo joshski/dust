@@ -78,6 +78,13 @@ export function detectTestCommand(
   return null
 }
 
+function applyEnvOverrides(settings: DustSettings): DustSettings {
+  if (process.env.DUST_EVENTS_URL) {
+    settings.eventsUrl = process.env.DUST_EVENTS_URL
+  }
+  return settings
+}
+
 export async function loadSettings(
   cwd: string,
   fileSystem: FileSystem
@@ -85,40 +92,42 @@ export async function loadSettings(
   const settingsPath = join(cwd, '.dust', 'config', 'settings.json')
 
   if (!fileSystem.exists(settingsPath)) {
-    const result: DustSettings = {
+    return applyEnvOverrides({
       dustCommand: detectDustCommand(cwd, fileSystem),
-    }
-    // Override eventsUrl with env var if set
-    if (process.env.DUST_EVENTS_URL) {
-      result.eventsUrl = process.env.DUST_EVENTS_URL
-    }
-    return result
+    })
   }
 
   try {
     const content = await fileSystem.readFile(settingsPath)
-    const parsed = JSON.parse(content)
+    const parsed: unknown = JSON.parse(content)
+    if (
+      typeof parsed !== 'object' ||
+      parsed === null ||
+      Array.isArray(parsed)
+    ) {
+      return applyEnvOverrides({
+        dustCommand: detectDustCommand(cwd, fileSystem),
+      })
+    }
+    const config = parsed as Record<string, unknown>
     const result: DustSettings = {
       ...DEFAULT_SETTINGS,
-      ...parsed,
     }
-    // Auto-detect dustCommand if not explicitly set
-    if (!parsed.dustCommand) {
+    if (typeof config.dustCommand === 'string') {
+      result.dustCommand = config.dustCommand
+    } else {
       result.dustCommand = detectDustCommand(cwd, fileSystem)
     }
-    // Override eventsUrl with env var if set
-    if (process.env.DUST_EVENTS_URL) {
-      result.eventsUrl = process.env.DUST_EVENTS_URL
+    if (typeof config.eventsUrl === 'string') {
+      result.eventsUrl = config.eventsUrl
     }
-    return result
+    if (Array.isArray(config.checks)) {
+      result.checks = config.checks as CheckConfig[]
+    }
+    return applyEnvOverrides(result)
   } catch {
-    const result: DustSettings = {
+    return applyEnvOverrides({
       dustCommand: detectDustCommand(cwd, fileSystem),
-    }
-    // Override eventsUrl with env var if set
-    if (process.env.DUST_EVENTS_URL) {
-      result.eventsUrl = process.env.DUST_EVENTS_URL
-    }
-    return result
+    })
   }
 }

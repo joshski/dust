@@ -3,6 +3,7 @@ import { afterEach, describe, expect, test } from 'vitest'
 import { restoreEnv, stubEnv } from '../test/test-utilities'
 import { spawnClaudeCode } from './spawn-claude-code'
 import { streamEvents } from './streamer'
+import type { RawEvent } from './types'
 import {
   type Cassette,
   cassetteExists,
@@ -61,7 +62,7 @@ describe('replayEvents', () => {
   test('yields all events from cassette', async () => {
     const cassette: Cassette = {
       name: 'test',
-      rawEvents: [{ type: 'a' }, { type: 'b' }, { type: 'c' }],
+      rawEvents: [{ type: 'result' }, { type: 'result' }, { type: 'result' }],
       expectedOutput: [],
     }
 
@@ -70,7 +71,11 @@ describe('replayEvents', () => {
       events.push(event)
     }
 
-    expect(events).toEqual([{ type: 'a' }, { type: 'b' }, { type: 'c' }])
+    expect(events).toEqual([
+      { type: 'result' },
+      { type: 'result' },
+      { type: 'result' },
+    ])
   })
 
   test('handles empty cassette', async () => {
@@ -122,7 +127,7 @@ describe('saveCassette', () => {
     const cassette: Cassette = {
       name: testCassetteName,
       description: 'Test cassette',
-      rawEvents: [{ type: 'test' }],
+      rawEvents: [{ type: 'result' }],
       expectedOutput: [{ op: 'write', text: 'test' }],
     }
 
@@ -185,11 +190,13 @@ describe('recordCassette', () => {
   })
 
   test('collects raw events and saves cassette', async () => {
+    const event1: RawEvent = { type: 'stream_event' }
+    const event2: RawEvent = { type: 'result' }
     const dependencies: RecorderDependencies = {
       spawnClaudeCode: () =>
         (async function* () {
-          yield { type: 'raw1' }
-          yield { type: 'raw2' }
+          yield event1
+          yield event2
         })(),
       streamEvents: async events => {
         for await (const _ of events) {
@@ -208,18 +215,20 @@ describe('recordCassette', () => {
 
     expect(result.name).toBe(testCassetteName)
     expect(result.description).toBe('Test description')
-    expect(result.rawEvents).toEqual([{ type: 'raw1' }, { type: 'raw2' }])
+    expect(result.rawEvents).toEqual([event1, event2])
     expect(existsSync(testCassettePath)).toBe(true)
   })
 
   test('passes events through to streamEvents', async () => {
     const streamedEvents: unknown[] = []
+    const event1: RawEvent = { type: 'stream_event' }
+    const event2: RawEvent = { type: 'result' }
 
     const dependencies: RecorderDependencies = {
       spawnClaudeCode: () =>
         (async function* () {
-          yield { type: 'a' }
-          yield { type: 'b' }
+          yield event1
+          yield event2
         })(),
       streamEvents: async events => {
         for await (const e of events) {
@@ -236,6 +245,6 @@ describe('recordCassette', () => {
       dependencies
     )
 
-    expect(streamedEvents).toEqual([{ type: 'a' }, { type: 'b' }])
+    expect(streamedEvents).toEqual([event1, event2])
   })
 })

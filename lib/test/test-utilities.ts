@@ -6,13 +6,14 @@
  * See .dust/goals/stubs-over-mocks.md for the rationale.
  */
 
-import type {
-  CommandContext,
-  CommandDependencies,
-  DustSettings,
-  FileSystem,
-  GlobScanner,
-  WriteOptions,
+import {
+  type CommandContext,
+  type CommandDependencies,
+  createNodeError,
+  type DustSettings,
+  type FileSystem,
+  type GlobScanner,
+  type WriteOptions,
 } from '../cli/types'
 
 /**
@@ -172,11 +173,10 @@ export function createFileSystemEmulator(
     exists: (path: string) => paths.has(path),
     readFile: async (path: string) => {
       if (!files.has(path)) {
-        const error = new Error(
-          `ENOENT: no such file or directory, open '${path}'`
+        throw createNodeError(
+          `ENOENT: no such file or directory, open '${path}'`,
+          'ENOENT'
         )
-        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-        throw error
       }
       return files.get(path) as string
     },
@@ -186,9 +186,10 @@ export function createFileSystemEmulator(
       options?: WriteOptions
     ) => {
       if (options?.flag === 'wx' && paths.has(path)) {
-        const error = new Error(`EEXIST: file already exists, open '${path}'`)
-        ;(error as NodeJS.ErrnoException).code = 'EEXIST'
-        throw error
+        throw createNodeError(
+          `EEXIST: file already exists, open '${path}'`,
+          'EEXIST'
+        )
       }
       writtenFiles.set(path, content)
       paths.add(path)
@@ -210,11 +211,10 @@ export function createFileSystemEmulator(
     scan: async function* (dir: string) {
       // Check if directory exists (it's in paths if it was created or is a parent of any file)
       if (!paths.has(dir)) {
-        const error = new Error(
-          `ENOENT: no such file or directory, scandir '${dir}'`
+        throw createNodeError(
+          `ENOENT: no such file or directory, scandir '${dir}'`,
+          'ENOENT'
         )
-        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-        throw error
       }
       const prefix = `${dir}/`
       for (const file of files.keys()) {

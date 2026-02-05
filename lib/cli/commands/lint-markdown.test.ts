@@ -4,7 +4,11 @@ import {
   createFileSystemEmulator,
   type FileSystemEmulator,
 } from '../../test/test-utilities'
-import type { CommandContext, CommandDependencies } from '../types'
+import {
+  type CommandContext,
+  type CommandDependencies,
+  createNodeError,
+} from '../types'
 import {
   extractGoalRelationships,
   lintMarkdown,
@@ -1419,9 +1423,7 @@ This is a goal.
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
     fileSystem.readFile = async (path: string) => {
       if (path.endsWith('.md') && path.includes('.dust')) {
-        const error = new Error('ENOENT: file deleted')
-        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-        throw error
+        throw createNodeError('ENOENT: file deleted', 'ENOENT')
       }
       return originalReadFile(path)
     }
@@ -1480,9 +1482,7 @@ This is a goal.
         ideaReadCount++
         // Throw ENOENT on the 2nd read (content validation) to hit lines 571-572
         if (ideaReadCount === 2) {
-          const error = new Error('ENOENT: file deleted')
-          ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-          throw error
+          throw createNodeError('ENOENT: file deleted', 'ENOENT')
         }
       }
       return originalReadFile(path)
@@ -1607,9 +1607,7 @@ This is a task.
         // 3. Line 615: task-specific validation
         // We want to throw ENOENT on the 3rd read to test line 618-619
         if (taskReadCount === 3) {
-          const error = new Error('ENOENT: file deleted')
-          ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-          throw error
+          throw createNodeError('ENOENT: file deleted', 'ENOENT')
         }
       }
       return originalReadFile(path)
@@ -1643,9 +1641,7 @@ This is a task.
         // 3. Line 648: goal hierarchy validation
         // We want to throw ENOENT on the 3rd read to test line 651-652
         if (goalReadCount === 3) {
-          const error = new Error('ENOENT: file deleted')
-          ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-          throw error
+          throw createNodeError('ENOENT: file deleted', 'ENOENT')
         }
       }
       return originalReadFile(path)

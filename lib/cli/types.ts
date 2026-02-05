@@ -55,3 +55,29 @@ export interface CommandDependencies {
   globScanner: GlobScanner
   settings: DustSettings
 }
+
+/**
+ * Type guard for Node.js filesystem errors.
+ * Replaces scattered `(error as NodeJS.ErrnoException).code` casts.
+ */
+export function isNodeError(
+  error: unknown,
+  code: string
+): error is NodeJS.ErrnoException {
+  return (
+    error instanceof Error && (error as NodeJS.ErrnoException).code === code
+  )
+}
+
+/**
+ * Creates a Node.js-style error with an errno code.
+ * Useful in test emulators that simulate filesystem errors.
+ */
+export function createNodeError(
+  message: string,
+  code: string
+): NodeJS.ErrnoException {
+  const error = new Error(message) as NodeJS.ErrnoException
+  error.code = code
+  return error
+}

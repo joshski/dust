@@ -1,4 +1,50 @@
-export type RawEvent = Record<string, unknown>
+export type RawStreamEvent = {
+  type: 'stream_event'
+  event?: { delta?: { type?: string; text?: string } }
+  session_id?: string
+}
+
+export type RawAssistantEvent = {
+  type: 'assistant'
+  message?: {
+    content?: Array<{
+      type: string
+      id?: string
+      name?: string
+      input?: Record<string, unknown>
+      text?: string
+    }>
+  }
+}
+
+export type RawUserEvent = {
+  type: 'user'
+  message?: {
+    content?: Array<{
+      type: string
+      tool_use_id?: string
+      content?: unknown
+    }>
+  }
+}
+
+export type RawResultEvent = {
+  type: 'result'
+  subtype?: string
+  result?: string
+  error?: string
+  cost_usd?: number
+  total_cost_usd?: number
+  duration_ms?: number
+  num_turns?: number
+  session_id?: string
+}
+
+export type RawEvent =
+  | RawStreamEvent
+  | RawAssistantEvent
+  | RawUserEvent
+  | RawResultEvent
 
 export type TextDeltaEvent = { type: 'text_delta'; text: string }
 export type ToolUseEvent = {

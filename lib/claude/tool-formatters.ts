@@ -209,7 +209,17 @@ function formatFallback(
   return lines
 }
 
-const formatters: Record<string, ToolFormatter> = {
+type KnownToolName =
+  | 'Write'
+  | 'Edit'
+  | 'Read'
+  | 'Bash'
+  | 'TodoWrite'
+  | 'Grep'
+  | 'Glob'
+  | 'Task'
+
+const formatters: Record<KnownToolName, ToolFormatter> = {
   Write: formatWrite,
   Edit: formatEdit,
   Read: formatRead,
@@ -228,9 +238,8 @@ export function formatToolUse(
   name: string,
   input: Record<string, unknown>
 ): FormatterResult {
-  const formatter = formatters[name]
-  if (formatter) {
-    return formatter(input)
+  if (name in formatters) {
+    return formatters[name as KnownToolName](input)
   }
   return formatFallback(name, input)
 }

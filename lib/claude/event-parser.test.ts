@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'vitest'
 import { parseRawEvent } from './event-parser'
+import type { RawEvent } from './types'
 
 describe('parseRawEvent', () => {
   test('parses text_delta from stream_event', () => {
-    const raw = {
+    const raw: RawEvent = {
       type: 'stream_event',
       event: { delta: { type: 'text_delta', text: 'Hello' } },
     }
@@ -14,7 +15,7 @@ describe('parseRawEvent', () => {
   })
 
   test('skips stream_event without text_delta', () => {
-    const raw = {
+    const raw: RawEvent = {
       type: 'stream_event',
       event: { delta: { type: 'other' } },
     }
@@ -25,7 +26,7 @@ describe('parseRawEvent', () => {
   })
 
   test('parses tool_use from assistant message', () => {
-    const raw = {
+    const raw: RawEvent = {
       type: 'assistant',
       message: {
         content: [
@@ -45,7 +46,7 @@ describe('parseRawEvent', () => {
     expect(events.length).toBe(2)
     expect(events[0]).toEqual({
       type: 'assistant_message',
-      content: raw.message.content,
+      content: (raw as { message: { content: unknown[] } }).message.content,
     })
     expect(events[1]).toEqual({
       type: 'tool_use',
@@ -56,7 +57,7 @@ describe('parseRawEvent', () => {
   })
 
   test('parses tool_result from user message', () => {
-    const raw = {
+    const raw: RawEvent = {
       type: 'user',
       message: {
         content: [
@@ -81,7 +82,7 @@ describe('parseRawEvent', () => {
   })
 
   test('parses tool_result with non-string content as JSON', () => {
-    const raw = {
+    const raw: RawEvent = {
       type: 'user',
       message: {
         content: [
@@ -106,7 +107,7 @@ describe('parseRawEvent', () => {
   })
 
   test('handles assistant message with missing content', () => {
-    const raw = {
+    const raw: RawEvent = {
       type: 'assistant',
       message: {},
     }
@@ -117,7 +118,7 @@ describe('parseRawEvent', () => {
   })
 
   test('handles user message with missing content', () => {
-    const raw = {
+    const raw: RawEvent = {
       type: 'user',
       message: {},
     }
@@ -128,13 +129,13 @@ describe('parseRawEvent', () => {
   })
 
   test('skips non-tool_result blocks in user message', () => {
-    const raw = {
+    const raw: RawEvent = {
       type: 'user',
       message: {
         content: [
-          { type: 'text', text: 'some text' },
+          { type: 'text' },
           { type: 'tool_result', tool_use_id: 'tool_1', content: 'result' },
-          { type: 'image', data: 'base64...' },
+          { type: 'image' },
         ],
       },
     }
@@ -148,7 +149,7 @@ describe('parseRawEvent', () => {
   })
 
   test('parses result event', () => {
-    const raw = {
+    const raw: RawEvent = {
       type: 'result',
       subtype: 'success',
       result: 'Done!',
@@ -175,7 +176,7 @@ describe('parseRawEvent', () => {
   })
 
   test('parses result event with total_cost_usd', () => {
-    const raw = {
+    const raw: RawEvent = {
       type: 'result',
       subtype: 'success',
       total_cost_usd: 0.05,
@@ -191,7 +192,7 @@ describe('parseRawEvent', () => {
   })
 
   test('parses result event with defaults for missing fields', () => {
-    const raw = {
+    const raw: RawEvent = {
       type: 'result',
     }
 
@@ -212,7 +213,7 @@ describe('parseRawEvent', () => {
   })
 
   test('returns empty for unknown event types', () => {
-    const raw = { type: 'unknown', data: 'whatever' }
+    const raw = { type: 'unknown' } as unknown as RawEvent
 
     const events = [...parseRawEvent(raw)]
 

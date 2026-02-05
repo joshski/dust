@@ -6,7 +6,7 @@ import {
   stripAnsi,
   stubEnv,
 } from '../../test/test-utilities'
-import type { CommandDependencies } from '../types'
+import { type CommandDependencies, createNodeError } from '../types'
 import { init } from './init'
 
 describe('init command', () => {
@@ -512,9 +512,7 @@ describe('init command', () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator()
     fileSystem.writeFile = async () => {
-      const error = new Error('EACCES: permission denied')
-      ;(error as NodeJS.ErrnoException).code = 'EACCES'
-      throw error
+      throw createNodeError('EACCES: permission denied', 'EACCES')
     }
     const dependencies: CommandDependencies = {
       arguments: [],
@@ -539,9 +537,7 @@ describe('init command', () => {
         return originalWriteFile(path, content, options)
       }
       // Second write (settings.json) throws a permission error
-      const error = new Error('EACCES: permission denied')
-      ;(error as NodeJS.ErrnoException).code = 'EACCES'
-      throw error
+      throw createNodeError('EACCES: permission denied', 'EACCES')
     }
     const dependencies: CommandDependencies = {
       arguments: [],
@@ -566,9 +562,7 @@ describe('init command', () => {
         return originalWriteFile(path, content, options)
       }
       // Third write (CLAUDE.md) throws a permission error
-      const error = new Error('EACCES: permission denied')
-      ;(error as NodeJS.ErrnoException).code = 'EACCES'
-      throw error
+      throw createNodeError('EACCES: permission denied', 'EACCES')
     }
     const dependencies: CommandDependencies = {
       arguments: [],
@@ -593,9 +587,7 @@ describe('init command', () => {
         return originalWriteFile(path, content, options)
       }
       // Fourth write (AGENTS.md) throws a permission error
-      const error = new Error('EACCES: permission denied')
-      ;(error as NodeJS.ErrnoException).code = 'EACCES'
-      throw error
+      throw createNodeError('EACCES: permission denied', 'EACCES')
     }
     const dependencies: CommandDependencies = {
       arguments: [],

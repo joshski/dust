@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest'
 import { defaultRunnerDependencies, type RunnerDependencies, run } from './run'
 import { spawnClaudeCode } from './spawn-claude-code'
 import { createStdoutSink, streamEvents } from './streamer'
-import type { RawEventCallback } from './types'
+import type { RawEvent, RawEventCallback } from './types'
 
 describe('defaultRunnerDependencies', () => {
   test('uses real implementations', () => {
@@ -41,9 +41,9 @@ describe('run', () => {
 
     const dependencies: RunnerDependencies = {
       spawnClaudeCode: () =>
-        (async function* () {
-          yield { type: 'event1' }
-          yield { type: 'event2' }
+        (async function* (): AsyncGenerator<RawEvent> {
+          yield { type: 'stream_event' }
+          yield { type: 'result' }
         })(),
       createStdoutSink: () => fakeSink,
       streamEvents: async (events, sink) => {
@@ -57,7 +57,10 @@ describe('run', () => {
     await run('test', {}, dependencies)
 
     expect(usedSink).toBe(fakeSink)
-    expect(streamedEvents).toEqual([{ type: 'event1' }, { type: 'event2' }])
+    expect(streamedEvents).toEqual([
+      { type: 'stream_event' },
+      { type: 'result' },
+    ])
   })
 
   test('passes onRawEvent callback to streamEvents when using RunOptions', async () => {

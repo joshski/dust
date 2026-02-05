@@ -8,11 +8,12 @@ import {
   extractTitle,
   MARKDOWN_LINK_PATTERN,
 } from '../../markdown/markdown-utilities'
-import type {
-  CommandDependencies,
-  CommandResult,
-  FileSystem,
-  GlobScanner,
+import {
+  type CommandDependencies,
+  type CommandResult,
+  type FileSystem,
+  type GlobScanner,
+  isNodeError,
 } from '../types'
 
 // Re-export for backwards compatibility
@@ -509,7 +510,7 @@ async function safeScanDir(
     }
     return { files, exists: true }
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isNodeError(error, 'ENOENT')) {
       return { files: [], exists: false }
     }
     throw error
@@ -545,7 +546,7 @@ export async function lintMarkdown(
       violations.push(...validateLinks(filePath, content, fileSystem))
     } catch (error) {
       // File may have been deleted between scan and read - skip it
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      if (!isNodeError(error, 'ENOENT')) {
         throw error
       }
     }
@@ -568,7 +569,7 @@ export async function lintMarkdown(
         content = await fileSystem.readFile(filePath)
       } catch (error) {
         // File may have been deleted between scan and read - skip it
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (isNodeError(error, 'ENOENT')) {
           continue
         }
         throw error
@@ -615,7 +616,7 @@ export async function lintMarkdown(
         content = await fileSystem.readFile(filePath)
       } catch (error) {
         // File may have been deleted between scan and read - skip it
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (isNodeError(error, 'ENOENT')) {
           continue
         }
         throw error
@@ -648,7 +649,7 @@ export async function lintMarkdown(
         content = await fileSystem.readFile(filePath)
       } catch (error) {
         // File may have been deleted between scan and read - skip it
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (isNodeError(error, 'ENOENT')) {
           continue
         }
         throw error

@@ -9,7 +9,12 @@ import {
   detectTestCommand,
 } from '../../config/settings'
 import { loadTemplate } from '../templates'
-import type { CommandDependencies, CommandResult, FileSystem } from '../types'
+import {
+  type CommandDependencies,
+  type CommandResult,
+  type FileSystem,
+  isNodeError,
+} from '../types'
 
 const DUST_DIRECTORIES = ['goals', 'ideas', 'tasks', 'facts', 'config']
 
@@ -72,7 +77,7 @@ export async function init(
     )
     dustDirCreated = true
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+    if (!isNodeError(error, 'EEXIST')) {
       throw error
     }
     // File already exists - .dust was previously initialized
@@ -87,7 +92,7 @@ export async function init(
       { flag: 'wx' }
     )
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+    if (!isNodeError(error, 'EEXIST')) {
       throw error
     }
     // File already exists - settings were previously created
@@ -121,7 +126,7 @@ export async function init(
       `${colors.green}📄 Created${colors.reset} ${colors.cyan}CLAUDE.md${colors.reset} with agent instructions`
     )
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+    if (isNodeError(error, 'EEXIST')) {
       context.stdout(
         `${colors.yellow}⚠️  Warning:${colors.reset} ${colors.cyan}CLAUDE.md${colors.reset} already exists. Consider adding: ${colors.dim}"${agentInstruction}"${colors.reset}`
       )
@@ -139,7 +144,7 @@ export async function init(
       `${colors.green}📄 Created${colors.reset} ${colors.cyan}AGENTS.md${colors.reset} with agent instructions`
     )
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'EEXIST') {
+    if (isNodeError(error, 'EEXIST')) {
       context.stdout(
         `${colors.yellow}⚠️  Warning:${colors.reset} ${colors.cyan}AGENTS.md${colors.reset} already exists. Consider adding: ${colors.dim}"${agentInstruction}"${colors.reset}`
       )

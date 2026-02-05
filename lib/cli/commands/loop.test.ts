@@ -1,6 +1,7 @@
 import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
+import type { RawEvent } from '../../claude/types'
 import {
   createContextEmulator,
   createFileSystemEmulator,
@@ -633,17 +634,16 @@ describe('runOneIteration', () => {
       },
     })
     const emit = createStubEmit()
-    const rawEvents: Record<string, unknown>[] = []
+    const rawEvents: RawEvent[] = []
 
     const loopDeps = createLoopDeps({
       run: async (_prompt, options) => {
         // Check if onRawEvent is passed in RunOptions format and call it
-        const onRawEvent = (
-          options as { onRawEvent?: (e: Record<string, unknown>) => void }
-        )?.onRawEvent
+        const onRawEvent = (options as { onRawEvent?: (e: RawEvent) => void })
+          ?.onRawEvent
         if (onRawEvent) {
           // Invoke the callback with a test event
-          onRawEvent({ type: 'text_delta', text: 'Hello' })
+          onRawEvent({ type: 'stream_event', session_id: 'test-123' })
         }
       },
     })
@@ -655,8 +655,8 @@ describe('runOneIteration', () => {
     // Verify the raw event was received by the callback
     expect(rawEvents).toHaveLength(1)
     expect(rawEvents[0]).toEqual({
-      type: 'text_delta',
-      text: 'Hello',
+      type: 'stream_event',
+      session_id: 'test-123',
     })
   })
 
@@ -687,7 +687,7 @@ describe('formatEvent', () => {
   test('returns null for claude.raw_event', () => {
     const result = formatEvent({
       type: 'claude.raw_event',
-      rawEvent: { type: 'text_delta', text: 'Hello' },
+      rawEvent: { type: 'stream_event' },
     })
     expect(result).toBeNull()
   })
@@ -1130,9 +1130,8 @@ describe('loopClaude', () => {
     const postedEvents: { url: string; payload: EventPayload }[] = []
     const loopDeps = createLoopDeps({
       run: async (_prompt, options) => {
-        const onRawEvent = (
-          options as { onRawEvent?: (e: Record<string, unknown>) => void }
-        )?.onRawEvent
+        const onRawEvent = (options as { onRawEvent?: (e: RawEvent) => void })
+          ?.onRawEvent
         if (onRawEvent) {
           // Simulate a result event with session_id
           onRawEvent({ type: 'stream_event', session_id: 'claude-session-xyz' })
@@ -1170,9 +1169,8 @@ describe('loopClaude', () => {
     const loopDeps = createLoopDeps({
       run: async (_prompt, options) => {
         runCount++
-        const onRawEvent = (
-          options as { onRawEvent?: (e: Record<string, unknown>) => void }
-        )?.onRawEvent
+        const onRawEvent = (options as { onRawEvent?: (e: RawEvent) => void })
+          ?.onRawEvent
         if (onRawEvent) {
           // Only emit session_id on first run
           if (runCount === 1) {
@@ -1229,11 +1227,10 @@ describe('loopClaude', () => {
     const loopDeps = createLoopDeps({
       run: async (_prompt, options) => {
         // Simulate raw events from Claude by calling the callback
-        const onRawEvent = (
-          options as { onRawEvent?: (e: Record<string, unknown>) => void }
-        )?.onRawEvent
+        const onRawEvent = (options as { onRawEvent?: (e: RawEvent) => void })
+          ?.onRawEvent
         if (onRawEvent) {
-          onRawEvent({ type: 'text_delta', text: 'Hello' })
+          onRawEvent({ type: 'stream_event', session_id: 'test-123' })
         }
       },
       postEvent: async (url, payload) => {
@@ -1249,12 +1246,11 @@ describe('loopClaude', () => {
     )
     expect(rawEvents.length).toBe(1)
     expect(
-      (rawEvents[0].payload.event as { rawEvent: Record<string, unknown> })
-        .rawEvent
-    ).toEqual({ type: 'text_delta', text: 'Hello' })
+      (rawEvents[0].payload.event as { rawEvent: RawEvent }).rawEvent
+    ).toEqual({ type: 'stream_event', session_id: 'test-123' })
 
     // Verify raw events are NOT output to console (formatEvent returns null)
-    expect(context.stdoutLines.join('\n')).not.toContain('text_delta')
+    expect(context.stdoutLines.join('\n')).not.toContain('stream_event')
     expect(context.stdoutLines.join('\n')).not.toContain('raw_event')
   })
 })
@@ -1313,11 +1309,10 @@ describe('integration: HTTP event posting', () => {
         postEvent: realPostEvent,
         run: async (_prompt, options) => {
           // Simulate raw events
-          const onRawEvent = (
-            options as { onRawEvent?: (e: Record<string, unknown>) => void }
-          )?.onRawEvent
+          const onRawEvent = (options as { onRawEvent?: (e: RawEvent) => void })
+            ?.onRawEvent
           if (onRawEvent) {
-            onRawEvent({ type: 'text_delta', text: 'Integration test' })
+            onRawEvent({ type: 'stream_event', session_id: 'integration-test' })
           }
         },
       })
@@ -1348,11 +1343,9 @@ describe('integration: HTTP event posting', () => {
         e => e.event.type === 'claude.raw_event'
       )
       expect(rawEvent).toBeDefined()
-      expect(
-        (rawEvent?.event as { rawEvent: Record<string, unknown> }).rawEvent
-      ).toEqual({
-        type: 'text_delta',
-        text: 'Integration test',
+      expect((rawEvent?.event as { rawEvent: RawEvent }).rawEvent).toEqual({
+        type: 'stream_event',
+        session_id: 'integration-test',
       })
 
       // Verify agentType for claude events

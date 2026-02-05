@@ -18,6 +18,7 @@
 
 import { spawn as nodeSpawn } from 'node:child_process'
 import { run as claudeRun } from '../../claude/run'
+import type { RawEvent } from '../../claude/types'
 import type { CommandDependencies, CommandResult } from '../types'
 import { next } from './next'
 
@@ -64,7 +65,7 @@ export interface ClaudeEndedEvent {
 
 export interface ClaudeRawEvent {
   type: 'claude.raw_event'
-  rawEvent: Record<string, unknown>
+  rawEvent: RawEvent
 }
 
 export interface LoopIterationCompleteEvent {
@@ -255,7 +256,7 @@ export type IterationResult =
   | 'resolved_pull_conflict'
 
 export interface IterationOptions {
-  onRawEvent?: (rawEvent: Record<string, unknown>) => void
+  onRawEvent?: (rawEvent: RawEvent) => void
 }
 
 export async function runOneIteration(
@@ -394,9 +395,9 @@ export async function loopClaude(
   // Build iteration options
   const iterationOptions: IterationOptions = {}
   if (eventsUrl) {
-    iterationOptions.onRawEvent = (rawEvent: Record<string, unknown>) => {
+    iterationOptions.onRawEvent = (rawEvent: RawEvent) => {
       // Extract session_id from any event that has it
-      if (typeof rawEvent.session_id === 'string' && rawEvent.session_id) {
+      if ('session_id' in rawEvent && rawEvent.session_id) {
         agentSessionId = rawEvent.session_id
       }
       emit({ type: 'claude.raw_event', rawEvent })
