@@ -15,6 +15,7 @@ import {
   type BufferedProcessRunner,
   check,
   createBufferedRunner,
+  detectUnsafeShellPatterns,
 } from './check'
 
 function createMockBufferedRunner(
@@ -675,5 +676,136 @@ describe('check command summary indicators', () => {
     )
 
     expect(context.stdoutLines).toContain('✗ 1/2 checks passed')
+  })
+})
+
+describe('detectUnsafeShellPatterns', () => {
+  test('detects unquoted globstar **', () => {
+    const warnings = detectUnsafeShellPatterns([
+      { name: 'typecheck', command: 'tsc lib/**/*.ts' },
+    ])
+
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0].checkName).toBe('typecheck')
+    expect(warnings[0].pattern).toBe('**')
+    expect(warnings[0].suggestion).toContain('Globstar')
+  })
+
+  test('does not warn when ** is inside double quotes', () => {
+    const warnings = detectUnsafeShellPatterns([
+      { name: 'typecheck', command: 'tsc "lib/**/*.ts"' },
+    ])
+
+    expect(warnings).toHaveLength(0)
+  })
+
+  test('does not warn when ** is inside single quotes', () => {
+    const warnings = detectUnsafeShellPatterns([
+      { name: 'typecheck', command: "tsc 'lib/**/*.ts'" },
+    ])
+
+    expect(warnings).toHaveLength(0)
+  })
+
+  test('detects unquoted brace expansion', () => {
+    const warnings = detectUnsafeShellPatterns([
+      { name: 'lint', command: 'eslint lib/*.{ts,js}' },
+    ])
+
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0].checkName).toBe('lint')
+    expect(warnings[0].pattern).toBe('{,}')
+    expect(warnings[0].suggestion).toContain('Brace expansion')
+  })
+
+  test('does not warn when braces are inside quotes', () => {
+    const warnings = detectUnsafeShellPatterns([
+      { name: 'lint', command: 'eslint "lib/*.{ts,js}"' },
+    ])
+
+    expect(warnings).toHaveLength(0)
+  })
+
+  test('does not warn for braces without commas', () => {
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: testing shell variable syntax
+    const shellCommand = 'echo ${VAR:-default}'
+    const warnings = detectUnsafeShellPatterns([
+      { name: 'test', command: shellCommand },
+    ])
+
+    expect(warnings).toHaveLength(0)
+  })
+
+  test('reports both ** and brace expansion in same command', () => {
+    const warnings = detectUnsafeShellPatterns([
+      { name: 'lint', command: 'eslint lib/**/*.{ts,js}' },
+    ])
+
+    expect(warnings).toHaveLength(2)
+    expect(warnings.map(w => w.pattern)).toContain('**')
+    expect(warnings.map(w => w.pattern)).toContain('{,}')
+  })
+
+  test('returns no warnings for safe commands', () => {
+    const warnings = detectUnsafeShellPatterns([
+      { name: 'lint', command: 'npm run lint' },
+      { name: 'test', command: 'bun test' },
+      { name: 'build', command: 'tsc -p tsconfig.json --noEmit' },
+    ])
+
+    expect(warnings).toHaveLength(0)
+  })
+
+  test('warns for each check independently', () => {
+    const warnings = detectUnsafeShellPatterns([
+      { name: 'check-a', command: 'cmd lib/**/*.ts' },
+      { name: 'check-b', command: 'cmd src/**/*.ts' },
+    ])
+
+    expect(warnings).toHaveLength(2)
+    expect(warnings[0].checkName).toBe('check-a')
+    expect(warnings[1].checkName).toBe('check-b')
+  })
+
+  test('warnings are displayed to stderr during check', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [{ name: 'typecheck', command: 'tsc lib/**/*.ts' }],
+    }
+    const fileSystem = createFileSystemEmulator()
+    const bufferedRunner = createMockBufferedRunner({
+      'tsc lib/**/*.ts': { exitCode: 0, output: '' },
+    })
+
+    await check(
+      createDependencies(context, fileSystem, settings),
+      bufferedRunner
+    )
+
+    const stderr = context.stderrLines.join('\n')
+    expect(stderr).toContain("Check 'typecheck' contains unsafe shell pattern")
+    expect(stderr).toContain('Globstar')
+  })
+
+  test('check still runs despite warnings', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [{ name: 'typecheck', command: 'tsc lib/**/*.ts' }],
+    }
+    const fileSystem = createFileSystemEmulator()
+    const bufferedRunner = createMockBufferedRunner({
+      'tsc lib/**/*.ts': { exitCode: 0, output: '' },
+    })
+
+    const result = await check(
+      createDependencies(context, fileSystem, settings),
+      bufferedRunner
+    )
+
+    expect(result.exitCode).toBe(0)
+    expect(bufferedRunner.calls).toHaveLength(1)
+    expect(context.stdoutLines).toContain('✓ typecheck')
   })
 })

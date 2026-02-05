@@ -160,6 +160,121 @@ function displayResults(
   return failed.length > 0 ? 1 : 0
 }
 
+/**
+ * Warning about an unsafe shell pattern in a check command
+ */
+export interface ShellPatternWarning {
+  checkName: string
+  command: string
+  pattern: string
+  suggestion: string
+}
+
+/**
+ * Detects check commands containing shell patterns that silently fail under /bin/sh.
+ * Unquoted globstar (**) and brace expansion ({a,b}) don't work in POSIX sh.
+ */
+export function detectUnsafeShellPatterns(
+  checks: CheckConfig[]
+): ShellPatternWarning[] {
+  const warnings: ShellPatternWarning[] = []
+
+  for (const check of checks) {
+    // Detect unquoted ** (globstar) - not inside quotes
+    // We check for ** that isn't wrapped in quotes
+    if (hasUnquotedPattern(check.command, '**')) {
+      warnings.push({
+        checkName: check.name,
+        command: check.command,
+        pattern: '**',
+        suggestion:
+          'Globstar (**) is not supported in /bin/sh. Quote the glob (e.g., "lib/**/*.ts") so the tool expands it, or use a config file.',
+      })
+    }
+
+    // Detect unquoted brace expansion {a,b}
+    if (hasUnquotedBraceExpansion(check.command)) {
+      warnings.push({
+        checkName: check.name,
+        command: check.command,
+        pattern: '{,}',
+        suggestion:
+          "Brace expansion ({a,b}) is not a POSIX feature and won't work in /bin/sh. Use separate arguments or a config file instead.",
+      })
+    }
+  }
+
+  return warnings
+}
+
+/**
+ * Checks if a command contains a pattern outside of quoted strings.
+ */
+function hasUnquotedPattern(command: string, pattern: string): boolean {
+  let inSingleQuote = false
+  let inDoubleQuote = false
+
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i]
+
+    if (char === "'" && !inDoubleQuote) {
+      inSingleQuote = !inSingleQuote
+      continue
+    }
+    if (char === '"' && !inSingleQuote) {
+      inDoubleQuote = !inDoubleQuote
+      continue
+    }
+
+    if (!inSingleQuote && !inDoubleQuote) {
+      if (command.substring(i, i + pattern.length) === pattern) {
+        return true
+      }
+    }
+  }
+
+  return false
+}
+
+/**
+ * Checks if a command contains unquoted brace expansion like {ts,js}.
+ */
+function hasUnquotedBraceExpansion(command: string): boolean {
+  let inSingleQuote = false
+  let inDoubleQuote = false
+  let braceDepth = 0
+  let hasCommaInBrace = false
+
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i]
+
+    if (char === "'" && !inDoubleQuote) {
+      inSingleQuote = !inSingleQuote
+      continue
+    }
+    if (char === '"' && !inSingleQuote) {
+      inDoubleQuote = !inDoubleQuote
+      continue
+    }
+
+    if (!inSingleQuote && !inDoubleQuote) {
+      if (char === '{') {
+        braceDepth++
+        hasCommaInBrace = false
+      } else if (char === '}' && braceDepth > 0) {
+        if (hasCommaInBrace) {
+          return true
+        }
+        braceDepth--
+      } else if (char === ',' && braceDepth > 0) {
+        hasCommaInBrace = true
+      }
+    }
+  }
+
+  return false
+}
+
 export async function check(
   dependencies: CommandDependencies,
   bufferedRunner: BufferedProcessRunner = defaultBufferedRunner
@@ -177,6 +292,16 @@ export async function check(
     context.stderr('    ]')
     context.stderr('  }')
     return { exitCode: 1 }
+  }
+
+  // Warn about unsafe shell patterns in check commands
+  const shellWarnings = detectUnsafeShellPatterns(settings.checks)
+  for (const warning of shellWarnings) {
+    context.stderr(
+      `⚠️  Check '${warning.checkName}' contains unsafe shell pattern: ${warning.pattern}`
+    )
+    context.stderr(`  ${warning.suggestion}`)
+    context.stderr('')
   }
 
   // Run built-in and configured checks in parallel

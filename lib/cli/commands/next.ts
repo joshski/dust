@@ -11,6 +11,11 @@ import {
 } from '../../markdown/markdown-utilities'
 import { getColors } from '../colors'
 import type { CommandDependencies, CommandResult } from '../types'
+import {
+  defaultHealthCheckGitRunner,
+  type HealthCheckGitRunner,
+  runHealthCheck,
+} from './health-check'
 
 function extractBlockedBy(content: string): string[] {
   // Find the "## Blocked By" section
@@ -42,9 +47,10 @@ function extractBlockedBy(content: string): string[] {
 }
 
 export async function next(
-  dependencies: CommandDependencies
+  dependencies: CommandDependencies,
+  healthCheckGitRunner: HealthCheckGitRunner = defaultHealthCheckGitRunner
 ): Promise<CommandResult> {
-  const { context, fileSystem } = dependencies
+  const { context, fileSystem, settings } = dependencies
   const dustPath = `${context.cwd}/.dust`
   const colors = getColors()
 
@@ -99,6 +105,8 @@ export async function next(
   if (unblockedTasks.length === 0) {
     return { exitCode: 0 }
   }
+
+  await runHealthCheck(context, fileSystem, settings, healthCheckGitRunner)
 
   context.stdout('📋 Next tasks')
   context.stdout('')
