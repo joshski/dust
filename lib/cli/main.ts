@@ -11,6 +11,7 @@
 import { loadSettings } from '../config/settings'
 import { agent } from './commands/agent'
 import { check } from './commands/check'
+import { focus } from './commands/focus'
 import { generateHelpText, help } from './commands/help'
 import { implementTask } from './commands/implement-task'
 import { init } from './commands/init'
@@ -51,6 +52,7 @@ export const commandRegistry = {
   next,
   check,
   agent,
+  focus,
   'new task': newTask,
   'new goal': newGoal,
   'new idea': newIdea,

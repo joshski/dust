@@ -108,7 +108,7 @@ describe('createEventPoster', () => {
       postEvent,
       () => {}
     )
-    poster({ type: 'loop.syncing' })
+    poster.emit({ type: 'loop.syncing' })
     await Promise.resolve()
     expect(postCalled).toBe(false)
   })
@@ -124,8 +124,8 @@ describe('createEventPoster', () => {
       postEvent,
       () => {}
     )
-    poster({ type: 'loop.syncing' })
-    poster({ type: 'loop.started', maxIterations: 5 })
+    poster.emit({ type: 'loop.syncing' })
+    poster.emit({ type: 'loop.started', maxIterations: 5 })
     await Promise.resolve()
     expect(postedEvents).toHaveLength(2)
     expect(postedEvents[0].sequence).toBe(1)
@@ -150,14 +150,14 @@ describe('createEventPoster', () => {
       postEvent,
       () => {}
     )
-    poster({ type: 'loop.syncing' })
+    poster.emit({ type: 'loop.syncing' })
     await Promise.resolve()
     expect(postedEvents[0].timestamp).toMatch(
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/
     )
   })
 
-  test('generates agentSessionId for claude.started and includes in claude events', async () => {
+  test('includes agentSessionId in claude and agent events when session is active', async () => {
     const postedEvents: EventPayload[] = []
     const postEvent = async (_url: string, payload: EventPayload) => {
       postedEvents.push(payload)
@@ -168,9 +168,11 @@ describe('createEventPoster', () => {
       postEvent,
       () => {}
     )
-    poster({ type: 'loop.tasks_found' })
-    poster({ type: 'claude.started' })
-    poster({ type: 'claude.ended', success: true })
+    poster.emit({ type: 'loop.tasks_found' })
+    const agentSessionId = poster.startAgentSession()
+    poster.emit({ type: 'claude.started' })
+    poster.emit({ type: 'claude.ended', success: true })
+    poster.endAgentSession()
     await Promise.resolve()
 
     // loop.tasks_found should not have agent info
@@ -178,15 +180,38 @@ describe('createEventPoster', () => {
     expect(postedEvents[0].agentType).toBeUndefined()
 
     // claude.started should have agent info
-    expect(postedEvents[1].agentSessionId).toBeDefined()
+    expect(postedEvents[1].agentSessionId).toBe(agentSessionId)
     expect(postedEvents[1].agentType).toBe('claude')
 
     // claude.ended should have same agentSessionId
-    expect(postedEvents[2].agentSessionId).toBe(postedEvents[1].agentSessionId)
+    expect(postedEvents[2].agentSessionId).toBe(agentSessionId)
     expect(postedEvents[2].agentType).toBe('claude')
   })
 
-  test('generates new agentSessionId for each claude session', async () => {
+  test('includes agentSessionId in agent.focus events', async () => {
+    const postedEvents: EventPayload[] = []
+    const postEvent = async (_url: string, payload: EventPayload) => {
+      postedEvents.push(payload)
+    }
+    const poster = createEventPoster(
+      'http://example.com',
+      testSessionId,
+      postEvent,
+      () => {}
+    )
+    const agentSessionId = poster.startAgentSession()
+    poster.emit({ type: 'agent.focus', objective: 'add login box' })
+    await Promise.resolve()
+
+    expect(postedEvents[0].agentSessionId).toBe(agentSessionId)
+    expect(postedEvents[0].agentType).toBe('claude')
+    expect(postedEvents[0].event).toEqual({
+      type: 'agent.focus',
+      objective: 'add login box',
+    })
+  })
+
+  test('generates new agentSessionId for each session', async () => {
     const postedEvents: EventPayload[] = []
     const postEvent = async (_url: string, payload: EventPayload) => {
       postedEvents.push(payload)
@@ -198,19 +223,22 @@ describe('createEventPoster', () => {
       () => {}
     )
     // First claude session
-    poster({ type: 'claude.started' })
-    poster({ type: 'claude.ended', success: true })
+    const firstId = poster.startAgentSession()
+    poster.emit({ type: 'claude.started' })
+    poster.emit({ type: 'claude.ended', success: true })
+    poster.endAgentSession()
     // Second claude session
-    poster({ type: 'claude.started' })
-    poster({ type: 'claude.ended', success: true })
+    const secondId = poster.startAgentSession()
+    poster.emit({ type: 'claude.started' })
+    poster.emit({ type: 'claude.ended', success: true })
+    poster.endAgentSession()
     await Promise.resolve()
 
-    const firstSessionId = postedEvents[0].agentSessionId
-    const secondSessionId = postedEvents[2].agentSessionId
-
-    expect(firstSessionId).toBeDefined()
-    expect(secondSessionId).toBeDefined()
-    expect(firstSessionId).not.toBe(secondSessionId)
+    expect(firstId).toBeDefined()
+    expect(secondId).toBeDefined()
+    expect(firstId).not.toBe(secondId)
+    expect(postedEvents[0].agentSessionId).toBe(firstId)
+    expect(postedEvents[2].agentSessionId).toBe(secondId)
   })
 
   test('calls onError when post fails', async () => {
@@ -226,11 +254,25 @@ describe('createEventPoster', () => {
         errors.push(error)
       }
     )
-    poster({ type: 'loop.syncing' })
+    poster.emit({ type: 'loop.syncing' })
     await Promise.resolve()
     await Promise.resolve()
     expect(errors).toHaveLength(1)
     expect((errors[0] as Error).message).toBe('Network error')
+  })
+
+  test('getCurrentAgentSessionId returns current session ID', () => {
+    const poster = createEventPoster(
+      'http://example.com',
+      testSessionId,
+      async () => {},
+      () => {}
+    )
+    expect(poster.getCurrentAgentSessionId()).toBeUndefined()
+    const sessionId = poster.startAgentSession()
+    expect(poster.getCurrentAgentSessionId()).toBe(sessionId)
+    poster.endAgentSession()
+    expect(poster.getCurrentAgentSessionId()).toBeUndefined()
   })
 })
 
@@ -486,6 +528,66 @@ describe('runOneIteration', () => {
     expect(capturedCwd).toBe('/project')
   })
 
+  test('passes session env vars to Claude when provided in options', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+        },
+      },
+    })
+    let capturedEnv: Record<string, string> | undefined
+    const loopDeps = createLoopDeps({
+      run: async (_prompt, options) => {
+        const runOptions = options as {
+          spawnOptions?: { env?: Record<string, string> }
+        }
+        capturedEnv = runOptions?.spawnOptions?.env
+      },
+    })
+    const emit = createStubEmit()
+
+    await runOneIteration(dependencies, loopDeps, emit, {
+      sessionId: 'test-session-id',
+      agentSessionId: 'test-agent-session-id',
+      eventsUrl: 'http://example.com/events',
+    })
+
+    expect(capturedEnv).toBeDefined()
+    expect(capturedEnv?.DUST_SESSION_ID).toBe('test-session-id')
+    expect(capturedEnv?.DUST_AGENT_SESSION_ID).toBe('test-agent-session-id')
+    expect(capturedEnv?.DUST_EVENTS_URL).toBe('http://example.com/events')
+    expect(capturedEnv?.DUST_UNATTENDED).toBe('1')
+  })
+
+  test('does not include undefined session env vars', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+        },
+      },
+    })
+    let capturedEnv: Record<string, string> | undefined
+    const loopDeps = createLoopDeps({
+      run: async (_prompt, options) => {
+        const runOptions = options as {
+          spawnOptions?: { env?: Record<string, string> }
+        }
+        capturedEnv = runOptions?.spawnOptions?.env
+      },
+    })
+    const emit = createStubEmit()
+
+    await runOneIteration(dependencies, loopDeps, emit, {})
+
+    expect(capturedEnv).toBeDefined()
+    expect(capturedEnv?.DUST_UNATTENDED).toBe('1')
+    expect('DUST_SESSION_ID' in (capturedEnv ?? {})).toBe(false)
+    expect('DUST_AGENT_SESSION_ID' in (capturedEnv ?? {})).toBe(false)
+    expect('DUST_EVENTS_URL' in (capturedEnv ?? {})).toBe(false)
+  })
+
   test('handles Claude errors gracefully', async () => {
     const dependencies = createDependencies({
       project: {
@@ -664,6 +766,12 @@ describe('formatEvent', () => {
     expect(formatEvent({ type: 'claude.started' })).toBe(
       '🤖 Claude session started'
     )
+  })
+
+  test('formats agent.focus event with objective', () => {
+    expect(
+      formatEvent({ type: 'agent.focus', objective: 'add login box' })
+    ).toBe('🎯 Focus: add login box')
   })
 })
 

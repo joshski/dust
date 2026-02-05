@@ -67,6 +67,11 @@ export interface ClaudeRawEvent {
   rawEvent: Record<string, unknown>
 }
 
+export interface AgentFocusEvent {
+  type: 'agent.focus'
+  objective: string
+}
+
 export interface LoopIterationCompleteEvent {
   type: 'loop.iteration_complete'
   iteration: number
@@ -89,6 +94,7 @@ export type DustWireEvent =
   | ClaudeStartedEvent
   | ClaudeEndedEvent
   | ClaudeRawEvent
+  | AgentFocusEvent
   | LoopIterationCompleteEvent
   | LoopEndedEvent
 
@@ -121,6 +127,8 @@ export function formatEvent(event: DustWireEvent): string | null {
     case 'claude.raw_event':
       // Raw events are high-volume and not displayed to console
       return null
+    case 'agent.focus':
+      return `🎯 Focus: ${event.objective}`
     case 'loop.iteration_complete':
       return `📋 Completed iteration ${event.iteration}/${event.maxIterations}`
     case 'loop.ended':
@@ -169,23 +177,25 @@ export function createDefaultDependencies(): LoopDependencies {
   }
 }
 
+export interface EventPosterWithSession {
+  emit: (event: DustWireEvent) => void
+  startAgentSession: () => string
+  getCurrentAgentSessionId: () => string | undefined
+  endAgentSession: () => void
+}
+
 export function createEventPoster(
   eventsUrl: string | undefined,
   sessionId: string,
   postEvent: PostEventFn,
   onError: (error: unknown) => void
-): (event: DustWireEvent) => void {
+): EventPosterWithSession {
   let sequence = 0
   let currentAgentSessionId: string | undefined
 
-  return (event: DustWireEvent) => {
+  const emit = (event: DustWireEvent) => {
     if (!eventsUrl) return
     sequence++
-
-    // Track agent sessions
-    if (event.type === 'claude.started') {
-      currentAgentSessionId = crypto.randomUUID()
-    }
 
     const payload: EventPayload = {
       sequence,
@@ -194,18 +204,28 @@ export function createEventPoster(
       event,
     }
 
-    // Include agent info for claude.* events
-    if (event.type.startsWith('claude.') && currentAgentSessionId) {
+    // Include agent info for claude.* and agent.* events
+    if (
+      (event.type.startsWith('claude.') || event.type.startsWith('agent.')) &&
+      currentAgentSessionId
+    ) {
       payload.agentSessionId = currentAgentSessionId
       payload.agentType = 'claude'
     }
 
     postEvent(eventsUrl, payload).catch(onError)
+  }
 
-    // Clear agent session after ended event is sent
-    if (event.type === 'claude.ended') {
+  return {
+    emit,
+    startAgentSession: () => {
+      currentAgentSessionId = crypto.randomUUID()
+      return currentAgentSessionId
+    },
+    getCurrentAgentSessionId: () => currentAgentSessionId,
+    endAgentSession: () => {
       currentAgentSessionId = undefined
-    }
+    },
   }
 }
 
@@ -263,6 +283,23 @@ export type IterationResult =
 
 export interface IterationOptions {
   onRawEvent?: (rawEvent: Record<string, unknown>) => void
+  sessionId?: string
+  agentSessionId?: string
+  eventsUrl?: string
+}
+
+function buildClaudeEnv(options: IterationOptions): Record<string, string> {
+  const env: Record<string, string> = { DUST_UNATTENDED: '1' }
+  if (options.sessionId) {
+    env.DUST_SESSION_ID = options.sessionId
+  }
+  if (options.agentSessionId) {
+    env.DUST_AGENT_SESSION_ID = options.agentSessionId
+  }
+  if (options.eventsUrl) {
+    env.DUST_EVENTS_URL = options.eventsUrl
+  }
+  return env
 }
 
 export async function runOneIteration(
@@ -303,7 +340,7 @@ Make sure the repository is in a clean state and synced with remote before finis
         spawnOptions: {
           cwd: context.cwd,
           dangerouslySkipPermissions: true,
-          env: { DUST_UNATTENDED: '1' },
+          env: buildClaudeEnv(options),
         },
         onRawEvent,
       })
@@ -337,7 +374,7 @@ Make sure the repository is in a clean state and synced with remote before finis
       spawnOptions: {
         cwd: context.cwd,
         dangerouslySkipPermissions: true,
-        env: { DUST_UNATTENDED: '1' },
+        env: buildClaudeEnv(options),
       },
       onRawEvent,
     })
@@ -372,7 +409,7 @@ export async function loopClaude(
 
   const eventsUrl = settings.eventsUrl
   const sessionId = crypto.randomUUID()
-  const postTypedEvent = createEventPoster(
+  const eventPoster = createEventPoster(
     eventsUrl,
     sessionId,
     postEvent,
@@ -387,7 +424,7 @@ export async function loopClaude(
     if (formatted !== null) {
       context.stdout(formatted)
     }
-    postTypedEvent(event)
+    eventPoster.emit(event)
   }
 
   emit({ type: 'loop.warning' })
@@ -396,21 +433,36 @@ export async function loopClaude(
   context.stdout('')
 
   let completedIterations = 0
-  const iterationOptions: IterationOptions = eventsUrl
-    ? {
-        onRawEvent: (rawEvent: Record<string, unknown>) => {
-          emit({ type: 'claude.raw_event', rawEvent })
-        },
-      }
-    : {}
+  // Build base iteration options
+  const baseIterationOptions: IterationOptions = {
+    sessionId,
+    eventsUrl,
+  }
+  if (eventsUrl) {
+    baseIterationOptions.onRawEvent = (rawEvent: Record<string, unknown>) => {
+      emit({ type: 'claude.raw_event', rawEvent })
+    }
+  }
 
   while (completedIterations < maxIterations) {
+    // Generate agent session ID before starting Claude
+    // This allows us to pass it via env vars before claude.started is emitted
+    const agentSessionId = eventPoster.startAgentSession()
+    const iterationOptions: IterationOptions = {
+      ...baseIterationOptions,
+      agentSessionId,
+    }
+
     const result = await runOneIteration(
       dependencies,
       loopDependencies,
       emit,
       iterationOptions
     )
+
+    // End agent session after iteration
+    eventPoster.endAgentSession()
+
     if (result === 'no_tasks') {
       await loopDependencies.sleep(SLEEP_INTERVAL_MS)
     } else {

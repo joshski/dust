@@ -54,6 +54,7 @@ Events are a discriminated union with a `type` field:
 | `claude.started` | - | Claude session started |
 | `claude.ended` | `success: boolean`, `error?: string` | Claude session ended |
 | `claude.raw_event` | `rawEvent: object` | Raw Claude streaming event |
+| `agent.focus` | `objective: string` | Agent declared current objective |
 | `loop.iteration_complete` | `iteration: number`, `maxIterations: number` | Iteration finished |
 | `loop.ended` | `maxIterations: number` | Loop completed |
 
@@ -126,6 +127,30 @@ Claude raw event:
 ```
 
 **Note:** Raw events are high-volume (many events per response) and contain response content.
+
+Agent focus event:
+```json
+{
+  "sequence": 42,
+  "timestamp": "2025-01-15T10:35:00.000Z",
+  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+  "agentSessionId": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+  "agentType": "claude",
+  "event": { "type": "agent.focus", "objective": "add login box" }
+}
+```
+
+## Environment Variables
+
+When running inside `dust loop`, agents receive the following environment variables to enable event posting:
+
+| Variable | Description |
+|----------|-------------|
+| `DUST_SESSION_ID` | UUID identifying the dust loop session |
+| `DUST_AGENT_SESSION_ID` | UUID identifying this specific agent invocation |
+| `DUST_EVENTS_URL` | URL to POST events to (from settings) |
+
+These variables allow agents to post events (like `agent.focus`) directly to the events endpoint.
 
 ## Delivery Semantics
 
