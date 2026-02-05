@@ -35,8 +35,7 @@ interface EventPayload {
 ## Session IDs
 
 - **sessionId**: Generated once when a dust command starts. All events from that command invocation share this ID.
-- **agentSessionId**: Generated each time an agent (like Claude) is invoked. Present only on agent-related events (`claude.*`).
-- **agentType**: Identifies the agent type (e.g., "claude"). Present only on agent-related events.
+- **agentType**: Identifies the agent type (e.g., "claude"). Present only on agent-related events (`claude.*`).
 
 ## Event Types
 
@@ -54,7 +53,6 @@ Events are a discriminated union with a `type` field:
 | `claude.started` | - | Claude session started |
 | `claude.ended` | `success: boolean`, `error?: string` | Claude session ended |
 | `claude.raw_event` | `rawEvent: object` | Raw Claude streaming event |
-| `agent.focus` | `objective: string` | Agent declared current objective |
 | `loop.iteration_complete` | `iteration: number`, `maxIterations: number` | Iteration finished |
 | `loop.ended` | `maxIterations: number` | Loop completed |
 
@@ -70,13 +68,12 @@ Loop started event:
 }
 ```
 
-Claude started event (with agent session):
+Claude started event:
 ```json
 {
   "sequence": 5,
   "timestamp": "2025-01-15T10:30:05.000Z",
   "sessionId": "550e8400-e29b-41d4-a716-446655440000",
-  "agentSessionId": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
   "agentType": "claude",
   "event": { "type": "claude.started" }
 }
@@ -88,7 +85,6 @@ Claude ended event (success):
   "sequence": 6,
   "timestamp": "2025-01-15T10:30:30.000Z",
   "sessionId": "550e8400-e29b-41d4-a716-446655440000",
-  "agentSessionId": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
   "agentType": "claude",
   "event": { "type": "claude.ended", "success": true }
 }
@@ -100,7 +96,6 @@ Claude ended event (error):
   "sequence": 6,
   "timestamp": "2025-01-15T10:30:30.000Z",
   "sessionId": "550e8400-e29b-41d4-a716-446655440000",
-  "agentSessionId": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
   "agentType": "claude",
   "event": { "type": "claude.ended", "success": false, "error": "Process exited with code 1" }
 }
@@ -112,7 +107,6 @@ Claude raw event:
   "sequence": 7,
   "timestamp": "2025-01-15T10:30:31.000Z",
   "sessionId": "550e8400-e29b-41d4-a716-446655440000",
-  "agentSessionId": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
   "agentType": "claude",
   "event": {
     "type": "claude.raw_event",
@@ -127,30 +121,6 @@ Claude raw event:
 ```
 
 **Note:** Raw events are high-volume (many events per response) and contain response content.
-
-Agent focus event:
-```json
-{
-  "sequence": 42,
-  "timestamp": "2025-01-15T10:35:00.000Z",
-  "sessionId": "550e8400-e29b-41d4-a716-446655440000",
-  "agentSessionId": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
-  "agentType": "claude",
-  "event": { "type": "agent.focus", "objective": "add login box" }
-}
-```
-
-## Environment Variables
-
-When running inside `dust loop`, agents receive the following environment variables to enable event posting:
-
-| Variable | Description |
-|----------|-------------|
-| `DUST_SESSION_ID` | UUID identifying the dust loop session |
-| `DUST_AGENT_SESSION_ID` | UUID identifying this specific agent invocation |
-| `DUST_EVENTS_URL` | URL to POST events to (from settings) |
-
-These variables allow agents to post events (like `agent.focus`) directly to the events endpoint.
 
 ## Delivery Semantics
 
