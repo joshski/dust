@@ -1207,6 +1207,42 @@ describe('loopClaude', () => {
     expect(claudeEndedEvents[1].payload.agentSessionId).toBeUndefined()
   })
 
+  test('does not set agentSessionId when raw event has no session_id', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+        },
+      },
+    })
+    dependencies.arguments = ['1']
+    dependencies.settings = {
+      dustCommand: 'dust',
+      eventsUrl: 'http://example.com/events',
+    }
+    const postedEvents: { url: string; payload: EventPayload }[] = []
+    const loopDeps = createLoopDeps({
+      run: async (_prompt, options) => {
+        const onRawEvent = (options as { onRawEvent?: (e: RawEvent) => void })
+          ?.onRawEvent
+        if (onRawEvent) {
+          // Emit an event without session_id
+          onRawEvent({ type: 'assistant', message: { content: [] } })
+        }
+      },
+      postEvent: async (url, payload) => {
+        postedEvents.push({ url, payload })
+      },
+    })
+
+    await loopClaude(dependencies, loopDeps)
+
+    const claudeEnded = postedEvents.find(
+      e => e.payload.event.type === 'claude.ended'
+    )
+    expect(claudeEnded?.payload.agentSessionId).toBeUndefined()
+  })
+
   test('emits raw events automatically when eventsUrl is configured', async () => {
     const dependencies = createDependencies({
       project: {

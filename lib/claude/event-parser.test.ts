@@ -191,6 +191,22 @@ describe('parseRawEvent', () => {
     })
   })
 
+  test('parses result event with error subtype', () => {
+    const raw: RawEvent = {
+      type: 'result',
+      subtype: 'error',
+      error: 'Something went wrong',
+    }
+
+    const events = [...parseRawEvent(raw)]
+
+    expect(events[0]).toMatchObject({
+      type: 'result',
+      subtype: 'error',
+      error: 'Something went wrong',
+    })
+  })
+
   test('parses result event with defaults for missing fields', () => {
     const raw: RawEvent = {
       type: 'result',

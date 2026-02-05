@@ -311,6 +311,41 @@ describe('loadSettings', () => {
     expect(settings.eventsUrl).toBeUndefined()
   })
 
+  test('returns defaults when settings.json contains a JSON array', async () => {
+    stubEnv('BUN_INSTALL', '')
+    stubEnv('DUST_EVENTS_URL', '')
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: { 'settings.json': '["not", "an", "object"]' },
+        },
+      },
+    })
+    const settings = await loadSettings('/project', fileSystem)
+
+    expect(settings.dustCommand).toBe('npx dust')
+    expect(settings.eventsUrl).toBeUndefined()
+  })
+
+  test('loads checks array from settings.json', async () => {
+    stubEnv('DUST_EVENTS_URL', '')
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {
+            'settings.json': JSON.stringify({
+              checks: [{ name: 'test', command: 'bun test' }],
+            }),
+          },
+        },
+        'bun.lockb': '',
+      },
+    })
+    const settings = await loadSettings('/project', fileSystem)
+
+    expect(settings.checks).toEqual([{ name: 'test', command: 'bun test' }])
+  })
+
   test('DUST_EVENTS_URL env var works when settings.json is invalid JSON', async () => {
     stubEnv('DUST_EVENTS_URL', 'https://env.example.com/events')
     stubEnv('BUN_INSTALL', '')
