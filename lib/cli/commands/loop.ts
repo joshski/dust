@@ -395,12 +395,8 @@ export async function loopClaude(
   const iterationOptions: IterationOptions = {}
   if (eventsUrl) {
     iterationOptions.onRawEvent = (rawEvent: Record<string, unknown>) => {
-      // Extract session_id from result events
-      if (
-        rawEvent.type === 'result' &&
-        typeof rawEvent.session_id === 'string' &&
-        rawEvent.session_id
-      ) {
+      // Extract session_id from any event that has it
+      if (typeof rawEvent.session_id === 'string' && rawEvent.session_id) {
         agentSessionId = rawEvent.session_id
       }
       emit({ type: 'claude.raw_event', rawEvent })

@@ -1114,7 +1114,7 @@ describe('loopClaude', () => {
     expect(capturedOnRawEvent).toBeUndefined()
   })
 
-  test('includes agentSessionId in events after session_id is extracted from result raw event', async () => {
+  test('includes agentSessionId in events after session_id is extracted from a raw event', async () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
@@ -1135,7 +1135,7 @@ describe('loopClaude', () => {
         )?.onRawEvent
         if (onRawEvent) {
           // Simulate a result event with session_id
-          onRawEvent({ type: 'result', session_id: 'claude-session-xyz' })
+          onRawEvent({ type: 'stream_event', session_id: 'claude-session-xyz' })
         }
       },
       postEvent: async (url, payload) => {
@@ -1176,7 +1176,7 @@ describe('loopClaude', () => {
         if (onRawEvent) {
           // Only emit session_id on first run
           if (runCount === 1) {
-            onRawEvent({ type: 'result', session_id: 'session-1' })
+            onRawEvent({ type: 'stream_event', session_id: 'session-1' })
           }
           // Second run: no result event, so agentSessionId should be undefined
         }
