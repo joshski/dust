@@ -21,6 +21,7 @@ export interface CheckResult {
   output: string
   isBuiltIn?: boolean
   hints?: string[]
+  durationMs?: number
 }
 
 export interface BufferedProcessRunner {
@@ -70,13 +71,16 @@ async function runConfiguredChecks(
   runner: BufferedProcessRunner
 ): Promise<CheckResult[]> {
   const promises = checks.map(async check => {
+    const startTime = Date.now()
     const { exitCode, output } = await runner.run(check.command, cwd)
+    const durationMs = Date.now() - startTime
     return {
       name: check.name,
       command: check.command,
       exitCode,
       output,
       hints: check.hints,
+      durationMs,
     }
   })
   return Promise.all(promises)
@@ -92,11 +96,13 @@ async function runValidationCheck(
     stderr: (msg: string) => outputLines.push(msg),
   }
 
+  const startTime = Date.now()
   const result = await lintMarkdown({
     ...dependencies,
     context: bufferedContext,
     arguments: [],
   })
+  const durationMs = Date.now() - startTime
 
   return {
     name: 'lint markdown',
@@ -104,6 +110,7 @@ async function runValidationCheck(
     exitCode: result.exitCode,
     output: outputLines.join('\n'),
     isBuiltIn: true,
+    durationMs,
   }
 }
 
@@ -116,10 +123,14 @@ function displayResults(
 
   // Display pass/fail status for each check
   for (const result of results) {
+    const timing =
+      result.durationMs !== undefined && result.durationMs >= 1000
+        ? ` [${(result.durationMs / 1000).toFixed(1)}s]`
+        : ''
     if (result.exitCode === 0) {
-      context.stdout(`✓ ${result.name}`)
+      context.stdout(`✓ ${result.name}${timing}`)
     } else {
-      context.stdout(`✗ ${result.name}`)
+      context.stdout(`✗ ${result.name}${timing}`)
     }
   }
 
@@ -141,7 +152,10 @@ function displayResults(
 
   // Display summary
   context.stdout('')
-  context.stdout(`${passed.length}/${results.length} checks passed`)
+  const indicator = failed.length > 0 ? '✗' : '✓'
+  context.stdout(
+    `${indicator} ${passed.length}/${results.length} checks passed`
+  )
 
   return failed.length > 0 ? 1 : 0
 }
