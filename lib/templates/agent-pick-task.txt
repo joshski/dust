@@ -4,4 +4,4 @@ Follow these steps:
 
 1. Run `{{bin}} next` to see available tasks
 2. Pick ONE task and read its file to understand the requirements
-3. Run `{{bin}} agent implement task` for instructions about how to implement
+3. Run `{{bin}} implement task` for instructions about how to implement
