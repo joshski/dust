@@ -43,7 +43,7 @@ test('no goals defined shows empty goals list', async () => {
       },
     },
     handlers: [
-      { pattern: /welcome to dust/, getCommand: () => 'bin/dust list goals' },
+      { pattern: /welcome to dust/, getCommand: () => 'bin/dust goals' },
       // Empty goals directory shows "No goals found" message
       { pattern: /No goals found/, getCommand: () => null },
     ],
@@ -132,7 +132,7 @@ test('task list handles tasks with no title gracefully', async () => {
       },
     },
     handlers: [
-      { pattern: /welcome to dust/, getCommand: () => 'bin/dust list tasks' },
+      { pattern: /welcome to dust/, getCommand: () => 'bin/dust tasks' },
       { pattern: /no-title/, getCommand: () => null },
     ],
   })
@@ -173,7 +173,7 @@ test('list ideas handles empty ideas directory', async () => {
       },
     },
     handlers: [
-      { pattern: /welcome to dust/, getCommand: () => 'bin/dust list ideas' },
+      { pattern: /welcome to dust/, getCommand: () => 'bin/dust ideas' },
       // Empty ideas directory shows "No ideas found" message
       { pattern: /No ideas found/, getCommand: () => null },
     ],
@@ -193,7 +193,7 @@ test('list facts handles empty facts directory', async () => {
       },
     },
     handlers: [
-      { pattern: /welcome to dust/, getCommand: () => 'bin/dust list facts' },
+      { pattern: /welcome to dust/, getCommand: () => 'bin/dust facts' },
       // Empty facts directory shows "No facts found" message
       { pattern: /No facts found/, getCommand: () => null },
     ],

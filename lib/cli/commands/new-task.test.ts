@@ -35,7 +35,7 @@ Follow these steps to create the task definition, then spawn a sub-agent for imp
 
 Use a todo list to track your progress through these steps.
 
-1. Run \`dust list ideas\` to see all existing ideas
+1. Run \`dust ideas\` to see all existing ideas
 2. Determine which ideas (if any) should be:
    - **Deleted** - if the new task fully covers the idea
    - **Updated** - if the idea's scope changes as a result of the task

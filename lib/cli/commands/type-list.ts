@@ -1,11 +1,11 @@
 /**
- * Shorthand commands for listing specific types
+ * Commands for listing specific types
  *
- * These commands provide direct access to list specific item types:
- * - dust tasks -> list tasks
- * - dust goals -> list goals
- * - dust ideas -> list ideas
- * - dust facts -> list facts
+ * These are the primary commands for listing items:
+ * - dust tasks - lists all tasks
+ * - dust goals - lists all goals
+ * - dust ideas - lists all ideas
+ * - dust facts - lists all facts
  */
 
 import type { CommandDependencies, CommandResult } from '../types'

@@ -2,7 +2,7 @@
 
 Follow these steps:
 
-1. Run `{{bin}} list ideas` to see all existing ideas and avoid duplicates
+1. Run `{{bin}} ideas` to see all existing ideas and avoid duplicates
 2. Create a new markdown file in `.dust/ideas/` with a descriptive kebab-case name (e.g., `improve-error-messages.md`)
 3. Add a title as the first line using an H1 heading (e.g., `# Improve error messages`)
 4. Write a brief description of the potential change or improvement

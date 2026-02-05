@@ -118,13 +118,13 @@ test('new task instructions include checking existing ideas', async () => {
         pattern: /Capture a new task.*new task/s,
         getCommand: () => 'bin/dust new task',
       },
-      { pattern: /list ideas/, getCommand: () => null },
+      { pattern: /dust ideas/, getCommand: () => null },
     ],
   })
 
   // Instructions should mention checking existing ideas
   const output = session.turns[1].result.stdout
-  expect(output).toContain('list ideas')
+  expect(output).toContain('dust ideas')
 })
 
 test('new goal instructions include checking existing goals', async () => {
@@ -146,11 +146,11 @@ test('new goal instructions include checking existing goals', async () => {
         pattern: /Capture a new goal.*new goal/s,
         getCommand: () => 'bin/dust new goal',
       },
-      { pattern: /list goals/, getCommand: () => null },
+      { pattern: /dust goals/, getCommand: () => null },
     ],
   })
 
   // Instructions should mention checking existing goals
   const output = session.turns[1].result.stdout
-  expect(output).toContain('list goals')
+  expect(output).toContain('dust goals')
 })

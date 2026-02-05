@@ -19,7 +19,7 @@ test('agent lists tasks to understand current work', async () => {
       },
     },
     handlers: [
-      { pattern: /welcome to dust/, getCommand: () => 'bin/dust list tasks' },
+      { pattern: /welcome to dust/, getCommand: () => 'bin/dust tasks' },
       { pattern: /task-two/, getCommand: () => null },
     ],
   })
@@ -28,7 +28,7 @@ test('agent lists tasks to understand current work', async () => {
     turns: [
       { command: 'bin/dust agent' },
       {
-        command: 'bin/dust list tasks',
+        command: 'bin/dust tasks',
         result: { stdout: expect.stringMatching(/task-one.*task-two/s) },
       },
     ],

@@ -5,7 +5,7 @@ Dust commands use verb-then-noun patterns with spaces, making them readable as n
 ## Examples
 
 - `dust new task` - creates a new task
-- `dust list facts` - lists all facts
+- `dust facts` - lists all facts
 - `dust implement task` - guides the agent to implement a task
 
 ## Why Not Subcommands?

@@ -52,7 +52,7 @@ describe('shell emulator', () => {
       },
     })
 
-    const result = await customShell.exec('bin/dust list tasks')
+    const result = await customShell.exec('bin/dust tasks')
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain('existing-task')
   })

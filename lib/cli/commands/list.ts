@@ -1,5 +1,5 @@
 /**
- * dust list [type] - List tasks, ideas, goals, or facts
+ * dust [type] - List tasks, ideas, goals, or facts (e.g., dust tasks, dust goals)
  */
 
 import { basename } from 'node:path'

@@ -1,6 +1,6 @@
 # Unified CLI
 
-Dust provides a single `dust` command with subcommands for all operations. For example: `dust init`, `dust list tasks`, `dust check`, `dust agent`.
+Dust provides a single `dust` command with subcommands for all operations. For example: `dust init`, `dust tasks`, `dust check`, `dust agent`.
 
 This follows the familiar pattern of tools like `git` and `docker`, supporting [Easy Adoption](../goals/easy-adoption.md). Run `dust help` to see all available commands.
 

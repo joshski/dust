@@ -21,7 +21,7 @@ test('agent explores goals to understand project direction', async () => {
       },
     },
     handlers: [
-      { pattern: /welcome to dust/, getCommand: () => 'bin/dust list goals' },
+      { pattern: /welcome to dust/, getCommand: () => 'bin/dust goals' },
       { pattern: /maintainability/, getCommand: () => null },
     ],
   })
@@ -30,7 +30,7 @@ test('agent explores goals to understand project direction', async () => {
     turns: [
       { command: 'bin/dust agent' },
       {
-        command: 'bin/dust list goals',
+        command: 'bin/dust goals',
         result: {
           stdout: expect.stringMatching(/fast-feedback.*maintainability/s),
         },
