@@ -183,6 +183,49 @@ describe('createEventPoster', () => {
     expect(postedEvents[2].agentType).toBe('claude')
   })
 
+  test('includes agentSessionId for claude events when getter returns a value', async () => {
+    const postedEvents: EventPayload[] = []
+    const postEvent = async (_url: string, payload: EventPayload) => {
+      postedEvents.push(payload)
+    }
+    const emit = createEventPoster(
+      'http://example.com',
+      testSessionId,
+      postEvent,
+      () => {},
+      () => 'claude-session-abc'
+    )
+    emit({ type: 'loop.tasks_found' })
+    emit({ type: 'claude.started' })
+    emit({ type: 'claude.ended', success: true })
+    await Promise.resolve()
+
+    // loop event should not have agentSessionId
+    expect(postedEvents[0].agentSessionId).toBeUndefined()
+
+    // claude events should have agentSessionId
+    expect(postedEvents[1].agentSessionId).toBe('claude-session-abc')
+    expect(postedEvents[2].agentSessionId).toBe('claude-session-abc')
+  })
+
+  test('does not include agentSessionId when getter returns undefined', async () => {
+    const postedEvents: EventPayload[] = []
+    const postEvent = async (_url: string, payload: EventPayload) => {
+      postedEvents.push(payload)
+    }
+    const emit = createEventPoster(
+      'http://example.com',
+      testSessionId,
+      postEvent,
+      () => {},
+      () => undefined
+    )
+    emit({ type: 'claude.started' })
+    await Promise.resolve()
+
+    expect(postedEvents[0].agentSessionId).toBeUndefined()
+  })
+
   test('calls onError when post fails', async () => {
     const errors: unknown[] = []
     const postEvent = async () => {
@@ -1069,6 +1112,101 @@ describe('loopClaude', () => {
     await loopClaude(dependencies, loopDeps)
 
     expect(capturedOnRawEvent).toBeUndefined()
+  })
+
+  test('includes agentSessionId in events after session_id is extracted from result raw event', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+        },
+      },
+    })
+    dependencies.arguments = ['1']
+    dependencies.settings = {
+      dustCommand: 'dust',
+      eventsUrl: 'http://example.com/events',
+    }
+    const postedEvents: { url: string; payload: EventPayload }[] = []
+    const loopDeps = createLoopDeps({
+      run: async (_prompt, options) => {
+        const onRawEvent = (
+          options as { onRawEvent?: (e: Record<string, unknown>) => void }
+        )?.onRawEvent
+        if (onRawEvent) {
+          // Simulate a result event with session_id
+          onRawEvent({ type: 'result', session_id: 'claude-session-xyz' })
+        }
+      },
+      postEvent: async (url, payload) => {
+        postedEvents.push({ url, payload })
+      },
+    })
+
+    await loopClaude(dependencies, loopDeps)
+
+    // claude.ended is emitted after run completes, so it should have the agentSessionId
+    const claudeEnded = postedEvents.find(
+      e => e.payload.event.type === 'claude.ended'
+    )
+    expect(claudeEnded?.payload.agentSessionId).toBe('claude-session-xyz')
+  })
+
+  test('resets agentSessionId between iterations', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+        },
+      },
+    })
+    dependencies.arguments = ['2']
+    dependencies.settings = {
+      dustCommand: 'dust',
+      eventsUrl: 'http://example.com/events',
+    }
+    const postedEvents: { url: string; payload: EventPayload }[] = []
+    let runCount = 0
+    const loopDeps = createLoopDeps({
+      run: async (_prompt, options) => {
+        runCount++
+        const onRawEvent = (
+          options as { onRawEvent?: (e: Record<string, unknown>) => void }
+        )?.onRawEvent
+        if (onRawEvent) {
+          // Only emit session_id on first run
+          if (runCount === 1) {
+            onRawEvent({ type: 'result', session_id: 'session-1' })
+          }
+          // Second run: no result event, so agentSessionId should be undefined
+        }
+      },
+      postEvent: async (url, payload) => {
+        postedEvents.push({ url, payload })
+      },
+    })
+
+    await loopClaude(dependencies, loopDeps)
+
+    // Find claude.started events (there should be 2, one per iteration)
+    const claudeStartedEvents = postedEvents.filter(
+      e => e.payload.event.type === 'claude.started'
+    )
+    expect(claudeStartedEvents).toHaveLength(2)
+
+    // First iteration's claude.started won't have agentSessionId (it's emitted before run)
+    expect(claudeStartedEvents[0].payload.agentSessionId).toBeUndefined()
+    // Second iteration's claude.started also won't have it (reset between iterations)
+    expect(claudeStartedEvents[1].payload.agentSessionId).toBeUndefined()
+
+    // First iteration's claude.ended should have session-1
+    const claudeEndedEvents = postedEvents.filter(
+      e => e.payload.event.type === 'claude.ended'
+    )
+    expect(claudeEndedEvents).toHaveLength(2)
+    expect(claudeEndedEvents[0].payload.agentSessionId).toBe('session-1')
+    // Second iteration's claude.ended should NOT have agentSessionId
+    expect(claudeEndedEvents[1].payload.agentSessionId).toBeUndefined()
   })
 
   test('emits raw events automatically when eventsUrl is configured', async () => {

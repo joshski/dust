@@ -134,6 +134,7 @@ export interface EventPayload {
   timestamp: string
   sessionId: string
   agentType?: string
+  agentSessionId?: string
   event: DustWireEvent
 }
 
@@ -172,7 +173,8 @@ export function createEventPoster(
   eventsUrl: string | undefined,
   sessionId: string,
   postEvent: PostEventFn,
-  onError: (error: unknown) => void
+  onError: (error: unknown) => void,
+  getAgentSessionId?: () => string | undefined
 ): EmitFn {
   let sequence = 0
 
@@ -190,6 +192,10 @@ export function createEventPoster(
     // Include agent info for claude.* events
     if (event.type.startsWith('claude.')) {
       payload.agentType = 'claude'
+      const agentSessionId = getAgentSessionId?.()
+      if (agentSessionId) {
+        payload.agentSessionId = agentSessionId
+      }
     }
 
     postEvent(eventsUrl, payload).catch(onError)
@@ -359,6 +365,7 @@ export async function loopClaude(
 
   const eventsUrl = settings.eventsUrl
   const sessionId = crypto.randomUUID()
+  let agentSessionId: string | undefined
   const postEventFn = createEventPoster(
     eventsUrl,
     sessionId,
@@ -366,7 +373,8 @@ export async function loopClaude(
     error => {
       const message = error instanceof Error ? error.message : String(error)
       context.stderr(`Event POST failed: ${message}`)
-    }
+    },
+    () => agentSessionId
   )
 
   const emit: EmitFn = event => {
@@ -387,11 +395,20 @@ export async function loopClaude(
   const iterationOptions: IterationOptions = {}
   if (eventsUrl) {
     iterationOptions.onRawEvent = (rawEvent: Record<string, unknown>) => {
+      // Extract session_id from result events
+      if (
+        rawEvent.type === 'result' &&
+        typeof rawEvent.session_id === 'string' &&
+        rawEvent.session_id
+      ) {
+        agentSessionId = rawEvent.session_id
+      }
       emit({ type: 'claude.raw_event', rawEvent })
     }
   }
 
   while (completedIterations < maxIterations) {
+    agentSessionId = undefined
     const result = await runOneIteration(
       dependencies,
       loopDependencies,
