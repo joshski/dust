@@ -31,7 +31,7 @@
       ]
     },
     {
-      "name": "typecheck",
+      "name": "typecheck (tsc)",
       "command": "bunx tsc -p tsconfig.json --noEmit",
       "hints": [
         "Check type definitions in the files you modified",
