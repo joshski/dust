@@ -1,0 +1,37 @@
+{
+  "name": "@joshski/dust-validation",
+  "version": "0.1.0",
+  "description": "Artifact validation for dust markdown files",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joshski/dust.git"
+  },
+  "keywords": [
+    "dust",
+    "validation",
+    "markdown",
+    "lint"
+  ],
+  "author": "joshski",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
