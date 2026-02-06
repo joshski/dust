@@ -4,6 +4,10 @@
 
 import { dirname, resolve } from 'node:path'
 import {
+  IDEA_TRANSITION_PREFIXES,
+  titleToFilename,
+} from '../../artifacts/idea-transition-task'
+import {
   extractOpeningSentence,
   extractTitle,
   MARKDOWN_LINK_PATTERN,
@@ -15,6 +19,8 @@ import type {
   GlobScanner,
 } from '../types'
 
+export { IDEA_TRANSITION_PREFIXES, titleToFilename }
+
 // Re-export for backwards compatibility
 export type { GlobScanner }
 
@@ -24,12 +30,6 @@ const REQUIRED_GOAL_HEADINGS = ['## Parent Goal', '## Sub-Goals']
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.md$/
 
 const MAX_OPENING_SENTENCE_LENGTH = 150
-
-export const IDEA_TRANSITION_PREFIXES = [
-  'Refine Idea: ',
-  'Create Task From Idea: ',
-  'Shelve Idea: ',
-]
 
 export interface Violation {
   file: string
@@ -47,25 +47,6 @@ export function validateFilename(filePath: string): Violation | null {
     }
   }
   return null
-}
-
-/**
- * Converts a markdown title to the expected filename using deterministic rules:
- * 1. Convert to lowercase
- * 2. Replace dots with hyphens (before removing other special chars)
- * 3. Remove characters that aren't alphanumeric, spaces, or hyphens
- * 4. Replace spaces with hyphens
- * 5. Collapse multiple consecutive hyphens
- * 6. Add .md extension
- */
-export function titleToFilename(title: string): string {
-  return `${title
-    .toLowerCase()
-    .replace(/\./g, '-')
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '')}.md`
 }
 
 export function validateTitleFilenameMatch(
