@@ -111,9 +111,9 @@ export function formatEvent(event: DustWireEvent): string | null {
     case 'loop.no_tasks':
       return '😴 No tasks available. Sleeping...\n'
     case 'loop.tasks_found':
-      return '✨ Found task(s). 🤖 Starting Claude...'
+      return '✨ Found a task. Going to work!\n'
     case 'claude.started':
-      return '🤖 Claude session started'
+      return '🤖 Starting Claude...'
     case 'claude.ended':
       return event.success
         ? '🤖 Claude session ended (success)'

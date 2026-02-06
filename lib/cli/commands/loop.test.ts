@@ -703,7 +703,7 @@ describe('formatEvent', () => {
       '🔄 Starting dust loop claude (max 5 iterations)...'
     )
     expect(formatEvent({ type: 'claude.started' })).toBe(
-      '🤖 Claude session started'
+      '🤖 Starting Claude...'
     )
   })
 
