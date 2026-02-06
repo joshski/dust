@@ -1,6 +1,6 @@
 # Dust Event Protocol
 
-When `eventsUrl` is configured in `.dust/config/settings.json`, dust commands will HTTP POST events to that URL.
+Dust commands HTTP POST events to a configured URL. Configure `eventsUrl` in [`.dust/config/settings.json`](./configuration-system.md) to enable event delivery.
 
 ## Configuration
 
@@ -44,7 +44,7 @@ Events are a discriminated union with a `type` field:
 
 | Type | Fields | Description |
 |------|--------|-------------|
-| `loop.warning` | - | Permission skip warning |
+| `loop.warning` | - | Permission skip warning (see [Loop Command](./loop-command.md)) |
 | `loop.started` | `maxIterations: number` | Loop has started |
 | `loop.syncing` | - | Git pull in progress |
 | `loop.sync_skipped` | `reason: string` | Git pull failed |

@@ -51,3 +51,5 @@ The setup script should:
 - **Isolation**: Each eval runs in a fresh temporary directory
 - **Semantic evaluation**: Haiku judges behavior by intent, not exact string matching
 - **Extensibility**: Add new evals by creating a new directory with `eval.json` and `setup.sh`
+
+Use [Exploratory Testing](./exploratory-testing.md) to discover behaviors worth preserving as evals.

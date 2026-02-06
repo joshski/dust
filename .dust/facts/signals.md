@@ -1,6 +1,6 @@
 # Signals
 
-Dust refers to its primary artifacts (goals, facts, ideas and tasks) as "signals".
+Dust refers to its primary artifacts (goals, facts, ideas and tasks) as "signals" — stored in the [`.dust/` directory](./dust-directory-structure.md).
 
 One way to think of these is as a progression from stable/abstract to volatile/concrete:
 

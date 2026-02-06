@@ -1,6 +1,6 @@
 # Configuration System
 
-Dust uses a JSON configuration file at `.dust/config/settings.json` to customize behavior.
+Dust uses a JSON configuration file at [`.dust/config/settings.json`](./dust-directory-structure.md) to customize behavior.
 
 ## Settings
 

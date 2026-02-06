@@ -73,7 +73,7 @@ Trigger a failure (missing file, invalid state). Does Claude diagnose and recove
 ### State Changes
 Make external changes to the test directory between turns. Does Claude notice?
 
-## Converting Findings to Evals
+## Converting Findings to [Evals](./evals.md)
 
 When a behavior is worth preserving:
 

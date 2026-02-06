@@ -19,3 +19,5 @@ The testing framework has three layers:
 - **ActionHandler** - Maps output patterns to next commands
 - **NoHandlerMatchError** - Thrown when no handler matches (helps debug missing handlers)
 - Sessions always start with `bin/dust agent` command
+
+System tests run alongside unit tests using [Vitest](./vitest-testing.md).

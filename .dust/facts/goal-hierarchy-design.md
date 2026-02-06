@@ -1,6 +1,6 @@
 # Goal Hierarchy Design
 
-Goals are organized in a single-parent tree hierarchy rather than a multi-parent directed acyclic graph (DAG).
+[Goals](./dust-directory-structure.md) are organized in a single-parent tree hierarchy rather than a multi-parent directed acyclic graph (DAG).
 
 ## Structure
 

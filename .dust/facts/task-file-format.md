@@ -1,6 +1,6 @@
 # Task File Format
 
-Task files in `.dust/tasks/` must follow a specific structure.
+Task files in [`.dust/tasks/`](./dust-directory-structure.md) must follow a specific structure.
 
 ## Required Headings
 
