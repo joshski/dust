@@ -7,6 +7,7 @@ import {
 import type { CommandContext, CommandDependencies } from '../types'
 import {
   extractGoalRelationships,
+  IDEA_TRANSITION_PREFIXES,
   lintMarkdown,
   titleToFilename,
   validateBidirectionalLinks,
@@ -14,6 +15,7 @@ import {
   validateGoalHierarchyLinks,
   validateGoalHierarchySections,
   validateIdeaOpenQuestions,
+  validateIdeaTransitionTitle,
   validateLinks,
   validateNoCycles,
   validateOpeningSentence,
@@ -1530,6 +1532,170 @@ This is an idea.
     await expect(
       lintMarkdown(createDependencies(context, fileSystem))
     ).rejects.toThrow('Permission denied')
+  })
+})
+
+describe('validateIdeaTransitionTitle', () => {
+  test('returns null for non-transition task title', () => {
+    const content = '# Add User Authentication\n\nImplement auth.'
+    const fileSystem = createFileSystemEmulator()
+    const violation = validateIdeaTransitionTitle(
+      '/project/.dust/tasks/add-user-authentication.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violation).toBeNull()
+  })
+
+  test('returns null when idea file exists for Refine Idea prefix', () => {
+    const content = '# Refine Idea: My Great Idea\n\nRefine this idea.'
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-great-idea.md': '# My Great Idea\n\nAn idea.' },
+        },
+      },
+    })
+    const violation = validateIdeaTransitionTitle(
+      '/project/.dust/tasks/refine-idea-my-great-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violation).toBeNull()
+  })
+
+  test('returns null when idea file exists for Create Task From Idea prefix', () => {
+    const content =
+      '# Create Task From Idea: My Great Idea\n\nCreate a task from this idea.'
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-great-idea.md': '# My Great Idea\n\nAn idea.' },
+        },
+      },
+    })
+    const violation = validateIdeaTransitionTitle(
+      '/project/.dust/tasks/create-task-from-idea-my-great-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violation).toBeNull()
+  })
+
+  test('returns null when idea file exists for Shelve Idea prefix', () => {
+    const content = '# Shelve Idea: My Great Idea\n\nShelve this idea.'
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-great-idea.md': '# My Great Idea\n\nAn idea.' },
+        },
+      },
+    })
+    const violation = validateIdeaTransitionTitle(
+      '/project/.dust/tasks/shelve-idea-my-great-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violation).toBeNull()
+  })
+
+  test('returns violation when referenced idea does not exist', () => {
+    const content = '# Refine Idea: Nonexistent Idea\n\nRefine this idea.'
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+        },
+      },
+    })
+    const violation = validateIdeaTransitionTitle(
+      '/project/.dust/tasks/refine-idea-nonexistent-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violation).not.toBeNull()
+    expect(violation?.message).toContain('Nonexistent Idea')
+    expect(violation?.message).toContain('nonexistent-idea.md')
+  })
+
+  test('returns null when content has no title', () => {
+    const content = 'No heading in this file.'
+    const fileSystem = createFileSystemEmulator()
+    const violation = validateIdeaTransitionTitle(
+      '/project/.dust/tasks/some-task.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violation).toBeNull()
+  })
+})
+
+describe('IDEA_TRANSITION_PREFIXES', () => {
+  test('exports the three known prefixes', () => {
+    expect(IDEA_TRANSITION_PREFIXES).toEqual([
+      'Refine Idea: ',
+      'Create Task From Idea: ',
+      'Shelve Idea: ',
+    ])
+  })
+})
+
+describe('lintMarkdown idea transition validation', () => {
+  test('passes when transition task references existing idea', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea\n\nThis is an idea.',
+          },
+          tasks: {
+            'refine-idea-my-idea.md': `# Refine Idea: My Idea
+
+Refine this idea.
+
+## Goals
+## Blocked By
+## Definition of Done`,
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+    expect(result.exitCode).toBe(0)
+  })
+
+  test('reports violation when transition task references non-existent idea', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {
+            'refine-idea-missing-idea.md': `# Refine Idea: Missing Idea
+
+Refine this idea.
+
+## Goals
+## Blocked By
+## Definition of Done`,
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+    expect(result.exitCode).toBe(1)
+    const output = context.stderrLines.join('\n')
+    expect(output).toContain('Missing Idea')
+    expect(output).toContain('missing-idea.md')
   })
 })
 

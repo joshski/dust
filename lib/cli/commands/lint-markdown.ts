@@ -25,6 +25,12 @@ const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.md$/
 
 const MAX_OPENING_SENTENCE_LENGTH = 150
 
+export const IDEA_TRANSITION_PREFIXES = [
+  'Refine Idea: ',
+  'Create Task From Idea: ',
+  'Shelve Idea: ',
+]
+
 export interface Violation {
   file: string
   message: string
@@ -333,6 +339,34 @@ export function validateSemanticLinks(
   }
 
   return violations
+}
+
+export function validateIdeaTransitionTitle(
+  filePath: string,
+  content: string,
+  ideasPath: string,
+  fileSystem: FileSystem
+): Violation | null {
+  const title = extractTitle(content)
+  if (!title) {
+    return null
+  }
+
+  for (const prefix of IDEA_TRANSITION_PREFIXES) {
+    if (title.startsWith(prefix)) {
+      const ideaTitle = title.slice(prefix.length)
+      const ideaFilename = titleToFilename(ideaTitle)
+      if (!fileSystem.exists(`${ideasPath}/${ideaFilename}`)) {
+        return {
+          file: filePath,
+          message: `Idea transition task references non-existent idea: "${ideaTitle}" (expected file "${ideaFilename}" in ideas/)`,
+        }
+      }
+      return null
+    }
+  }
+
+  return null
 }
 
 export function validateGoalHierarchySections(
@@ -724,6 +758,16 @@ export async function lintMarkdown(
 
       violations.push(...validateTaskHeadings(filePath, content))
       violations.push(...validateSemanticLinks(filePath, content))
+
+      const ideaTransitionViolation = validateIdeaTransitionTitle(
+        filePath,
+        content,
+        ideasPath,
+        fileSystem
+      )
+      if (ideaTransitionViolation) {
+        violations.push(ideaTransitionViolation)
+      }
     }
   }
 
