@@ -13,6 +13,7 @@ import {
   validateFilename,
   validateGoalHierarchyLinks,
   validateGoalHierarchySections,
+  validateIdeaOpenQuestions,
   validateLinks,
   validateNoCycles,
   validateOpeningSentence,
@@ -206,6 +207,157 @@ describe('validateOpeningSentenceLength', () => {
     // Missing sentence is handled by validateOpeningSentence, not this function
     const content = '# Title\n\n## Another Heading'
     expect(validateOpeningSentenceLength('file.md', content)).toBeNull()
+  })
+})
+
+describe('validateIdeaOpenQuestions', () => {
+  test('returns no violations when no Open Questions section exists', () => {
+    const content = `# My Idea
+
+This is a simple idea.
+`
+    expect(validateIdeaOpenQuestions('idea.md', content)).toHaveLength(0)
+  })
+
+  test('returns no violations for valid Open Questions section', () => {
+    const content = `# My Idea
+
+This is an idea.
+
+## Open Questions
+
+### Should we take our own payments?
+
+#### Yes, take our own payments
+
+Lower costs, seller of record, but merchant account required.
+
+#### No, use a payment provider
+
+Higher costs, simpler setup.
+
+### Which framework should we use?
+
+#### React
+
+Large ecosystem, widely adopted.
+
+#### Vue
+
+Simpler API, smaller bundle.
+`
+    expect(validateIdeaOpenQuestions('idea.md', content)).toHaveLength(0)
+  })
+
+  test('returns violation when question heading does not end with question mark', () => {
+    const content = `# My Idea
+
+This is an idea.
+
+## Open Questions
+
+### This is not a question
+
+#### Option A
+
+Some analysis.
+`
+    const violations = validateIdeaOpenQuestions('idea.md', content)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('Questions must end with "?"')
+    expect(violations[0].line).toBe(7)
+  })
+
+  test('returns violation when question has no options', () => {
+    const content = `# My Idea
+
+This is an idea.
+
+## Open Questions
+
+### Should we take our own payments?
+`
+    const violations = validateIdeaOpenQuestions('idea.md', content)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('no options')
+    expect(violations[0].line).toBe(7)
+  })
+
+  test('returns violation when question has no options before next question', () => {
+    const content = `# My Idea
+
+This is an idea.
+
+## Open Questions
+
+### Should we take our own payments?
+
+### Which framework should we use?
+
+#### React
+
+Large ecosystem.
+`
+    const violations = validateIdeaOpenQuestions('idea.md', content)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('no options')
+    expect(violations[0].line).toBe(7)
+  })
+
+  test('returns violation when question has no options before next section', () => {
+    const content = `# My Idea
+
+This is an idea.
+
+## Open Questions
+
+### Should we take our own payments?
+
+## Notes
+
+Some notes.
+`
+    const violations = validateIdeaOpenQuestions('idea.md', content)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('no options')
+    expect(violations[0].line).toBe(7)
+  })
+
+  test('ignores headings in other sections', () => {
+    const content = `# My Idea
+
+This is an idea.
+
+## Notes
+
+### This is not a question
+
+#### And this is not an option
+`
+    expect(validateIdeaOpenQuestions('idea.md', content)).toHaveLength(0)
+  })
+
+  test('reports multiple violations', () => {
+    const content = `# My Idea
+
+This is an idea.
+
+## Open Questions
+
+### Not a question
+
+#### Option A
+
+Some analysis.
+
+### Also not a question
+
+#### Option B
+
+Some analysis.
+`
+    const violations = validateIdeaOpenQuestions('idea.md', content)
+    expect(violations).toHaveLength(2)
   })
 })
 
@@ -1168,6 +1320,216 @@ describe('validateNoCycles', () => {
     const violations = validateNoCycles(relationships)
     expect(violations.length).toBeGreaterThan(0)
     expect(violations[0].message).toContain('Cycle detected')
+  })
+})
+
+describe('lintMarkdown idea open questions validation', () => {
+  test('passes with valid idea Open Questions section', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': `# My Idea
+
+This is an idea.
+
+## Open Questions
+
+### Should we take our own payments?
+
+#### Yes, take our own payments
+
+Lower costs, seller of record.
+
+#### No, use a payment provider
+
+Higher costs, simpler setup.
+`,
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain('All validations passed')
+  })
+
+  test('passes with idea that has no Open Questions section', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'simple-idea.md': `# Simple Idea
+
+This is a simple idea without open questions.
+`,
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(0)
+  })
+
+  test('reports violations for malformed Open Questions section', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'bad-idea.md': `# Bad Idea
+
+This is an idea with bad questions.
+
+## Open Questions
+
+### This is not a question
+
+#### Option A
+
+Some analysis.
+`,
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    const output = context.stderrLines.join('\n')
+    expect(output).toContain('Questions must end with "?"')
+  })
+
+  test('reports violations for questions with no options', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'no-options.md': `# No Options
+
+This is an idea with a question but no options.
+
+## Open Questions
+
+### Should we take our own payments?
+`,
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    const output = context.stderrLines.join('\n')
+    expect(output).toContain('no options')
+  })
+
+  test('skips idea files that disappear between scan and read (ENOENT)', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'idea.md': `# Idea
+
+This is an idea.
+
+## Open Questions
+
+### Should we do this?
+
+#### Yes
+
+Good reasons.
+
+#### No
+
+Other reasons.
+`,
+          },
+        },
+      },
+    })
+    const originalReadFile = fileSystem.readFile.bind(fileSystem)
+    let ideaReadCount = 0
+    fileSystem.readFile = async (path: string) => {
+      if (path.includes('/ideas/')) {
+        ideaReadCount++
+        // Ideas are read 3 times:
+        // 1. .dust root links validation
+        // 2. content validation
+        // 3. idea-specific validation (open questions)
+        if (ideaReadCount === 3) {
+          const error = new Error('ENOENT: file deleted')
+          ;(error as NodeJS.ErrnoException).code = 'ENOENT'
+          throw error
+        }
+      }
+      return originalReadFile(path)
+    }
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+    expect(result.exitCode).toBe(0)
+  })
+
+  test('skips non-markdown files in ideas directory', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'idea.md': `# Idea
+
+This is an idea.
+`,
+            README: '',
+            '.gitkeep': '',
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain('All validations passed')
+  })
+
+  test('rethrows non-ENOENT errors when reading idea files during idea validation', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'idea.md': '# Idea\n\nThis is an idea.',
+          },
+        },
+      },
+    })
+    const originalReadFile = fileSystem.readFile.bind(fileSystem)
+    let ideaReadCount = 0
+    fileSystem.readFile = async (path: string) => {
+      if (path.includes('/ideas/')) {
+        ideaReadCount++
+        if (ideaReadCount === 3) {
+          throw new Error('Permission denied')
+        }
+      }
+      return originalReadFile(path)
+    }
+
+    await expect(
+      lintMarkdown(createDependencies(context, fileSystem))
+    ).rejects.toThrow('Permission denied')
   })
 })
 
