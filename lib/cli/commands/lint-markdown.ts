@@ -172,6 +172,77 @@ export function validateLinks(
   return violations
 }
 
+export function validateIdeaOpenQuestions(
+  filePath: string,
+  content: string
+): Violation[] {
+  const violations: Violation[] = []
+  const lines = content.split('\n')
+
+  let inOpenQuestions = false
+  let currentQuestionLine: number | null = null
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+
+    // h2 heading: enters or exits the Open Questions section
+    if (line.startsWith('## ')) {
+      if (inOpenQuestions && currentQuestionLine !== null) {
+        violations.push({
+          file: filePath,
+          message: 'Question has no options listed beneath it',
+          line: currentQuestionLine,
+        })
+      }
+      inOpenQuestions = line === '## Open Questions'
+      currentQuestionLine = null
+      continue
+    }
+
+    if (!inOpenQuestions) continue
+
+    // h3 heading: a question (must end with ?)
+    if (line.startsWith('### ')) {
+      if (currentQuestionLine !== null) {
+        violations.push({
+          file: filePath,
+          message: 'Question has no options listed beneath it',
+          line: currentQuestionLine,
+        })
+      }
+
+      if (!line.trimEnd().endsWith('?')) {
+        violations.push({
+          file: filePath,
+          message:
+            'Questions must end with "?" (e.g., "### Should we take our own payments?")',
+          line: i + 1,
+        })
+        currentQuestionLine = null
+      } else {
+        currentQuestionLine = i + 1
+      }
+      continue
+    }
+
+    // h4 heading: an option (satisfies the current question)
+    if (line.startsWith('#### ')) {
+      currentQuestionLine = null
+    }
+  }
+
+  // Handle question at end of file with no options
+  if (inOpenQuestions && currentQuestionLine !== null) {
+    violations.push({
+      file: filePath,
+      message: 'Question has no options listed beneath it',
+      line: currentQuestionLine,
+    })
+  }
+
+  return violations
+}
+
 interface SemanticRule {
   section: string
   requiredPath: string
@@ -597,6 +668,31 @@ export async function lintMarkdown(
       if (titleFilenameViolation) {
         violations.push(titleFilenameViolation)
       }
+    }
+  }
+
+  // Validate idea files specifically
+  const ideasPath = `${dustPath}/ideas`
+  const { files: ideaFiles } = await safeScanDir(glob, ideasPath)
+  if (ideaFiles.length > 0) {
+    context.stdout('Validating idea files in .dust/ideas/...')
+
+    for (const file of ideaFiles) {
+      if (!file.endsWith('.md')) continue
+
+      const filePath = `${ideasPath}/${file}`
+      let content: string
+      try {
+        content = await fileSystem.readFile(filePath)
+      } catch (error) {
+        // File may have been deleted between scan and read - skip it
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+          continue
+        }
+        throw error
+      }
+
+      violations.push(...validateIdeaOpenQuestions(filePath, content))
     }
   }
 
