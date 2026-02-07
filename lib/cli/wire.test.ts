@@ -199,7 +199,7 @@ describe('wireEntry', () => {
 
     expect(exitCode).toBe(0)
     expect(logLines.join('\n')).toContain(
-      '💨 dust - A tool for keeping AI coding agents on track'
+      '💨 dust - Flow state for AI coding agents'
     )
   })
 
@@ -250,7 +250,7 @@ describe('wireEntry', () => {
 
     expect(exitCode).toBe(0)
     expect(logLines.join('\n')).toContain(
-      '💨 dust - A tool for keeping AI coding agents on track'
+      '💨 dust - Flow state for AI coding agents'
     )
   })
 

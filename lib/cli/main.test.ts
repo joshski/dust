@@ -79,7 +79,7 @@ describe('runCommand', () => {
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain(
-      '💨 dust - A tool for keeping AI coding agents on track'
+      '💨 dust - Flow state for AI coding agents'
     )
   })
 
@@ -114,7 +114,7 @@ describe('main', () => {
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain(
-      '💨 dust - A tool for keeping AI coding agents on track'
+      '💨 dust - Flow state for AI coding agents'
     )
     expect(context.stdoutLines.join('\n')).toContain(
       'Usage: npx dust <command>'
@@ -134,7 +134,7 @@ describe('main', () => {
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain(
-      '💨 dust - A tool for keeping AI coding agents on track'
+      '💨 dust - Flow state for AI coding agents'
     )
   })
 

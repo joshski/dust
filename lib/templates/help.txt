@@ -1,4 +1,4 @@
-💨 dust - A tool for keeping AI coding agents on track.
+💨 dust - Flow state for AI coding agents.
 
 Usage: {{bin}} <command> [options]
 
