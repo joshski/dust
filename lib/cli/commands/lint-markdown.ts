@@ -4,14 +4,14 @@
 
 import { dirname, resolve } from 'node:path'
 import {
-  IDEA_TRANSITION_PREFIXES,
-  titleToFilename,
-} from '../../artifacts/idea-transition-task'
-import {
   extractOpeningSentence,
   extractTitle,
   MARKDOWN_LINK_PATTERN,
 } from '../../markdown/markdown-utilities'
+import {
+  IDEA_TRANSITION_PREFIXES,
+  titleToFilename,
+} from '../idea-transition-tasks'
 import type {
   CommandDependencies,
   CommandResult,

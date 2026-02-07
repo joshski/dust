@@ -6,9 +6,7 @@
   "bin": {
     "dust": "./dist/dust.js"
   },
-  "exports": {
-    "./artifacts": "./dist/artifacts.js"
-  },
+  "exports": {},
   "files": [
     "dist",
     "bin",
@@ -27,7 +25,7 @@
   "author": "joshski",
   "license": "MIT",
   "scripts": {
-    "build": "bun build lib/cli/run.ts --target node --outfile dist/dust.js && printf '%s\\n%s' '#!/usr/bin/env node' \"$(cat dist/dust.js)\" > dist/dust.js && bun build lib/artifacts/idea-transition-task.ts --target browser --outfile dist/artifacts.js && cp -r lib/templates templates",
+    "build": "bun build lib/cli/run.ts --target node --outfile dist/dust.js && printf '%s\\n%s' '#!/usr/bin/env node' \"$(cat dist/dust.js)\" > dist/dust.js && cp -r lib/templates templates",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "eval": "bun run ./evals/run.ts"
