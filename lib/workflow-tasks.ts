@@ -1,4 +1,4 @@
-import type { FileSystem } from './types'
+import type { FileSystem } from './cli/types'
 
 export const IDEA_TRANSITION_PREFIXES = [
   'Refine Idea: ',

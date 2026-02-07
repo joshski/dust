@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { createFileSystemEmulator } from '../test/test-utilities'
+import { createFileSystemEmulator } from './test/test-utilities'
 import {
   createCaptureIdeaTask,
   createRefineIdeaTask,
@@ -7,7 +7,7 @@ import {
   createTaskFromIdea,
   IDEA_TRANSITION_PREFIXES,
   titleToFilename,
-} from './idea-transition-tasks'
+} from './workflow-tasks'
 
 describe('IDEA_TRANSITION_PREFIXES', () => {
   test('contains all three transition prefixes', () => {

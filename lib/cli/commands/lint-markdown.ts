@@ -8,10 +8,7 @@ import {
   extractTitle,
   MARKDOWN_LINK_PATTERN,
 } from '../../markdown/markdown-utilities'
-import {
-  IDEA_TRANSITION_PREFIXES,
-  titleToFilename,
-} from '../idea-transition-tasks'
+import { IDEA_TRANSITION_PREFIXES, titleToFilename } from '../../workflow-tasks'
 import type {
   CommandDependencies,
   CommandResult,
