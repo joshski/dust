@@ -15,3 +15,4 @@ This goal governs how we develop and maintain dust itself, separate from the goa
 - [Intuitive Directory Structure](intuitive-directory-structure.md)
 - [Repository Hygiene](repository-hygiene.md)
 - [Clarity Over Brevity](clarity-over-brevity.md)
+- [Reasonably DRY](reasonably-dry.md)
