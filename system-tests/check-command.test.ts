@@ -183,7 +183,7 @@ test('lint markdown passes with valid files', async () => {
           tasks: {
             'good-task.md': buildTask({
               title: 'Good Task',
-              description: 'A proper task with all sections.',
+              description: 'Cover all required sections for a valid task.',
               goals: [{ name: 'Good Goal', path: '../goals/good-goal.md' }],
             }),
           },

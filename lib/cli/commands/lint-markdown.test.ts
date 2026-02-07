@@ -16,6 +16,7 @@ import {
   validateGoalHierarchySections,
   validateIdeaOpenQuestions,
   validateIdeaTransitionTitle,
+  validateImperativeOpeningSentence,
   validateLinks,
   validateNoCycles,
   validateOpeningSentence,
@@ -209,6 +210,71 @@ describe('validateOpeningSentenceLength', () => {
     // Missing sentence is handled by validateOpeningSentence, not this function
     const content = '# Title\n\n## Another Heading'
     expect(validateOpeningSentenceLength('file.md', content)).toBeNull()
+  })
+})
+
+describe('validateImperativeOpeningSentence', () => {
+  test('passes for imperative sentences', () => {
+    expect(
+      validateImperativeOpeningSentence(
+        'file.md',
+        '# Title\n\nAdd authentication to the login page.'
+      )
+    ).toBeNull()
+    expect(
+      validateImperativeOpeningSentence(
+        'file.md',
+        '# Title\n\nReplace the old caching layer.'
+      )
+    ).toBeNull()
+    expect(
+      validateImperativeOpeningSentence(
+        'file.md',
+        '# Title\n\nFix the race condition in the worker pool.'
+      )
+    ).toBeNull()
+  })
+
+  test('fails for sentences starting with articles', () => {
+    const violation = validateImperativeOpeningSentence(
+      'file.md',
+      '# Title\n\nThe authentication system needs updating.'
+    )
+    expect(violation).not.toBeNull()
+    expect(violation?.message).toContain('imperative form')
+  })
+
+  test('fails for sentences starting with demonstratives', () => {
+    const violation = validateImperativeOpeningSentence(
+      'file.md',
+      '# Title\n\nThis task adds authentication.'
+    )
+    expect(violation).not.toBeNull()
+    expect(violation?.message).toContain('imperative form')
+  })
+
+  test('fails for sentences starting with pronouns', () => {
+    const violation = validateImperativeOpeningSentence(
+      'file.md',
+      '# Title\n\nWe need to add authentication.'
+    )
+    expect(violation).not.toBeNull()
+    expect(violation?.message).toContain('imperative form')
+  })
+
+  test('fails for sentences starting with gerunds', () => {
+    const violation = validateImperativeOpeningSentence(
+      'file.md',
+      '# Title\n\nAdding authentication to the login page.'
+    )
+    expect(violation).not.toBeNull()
+    expect(violation?.message).toContain('imperative form')
+  })
+
+  test('returns null when there is no opening sentence', () => {
+    expect(
+      validateImperativeOpeningSentence('file.md', '# Title\n\n## Heading')
+    ).toBeNull()
   })
 })
 
@@ -618,7 +684,7 @@ This is a goal.
           tasks: {
             'my-task.md': `# My Task
 
-This is a task.
+Implement the task functionality.
 
 ## Goals
 [Goal](../goals/goal.md)
@@ -697,7 +763,7 @@ This is a goal.
           tasks: {
             'my-task.md': `# My Task
 
-This is a task.
+Implement the task functionality.
 
 ## Goals
 ## Blocked By
@@ -846,6 +912,31 @@ This is a goal.
     const output = context.stderrLines.join('\n')
     expect(output).toContain('## Goals')
     expect(output).toContain('goal file')
+  })
+
+  test('reports imperative opening sentence violations for task files', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: {
+            'my-task.md': `# My Task
+
+This task does something.
+
+## Goals
+## Blocked By
+## Definition of Done`,
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    const output = context.stderrLines.join('\n')
+    expect(output).toContain('imperative form')
   })
 
   test('reports semantic link violations for wrong link type in Blocked by section', async () => {
@@ -2115,7 +2206,7 @@ This is a goal.
           tasks: {
             'task.md': `# Task
 
-This is a task.
+Implement the task functionality.
 
 ## Goals
 ## Blocked By

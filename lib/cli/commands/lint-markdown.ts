@@ -103,6 +103,47 @@ export function validateOpeningSentenceLength(
   return null
 }
 
+const NON_IMPERATIVE_STARTERS = new Set([
+  'the',
+  'a',
+  'an',
+  'this',
+  'that',
+  'these',
+  'those',
+  'we',
+  'it',
+  'they',
+  'you',
+  'i',
+])
+
+export function validateImperativeOpeningSentence(
+  filePath: string,
+  content: string
+): Violation | null {
+  const openingSentence = extractOpeningSentence(content)
+  if (!openingSentence) {
+    return null
+  }
+
+  const firstWord = openingSentence.split(/\s/)[0].replace(/[^a-zA-Z]/g, '')
+  const lower = firstWord.toLowerCase()
+
+  if (NON_IMPERATIVE_STARTERS.has(lower) || lower.endsWith('ing')) {
+    const preview =
+      openingSentence.length > 40
+        ? `${openingSentence.slice(0, 40)}...`
+        : openingSentence
+    return {
+      file: filePath,
+      message: `Opening sentence should use imperative form (e.g., "Add X" not "This adds X"). Found: "${preview}"`,
+    }
+  }
+
+  return null
+}
+
 export function validateTaskHeadings(
   filePath: string,
   content: string
@@ -739,6 +780,14 @@ export async function lintMarkdown(
 
       violations.push(...validateTaskHeadings(filePath, content))
       violations.push(...validateSemanticLinks(filePath, content))
+
+      const imperativeViolation = validateImperativeOpeningSentence(
+        filePath,
+        content
+      )
+      if (imperativeViolation) {
+        violations.push(imperativeViolation)
+      }
 
       const ideaTransitionViolation = validateIdeaTransitionTitle(
         filePath,
