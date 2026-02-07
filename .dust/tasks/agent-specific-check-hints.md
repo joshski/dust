@@ -6,31 +6,30 @@ Add support for agent-specific check hints so that projects can expose targeted 
 
 ## Design
 
-Extend the `hints` field in `CheckConfig` to support both the current `string[]` format and a new keyed format where hints are mapped to agent types:
+Each hint in the `hints` array can be either a plain string (shown to all agents) or an object with `agents` and `hint` fields (shown only to the listed agents):
 
 ```json
 {
   "name": "lint (biome)",
   "command": "bunx biome check .",
-  "hints": {
-    "*": ["Run `bunx biome check . --write` to auto-fix lint errors"],
-    "claude-code-web": ["You cannot run --write in this environment, fix each error manually"],
-    "codex": ["Use the sandbox shell to run biome with --write"]
-  }
+  "hints": [
+    "Check biome.json for rule configurations",
+    { "agents": ["claude-code", "codex"], "hint": "Run `bunx biome check . --write` to auto-fix lint errors" },
+    { "agents": ["claude-code-web"], "hint": "You cannot run --write in this environment, fix each error manually" }
+  ]
 }
 ```
 
-- `"*"` provides default hints shown to any agent (equivalent to the current `string[]` format)
-- Agent-type keys (`"claude-code"`, `"claude-code-web"`, `"codex"`) provide overrides for specific agents
-- When a specific agent key is present, its hints are shown **instead of** the `"*"` hints
-- The plain `string[]` format remains supported for backwards compatibility
+- Plain strings are shown to every agent (unchanged from today)
+- `{ "agents": [...], "hint": "..." }` objects are shown only when the detected agent type is in the `agents` list
+- Both forms can be mixed freely in the same array
 
 ### Files to change
 
-- **`lib/cli/types.ts`** - Update `CheckConfig.hints` type to accept both `string[]` and `Record<string, string[]>`. Add a type like `CheckHints = string[] | Record<string, string[]>`.
-- **`lib/cli/commands/check.ts`** - Resolve hints at display time using the detected agent type. Import `detectAgent` from `lib/agents/detection.ts` and use it in `displayResults` (or resolve earlier in the pipeline). When hints is a `Record`, select the agent-specific key if present, otherwise fall back to `"*"`.
-- **`lib/config/settings.ts`** - Ensure settings parsing accepts both hint formats without validation errors.
-- **`lib/cli/commands/check.test.ts`** - Add tests for: plain `string[]` hints still work, `Record` hints select the correct agent, `"*"` fallback works, missing agent key falls back to `"*"`, no hints at all still works.
+- **`lib/cli/types.ts`** - Update `CheckConfig.hints` type. Add a type like `type CheckHint = string | { agents: AgentType[]; hint: string }` and change `hints?: string[]` to `hints?: CheckHint[]`.
+- **`lib/cli/commands/check.ts`** - Resolve hints at display time using the detected agent type. Import `detectAgent` from `lib/agents/detection.ts` and use it in `displayResults` (or resolve earlier in the pipeline). Filter hints: include plain strings unconditionally, include objects only when the current agent type appears in their `agents` list.
+- **`lib/config/settings.ts`** - Ensure settings parsing accepts the mixed hint format without validation errors.
+- **`lib/cli/commands/check.test.ts`** - Add tests for: plain string hints still work, object hints filter by agent type, mixed arrays resolve correctly, no hints at all still works.
 
 ### Agent detection
 
@@ -48,10 +47,9 @@ Agent detection already exists in `lib/agents/detection.ts` with types `"claude-
 
 ## Definition of Done
 
-- [ ] `CheckConfig.hints` accepts both `string[]` and `Record<string, string[]>`
-- [ ] When hints is a `Record`, the correct agent-specific hints are displayed based on `detectAgent()`
-- [ ] When no agent-specific key matches, `"*"` hints are used as a fallback
-- [ ] When hints is a plain `string[]`, behavior is unchanged from today
-- [ ] When hints is a `Record` with no matching key and no `"*"`, no hints are shown
+- [ ] `CheckConfig.hints` accepts `Array<string | { agents, hint }>`
+- [ ] Plain string hints are shown to all agents (unchanged from today)
+- [ ] Object hints are shown only when the detected agent type is in the `agents` list
+- [ ] Mixed arrays of strings and objects resolve correctly
 - [ ] Existing tests continue to pass
 - [ ] New tests cover all hint resolution paths
