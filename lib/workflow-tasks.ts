@@ -25,6 +25,38 @@ export function titleToFilename(title: string): string {
     .replace(/^-|-$/g, '')}.md`
 }
 
+export type WorkflowTaskType = 'refine' | 'create-task' | 'shelve'
+
+export interface WorkflowTaskMatch {
+  type: WorkflowTaskType
+  taskSlug: string
+}
+
+const WORKFLOW_TASK_TYPES: { type: WorkflowTaskType; prefix: string }[] = [
+  { type: 'refine', prefix: 'Refine Idea: ' },
+  { type: 'create-task', prefix: 'Create Task From Idea: ' },
+  { type: 'shelve', prefix: 'Shelve Idea: ' },
+]
+
+export async function findWorkflowTask(
+  fileSystem: FileSystem,
+  dustPath: string,
+  ideaSlug: string
+): Promise<WorkflowTaskMatch | null> {
+  const ideaTitle = await readIdeaTitle(fileSystem, dustPath, ideaSlug)
+
+  for (const { type, prefix } of WORKFLOW_TASK_TYPES) {
+    const filename = titleToFilename(`${prefix}${ideaTitle}`)
+    const filePath = `${dustPath}/tasks/${filename}`
+    if (fileSystem.exists(filePath)) {
+      const taskSlug = filename.replace(/\.md$/, '')
+      return { type, taskSlug }
+    }
+  }
+
+  return null
+}
+
 export interface CreateIdeaTransitionTaskResult {
   filePath: string
 }

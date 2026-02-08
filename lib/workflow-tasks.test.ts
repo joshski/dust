@@ -5,6 +5,7 @@ import {
   createRefineIdeaTask,
   createShelveIdeaTask,
   createTaskFromIdea,
+  findWorkflowTask,
   IDEA_TRANSITION_PREFIXES,
   titleToFilename,
 } from './workflow-tasks'
@@ -166,6 +167,79 @@ describe('createCaptureIdeaTask', () => {
     await expect(
       createCaptureIdeaTask(fileSystem, '/project/.dust', '   ')
     ).rejects.toThrow('description is required and must not be whitespace-only')
+  })
+})
+
+describe('findWorkflowTask', () => {
+  test('returns null when no workflow task exists for the idea', async () => {
+    const fileSystem = createFileSystem()
+    const result = await findWorkflowTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+    expect(result).toBeNull()
+  })
+
+  test('finds a refine task', async () => {
+    const fileSystem = createFileSystem()
+    await createRefineIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+    const result = await findWorkflowTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+    expect(result).toEqual({
+      type: 'refine',
+      taskSlug: 'refine-idea-progress-broadcasting',
+    })
+  })
+
+  test('finds a create-task task', async () => {
+    const fileSystem = createFileSystem()
+    await createTaskFromIdea(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+    const result = await findWorkflowTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+    expect(result).toEqual({
+      type: 'create-task',
+      taskSlug: 'create-task-from-idea-progress-broadcasting',
+    })
+  })
+
+  test('finds a shelve task', async () => {
+    const fileSystem = createFileSystem()
+    await createShelveIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+    const result = await findWorkflowTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+    expect(result).toEqual({
+      type: 'shelve',
+      taskSlug: 'shelve-idea-progress-broadcasting',
+    })
+  })
+
+  test('throws when the idea does not exist', async () => {
+    const fileSystem = createFileSystem()
+    await expect(
+      findWorkflowTask(fileSystem, '/project/.dust', 'nonexistent')
+    ).rejects.toThrow('Idea not found: "nonexistent"')
   })
 })
 

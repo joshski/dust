@@ -8,6 +8,7 @@
 - `createTaskFromIdea(fileSystem, dustPath, ideaSlug, description?)` - Creates a task to convert an idea into a concrete task
 - `createShelveIdeaTask(fileSystem, dustPath, ideaSlug, description?)` - Creates a task to archive and remove an idea
 - `createCaptureIdeaTask(fileSystem, dustPath, description)` - Creates a task to capture a new idea (no existing idea required)
+- `findWorkflowTask(fileSystem, dustPath, ideaSlug)` - Returns `null` or a `WorkflowTaskMatch` (`{ type, taskSlug }`) indicating the existing workflow task for an idea
 
 ## Idea Transition Prefixes
 
@@ -25,13 +26,9 @@ The `titleToFilename` function strips the colon from the prefix, producing predi
 - `Create Task From Idea: Foo Bar` -> `create-task-from-idea-foo-bar.md`
 - `Shelve Idea: Foo Bar` -> `shelve-idea-foo-bar.md`
 
-## UI Inference
+## Finding Existing Workflow Tasks
 
-External UIs can infer idea-to-task relationships purely from task filenames by stripping the known prefix slugs:
-
-- `refine-idea-foo-bar.md` -> strip `refine-idea-` -> idea slug `foo-bar.md`
-- `create-task-from-idea-foo-bar.md` -> strip `create-task-from-idea-` -> idea slug `foo-bar.md`
-- `shelve-idea-foo-bar.md` -> strip `shelve-idea-` -> idea slug `foo-bar.md`
+`findWorkflowTask` reads the idea title, computes each possible task filename, and checks for existence. Returns a `WorkflowTaskMatch` with `type` (`'refine' | 'create-task' | 'shelve'`) and `taskSlug` (the task filename without `.md`) — or `null` if no workflow task exists.
 
 ## Linter Validation
 
