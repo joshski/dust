@@ -10,6 +10,7 @@ import { type ChildProcess, spawn } from 'node:child_process'
 export interface ProcessResult {
   exitCode: number
   output: string
+  timedOut?: boolean
 }
 
 export type SpawnFn = (
@@ -23,12 +24,17 @@ export type SpawnFn = (
  * Commands are run with shell: true for command string interpretation.
  */
 export interface ShellRunner {
-  run: (command: string, cwd: string) => Promise<ProcessResult>
+  run: (
+    command: string,
+    cwd: string,
+    timeoutMs?: number
+  ) => Promise<ProcessResult>
 }
 
 export function createShellRunner(spawnFn: SpawnFn): ShellRunner {
   return {
-    run: (command, cwd) => runBufferedProcess(spawnFn, command, [], cwd, true),
+    run: (command, cwd, timeoutMs) =>
+      runBufferedProcess(spawnFn, command, [], cwd, true, timeoutMs),
   }
 }
 
@@ -59,11 +65,26 @@ function runBufferedProcess(
   command: string,
   commandArguments: string[],
   cwd: string,
-  shell: boolean
+  shell: boolean,
+  timeoutMs?: number
 ): Promise<ProcessResult> {
   return new Promise(resolve => {
     const proc = spawnFn(command, commandArguments, { cwd, shell })
     const chunks: string[] = []
+    let resolved = false
+    let timer: ReturnType<typeof setTimeout> | undefined
+
+    if (timeoutMs !== undefined) {
+      timer = setTimeout(() => {
+        resolved = true
+        proc.kill()
+        resolve({
+          exitCode: 1,
+          output: chunks.join(''),
+          timedOut: true,
+        })
+      }, timeoutMs)
+    }
 
     proc.stdout?.on('data', (data: Buffer) => {
       chunks.push(data.toString())
@@ -73,9 +94,13 @@ function runBufferedProcess(
     })
 
     proc.on('close', code => {
+      if (resolved) return
+      if (timer !== undefined) clearTimeout(timer)
       resolve({ exitCode: code ?? 1, output: chunks.join('') })
     })
     proc.on('error', error => {
+      if (resolved) return
+      if (timer !== undefined) clearTimeout(timer)
       resolve({ exitCode: 1, output: error.message })
     })
   })

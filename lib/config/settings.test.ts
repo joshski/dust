@@ -325,6 +325,49 @@ describe('loadSettings', () => {
 
     expect(settings.eventsUrl).toBe('https://env.example.com/events')
   })
+
+  test('normalizes string entries in checks array to CheckConfig objects', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {
+            'settings.json': JSON.stringify({
+              checks: ['npm run lint', { name: 'test', command: 'npm test' }],
+            }),
+          },
+        },
+      },
+    })
+    const settings = await loadSettings('/project', fileSystem)
+
+    expect(settings.checks).toEqual([
+      { name: 'npm run lint', command: 'npm run lint' },
+      { name: 'test', command: 'npm test' },
+    ])
+  })
+
+  test('preserves timeoutMilliseconds on object check entries', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {
+            'settings.json': JSON.stringify({
+              checks: [
+                {
+                  name: 'test',
+                  command: 'npm test',
+                  timeoutMilliseconds: 30000,
+                },
+              ],
+            }),
+          },
+        },
+      },
+    })
+    const settings = await loadSettings('/project', fileSystem)
+
+    expect(settings.checks?.[0].timeoutMilliseconds).toBe(30000)
+  })
 })
 
 describe('stubEnv and restoreEnv', () => {

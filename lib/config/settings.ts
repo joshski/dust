@@ -78,6 +78,13 @@ export function detectTestCommand(
   return null
 }
 
+function normalizeCheckEntry(entry: string | CheckConfig): CheckConfig {
+  if (typeof entry === 'string') {
+    return { name: entry, command: entry }
+  }
+  return entry
+}
+
 export async function loadSettings(
   cwd: string,
   fileSystem: FileSystem
@@ -98,6 +105,9 @@ export async function loadSettings(
   try {
     const content = await fileSystem.readFile(settingsPath)
     const parsed = JSON.parse(content)
+    if (Array.isArray(parsed.checks)) {
+      parsed.checks = parsed.checks.map(normalizeCheckEntry)
+    }
     const result: DustSettings = {
       ...DEFAULT_SETTINGS,
       ...parsed,

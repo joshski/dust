@@ -37,6 +37,7 @@ export interface CheckConfig {
   name: string
   command: string
   hints?: string[]
+  timeoutMilliseconds?: number
 }
 
 export interface DustSettings {

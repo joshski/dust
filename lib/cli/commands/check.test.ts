@@ -15,15 +15,28 @@ import type {
 import { check } from './check'
 
 function createMockBufferedRunner(
-  results: Record<string, { exitCode: number; output: string }>
+  results: Record<
+    string,
+    { exitCode: number; output: string; timedOut?: boolean }
+  >
 ): ShellRunner & {
-  calls: Array<{ command: string; cwd: string; startTime: number }>
+  calls: Array<{
+    command: string
+    cwd: string
+    startTime: number
+    timeoutMs?: number
+  }>
 } {
-  const calls: Array<{ command: string; cwd: string; startTime: number }> = []
+  const calls: Array<{
+    command: string
+    cwd: string
+    startTime: number
+    timeoutMs?: number
+  }> = []
   return {
-    run: async (command, cwd) => {
+    run: async (command, cwd, timeoutMs) => {
       const startTime = Date.now()
-      calls.push({ command, cwd, startTime })
+      calls.push({ command, cwd, startTime, timeoutMs })
       return results[command] ?? { exitCode: 0, output: '' }
     },
     calls,
@@ -449,6 +462,101 @@ describe('createShellRunner', () => {
     expect(result.output).toBe('spawn failed')
   })
 
+  test('kills process and resolves with timedOut when timeout elapses', async () => {
+    const mockProc = new EventEmitter() as EventEmitter & {
+      stdout: EventEmitter
+      stderr: EventEmitter
+      kill: () => void
+    }
+    mockProc.stdout = new EventEmitter()
+    mockProc.stderr = new EventEmitter()
+    let killed = false
+    mockProc.kill = () => {
+      killed = true
+    }
+
+    const mockSpawn = () => mockProc as unknown as ChildProcess
+    const runner = createShellRunner(mockSpawn)
+
+    const promise = runner.run('cmd', '/', 50)
+    mockProc.stdout.emit('data', Buffer.from('partial'))
+
+    const result = await promise
+    expect(result.timedOut).toBe(true)
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toBe('partial')
+    expect(killed).toBe(true)
+  })
+
+  test('ignores close event after timeout has already resolved', async () => {
+    const mockProc = new EventEmitter() as EventEmitter & {
+      stdout: EventEmitter
+      stderr: EventEmitter
+      kill: () => void
+    }
+    mockProc.stdout = new EventEmitter()
+    mockProc.stderr = new EventEmitter()
+    mockProc.kill = () => {}
+
+    const mockSpawn = () => mockProc as unknown as ChildProcess
+    const runner = createShellRunner(mockSpawn)
+
+    const promise = runner.run('cmd', '/', 50)
+    mockProc.stderr.emit('data', Buffer.from('stderr output'))
+
+    const result = await promise
+    expect(result.timedOut).toBe(true)
+    expect(result.output).toBe('stderr output')
+
+    // Close event after timeout should be ignored
+    mockProc.emit('close', 0)
+  })
+
+  test('ignores error event after timeout has already resolved', async () => {
+    const mockProc = new EventEmitter() as EventEmitter & {
+      stdout: EventEmitter
+      stderr: EventEmitter
+      kill: () => void
+    }
+    mockProc.stdout = new EventEmitter()
+    mockProc.stderr = new EventEmitter()
+    mockProc.kill = () => {}
+
+    const mockSpawn = () => mockProc as unknown as ChildProcess
+    const runner = createShellRunner(mockSpawn)
+
+    const promise = runner.run('cmd', '/', 50)
+
+    const result = await promise
+    expect(result.timedOut).toBe(true)
+
+    // Error event after timeout should be ignored
+    mockProc.emit('error', new Error('spawn failed'))
+  })
+
+  test('clears timeout timer on normal completion', async () => {
+    const mockProc = new EventEmitter() as EventEmitter & {
+      stdout: EventEmitter
+      stderr: EventEmitter
+      kill: () => void
+    }
+    mockProc.stdout = new EventEmitter()
+    mockProc.stderr = new EventEmitter()
+    mockProc.kill = () => {}
+
+    const mockSpawn = () => mockProc as unknown as ChildProcess
+    const runner = createShellRunner(mockSpawn)
+
+    const promise = runner.run('cmd', '/', 5000)
+    mockProc.stdout.emit('data', Buffer.from('output\n'))
+    mockProc.emit('close', 0)
+
+    const result = await promise
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toBe('output\n')
+    expect(result.timedOut).toBeUndefined()
+  })
+
   test('handles null stdout and stderr gracefully', async () => {
     const mockProc = new EventEmitter() as EventEmitter & {
       stdout: null
@@ -672,5 +780,115 @@ describe('check command summary indicators', () => {
     )
 
     expect(context.stdoutLines).toContain('✗ 1/2 checks passed')
+  })
+})
+
+describe('check command timeout behavior', () => {
+  test('passes default 13s timeout to runner', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [{ name: 'test', command: 'npm test' }],
+    }
+    const fileSystem = createFileSystemEmulator()
+    const bufferedRunner = createMockBufferedRunner({
+      'npm test': { exitCode: 0, output: '' },
+    })
+
+    await check(
+      createDependencies(context, fileSystem, settings),
+      bufferedRunner
+    )
+
+    expect(bufferedRunner.calls[0].timeoutMs).toBe(13000)
+  })
+
+  test('passes configured timeout to runner', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [
+        { name: 'test', command: 'npm test', timeoutMilliseconds: 30000 },
+      ],
+    }
+    const fileSystem = createFileSystemEmulator()
+    const bufferedRunner = createMockBufferedRunner({
+      'npm test': { exitCode: 0, output: '' },
+    })
+
+    await check(
+      createDependencies(context, fileSystem, settings),
+      bufferedRunner
+    )
+
+    expect(bufferedRunner.calls[0].timeoutMs).toBe(30000)
+  })
+
+  test('displays timed out status line', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [{ name: 'slow-test', command: 'npm test' }],
+    }
+    const fileSystem = createFileSystemEmulator()
+    const bufferedRunner = createMockBufferedRunner({
+      'npm test': { exitCode: 1, output: 'partial output', timedOut: true },
+    })
+
+    await check(
+      createDependencies(context, fileSystem, settings),
+      bufferedRunner
+    )
+
+    expect(context.stdoutLines).toContain('✗ slow-test [timed out after 13s]')
+  })
+
+  test('displays timed out status with configured timeout', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [
+        { name: 'slow-test', command: 'npm test', timeoutMilliseconds: 30000 },
+      ],
+    }
+    const fileSystem = createFileSystemEmulator()
+    const bufferedRunner = createMockBufferedRunner({
+      'npm test': { exitCode: 1, output: '', timedOut: true },
+    })
+
+    await check(
+      createDependencies(context, fileSystem, settings),
+      bufferedRunner
+    )
+
+    expect(context.stdoutLines).toContain('✗ slow-test [timed out after 30s]')
+  })
+
+  test('prints timeout notice and captured output for timed out check', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [{ name: 'slow-test', command: 'npm test' }],
+    }
+    const fileSystem = createFileSystemEmulator()
+    const bufferedRunner = createMockBufferedRunner({
+      'npm test': {
+        exitCode: 1,
+        output: 'partial output before timeout',
+        timedOut: true,
+      },
+    })
+
+    await check(
+      createDependencies(context, fileSystem, settings),
+      bufferedRunner
+    )
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('> npm test')
+    expect(output).toContain(
+      'Note: This check was killed after 13s. To configure a different timeout, set "timeoutMilliseconds" in the check configuration in .dust/config/settings.json'
+    )
+    expect(output).toContain('partial output before timeout')
   })
 })

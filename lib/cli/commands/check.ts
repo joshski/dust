@@ -14,6 +14,8 @@ import type {
 } from '../types'
 import { lintMarkdown } from './lint-markdown'
 
+const DEFAULT_CHECK_TIMEOUT_MS = 13000
+
 export interface CheckResult {
   name: string
   command: string
@@ -22,6 +24,8 @@ export interface CheckResult {
   isBuiltIn?: boolean
   hints?: string[]
   durationMs?: number
+  timedOut?: boolean
+  timeoutSeconds?: number
 }
 
 async function runConfiguredChecks(
@@ -30,16 +34,19 @@ async function runConfiguredChecks(
   runner: ShellRunner
 ): Promise<CheckResult[]> {
   const promises = checks.map(async check => {
+    const timeoutMs = check.timeoutMilliseconds ?? DEFAULT_CHECK_TIMEOUT_MS
     const startTime = Date.now()
-    const { exitCode, output } = await runner.run(check.command, cwd)
+    const result = await runner.run(check.command, cwd, timeoutMs)
     const durationMs = Date.now() - startTime
     return {
       name: check.name,
       command: check.command,
-      exitCode,
-      output,
+      exitCode: result.exitCode,
+      output: result.output,
       hints: check.hints,
       durationMs,
+      timedOut: result.timedOut,
+      timeoutSeconds: timeoutMs / 1000,
     }
   })
   return Promise.all(promises)
@@ -82,14 +89,20 @@ function displayResults(
 
   // Display pass/fail status for each check
   for (const result of results) {
-    const timing =
-      result.durationMs !== undefined && result.durationMs >= 1000
-        ? ` [${(result.durationMs / 1000).toFixed(1)}s]`
-        : ''
-    if (result.exitCode === 0) {
-      context.stdout(`✓ ${result.name}${timing}`)
+    if (result.timedOut) {
+      context.stdout(
+        `✗ ${result.name} [timed out after ${result.timeoutSeconds}s]`
+      )
     } else {
-      context.stdout(`✗ ${result.name}${timing}`)
+      const timing =
+        result.durationMs !== undefined && result.durationMs >= 1000
+          ? ` [${(result.durationMs / 1000).toFixed(1)}s]`
+          : ''
+      if (result.exitCode === 0) {
+        context.stdout(`✓ ${result.name}${timing}`)
+      } else {
+        context.stdout(`✗ ${result.name}${timing}`)
+      }
     }
   }
 
@@ -97,6 +110,11 @@ function displayResults(
   for (const result of failed) {
     context.stdout('')
     context.stdout(`> ${result.command}`)
+    if (result.timedOut) {
+      context.stdout(
+        `Note: This check was killed after ${result.timeoutSeconds}s. To configure a different timeout, set "timeoutMilliseconds" in the check configuration in .dust/config/settings.json`
+      )
+    }
     if (result.output.trim()) {
       context.stdout(result.output.trimEnd())
     }
