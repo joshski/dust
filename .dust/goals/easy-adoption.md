@@ -13,4 +13,5 @@ This lowers the barrier to entry and encourages experimentation.
 ## Sub-Goals
 
 - [Cross-Platform Compatibility](cross-platform-compatibility.md)
+- [Unsurprising UX](unsurprising-ux.md)
 - [VCS Independence](vcs-independence.md)
