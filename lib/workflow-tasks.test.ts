@@ -132,40 +132,61 @@ describe('createShelveIdeaTask', () => {
 })
 
 describe('createCaptureIdeaTask', () => {
-  test('creates a capture-idea task with description', async () => {
+  test('creates a capture-idea task with title and description', async () => {
     const fileSystem = createFileSystem()
     const result = await createCaptureIdeaTask(
       fileSystem,
       '/project/.dust',
+      'Progress Broadcasting',
       'Allow agents to broadcast progress via WebSocket.'
     )
 
-    expect(result.filePath).toBe('/project/.dust/tasks/capture-idea.md')
-    const content = fileSystem.writtenFiles.get(result.filePath) as string
-    expect(content).toContain('# Capture Idea')
-    expect(content).toContain(
-      'Research and capture a new idea in the dust backlog.'
+    expect(result.filePath).toBe(
+      '/project/.dust/tasks/add-idea-progress-broadcasting.md'
     )
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('# Add Idea: Progress Broadcasting')
+    expect(content).toContain('.dust/ideas/progress-broadcasting.md')
     expect(content).toContain(
       'Allow agents to broadcast progress via WebSocket.'
     )
-    expect(content).toContain(
-      '- [ ] A new idea file is created in .dust/ideas/'
-    )
-    expect(content).toContain('- [ ] Idea has a clear title and description')
+  })
+
+  test('throws if title is empty', async () => {
+    const fileSystem = createFileSystem()
+    await expect(
+      createCaptureIdeaTask(
+        fileSystem,
+        '/project/.dust',
+        '',
+        'Some description'
+      )
+    ).rejects.toThrow('title is required and must not be whitespace-only')
+  })
+
+  test('throws if title is whitespace-only', async () => {
+    const fileSystem = createFileSystem()
+    await expect(
+      createCaptureIdeaTask(
+        fileSystem,
+        '/project/.dust',
+        '   ',
+        'Some description'
+      )
+    ).rejects.toThrow('title is required and must not be whitespace-only')
   })
 
   test('throws if description is empty', async () => {
     const fileSystem = createFileSystem()
     await expect(
-      createCaptureIdeaTask(fileSystem, '/project/.dust', '')
+      createCaptureIdeaTask(fileSystem, '/project/.dust', 'Some Title', '')
     ).rejects.toThrow('description is required and must not be whitespace-only')
   })
 
   test('throws if description is whitespace-only', async () => {
     const fileSystem = createFileSystem()
     await expect(
-      createCaptureIdeaTask(fileSystem, '/project/.dust', '   ')
+      createCaptureIdeaTask(fileSystem, '/project/.dust', 'Some Title', '   ')
     ).rejects.toThrow('description is required and must not be whitespace-only')
   })
 })

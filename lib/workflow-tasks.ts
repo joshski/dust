@@ -196,22 +196,28 @@ export async function createShelveIdeaTask(
 export async function createCaptureIdeaTask(
   fileSystem: FileSystem,
   dustPath: string,
+  title: string,
   description: string
 ): Promise<CreateIdeaTransitionTaskResult> {
+  if (!title || !title.trim()) {
+    throw new Error('title is required and must not be whitespace-only')
+  }
   if (!description || !description.trim()) {
     throw new Error('description is required and must not be whitespace-only')
   }
 
-  const taskTitle = 'Capture Idea'
+  const taskTitle = `Add Idea: ${title}`
   const filename = titleToFilename(taskTitle)
   const filePath = `${dustPath}/tasks/${filename}`
+  const ideaFilename = titleToFilename(title)
+  const ideaPath = `.dust/ideas/${ideaFilename}`
 
   const content = renderTask(
     taskTitle,
-    'Research and capture a new idea in the dust backlog.',
+    `Create a new idea file at \`${ideaPath}\` with the title "${title}" and the following description:`,
     [
-      'A new idea file is created in .dust/ideas/',
-      'Idea has a clear title and description',
+      `Idea file exists at ${ideaPath}`,
+      `Idea file has an H1 title matching "${title}"`,
     ],
     description
   )

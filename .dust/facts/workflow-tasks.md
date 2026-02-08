@@ -7,7 +7,7 @@
 - `createRefineIdeaTask(fileSystem, dustPath, ideaSlug, description?)` - Creates a task to research and refine an idea
 - `createTaskFromIdea(fileSystem, dustPath, ideaSlug, description?)` - Creates a task to convert an idea into a concrete task
 - `createShelveIdeaTask(fileSystem, dustPath, ideaSlug, description?)` - Creates a task to archive and remove an idea
-- `createCaptureIdeaTask(fileSystem, dustPath, description)` - Creates a task to capture a new idea (no existing idea required)
+- `createCaptureIdeaTask(fileSystem, dustPath, title, description)` - Creates a task to capture a new idea (no existing idea required)
 - `findWorkflowTask(fileSystem, dustPath, ideaSlug)` - Returns `null` or a `WorkflowTaskMatch` (`{ type, taskSlug }`) indicating the existing workflow task for an idea
 
 ## Idea Transition Prefixes
