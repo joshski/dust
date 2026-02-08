@@ -6,7 +6,12 @@
   "bin": {
     "dust": "./dist/dust.js"
   },
-  "exports": {},
+  "exports": {
+    "./workflow-tasks": {
+      "import": "./dist/workflow-tasks.js",
+      "types": "./dist/workflow-tasks.d.ts"
+    }
+  },
   "files": [
     "dist",
     "bin",
@@ -25,7 +30,7 @@
   "author": "joshski",
   "license": "MIT",
   "scripts": {
-    "build": "bun build lib/cli/run.ts --target node --outfile dist/dust.js && printf '%s\\n%s' '#!/usr/bin/env node' \"$(cat dist/dust.js)\" > dist/dust.js && cp -r lib/templates templates",
+    "build": "bun build lib/cli/run.ts --target node --outfile dist/dust.js && printf '%s\\n%s' '#!/usr/bin/env node' \"$(cat dist/dust.js)\" > dist/dust.js && bun build lib/workflow-tasks.ts --target node --outfile dist/workflow-tasks.js && bunx tsc --project tsconfig.build.json && cp -r lib/templates templates",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "eval": "bun run ./evals/run.ts"
