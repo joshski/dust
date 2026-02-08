@@ -61,6 +61,17 @@ export interface CreateIdeaTransitionTaskResult {
   filePath: string
 }
 
+export interface OpenQuestionResponse {
+  question: string
+  chosenOption: string
+}
+
+export interface CreateTaskFromIdeaOptions {
+  ideaSlug: string
+  description?: string
+  openQuestionResponses?: OpenQuestionResponse[]
+}
+
 async function readIdeaTitle(
   fileSystem: FileSystem,
   dustPath: string,
@@ -81,19 +92,31 @@ async function readIdeaTitle(
   return ideaTitleMatch[1].trim()
 }
 
+function renderResolvedQuestions(responses: OpenQuestionResponse[]): string {
+  const sections = responses.map(
+    r => `### ${r.question}\n\n**Decision:** ${r.chosenOption}`
+  )
+  return `## Resolved Questions\n\n${sections.join('\n\n')}\n`
+}
+
 function renderTask(
   title: string,
   openingSentence: string,
   definitionOfDone: string[],
-  description?: string
+  options?: { description?: string; resolvedQuestions?: OpenQuestionResponse[] }
 ): string {
   const descriptionParagraph =
-    description !== undefined ? `\n${description}\n` : ''
+    options?.description !== undefined ? `\n${options.description}\n` : ''
+
+  const resolvedSection =
+    options?.resolvedQuestions && options.resolvedQuestions.length > 0
+      ? `\n${renderResolvedQuestions(options.resolvedQuestions)}\n`
+      : ''
 
   return `# ${title}
 
 ${openingSentence}
-${descriptionParagraph}
+${descriptionParagraph}${resolvedSection}
 ## Goals
 
 (none)
@@ -115,7 +138,10 @@ async function createIdeaTask(
   ideaSlug: string,
   openingSentenceTemplate: (ideaTitle: string) => string,
   definitionOfDone: string[],
-  description?: string
+  taskOptions?: {
+    description?: string
+    resolvedQuestions?: OpenQuestionResponse[]
+  }
 ): Promise<CreateIdeaTransitionTaskResult> {
   const ideaTitle = await readIdeaTitle(fileSystem, dustPath, ideaSlug)
   const taskTitle = `${prefix}${ideaTitle}`
@@ -127,7 +153,7 @@ async function createIdeaTask(
     taskTitle,
     openingSentence,
     definitionOfDone,
-    description
+    taskOptions
   )
   await fileSystem.writeFile(filePath, content)
   return { filePath }
@@ -151,28 +177,30 @@ export async function createRefineIdeaTask(
       'Open questions are added for any ambiguous or underspecified aspects',
       'Idea file is updated with findings',
     ],
-    description
+    { description }
   )
 }
 
 export async function createTaskFromIdea(
   fileSystem: FileSystem,
   dustPath: string,
-  ideaSlug: string,
-  description?: string
+  options: CreateTaskFromIdeaOptions
 ): Promise<CreateIdeaTransitionTaskResult> {
   return createIdeaTask(
     fileSystem,
     dustPath,
     'Create Task From Idea: ',
-    ideaSlug,
+    options.ideaSlug,
     ideaTitle =>
-      `Create a well-defined task from this idea. See [${ideaTitle}](../ideas/${ideaSlug}.md).`,
+      `Create a well-defined task from this idea. See [${ideaTitle}](../ideas/${options.ideaSlug}.md).`,
     [
       'A new task is created in .dust/tasks/',
       'The original idea is deleted or updated to reflect remaining scope',
     ],
-    description
+    {
+      description: options.description,
+      resolvedQuestions: options.openQuestionResponses,
+    }
   )
 }
 
@@ -190,7 +218,7 @@ export async function createShelveIdeaTask(
     ideaTitle =>
       `Archive this idea and remove it from the active backlog. See [${ideaTitle}](../ideas/${ideaSlug}.md).`,
     ['Idea file is deleted', 'Rationale is recorded in the commit message'],
-    description
+    { description }
   )
 }
 
@@ -222,7 +250,7 @@ export async function createCaptureIdeaTask(
       'Idea includes relevant context from codebase exploration',
       'Open questions are added for any ambiguous or underspecified aspects',
     ],
-    description
+    { description }
   )
   await fileSystem.writeFile(filePath, content)
   return { filePath }
