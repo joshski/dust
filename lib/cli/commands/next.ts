@@ -10,7 +10,12 @@ import {
   extractTitle,
 } from '../../markdown/markdown-utilities'
 import { getColors } from '../colors'
-import type { CommandDependencies, CommandResult } from '../types'
+import type {
+  CommandContext,
+  CommandDependencies,
+  CommandResult,
+  FileSystem,
+} from '../types'
 
 function extractBlockedBy(content: string): string[] {
   // Find the "## Blocked By" section
@@ -41,42 +46,43 @@ function extractBlockedBy(content: string): string[] {
   return blockers
 }
 
-export async function next(
-  dependencies: CommandDependencies
-): Promise<CommandResult> {
-  const { context, fileSystem } = dependencies
-  const dustPath = `${context.cwd}/.dust`
-  const colors = getColors()
+export interface UnblockedTask {
+  path: string
+  title: string | null
+  openingSentence: string | null
+}
+
+/**
+ * Finds unblocked tasks in .dust/tasks/.
+ * Returns null if .dust directory is missing, otherwise an array of unblocked tasks.
+ */
+export async function findUnblockedTasks(
+  cwd: string,
+  fileSystem: FileSystem
+): Promise<{ error?: string; tasks: UnblockedTask[] }> {
+  const dustPath = `${cwd}/.dust`
 
   if (!fileSystem.exists(dustPath)) {
-    context.stderr('Error: .dust directory not found')
-    context.stderr("Run 'dust init' to initialize a Dust repository")
-    return { exitCode: 1 }
+    return { error: '.dust directory not found', tasks: [] }
   }
 
   const tasksPath = `${dustPath}/tasks`
 
   if (!fileSystem.exists(tasksPath)) {
-    // No tasks directory means no tasks to show
-    return { exitCode: 0 }
+    return { tasks: [] }
   }
 
   const files = await fileSystem.readdir(tasksPath)
   const mdFiles = files.filter(f => f.endsWith('.md')).sort()
 
   if (mdFiles.length === 0) {
-    return { exitCode: 0 }
+    return { tasks: [] }
   }
 
   // Create a set of existing task files for quick lookup
   const existingTasks = new Set(mdFiles)
 
-  // Find unblocked tasks
-  const unblockedTasks: Array<{
-    path: string
-    title: string | null
-    openingSentence: string | null
-  }> = []
+  const tasks: UnblockedTask[] = []
 
   for (const file of mdFiles) {
     const filePath = `${tasksPath}/${file}`
@@ -92,17 +98,25 @@ export async function next(
       const title = extractTitle(content)
       const openingSentence = extractOpeningSentence(content)
       const relativePath = `.dust/tasks/${file}`
-      unblockedTasks.push({ path: relativePath, title, openingSentence })
+      tasks.push({ path: relativePath, title, openingSentence })
     }
   }
 
-  if (unblockedTasks.length === 0) {
-    return { exitCode: 0 }
-  }
+  return { tasks }
+}
+
+/**
+ * Formats unblocked tasks for display.
+ */
+export function printTaskList(
+  context: CommandContext,
+  tasks: UnblockedTask[]
+): void {
+  const colors = getColors()
 
   context.stdout('📋 Next tasks')
   context.stdout('')
-  for (const task of unblockedTasks) {
+  for (const task of tasks) {
     const parts = task.path.split('/')
     const displayTitle =
       task.title || parts[parts.length - 1].replace('.md', '')
@@ -115,6 +129,26 @@ export async function next(
     context.stdout(`${colors.cyan}→ ${task.path}${colors.reset}`)
     context.stdout('')
   }
+}
+
+export async function next(
+  dependencies: CommandDependencies
+): Promise<CommandResult> {
+  const { context, fileSystem } = dependencies
+
+  const result = await findUnblockedTasks(context.cwd, fileSystem)
+
+  if (result.error) {
+    context.stderr(`Error: ${result.error}`)
+    context.stderr("Run 'dust init' to initialize a Dust repository")
+    return { exitCode: 1 }
+  }
+
+  if (result.tasks.length === 0) {
+    return { exitCode: 0 }
+  }
+
+  printTaskList(context, result.tasks)
 
   return { exitCode: 0 }
 }

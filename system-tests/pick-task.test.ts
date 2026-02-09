@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 import { buildGoal, buildTask } from './support/content-builders'
 import { runSession } from './support/run-session'
 
-test('agent picks task from backlog and gets implementation instructions', async () => {
+test('agent picks task from backlog with inline task list', async () => {
   const session = await runSession({
     fileSystemTree: {
       project: {
@@ -34,33 +34,22 @@ test('agent picks task from backlog and gets implementation instructions', async
         pattern: /Pick up work.*pick task/s,
         getCommand: () => 'bin/dust pick task',
       },
-      { pattern: /Pick a Task/, getCommand: () => 'bin/dust next' },
       { pattern: /Add Logging/, getCommand: () => null },
     ],
   })
 
-  expect(session).toMatchObject({
-    turns: [
-      { command: 'bin/dust agent', result: { exitCode: 0 } },
-      {
-        command: 'bin/dust pick task',
-        result: {
-          exitCode: 0,
-          stdout: expect.stringContaining('Pick a Task'),
-        },
-      },
-      {
-        command: 'bin/dust next',
-        result: {
-          exitCode: 0,
-          stdout: expect.stringContaining('Add Logging'),
-        },
-      },
-    ],
-  })
+  // pick task now includes the task list inline (no separate `next` turn)
+  expect(session.turns).toHaveLength(2)
+  expect(session.turns[0].command).toBe('bin/dust agent')
+  expect(session.turns[0].result.exitCode).toBe(0)
+  expect(session.turns[1].command).toBe('bin/dust pick task')
+  expect(session.turns[1].result.exitCode).toBe(0)
+  expect(session.turns[1].result.stdout).toMatch(/Pick a Task/)
+  expect(session.turns[1].result.stdout).toMatch(/Add Logging/)
+  expect(session.turns[1].result.stdout).toMatch(/focus/)
 })
 
-test('agent can pick from multiple available tasks', async () => {
+test('agent can pick from multiple available tasks listed inline', async () => {
   const session = await runSession({
     fileSystemTree: {
       project: {
@@ -84,21 +73,12 @@ test('agent can pick from multiple available tasks', async () => {
         pattern: /Pick up work.*pick task/s,
         getCommand: () => 'bin/dust pick task',
       },
-      { pattern: /Pick a Task/, getCommand: () => 'bin/dust next' },
       { pattern: /Task C/, getCommand: () => null },
     ],
   })
 
-  expect(session).toMatchObject({
-    turns: [
-      { command: 'bin/dust agent' },
-      { command: 'bin/dust pick task' },
-      {
-        command: 'bin/dust next',
-        result: {
-          stdout: expect.stringMatching(/Task A.*Task B.*Task C/s),
-        },
-      },
-    ],
-  })
+  expect(session.turns).toHaveLength(2)
+  expect(session.turns[0].command).toBe('bin/dust agent')
+  expect(session.turns[1].command).toBe('bin/dust pick task')
+  expect(session.turns[1].result.stdout).toMatch(/Task A.*Task B.*Task C/s)
 })

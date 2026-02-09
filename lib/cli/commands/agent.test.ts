@@ -38,7 +38,7 @@ describe('agent command', () => {
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toMatch(/Hello .+, welcome to dust/)
     expect(context.stdoutLines.join('\n')).toContain('dust pick task')
-    expect(context.stdoutLines.join('\n')).toContain('dust implement task')
+    expect(context.stdoutLines.join('\n')).toContain('dust focus')
     expect(context.stdoutLines.join('\n')).toContain('dust new task')
     expect(context.stdoutLines.join('\n')).toContain('dust new goal')
     expect(context.stdoutLines.join('\n')).toContain('dust new idea')

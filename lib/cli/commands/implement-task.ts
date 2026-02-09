@@ -1,9 +1,22 @@
 /**
- * dust implement task - Task implementation instructions
+ * dust implement task - Redirect to focus
  *
- * Displays guidance for implementing tasks.
+ * Kept for backward compatibility. Directs the agent to use `focus` instead.
  */
 
-import { createTemplateCommand } from '../template-command'
+import type { CommandDependencies, CommandResult } from '../types'
+import { manageGitHooks, templateVariables } from './agent-shared'
 
-export const implementTask = createTemplateCommand('agent-implement-task')
+export async function implementTask(
+  dependencies: CommandDependencies
+): Promise<CommandResult> {
+  const { context, settings } = dependencies
+  const hooksInstalled = await manageGitHooks(dependencies)
+  const vars = templateVariables(settings, hooksInstalled)
+
+  context.stdout(
+    `Run \`${vars.bin} focus "<task name>"\` to set your focus and see implementation instructions.`
+  )
+
+  return { exitCode: 0 }
+}

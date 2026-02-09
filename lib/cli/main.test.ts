@@ -402,7 +402,7 @@ describe('multi-word command routing', () => {
   test('routes pick task correctly', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
-      project: { '.dust': {} },
+      project: { '.dust': { tasks: { 'a.md': '# A' } } },
     })
 
     const result = await main({

@@ -13,7 +13,7 @@ Determine the user's intent and run the matching command NOW:
 1. **Pick up work from the backlog** → `{{bin}} pick task`
    User wants to start working. Examples: "work", "go", "pick a task", "what's next?"
 
-2. **Implement a specific task** → `{{bin}} implement task`
+2. **Implement a specific task** → `{{bin}} focus "<task name>"`
    User mentions a particular task by name. Examples: "implement the auth task", "work on caching"
 
 3. **Capture a new task** → `{{bin}} new task`
