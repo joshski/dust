@@ -238,7 +238,7 @@ describe('analyzeChangesForTaskOnlyPattern', () => {
 
 describe('prePush command', () => {
   describe('uncommitted changes in unattended mode', () => {
-    const unattendedEnv = { DUST_UNATTENDED: '1' }
+    const unattendedEnv = { DUST_UNATTENDED: '1', CLAUDECODE: '1' }
 
     test('blocks push when uncommitted changes exist in unattended mode', async () => {
       const context = createContextEmulator()
@@ -310,11 +310,11 @@ describe('prePush command', () => {
         },
       })
 
-      // No DUST_UNATTENDED env var
+      // No DUST_UNATTENDED env var, but agent is detected
       await prePush(
         createDependencies(context, fileSystem, defaultSettings),
         gitRunner,
-        {}
+        { CLAUDECODE: '1' }
       )
 
       // Should not block (git status not even called)
@@ -527,6 +527,23 @@ describe('prePush command', () => {
     })
   })
 
+  describe('human push (no agent detected)', () => {
+    test('returns exitCode 0 immediately without running any checks', async () => {
+      const context = createContextEmulator()
+      const fileSystem = createFileSystemEmulator()
+      const gitRunner = createMockGitRunner({})
+
+      const result = await prePush(
+        createDependencies(context, fileSystem, defaultSettings),
+        gitRunner,
+        {}
+      )
+
+      expect(result.exitCode).toBe(0)
+      expect(gitRunner.calls).toEqual([])
+    })
+  })
+
   describe('task-only commits allowed for non-web agents', () => {
     test('allows task-only commits for Claude Code CLI', async () => {
       const context = createContextEmulator()
@@ -586,33 +603,19 @@ describe('prePush command', () => {
       )
     })
 
-    test('allows task-only commits for unknown agents', async () => {
+    test('skips all checks for unknown agents (human push)', async () => {
       const context = createContextEmulator()
-      const fileSystem = createFileSystemEmulator({
-        project: { '.dust': {} },
-      })
-      fileSystem.readFile = async () =>
-        '# Test\n## Goals\n## Blocked By\n## Definition of Done'
-      const gitRunner = createMockGitRunner({
-        'rev-list HEAD --not --remotes': {
-          exitCode: 0,
-          output: 'abc123\n',
-        },
-        'diff --name-status abc123^..HEAD': {
-          exitCode: 0,
-          output: 'A\t.dust/tasks/new-feature.md',
-        },
-      })
+      const fileSystem = createFileSystemEmulator()
+      const gitRunner = createMockGitRunner({})
 
-      await prePush(
+      const result = await prePush(
         createDependencies(context, fileSystem, defaultSettings),
         gitRunner,
         {}
       )
 
-      expect(context.stderrLines.join('\n')).not.toContain(
-        'Task-only commit detected'
-      )
+      expect(result.exitCode).toBe(0)
+      expect(gitRunner.calls).toEqual([])
     })
   })
 

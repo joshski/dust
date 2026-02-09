@@ -181,6 +181,12 @@ export async function prePush(
   env: NodeJS.ProcessEnv = process.env
 ): Promise<CommandResult> {
   const { context } = dependencies
+  const agent = detectAgent(env)
+
+  // Skip all checks for human pushes (no known agent detected)
+  if (agent.type === 'unknown') {
+    return { exitCode: 0 }
+  }
 
   // Block push when running unattended with uncommitted changes
   if (env.DUST_UNATTENDED) {
@@ -211,7 +217,6 @@ export async function prePush(
 
   if (changes.length > 0) {
     const analysis = analyzeChangesForTaskOnlyPattern(changes)
-    const agent = detectAgent(env)
 
     if (analysis.isTaskOnly && agent.type === 'claude-code-web') {
       context.stderr('')
