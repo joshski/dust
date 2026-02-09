@@ -16,4 +16,4 @@ Test isolation enables parallel execution, makes failures easier to diagnose, an
 
 ## Sub-Goals
 
-- (none)
+- [Environment-Independent Tests](environment-independent-tests.md)
