@@ -427,6 +427,92 @@ Some analysis.
     const violations = validateIdeaOpenQuestions('idea.md', content)
     expect(violations).toHaveLength(2)
   })
+
+  test('rejects bullet-point lines in Open Questions', () => {
+    const content = `# My Idea
+
+## Open Questions
+
+- Should we do X?
+- Should we do Y?
+`
+    const violations = validateIdeaOpenQuestions('idea.md', content)
+    expect(violations).toHaveLength(2)
+    expect(violations[0].message).toContain('not bullet points')
+    expect(violations[0].line).toBe(5)
+    expect(violations[1].line).toBe(6)
+  })
+
+  test('rejects asterisk bullet-point lines in Open Questions', () => {
+    const content = `# My Idea
+
+## Open Questions
+
+* Should we do X?
+`
+    const violations = validateIdeaOpenQuestions('idea.md', content)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('not bullet points')
+  })
+
+  test('rejects mixed bullet-points and headings in Open Questions', () => {
+    const content = `# My Idea
+
+## Open Questions
+
+### Should we do X?
+
+#### Option A
+
+Some analysis.
+
+- But also this bullet point
+`
+    const violations = validateIdeaOpenQuestions('idea.md', content)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('not bullet points')
+    expect(violations[0].line).toBe(11)
+  })
+
+  test('ignores bullet points inside fenced code blocks in Open Questions', () => {
+    const content = `# My Idea
+
+## Open Questions
+
+### Should we do X?
+
+#### Option A
+
+Example:
+
+\`\`\`markdown
+- This bullet point is in a code block
+* So is this one
+\`\`\`
+
+Some analysis.
+`
+    expect(validateIdeaOpenQuestions('idea.md', content)).toHaveLength(0)
+  })
+
+  test('allows bullet points in other sections', () => {
+    const content = `# My Idea
+
+## Notes
+
+- This is fine
+- So is this
+
+## Open Questions
+
+### Should we do X?
+
+#### Option A
+
+Some analysis.
+`
+    expect(validateIdeaOpenQuestions('idea.md', content)).toHaveLength(0)
+  })
 })
 
 describe('validateTaskHeadings', () => {

@@ -62,7 +62,42 @@ The [Update Wiki](https://github.com/marketplace/actions/update-wiki) GitHub Act
 
 ## Open Questions
 
-- Should the command support incremental updates or always regenerate?
-- How should cross-references between dust files be handled?
-- Should there be options to customize the generated structure?
-- How to handle repos where the wiki hasn't been initialized?
+### Should the command support incremental updates or always regenerate?
+
+#### Incremental updates
+
+Only regenerate pages whose source files have changed. Faster for large projects but adds complexity tracking what changed.
+
+#### Always regenerate
+
+Simple and predictable. Regenerate all wiki pages on every run. Acceptable if the wiki is small.
+
+### How should cross-references between dust files be handled?
+
+#### Convert to wiki links
+
+Transform internal markdown links to GitHub wiki link format so pages link to each other within the wiki.
+
+#### Strip internal links
+
+Remove or leave internal links as plain text, avoiding broken references.
+
+### Should there be options to customize the generated structure?
+
+#### Yes, via configuration
+
+Allow users to configure which sections appear, page naming conventions, and sidebar layout.
+
+#### No, use a fixed structure
+
+Keep it simple with a single opinionated layout. Users can fork or post-process if needed.
+
+### How to handle repos where the wiki hasn't been initialized?
+
+#### Error with instructions
+
+Detect the uninitialized state and print clear instructions for the user to create the first wiki page manually.
+
+#### Auto-initialize
+
+Attempt to create the wiki repository automatically if possible.

@@ -206,9 +206,17 @@ export function validateIdeaOpenQuestions(
 
   let inOpenQuestions = false
   let currentQuestionLine: number | null = null
+  let inCodeBlock = false
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
+
+    // Track fenced code blocks
+    if (line.startsWith('```')) {
+      inCodeBlock = !inCodeBlock
+      continue
+    }
+    if (inCodeBlock) continue
 
     // h2 heading: enters or exits the Open Questions section
     if (line.startsWith('## ')) {
@@ -225,6 +233,17 @@ export function validateIdeaOpenQuestions(
     }
 
     if (!inOpenQuestions) continue
+
+    // bullet-point lines are not allowed in Open Questions
+    if (/^[-*] /.test(line.trimStart())) {
+      violations.push({
+        file: filePath,
+        message:
+          'Open Questions must use ### headings for questions and #### headings for options, not bullet points. Run `dust new idea` to see the expected format.',
+        line: i + 1,
+      })
+      continue
+    }
 
     // h3 heading: a question (must end with ?)
     if (line.startsWith('### ')) {
