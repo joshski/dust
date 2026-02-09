@@ -645,7 +645,8 @@ describe('prePush command', () => {
       // Mock the check command's buffered runner
       await prePush(
         createDependencies(context, fileSystem, defaultSettings),
-        gitRunner
+        gitRunner,
+        { CLAUDECODE: '1' }
       )
 
       // Should proceed to check (might fail due to check config, but shouldn't fail on task detection)
@@ -674,7 +675,8 @@ describe('prePush command', () => {
 
       await prePush(
         createDependencies(context, fileSystem, defaultSettings),
-        gitRunner
+        gitRunner,
+        { CLAUDECODE: '1' }
       )
 
       expect(context.stderrLines.join('\n')).not.toContain(
@@ -705,7 +707,8 @@ describe('prePush command', () => {
 
       await prePush(
         createDependencies(context, fileSystem, defaultSettings),
-        gitRunner
+        gitRunner,
+        { CLAUDECODE: '1' }
       )
 
       expect(context.stderrLines.join('\n')).not.toContain(
@@ -731,7 +734,8 @@ describe('prePush command', () => {
 
       await prePush(
         createDependencies(context, fileSystem, defaultSettings),
-        gitRunner
+        gitRunner,
+        { CLAUDECODE: '1' }
       )
 
       // Should not show task-only error (proceeds to check)
@@ -756,7 +760,8 @@ describe('prePush command', () => {
 
       await prePush(
         createDependencies(context, fileSystem, defaultSettings),
-        gitRunner
+        gitRunner,
+        { CLAUDECODE: '1' }
       )
 
       // Should not show task-only error (proceeds to check)
@@ -789,7 +794,8 @@ describe('prePush command', () => {
 
       await prePush(
         createDependencies(context, fileSystem, defaultSettings),
-        gitRunner
+        gitRunner,
+        { CLAUDECODE: '1' }
       )
 
       // Should not show task-only error (proceeds to check)
