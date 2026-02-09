@@ -11,12 +11,14 @@ import {
 } from './cli/commands/lint-markdown'
 import { createFileSystemEmulator } from './test/test-utilities'
 import {
+  CAPTURE_IDEA_PREFIX,
   createCaptureIdeaTask,
   createRefineIdeaTask,
   createShelveIdeaTask,
   createTaskFromIdea,
   findWorkflowTask,
   IDEA_TRANSITION_PREFIXES,
+  findAllCaptureIdeaTasks,
   type OpenQuestionResponse,
   titleToFilename,
 } from './workflow-tasks'
@@ -436,5 +438,97 @@ describe('generated tasks pass lint rules', () => {
     )
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(lintTaskFile(result.filePath, content)).toEqual([])
+  })
+})
+
+describe('CAPTURE_IDEA_PREFIX', () => {
+  test('matches the prefix used by createCaptureIdeaTask', () => {
+    expect(CAPTURE_IDEA_PREFIX).toBe('Add Idea: ')
+  })
+})
+
+describe('findAllCaptureIdeaTasks', () => {
+  test('returns empty array when tasks directory does not exist', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { '.dust': { ideas: {} } },
+    })
+    const result = await findAllCaptureIdeaTasks(fileSystem, '/project/.dust')
+    expect(result).toEqual([])
+  })
+
+  test('returns empty array when no capture-idea tasks exist', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {
+            'some-regular-task.md':
+              '# Some Regular Task\n\nDo something.\n\n## Goals\n\n(none)\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done\n',
+          },
+        },
+      },
+    })
+    const result = await findAllCaptureIdeaTasks(fileSystem, '/project/.dust')
+    expect(result).toEqual([])
+  })
+
+  test('finds capture-idea tasks created by createCaptureIdeaTask', async () => {
+    const fileSystem = createFileSystem()
+    await createCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'Progress Broadcasting',
+      'Allow agents to broadcast progress via WebSocket.'
+    )
+    const result = await findAllCaptureIdeaTasks(fileSystem, '/project/.dust')
+    expect(result).toEqual([
+      {
+        taskSlug: 'add-idea-progress-broadcasting',
+        ideaTitle: 'Progress Broadcasting',
+      },
+    ])
+  })
+
+  test('returns multiple capture-idea tasks sorted by filename', async () => {
+    const fileSystem = createFileSystem()
+    await createCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'Progress Broadcasting',
+      'WebSocket-based progress.'
+    )
+    await createCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'Auto Linting',
+      'Lint on save.'
+    )
+    const result = await findAllCaptureIdeaTasks(fileSystem, '/project/.dust')
+    expect(result).toEqual([
+      { taskSlug: 'add-idea-auto-linting', ideaTitle: 'Auto Linting' },
+      {
+        taskSlug: 'add-idea-progress-broadcasting',
+        ideaTitle: 'Progress Broadcasting',
+      },
+    ])
+  })
+
+  test('ignores idea transition tasks (refine, create-task, shelve)', async () => {
+    const fileSystem = createFileSystem()
+    await createRefineIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+    await createCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'Auto Linting',
+      'Lint on save.'
+    )
+    const result = await findAllCaptureIdeaTasks(fileSystem, '/project/.dust')
+    expect(result).toEqual([
+      { taskSlug: 'add-idea-auto-linting', ideaTitle: 'Auto Linting' },
+    ])
   })
 })
