@@ -149,9 +149,20 @@ describe('createCaptureIdeaTask', () => {
     )
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain('# Add Idea: Progress Broadcasting')
-    expect(content).toContain('.dust/ideas/progress-broadcasting.md')
+    expect(content).toContain(
+      'Research this idea thoroughly, then create an idea file at `.dust/ideas/progress-broadcasting.md`.'
+    )
+    expect(content).toContain(
+      'Read the codebase for relevant context, flesh out the description, and identify any ambiguity.'
+    )
     expect(content).toContain(
       'Allow agents to broadcast progress via WebSocket.'
+    )
+    expect(content).toContain(
+      '- [ ] Idea includes relevant context from codebase exploration'
+    )
+    expect(content).toContain(
+      '- [ ] Open questions are added for any ambiguous or underspecified aspects'
     )
   })
 

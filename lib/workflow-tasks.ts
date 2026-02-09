@@ -215,10 +215,12 @@ export async function createCaptureIdeaTask(
 
   const content = renderTask(
     taskTitle,
-    `Create a new idea file at \`${ideaPath}\` with the title "${title}" and the following description:`,
+    `Research this idea thoroughly, then create an idea file at \`${ideaPath}\`. Read the codebase for relevant context, flesh out the description, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. The idea should have the title "${title}" and start from the following description:`,
     [
       `Idea file exists at ${ideaPath}`,
       `Idea file has an H1 title matching "${title}"`,
+      'Idea includes relevant context from codebase exploration',
+      'Open questions are added for any ambiguous or underspecified aspects',
     ],
     description
   )
