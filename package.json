@@ -10,12 +10,14 @@
     "./workflow-tasks": {
       "import": "./dist/workflow-tasks.js",
       "types": "./dist/workflow-tasks.d.ts"
-    }
+    },
+    "./istanbul/minimal-reporter": "./lib/istanbul/minimal-reporter.cjs"
   },
   "files": [
     "dist",
     "bin",
-    "templates"
+    "templates",
+    "lib/istanbul/minimal-reporter.cjs"
   ],
   "repository": {
     "type": "git",
