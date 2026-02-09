@@ -24,6 +24,7 @@ export interface FileSystem {
     content: string,
     options?: WriteOptions
   ) => Promise<void>
+  unlink: (path: string) => Promise<void>
   mkdir: (path: string, options?: { recursive?: boolean }) => Promise<void>
   readdir: (path: string) => Promise<string[]>
   chmod: (path: string, mode: number) => Promise<void>
@@ -44,6 +45,7 @@ export interface DustSettings {
   dustCommand: string
   checks?: CheckConfig[]
   eventsUrl?: string
+  ciMaxAttempts?: number
 }
 
 /**

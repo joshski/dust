@@ -11,6 +11,7 @@
 import { loadSettings } from '../config/settings'
 import { agent } from './commands/agent'
 import { check } from './commands/check'
+import { ciCheck } from './commands/ci-check'
 import { focus } from './commands/focus'
 import { generateHelpText, help } from './commands/help'
 import { implementTask } from './commands/implement-task'
@@ -51,6 +52,7 @@ export const commandRegistry = {
   facts,
   next,
   check,
+  'ci check': ciCheck,
   agent,
   focus,
   'new task': newTask,

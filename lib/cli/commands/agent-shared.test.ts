@@ -78,6 +78,7 @@ describe('loadAgentInstructions', () => {
       throw new Error('File not found')
     },
     writeFile: async () => {},
+    unlink: async () => {},
     mkdir: async () => {},
     readdir: async () => [],
     chmod: async () => {},
@@ -143,6 +144,7 @@ describe('loadAgentInstructions', () => {
         throw new Error('Permission denied')
       },
       writeFile: async () => {},
+      unlink: async () => {},
       mkdir: async () => {},
       readdir: async () => [],
       chmod: async () => {},
@@ -166,6 +168,7 @@ describe('templateVariablesWithInstructions', () => {
       throw new Error('File not found')
     },
     writeFile: async () => {},
+    unlink: async () => {},
     mkdir: async () => {},
     readdir: async () => [],
     chmod: async () => {},

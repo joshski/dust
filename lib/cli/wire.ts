@@ -28,6 +28,7 @@ export interface FileSystemPrimitives {
     (path: string, options: { recursive: true }): Promise<string[]>
   }
   chmod: (path: string, mode: number) => Promise<void>
+  unlink: (path: string) => Promise<void>
 }
 
 /**
@@ -62,6 +63,7 @@ export function createFileSystem(primitives: FileSystemPrimitives): FileSystem {
     mkdir: async (path, options) => {
       await primitives.mkdir(path, options)
     },
+    unlink: path => primitives.unlink(path),
     readdir: path => primitives.readdir(path),
     chmod: (path, mode) => primitives.chmod(path, mode),
   }

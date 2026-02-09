@@ -133,6 +133,8 @@ export interface FileSystemEmulator extends FileSystem, GlobScanner {
   files: Map<string, string>
   /** File permissions set via chmod - maps path to mode */
   permissions: Map<string, number>
+  /** Files removed via unlink */
+  unlinkedFiles: string[]
 }
 
 /**
@@ -167,6 +169,7 @@ export function createFileSystemEmulator(
   const createdDirs: string[] = []
   const writtenFiles = new Map<string, string>()
   const permissions = new Map<string, number>()
+  const unlinkedFiles: string[] = []
 
   return {
     exists: (path: string) => paths.has(path),
@@ -193,6 +196,18 @@ export function createFileSystemEmulator(
       writtenFiles.set(path, content)
       paths.add(path)
       files.set(path, content)
+    },
+    unlink: async (path: string) => {
+      if (!files.has(path)) {
+        const error = new Error(
+          `ENOENT: no such file or directory, unlink '${path}'`
+        )
+        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
+        throw error
+      }
+      files.delete(path)
+      paths.delete(path)
+      unlinkedFiles.push(path)
     },
     mkdir: async (path: string) => {
       createdDirs.push(path)
@@ -227,6 +242,7 @@ export function createFileSystemEmulator(
     writtenFiles,
     files,
     permissions,
+    unlinkedFiles,
   }
 }
 

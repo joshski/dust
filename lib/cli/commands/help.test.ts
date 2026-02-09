@@ -27,6 +27,7 @@ function createMockFileSystem(): FileSystem {
     exists: () => false,
     readFile: async () => '',
     writeFile: async () => {},
+    unlink: async () => {},
     mkdir: async () => {},
     readdir: async () => [],
     chmod: async () => {},

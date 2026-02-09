@@ -28,6 +28,7 @@ function createFsPrimitives(
         .map(f => f.slice(prefix.length))
     },
     chmod: async () => {},
+    unlink: async () => {},
   }
 }
 
@@ -130,6 +131,20 @@ describe('createFileSystem', () => {
 
     expect(chmodPath).toBe('/test.sh')
     expect(chmodMode).toBe(0o755)
+  })
+
+  test('unlink delegates to primitive', async () => {
+    let unlinkPath = ''
+
+    const primitives = createFsPrimitives()
+    primitives.unlink = async path => {
+      unlinkPath = path
+    }
+    const fileSystem = createFileSystem(primitives)
+
+    await fileSystem.unlink('/test.txt')
+
+    expect(unlinkPath).toBe('/test.txt')
   })
 })
 
