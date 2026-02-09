@@ -145,9 +145,10 @@ export async function createRefineIdeaTask(
     'Refine Idea: ',
     ideaSlug,
     ideaTitle =>
-      `Research and refine this idea into a well-defined proposal. See [${ideaTitle}](../ideas/${ideaSlug}.md).`,
+      `Thoroughly research this idea and refine it into a well-defined proposal. Read the idea file, explore the codebase for relevant context, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. See [${ideaTitle}](../ideas/${ideaSlug}.md).`,
     [
-      'Open questions are identified and resolved',
+      'Idea is thoroughly researched with relevant codebase context',
+      'Open questions are added for any ambiguous or underspecified aspects',
       'Idea file is updated with findings',
     ],
     description

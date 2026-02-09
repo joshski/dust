@@ -57,12 +57,15 @@ describe('createRefineIdeaTask', () => {
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain('# Refine Idea: Progress Broadcasting')
     expect(content).toContain(
-      'Research and refine this idea into a well-defined proposal. See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
+      'Thoroughly research this idea and refine it into a well-defined proposal. Read the idea file, explore the codebase for relevant context, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
     )
     expect(content).toContain('## Goals\n\n(none)')
     expect(content).toContain('## Blocked By\n\n(none)')
     expect(content).toContain(
-      '- [ ] Open questions are identified and resolved'
+      '- [ ] Idea is thoroughly researched with relevant codebase context'
+    )
+    expect(content).toContain(
+      '- [ ] Open questions are added for any ambiguous or underspecified aspects'
     )
     expect(content).toContain('- [ ] Idea file is updated with findings')
   })
@@ -78,7 +81,7 @@ describe('createRefineIdeaTask', () => {
 
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain(
-      'See [Progress Broadcasting](../ideas/progress-broadcasting.md).\n\nFocus on the WebSocket approach.\n\n## Goals'
+      'add open questions to the idea file. See [Progress Broadcasting](../ideas/progress-broadcasting.md).\n\nFocus on the WebSocket approach.\n\n## Goals'
     )
   })
 })
