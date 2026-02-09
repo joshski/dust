@@ -1,4 +1,14 @@
 import { describe, expect, test } from 'vitest'
+import {
+  type Violation,
+  validateFilename,
+  validateImperativeOpeningSentence,
+  validateOpeningSentence,
+  validateOpeningSentenceLength,
+  validateSemanticLinks,
+  validateTaskHeadings,
+  validateTitleFilenameMatch,
+} from './cli/commands/lint-markdown'
 import { createFileSystemEmulator } from './test/test-utilities'
 import {
   createCaptureIdeaTask,
@@ -364,5 +374,67 @@ describe('shared error handling', () => {
     ).rejects.toThrow(
       'Idea file has no title: /project/.dust/ideas/no-title.md'
     )
+  })
+})
+
+describe('generated tasks pass lint rules', () => {
+  function lintTaskFile(filePath: string, content: string): Violation[] {
+    const violations: Violation[] = []
+    const v1 = validateFilename(filePath)
+    if (v1) violations.push(v1)
+    const v2 = validateTitleFilenameMatch(filePath, content)
+    if (v2) violations.push(v2)
+    const v3 = validateOpeningSentence(filePath, content)
+    if (v3) violations.push(v3)
+    const v4 = validateOpeningSentenceLength(filePath, content)
+    if (v4) violations.push(v4)
+    const v5 = validateImperativeOpeningSentence(filePath, content)
+    if (v5) violations.push(v5)
+    violations.push(...validateTaskHeadings(filePath, content))
+    violations.push(...validateSemanticLinks(filePath, content))
+    return violations
+  }
+
+  test('createRefineIdeaTask produces a valid task file', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createRefineIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(lintTaskFile(result.filePath, content)).toEqual([])
+  })
+
+  test('createTaskFromIdea produces a valid task file', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createTaskFromIdea(fileSystem, '/project/.dust', {
+      ideaSlug: 'progress-broadcasting',
+    })
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(lintTaskFile(result.filePath, content)).toEqual([])
+  })
+
+  test('createShelveIdeaTask produces a valid task file', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createShelveIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(lintTaskFile(result.filePath, content)).toEqual([])
+  })
+
+  test('createCaptureIdeaTask produces a valid task file', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'Progress Broadcasting',
+      'Allow agents to broadcast progress via WebSocket.'
+    )
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(lintTaskFile(result.filePath, content)).toEqual([])
   })
 })
