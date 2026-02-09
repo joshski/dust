@@ -417,6 +417,7 @@ describe('multi-word command routing', () => {
   })
 
   test('routes pre push correctly', async () => {
+    stubEnv('CLAUDECODE', '1')
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: { '.dust': {} },
