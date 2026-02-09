@@ -16,9 +16,9 @@ import {
   createRefineIdeaTask,
   createShelveIdeaTask,
   createTaskFromIdea,
+  findAllCaptureIdeaTasks,
   findWorkflowTask,
   IDEA_TRANSITION_PREFIXES,
-  findAllCaptureIdeaTasks,
   type OpenQuestionResponse,
   titleToFilename,
 } from './workflow-tasks'
@@ -464,6 +464,21 @@ describe('findAllCaptureIdeaTasks', () => {
           tasks: {
             'some-regular-task.md':
               '# Some Regular Task\n\nDo something.\n\n## Goals\n\n(none)\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done\n',
+          },
+        },
+      },
+    })
+    const result = await findAllCaptureIdeaTasks(fileSystem, '/project/.dust')
+    expect(result).toEqual([])
+  })
+
+  test('skips task files with no title', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {
+            'no-title.md': 'Just some text without a heading.',
           },
         },
       },
