@@ -23,7 +23,7 @@ dust up https://github.com/joshski/dust.git https://github.com/joshski/dustbucke
 - Each repo runs its own independent dust loop — no cross-repo coordination
 - Events from all repos are posted to `eventsUrl` if configured, enabling dustbucket to show a unified view
 
-## Open questions
+## Open Questions
 
 ### Where should repos be cloned?
 

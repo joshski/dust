@@ -513,6 +513,79 @@ Some analysis.
 `
     expect(validateIdeaOpenQuestions('idea.md', content)).toHaveLength(0)
   })
+
+  test('reports violation for "## open questions" (all lowercase)', () => {
+    const content = `# My Idea
+
+This is an idea.
+
+## open questions
+
+### Should we do X?
+
+#### Yes
+
+Good idea.
+
+#### No
+
+Bad idea.
+`
+    const violations = validateIdeaOpenQuestions('idea.md', content)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe(
+      'Heading "## open questions" should be "## Open Questions"'
+    )
+    expect(violations[0].line).toBe(5)
+  })
+
+  test('reports violation for "## Open questions" (wrong capitalization)', () => {
+    const content = `# My Idea
+
+This is an idea.
+
+## Open questions
+
+### Should we do X?
+
+#### Yes
+
+Sure.
+
+#### No
+
+Nope.
+`
+    const violations = validateIdeaOpenQuestions('idea.md', content)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe(
+      'Heading "## Open questions" should be "## Open Questions"'
+    )
+  })
+
+  test('reports violation for "## OPEN QUESTIONS" (all uppercase)', () => {
+    const content = `# My Idea
+
+This is an idea.
+
+## OPEN QUESTIONS
+
+### Should we do X?
+
+#### Yes
+
+Sure.
+
+#### No
+
+Nope.
+`
+    const violations = validateIdeaOpenQuestions('idea.md', content)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe(
+      'Heading "## OPEN QUESTIONS" should be "## Open Questions"'
+    )
+  })
 })
 
 describe('validateTaskHeadings', () => {

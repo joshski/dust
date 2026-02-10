@@ -227,6 +227,17 @@ export function validateIdeaOpenQuestions(
           line: currentQuestionLine,
         })
       }
+      const headingText = line.slice(3).trimEnd()
+      if (
+        headingText.toLowerCase() === 'open questions' &&
+        headingText !== 'Open Questions'
+      ) {
+        violations.push({
+          file: filePath,
+          message: `Heading "${line.trimEnd()}" should be "## Open Questions"`,
+          line: i + 1,
+        })
+      }
       inOpenQuestions = line === '## Open Questions'
       currentQuestionLine = null
       continue
