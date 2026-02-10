@@ -27,8 +27,34 @@ A `dust review goals` command that prompts reflection: "Is this goal still relev
 ### Goal drift detection
 Use agent review to check whether completed task outcomes actually match their stated goals. This would require reading the diff and the goal content.
 
-## Open questions
+## Open Questions
 
-- How much automation vs. manual review?
-- Should goal violations block commits or just warn?
-- How to measure goal adherence without creating bureaucracy?
+### How much automation vs. manual review?
+
+#### Mostly automated
+
+Run checks automatically on every task completion, with human override for false positives.
+
+#### Mostly manual
+
+Rely on periodic review commands that prompt human reflection, with automation only for data gathering.
+
+### Should goal violations block commits or just warn?
+
+#### Block commits
+
+Enforce strict alignment so drift is impossible, similar to how lint errors block pushes.
+
+#### Just warn
+
+Advisory-only mode that surfaces issues without blocking workflow, letting teams decide when to act.
+
+### How to measure goal adherence without creating bureaucracy?
+
+#### Lightweight heuristics
+
+Use simple proxy metrics like task-to-goal reference counts and recency, avoiding detailed manual assessment.
+
+#### Structured review
+
+Periodic structured reviews with specific prompts, accepting some overhead for more accurate measurement.
