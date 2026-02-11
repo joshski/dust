@@ -1,0 +1,5 @@
+{
+  "prompt": "go",
+  "expectation": "Agent should follow a multi-step dust workflow involving many sequential steps: (1) run 'bin/dust agent' to get instructions, (2) run a command like 'bin/dust pick task' or 'bin/dust implement task' to start working, (3) run 'bin/dust next' or 'bin/dust focus' to identify and claim the task, (4) run 'bin/dust check' to verify project state, (5) read the task file to understand what needs to be done, (6) create or modify source files to implement the task (creating src/string-utils.js with capitalize, reverse, and truncate functions), (7) create test files, (8) run tests, (9) run 'bin/dust check' again, (10) create a git commit. The agent should use at least 8 tool calls demonstrating a long multi-step workflow.",
+  "maxTurns": 20
+}

@@ -10,6 +10,7 @@ import type { ClaudeEvent, ToolUseEvent } from '../lib/claude/types'
 interface EvalConfig {
   prompt: string
   expectation: string
+  maxTurns?: number
 }
 
 interface EvalResult {
@@ -51,7 +52,8 @@ async function runSetupScript(
 async function collectEvents(
   prompt: string,
   testDir: string,
-  dustBinPath: string
+  dustBinPath: string,
+  maxTurns?: number
 ): Promise<ClaudeEvent[]> {
   const events: ClaudeEvent[] = []
 
@@ -60,7 +62,7 @@ async function collectEvents(
   for await (const rawEvent of spawnClaudeCode(prompt, {
     cwd: testDir,
     dangerouslySkipPermissions: true,
-    maxTurns: 5,
+    maxTurns: maxTurns ?? 5,
     systemPrompt,
   })) {
     for (const event of parseRawEvent(rawEvent)) {
@@ -135,7 +137,12 @@ async function runEval(evalDir: string): Promise<EvalResult> {
   const testDir = await runSetupScript(evalDir, dustBinPath)
 
   try {
-    const transcript = await collectEvents(config.prompt, testDir, dustBinPath)
+    const transcript = await collectEvents(
+      config.prompt,
+      testDir,
+      dustBinPath,
+      config.maxTurns
+    )
     const evaluation = await evaluateWithHaiku(transcript, config.expectation)
 
     return {
