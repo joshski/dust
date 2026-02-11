@@ -70,7 +70,7 @@ describe('createRefineIdeaTask', () => {
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain('# Refine Idea: Progress Broadcasting')
     expect(content).toContain(
-      'Thoroughly research this idea and refine it into a well-defined proposal. Read the idea file, explore the codebase for relevant context, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
+      'Thoroughly research this idea and refine it into a well-defined proposal. Read the idea file, explore the codebase for relevant context, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. Review `.dust/goals/` for alignment and `.dust/facts/` for relevant design decisions. See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
     )
     expect(content).toContain('## Goals\n\n(none)')
     expect(content).toContain('## Blocked By\n\n(none)')
@@ -94,7 +94,7 @@ describe('createRefineIdeaTask', () => {
 
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain(
-      'add open questions to the idea file. See [Progress Broadcasting](../ideas/progress-broadcasting.md).\n\nFocus on the WebSocket approach.\n\n## Goals'
+      'Review `.dust/goals/` for alignment and `.dust/facts/` for relevant design decisions. See [Progress Broadcasting](../ideas/progress-broadcasting.md).\n\nFocus on the WebSocket approach.\n\n## Goals'
     )
   })
 })
@@ -112,9 +112,12 @@ describe('createTaskFromIdea', () => {
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain('# Create Task From Idea: Progress Broadcasting')
     expect(content).toContain(
-      'Create a well-defined task from this idea. See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
+      'Create a well-defined task from this idea. Review `.dust/goals/` to link relevant goals and `.dust/facts/` for design decisions that should inform the task. See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
     )
     expect(content).toContain('- [ ] A new task is created in .dust/tasks/')
+    expect(content).toContain(
+      "- [ ] Task's Goals section links to relevant goals from .dust/goals/"
+    )
     expect(content).toContain(
       '- [ ] The original idea is deleted or updated to reflect remaining scope'
     )
@@ -226,7 +229,7 @@ describe('createCaptureIdeaTask', () => {
       'Research this idea thoroughly, then create an idea file at `.dust/ideas/progress-broadcasting.md`.'
     )
     expect(content).toContain(
-      'Read the codebase for relevant context, flesh out the description, and identify any ambiguity.'
+      'Review `.dust/goals/` and `.dust/facts/` for relevant context.'
     )
     expect(content).toContain(
       'Allow agents to broadcast progress via WebSocket.'

@@ -205,7 +205,7 @@ export async function createRefineIdeaTask(
     'Refine Idea: ',
     ideaSlug,
     ideaTitle =>
-      `Thoroughly research this idea and refine it into a well-defined proposal. Read the idea file, explore the codebase for relevant context, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. See [${ideaTitle}](../ideas/${ideaSlug}.md).`,
+      `Thoroughly research this idea and refine it into a well-defined proposal. Read the idea file, explore the codebase for relevant context, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. Review \`.dust/goals/\` for alignment and \`.dust/facts/\` for relevant design decisions. See [${ideaTitle}](../ideas/${ideaSlug}.md).`,
     [
       'Idea is thoroughly researched with relevant codebase context',
       'Open questions are added for any ambiguous or underspecified aspects',
@@ -226,9 +226,10 @@ export async function createTaskFromIdea(
     'Create Task From Idea: ',
     options.ideaSlug,
     ideaTitle =>
-      `Create a well-defined task from this idea. See [${ideaTitle}](../ideas/${options.ideaSlug}.md).`,
+      `Create a well-defined task from this idea. Review \`.dust/goals/\` to link relevant goals and \`.dust/facts/\` for design decisions that should inform the task. See [${ideaTitle}](../ideas/${options.ideaSlug}.md).`,
     [
       'A new task is created in .dust/tasks/',
+      "Task's Goals section links to relevant goals from .dust/goals/",
       'The original idea is deleted or updated to reflect remaining scope',
     ],
     {
@@ -277,7 +278,7 @@ export async function createCaptureIdeaTask(
 
   const content = renderTask(
     taskTitle,
-    `Research this idea thoroughly, then create an idea file at \`${ideaPath}\`. Read the codebase for relevant context, flesh out the description, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. The idea should have the title "${title}" and start from the following description:`,
+    `Research this idea thoroughly, then create an idea file at \`${ideaPath}\`. Read the codebase for relevant context, flesh out the description, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. Review \`.dust/goals/\` and \`.dust/facts/\` for relevant context. The idea should have the title "${title}" and start from the following description:`,
     [
       `Idea file exists at ${ideaPath}`,
       `Idea file has an H1 title matching "${title}"`,
