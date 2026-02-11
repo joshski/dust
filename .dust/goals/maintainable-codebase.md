@@ -17,3 +17,4 @@ This goal governs how we develop and maintain dust itself, separate from the goa
 - [Clarity Over Brevity](clarity-over-brevity.md)
 - [Reasonably DRY](reasonably-dry.md)
 - [Make the Change Easy](make-the-change-easy.md)
+- [Boy Scout Rule](boy-scout-rule.md)
