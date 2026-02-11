@@ -1,6 +1,6 @@
 import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import {
   createContextEmulator,
   createFileSystemEmulator,
@@ -695,11 +695,12 @@ describe('check command timing display', () => {
       checks: [{ name: 'slow', command: 'slow-cmd' }],
     }
     const fileSystem = createFileSystemEmulator()
-    // Create a custom runner that simulates slow execution
+    // Mock Date.now to simulate 1.5 second elapsed time
+    let now = 1000
+    const dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now)
     const slowRunner: ShellRunner = {
       run: async () => {
-        // Simulate 1.5 second delay
-        await new Promise(resolve => setTimeout(resolve, 1500))
+        now += 1500
         return { exitCode: 0, output: '' }
       },
     }
@@ -708,7 +709,8 @@ describe('check command timing display', () => {
 
     // The timing should be shown for slow checks
     const output = context.stdoutLines.join('\n')
-    expect(output).toMatch(/✓ slow \[1\.\d+s\]/)
+    expect(output).toMatch(/✓ slow \[1\.5s\]/)
+    dateNowSpy.mockRestore()
   })
 
   test('shows timing for failing slow checks', async () => {
@@ -718,11 +720,12 @@ describe('check command timing display', () => {
       checks: [{ name: 'slow-fail', command: 'slow-fail-cmd' }],
     }
     const fileSystem = createFileSystemEmulator()
-    // Create a custom runner that simulates slow execution and fails
+    // Mock Date.now to simulate 1.2 second elapsed time
+    let now = 1000
+    const dateNowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now)
     const slowRunner: ShellRunner = {
       run: async () => {
-        // Simulate 1.2 second delay
-        await new Promise(resolve => setTimeout(resolve, 1200))
+        now += 1200
         return { exitCode: 1, output: 'Failed' }
       },
     }
@@ -731,7 +734,8 @@ describe('check command timing display', () => {
 
     // The timing should be shown for slow failing checks
     const output = context.stdoutLines.join('\n')
-    expect(output).toMatch(/✗ slow-fail \[1\.\d+s\]/)
+    expect(output).toMatch(/✗ slow-fail \[1\.2s\]/)
+    dateNowSpy.mockRestore()
   })
 })
 

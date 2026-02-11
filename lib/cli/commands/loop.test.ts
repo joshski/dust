@@ -1324,11 +1324,11 @@ describe('integration: HTTP event posting', () => {
 
       await loopClaude(dependencies, loopDeps)
 
-      // Poll for events to arrive (faster than fixed 100ms delay)
+      // Yield to I/O until events arrive
       const hasExpectedEvents = () =>
         receivedEvents.some(e => e.event.type === 'claude.ended')
-      for (let i = 0; i < 20 && !hasExpectedEvents(); i++) {
-        await new Promise(resolve => setTimeout(resolve, 5))
+      for (let i = 0; i < 50 && !hasExpectedEvents(); i++) {
+        await new Promise(resolve => setImmediate(resolve))
       }
 
       // Verify events were received by the HTTP server
