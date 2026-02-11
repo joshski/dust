@@ -112,9 +112,11 @@ describe('createTaskFromIdea', () => {
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain('# Create Task From Idea: Progress Broadcasting')
     expect(content).toContain(
-      'Create a well-defined task from this idea. Review `.dust/goals/` to link relevant goals and `.dust/facts/` for design decisions that should inform the task. See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
+      'Create one or more well-defined tasks from this idea. Prefer smaller, narrowly scoped tasks -- split the idea into multiple tasks if it covers more than one logical change. Review `.dust/goals/` to link relevant goals and `.dust/facts/` for design decisions that should inform the task. See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
     )
-    expect(content).toContain('- [ ] A new task is created in .dust/tasks/')
+    expect(content).toContain(
+      '- [ ] One or more new tasks are created in .dust/tasks/'
+    )
     expect(content).toContain(
       "- [ ] Task's Goals section links to relevant goals from .dust/goals/"
     )

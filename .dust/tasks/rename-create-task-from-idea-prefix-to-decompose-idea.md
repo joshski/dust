@@ -31,7 +31,7 @@ In `.dust/facts/workflow-tasks.md`:
 
 ## Blocked By
 
-- [Use plural language in create-task-from-idea prompt](use-plural-language-in-create-task-from-idea-prompt.md)
+(none)
 
 ## Definition of Done
 
