@@ -1,6 +1,6 @@
 # Fix Claude Code Web detection
 
-The `detectAgent()` function in `lib/agents/detection.ts` checks `CLAUDE_CODE_ENTRYPOINT === 'remote'` to identify Claude Code Web. This is unreliable — the entrypoint value varies by launch context (e.g. `remote_desktop` when launched from a desktop app, `remote` from the web app, potentially others from iOS or future clients). The current check misses `remote_desktop`, so Claude Code Web sessions launched from the desktop app are misidentified as plain `claude-code`.
+Use `CLAUDE_CODE_REMOTE=true` instead of `CLAUDE_CODE_ENTRYPOINT === 'remote'` to detect Claude Code Web sessions. The entrypoint value varies by launch context (e.g. `remote_desktop` from the desktop app, `remote` from the web app, potentially others from iOS or future clients). The current check misses `remote_desktop`, so Claude Code Web sessions launched from the desktop app are misidentified as plain `claude-code`.
 
 ## Fix
 
