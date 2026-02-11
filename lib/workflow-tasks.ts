@@ -2,7 +2,7 @@ import type { FileSystem } from './cli/types'
 
 export const IDEA_TRANSITION_PREFIXES = [
   'Refine Idea: ',
-  'Create Task From Idea: ',
+  'Decompose Idea: ',
   'Shelve Idea: ',
 ]
 
@@ -68,7 +68,7 @@ export interface WorkflowTaskMatch {
 
 const WORKFLOW_TASK_TYPES: { type: WorkflowTaskType; prefix: string }[] = [
   { type: 'refine', prefix: 'Refine Idea: ' },
-  { type: 'create-task', prefix: 'Create Task From Idea: ' },
+  { type: 'create-task', prefix: 'Decompose Idea: ' },
   { type: 'shelve', prefix: 'Shelve Idea: ' },
 ]
 
@@ -223,7 +223,7 @@ export async function createTaskFromIdea(
   return createIdeaTask(
     fileSystem,
     dustPath,
-    'Create Task From Idea: ',
+    'Decompose Idea: ',
     options.ideaSlug,
     ideaTitle =>
       `Create one or more well-defined tasks from this idea. Prefer smaller, narrowly scoped tasks -- split the idea into multiple tasks if it covers more than one logical change. Review \`.dust/goals/\` to link relevant goals and \`.dust/facts/\` for design decisions that should inform the task. See [${ideaTitle}](../ideas/${options.ideaSlug}.md).`,

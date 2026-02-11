@@ -27,7 +27,7 @@ describe('IDEA_TRANSITION_PREFIXES', () => {
   test('contains all three transition prefixes', () => {
     expect(IDEA_TRANSITION_PREFIXES).toEqual([
       'Refine Idea: ',
-      'Create Task From Idea: ',
+      'Decompose Idea: ',
       'Shelve Idea: ',
     ])
   })
@@ -107,10 +107,10 @@ describe('createTaskFromIdea', () => {
     })
 
     expect(result.filePath).toBe(
-      '/project/.dust/tasks/create-task-from-idea-progress-broadcasting.md'
+      '/project/.dust/tasks/decompose-idea-progress-broadcasting.md'
     )
     const content = fileSystem.writtenFiles.get(result.filePath) as string
-    expect(content).toContain('# Create Task From Idea: Progress Broadcasting')
+    expect(content).toContain('# Decompose Idea: Progress Broadcasting')
     expect(content).toContain(
       'Create one or more well-defined tasks from this idea. Prefer smaller, narrowly scoped tasks -- split the idea into multiple tasks if it covers more than one logical change. Review `.dust/goals/` to link relevant goals and `.dust/facts/` for design decisions that should inform the task. See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
     )
@@ -324,7 +324,7 @@ describe('findWorkflowTask', () => {
     )
     expect(result).toEqual({
       type: 'create-task',
-      taskSlug: 'create-task-from-idea-progress-broadcasting',
+      taskSlug: 'decompose-idea-progress-broadcasting',
     })
   })
 

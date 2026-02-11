@@ -15,7 +15,7 @@
 Tasks that transition existing ideas use title prefixes defined in `IDEA_TRANSITION_PREFIXES`:
 
 - `Refine Idea: <Idea Title>`
-- `Create Task From Idea: <Idea Title>`
+- `Decompose Idea: <Idea Title>`
 - `Shelve Idea: <Idea Title>`
 
 ## Filename Derivation
@@ -23,7 +23,7 @@ Tasks that transition existing ideas use title prefixes defined in `IDEA_TRANSIT
 The `titleToFilename` function strips the colon from the prefix, producing predictable slugs:
 
 - `Refine Idea: Foo Bar` -> `refine-idea-foo-bar.md`
-- `Create Task From Idea: Foo Bar` -> `create-task-from-idea-foo-bar.md`
+- `Decompose Idea: Foo Bar` -> `decompose-idea-foo-bar.md`
 - `Shelve Idea: Foo Bar` -> `shelve-idea-foo-bar.md`
 
 ## Finding Existing Workflow Tasks

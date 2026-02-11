@@ -1816,9 +1816,9 @@ describe('validateIdeaTransitionTitle', () => {
     expect(violation).toBeNull()
   })
 
-  test('returns null when idea file exists for Create Task From Idea prefix', () => {
+  test('returns null when idea file exists for Decompose Idea prefix', () => {
     const content =
-      '# Create Task From Idea: My Great Idea\n\nCreate a task from this idea.'
+      '# Decompose Idea: My Great Idea\n\nCreate one or more well-defined tasks from this idea.'
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -1827,7 +1827,7 @@ describe('validateIdeaTransitionTitle', () => {
       },
     })
     const violation = validateIdeaTransitionTitle(
-      '/project/.dust/tasks/create-task-from-idea-my-great-idea.md',
+      '/project/.dust/tasks/decompose-idea-my-great-idea.md',
       content,
       '/project/.dust/ideas',
       fileSystem
@@ -1890,7 +1890,7 @@ describe('IDEA_TRANSITION_PREFIXES', () => {
   test('exports the three known prefixes', () => {
     expect(IDEA_TRANSITION_PREFIXES).toEqual([
       'Refine Idea: ',
-      'Create Task From Idea: ',
+      'Decompose Idea: ',
       'Shelve Idea: ',
     ])
   })
