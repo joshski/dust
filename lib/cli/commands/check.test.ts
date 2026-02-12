@@ -46,10 +46,11 @@ function createMockBufferedRunner(
 function createDependencies(
   context: CommandContext,
   fileSystem: FileSystemEmulator,
-  settings: DustSettings
+  settings: DustSettings,
+  commandArguments: string[] = []
 ): CommandDependencies {
   return {
-    arguments: [],
+    arguments: commandArguments,
     context,
     fileSystem,
     globScanner: fileSystem,
@@ -894,5 +895,154 @@ describe('check command timeout behavior', () => {
       'Note: This check was killed after 13s. To configure a different timeout, set "timeoutMilliseconds" in the check configuration in .dust/config/settings.json'
     )
     expect(output).toContain('partial output before timeout')
+  })
+})
+
+describe('check command --serial flag', () => {
+  test('runs configured checks sequentially with --serial flag', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [
+        { name: 'first', command: 'cmd1' },
+        { name: 'second', command: 'cmd2' },
+        { name: 'third', command: 'cmd3' },
+      ],
+    }
+    const fileSystem = createFileSystemEmulator()
+
+    // Track the order of command execution
+    const executionOrder: string[] = []
+    const runner: ShellRunner = {
+      run: async command => {
+        executionOrder.push(command)
+        return { exitCode: 0, output: '' }
+      },
+    }
+
+    const result = await check(
+      createDependencies(context, fileSystem, settings, ['--serial']),
+      runner
+    )
+
+    expect(result.exitCode).toBe(0)
+    // In serial mode, commands should execute in the order they are defined
+    expect(executionOrder).toEqual(['cmd1', 'cmd2', 'cmd3'])
+  })
+
+  test('runs lint markdown first in serial mode when .dust exists', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [{ name: 'lint', command: 'npm run lint' }],
+    }
+    const fileSystem = createFileSystemEmulator({
+      project: { '.dust': {} },
+    })
+    fileSystem.readFile = async () =>
+      '# Test\n## Goals\n## Blocked By\n## Definition of Done'
+    const bufferedRunner = createMockBufferedRunner({
+      'npm run lint': { exitCode: 0, output: '' },
+    })
+
+    const result = await check(
+      createDependencies(context, fileSystem, settings, ['--serial']),
+      bufferedRunner
+    )
+
+    expect(result.exitCode).toBe(0)
+    // Lint markdown should appear first in results
+    expect(context.stdoutLines[0]).toBe('✓ lint markdown')
+    expect(context.stdoutLines[1]).toBe('✓ lint')
+  })
+
+  test('output format is consistent between parallel and serial modes', async () => {
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [
+        { name: 'lint', command: 'npm run lint' },
+        { name: 'test', command: 'npm test' },
+      ],
+    }
+    const fileSystem = createFileSystemEmulator()
+    const bufferedRunner = createMockBufferedRunner({
+      'npm run lint': { exitCode: 0, output: '' },
+      'npm test': { exitCode: 0, output: '' },
+    })
+
+    // Run in parallel mode
+    const parallelContext = createContextEmulator()
+    await check(
+      createDependencies(parallelContext, fileSystem, settings),
+      bufferedRunner
+    )
+
+    // Run in serial mode
+    const serialContext = createContextEmulator()
+    await check(
+      createDependencies(serialContext, fileSystem, settings, ['--serial']),
+      bufferedRunner
+    )
+
+    // Both should have the same output format (summary line)
+    expect(parallelContext.stdoutLines).toContain('✓ 2/2 checks passed')
+    expect(serialContext.stdoutLines).toContain('✓ 2/2 checks passed')
+  })
+
+  test('handles failures in serial mode', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [
+        { name: 'lint', command: 'npm run lint' },
+        { name: 'test', command: 'npm test' },
+      ],
+    }
+    const fileSystem = createFileSystemEmulator()
+    const bufferedRunner = createMockBufferedRunner({
+      'npm run lint': { exitCode: 0, output: '' },
+      'npm test': { exitCode: 1, output: 'Test failed' },
+    })
+
+    const result = await check(
+      createDependencies(context, fileSystem, settings, ['--serial']),
+      bufferedRunner
+    )
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stdoutLines).toContain('✓ lint')
+    expect(context.stdoutLines).toContain('✗ test')
+    expect(context.stdoutLines).toContain('✗ 1/2 checks passed')
+  })
+
+  test('default behavior (without --serial) runs checks in parallel', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [
+        { name: 'lint', command: 'npm run lint' },
+        { name: 'test', command: 'npm test' },
+        { name: 'build', command: 'npm run build' },
+      ],
+    }
+    const fileSystem = createFileSystemEmulator()
+    const bufferedRunner = createMockBufferedRunner({
+      'npm run lint': { exitCode: 0, output: '' },
+      'npm test': { exitCode: 0, output: '' },
+      'npm run build': { exitCode: 0, output: '' },
+    })
+
+    const result = await check(
+      createDependencies(context, fileSystem, settings),
+      bufferedRunner
+    )
+
+    expect(result.exitCode).toBe(0)
+    expect(bufferedRunner.calls).toHaveLength(3)
+    // Verify all commands were called (order may vary due to parallel execution)
+    const commands = bufferedRunner.calls.map(c => c.command)
+    expect(new Set(commands)).toEqual(
+      new Set(['npm run lint', 'npm test', 'npm run build'])
+    )
   })
 })

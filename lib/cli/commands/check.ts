@@ -28,28 +28,46 @@ export interface CheckResult {
   timeoutSeconds?: number
 }
 
+async function runSingleCheck(
+  check: CheckConfig,
+  cwd: string,
+  runner: ShellRunner
+): Promise<CheckResult> {
+  const timeoutMs = check.timeoutMilliseconds ?? DEFAULT_CHECK_TIMEOUT_MS
+  const startTime = Date.now()
+  const result = await runner.run(check.command, cwd, timeoutMs)
+  const durationMs = Date.now() - startTime
+  return {
+    name: check.name,
+    command: check.command,
+    exitCode: result.exitCode,
+    output: result.output,
+    hints: check.hints,
+    durationMs,
+    timedOut: result.timedOut,
+    timeoutSeconds: timeoutMs / 1000,
+  }
+}
+
 async function runConfiguredChecks(
   checks: CheckConfig[],
   cwd: string,
   runner: ShellRunner
 ): Promise<CheckResult[]> {
-  const promises = checks.map(async check => {
-    const timeoutMs = check.timeoutMilliseconds ?? DEFAULT_CHECK_TIMEOUT_MS
-    const startTime = Date.now()
-    const result = await runner.run(check.command, cwd, timeoutMs)
-    const durationMs = Date.now() - startTime
-    return {
-      name: check.name,
-      command: check.command,
-      exitCode: result.exitCode,
-      output: result.output,
-      hints: check.hints,
-      durationMs,
-      timedOut: result.timedOut,
-      timeoutSeconds: timeoutMs / 1000,
-    }
-  })
+  const promises = checks.map(check => runSingleCheck(check, cwd, runner))
   return Promise.all(promises)
+}
+
+async function runConfiguredChecksSerially(
+  checks: CheckConfig[],
+  cwd: string,
+  runner: ShellRunner
+): Promise<CheckResult[]> {
+  const results: CheckResult[] = []
+  for (const check of checks) {
+    results.push(await runSingleCheck(check, cwd, runner))
+  }
+  return results
 }
 
 async function runValidationCheck(
@@ -141,7 +159,13 @@ export async function check(
   dependencies: CommandDependencies,
   shellRunner: ShellRunner = defaultShellRunner
 ): Promise<CommandResult> {
-  const { context, fileSystem, settings } = dependencies
+  const {
+    arguments: commandArguments,
+    context,
+    fileSystem,
+    settings,
+  } = dependencies
+  const serial = commandArguments.includes('--serial')
 
   if (!settings.checks || settings.checks.length === 0) {
     context.stderr('Error: No checks configured in .dust/config/settings.json')
@@ -156,12 +180,33 @@ export async function check(
     return { exitCode: 1 }
   }
 
-  // Run built-in and configured checks in parallel
+  const dustPath = `${context.cwd}/.dust`
+  const hasDustDir = fileSystem.exists(dustPath)
+
+  if (serial) {
+    // Run checks sequentially: built-in first, then configured checks
+    const results: CheckResult[] = []
+
+    if (hasDustDir) {
+      results.push(await runValidationCheck(dependencies))
+    }
+
+    const configuredResults = await runConfiguredChecksSerially(
+      settings.checks,
+      context.cwd,
+      shellRunner
+    )
+    results.push(...configuredResults)
+
+    const exitCode = displayResults(results, context)
+    return { exitCode }
+  }
+
+  // Run built-in and configured checks in parallel (default behavior)
   const checkPromises: Promise<CheckResult | CheckResult[]>[] = []
 
   // Add validation check if .dust directory exists
-  const dustPath = `${context.cwd}/.dust`
-  if (fileSystem.exists(dustPath)) {
+  if (hasDustDir) {
     checkPromises.push(runValidationCheck(dependencies))
   }
 
