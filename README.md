@@ -1,4 +1,4 @@
-# Dust
+# Dust ✨
 
 **Flow state for AI coding agents.**
 
