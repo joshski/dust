@@ -1,6 +1,6 @@
 # Add `dust bucket` command
 
-A command that connects to a dustbucket server via WebSocket and manages multiple dust loop processes across repositories.
+A command that connects to a dustbucket server via WebSocket and manages dust loops across multiple repositories.
 
 ## Overview
 
@@ -8,13 +8,50 @@ A command that connects to a dustbucket server via WebSocket and manages multipl
 dust bucket <token>
 ```
 
-The command:
+The command connects to dustbucket and manages loops for multiple repositories. It uses a multi-layer process architecture designed to be resilient to changes to dust itself.
 
-1. Opens a WebSocket connection to `https://dustbucket.com/agent/connect` with the token in an HTTP authorization header
-2. Receives a list of repository URLs from the server
-3. Spawns a `dust loop claude` process for each repository
-4. Provides a terminal UI for switching between repository logs
-5. Dynamically adds/removes processes as the server sends updated repository lists
+## Architecture
+
+### Process Hierarchy
+
+The architecture uses three layers of processes:
+
+1. **`dust bucket <token>`** - The entry point process
+   - Connects to dustbucket via WebSocket
+   - Receives repository list from server
+   - Spawns a **single** container process (not one per repository)
+
+2. **`dust bucket container`** - The container process
+   - Expects `DUST_API_TOKEN` environment variable to be set
+   - Manages temp directories for each repository
+   - Runs dust loops for all repositories **without** spawning subprocesses per loop
+   - Each loop iteration: git pull, then invoke the repo's configured `dustCommand` with fresh execution
+
+3. **Per-iteration execution** - Each loop iteration
+   - Uses the repo's configured `dustCommand` (from `.dust/config/settings.json`)
+   - Runs the current version of dust after pulling
+   - This ensures dust updates in a repo are immediately used
+
+### Resilience to Dust Updates
+
+The key architectural goal is that if dust itself is updated in a repository, the new version should be used immediately. This is achieved by:
+
+1. The container process does NOT import dust modules directly for loop logic
+2. Each iteration pulls the repo, then invokes the repo's `dustCommand` as a subprocess
+3. The subprocess runs whatever version of dust is in that repo
+
+This means dust can update itself and the next iteration will use the new version.
+
+### Why a Single Container Process?
+
+Instead of spawning one process per repository (which would require inter-process coordination), the container runs all loops in a single process:
+
+- Simpler resource management
+- Easier event aggregation
+- No need for IPC between repository workers
+- Single point of connection back to dustbucket
+
+The container process coordinates multiple concurrent loops using async/await, not subprocesses.
 
 ## Connection Protocol
 
@@ -41,28 +78,38 @@ interface RepositoryListEvent {
 
 Subsequent `repository-list` events update the set of managed repositories:
 
-- New URLs cause dust to spawn new processes
-- Removed URLs cause dust to kill their processes
+- New URLs cause dust to start a new loop for that repo
+- Removed URLs cause dust to stop the loop and clean up the temp directory
 
 ## Process Management
 
 ### Per-Repository Workspace
 
-Each repository process runs in a temporary directory that:
+Each repository has a workspace in a temporary directory that:
 
 - Is created when the repository is first added
-- Persists between Claude invocations (allowing incremental work)
+- Persists between iterations (allowing incremental work)
 - Is deleted when the repository is removed from the list or the command exits
 
-The directory serves as the `cwd` for the spawned `dust loop claude` process.
+### Loop Lifecycle (Container Process)
 
-### Process Lifecycle
+For each repository, the container process runs an async loop:
 
-1. Clone the repository into the temp directory (or pull if already cloned)
-2. Spawn `dust loop claude` with the temp directory as cwd
-3. Stream stdout/stderr to the log buffer for that repository
-4. Restart the loop if it exits (respecting iteration limits or errors)
-5. Kill the process and delete the directory when the repository is removed
+1. **Pull**: `git pull` to sync with remote
+2. **Check tasks**: Use the repo's `dustCommand` to check for available tasks
+3. **Run iteration**: If tasks exist, invoke the repo's `dustCommand` with appropriate arguments
+4. **Sleep**: If no tasks, wait before checking again
+5. **Repeat**: Continue until the repository is removed from the list
+
+The container does NOT spawn subprocess per loop. Instead, it uses async iteration and invokes the repo's dust command directly for each task check/execution.
+
+### Invoking the Repo's Dust Command
+
+Each repository may have a different `dustCommand` configured in `.dust/config/settings.json` (e.g., `npx dust`, `bun run dust`, `./bin/dust`). The container must:
+
+1. Read the repo's settings to get `dustCommand`
+2. Use that command when invoking dust operations
+3. This ensures each repo uses its own version of dust
 
 ## Terminal UI
 
@@ -124,6 +171,21 @@ Following the project's dependency injection patterns, the command should accept
 - WebSocket client (for testing without real connections)
 - Process spawner (for testing process management)
 - File system (for testing temp directory management)
+
+### Codebase Context
+
+The existing `loop.ts` command provides a reference implementation:
+
+- **Event system**: Uses typed events (`DustWireEvent`) with console formatting and HTTP posting
+- **Dependency injection**: `LoopDependencies` interface allows injecting spawn, run, sleep, and postEvent
+- **Event poster**: `createEventPoster` handles sequenced event posting with agent session tracking
+- **Git operations**: `gitPull` function shows the pattern for git operations with error handling
+- **Claude integration**: Uses `lib/claude/run.ts` which handles spawning Claude Code with options
+
+Key patterns to follow:
+- Commands receive `CommandDependencies` with context, fileSystem, settings
+- Settings loaded from `.dust/config/settings.json` include `dustCommand` and `eventsUrl`
+- Process spawning uses `node:child_process` spawn with typed wrappers
 
 ## Open Questions
 
@@ -212,3 +274,99 @@ Since there's already a WebSocket connection to dustbucket, use it for events. R
 #### Support both
 
 Use WebSocket for dustbucket events by default, but also post to eventsUrl if configured.
+
+### How should the entry point spawn the container process?
+
+The entry point (`dust bucket <token>`) needs to spawn the container process. This spawn must be resilient to dust updates.
+
+#### Spawn using the same executable
+
+The entry point runs `dust bucket container` using the same executable that was used to start `dust bucket`. This means the container uses the same dust version as the entry point.
+
+#### Spawn using a fresh invocation
+
+The entry point clones a "bootstrap" repo first, then invokes its `dustCommand` with `bucket container`. This ensures even the container process can be updated.
+
+#### Direct import (no subprocess)
+
+The entry point doesn't spawn a subprocess at all - it just imports and runs the container logic directly. Simpler but means the container code is fixed at the version that started the entry point.
+
+### How should the container invoke dust for each iteration?
+
+The container needs to invoke dust commands for each repo's iteration. The task specifies that each iteration should use the current version of dust after pulling.
+
+#### Subprocess per dust invocation
+
+Each time the container needs to check tasks or run Claude, it spawns a subprocess: `${dustCommand} next` or `${dustCommand} loop claude --single-iteration`. This ensures the latest code is used but has process overhead.
+
+#### Dynamic import/eval
+
+The container could dynamically import the repo's dust modules after each pull. This avoids subprocess overhead but is complex and may have caching issues.
+
+#### Shell execution
+
+Run the `dustCommand` through a shell which will resolve the command fresh each time. Adds shell overhead but handles path resolution naturally.
+
+### What arguments should `dust bucket container` receive?
+
+The container process needs information to connect back to dustbucket and manage repositories.
+
+#### Environment variables only
+
+Pass everything via environment: `DUST_API_TOKEN`, `DUST_BUCKET_WS_URL`, `DUST_REPOSITORIES` (JSON array). Simple but limited by env var size constraints.
+
+#### Command line arguments
+
+Pass essential info as arguments: `dust bucket container --ws-url=... --repos=...`. More explicit but creates long command lines.
+
+#### Config file
+
+The entry point writes a temp config file, container reads it. Avoids length limits but adds file I/O.
+
+### How should the container communicate back to the entry point?
+
+The entry point manages the WebSocket to dustbucket. The container needs to send events (task started, completed, errors) back.
+
+#### Container sends events directly via WebSocket
+
+The container establishes its own WebSocket connection using the API token. Simple but duplicates the connection.
+
+#### Container posts to entry point via IPC
+
+The entry point listens on a socket/pipe, container posts events there, entry point forwards to dustbucket. More complex but single connection.
+
+#### Container writes to stdout, entry point parses
+
+The container emits JSON events to stdout, entry point reads and forwards. Uses existing stdio infrastructure.
+
+### Should Claude invocations use `dangerouslySkipPermissions`?
+
+The existing `dust loop claude` uses `dangerouslySkipPermissions: true` for unattended operation.
+
+#### Yes, always skip permissions
+
+Bucket workers are expected to run in sandboxes. Permission prompts would break autonomous operation.
+
+#### Configurable per-repo
+
+Let the server specify whether a repo should run with or without permissions. Useful for sensitive repos.
+
+#### Require sandbox detection
+
+Only skip permissions if running in a detected sandbox environment. Adds safety but complicates implementation.
+
+### How should dust installations in repos be validated?
+
+The container assumes each repo has dust installed and configured. What if it doesn't?
+
+#### Fail fast with clear error
+
+If `dustCommand` is missing or settings.json doesn't exist, emit an error event and skip that repo.
+
+#### Attempt to install dust
+
+Run `npm install` or similar before the first iteration. Handles repos that don't have dust pre-installed.
+
+#### Require dust to be pre-installed
+
+Document that repos must have dust installed. Keep the container simple.
