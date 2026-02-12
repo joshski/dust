@@ -5,7 +5,7 @@ import {
   type FileSystemEmulator,
 } from '../../test/test-utilities'
 import type { CommandContext, CommandDependencies } from '../types'
-import { audit, STOCK_AUDITS } from './audit'
+import { audit, STOCK_AUDITS, transformAuditContent } from './audit'
 
 function createDependencies(
   context: CommandContext,
@@ -217,5 +217,210 @@ describe('audit command', () => {
       expect(typeof audit.name).toBe('string')
       expect(typeof audit.description).toBe('string')
     }
+  })
+})
+
+describe('audit add command', () => {
+  test('creates task from user audit template', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {
+            audits: {
+              'my-audit.md':
+                '# My Custom Audit\n\nCheck for custom issues.\n\n## Goals\n\n- [Example Goal](../goals/example.md)',
+            },
+          },
+          tasks: {},
+        },
+      },
+    })
+
+    const result = await audit({
+      ...createDependencies(context, fileSystem),
+      arguments: ['my-audit'],
+    })
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain(
+      '→ .dust/tasks/audit-my-audit.md'
+    )
+    expect(
+      fileSystem.writtenFiles.has('/project/.dust/tasks/audit-my-audit.md')
+    ).toBe(true)
+    const writtenContent = fileSystem.writtenFiles.get(
+      '/project/.dust/tasks/audit-my-audit.md'
+    )
+    expect(writtenContent).toContain('# Audit: My Custom Audit')
+    expect(writtenContent).toContain('Check for custom issues.')
+  })
+
+  test('errors if audit task already exists', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {
+            audits: {
+              'my-audit.md': '# My Custom Audit\n\nContent here.',
+            },
+          },
+          tasks: {
+            'audit-my-audit.md': '# Audit: My Custom Audit\n\nExisting task.',
+          },
+        },
+      },
+    })
+
+    const result = await audit({
+      ...createDependencies(context, fileSystem),
+      arguments: ['my-audit'],
+    })
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain(
+      'Error: Audit task already exists'
+    )
+  })
+
+  test('errors if audit name not found', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {
+            audits: {},
+          },
+          tasks: {},
+        },
+      },
+    })
+
+    const result = await audit({
+      ...createDependencies(context, fileSystem),
+      arguments: ['nonexistent'],
+    })
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain(
+      "Error: Audit 'nonexistent' not found"
+    )
+  })
+
+  test('errors if stock audit has no template', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {},
+          tasks: {},
+        },
+      },
+    })
+
+    // 'security-review' is a stock audit without a template
+    const result = await audit({
+      ...createDependencies(context, fileSystem),
+      arguments: ['security-review'],
+    })
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain(
+      "Error: Stock audit 'security-review' does not have a template yet"
+    )
+  })
+
+  test('user audit takes precedence over stock audit with same name', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {
+            audits: {
+              'security-review.md':
+                '# Custom Security Review\n\nOur custom security process.',
+            },
+          },
+          tasks: {},
+        },
+      },
+    })
+
+    const result = await audit({
+      ...createDependencies(context, fileSystem),
+      arguments: ['security-review'],
+    })
+
+    expect(result.exitCode).toBe(0)
+    const writtenContent = fileSystem.writtenFiles.get(
+      '/project/.dust/tasks/audit-security-review.md'
+    )
+    expect(writtenContent).toContain('# Audit: Custom Security Review')
+    expect(writtenContent).toContain('Our custom security process.')
+  })
+
+  test('creates task from stock audit with template', async () => {
+    // Temporarily add a stock audit with a template
+    const testAudit = {
+      name: 'test-audit-with-template',
+      description: 'A test audit with a template.',
+      template:
+        '# Test Audit\n\nThis is a test audit template.\n\n## Goals\n\n- Test Goal',
+    }
+    STOCK_AUDITS.push(testAudit)
+
+    try {
+      const context = createContextEmulator()
+      const fileSystem = createFileSystemEmulator({
+        project: {
+          '.dust': {
+            config: {},
+            tasks: {},
+          },
+        },
+      })
+
+      const result = await audit({
+        ...createDependencies(context, fileSystem),
+        arguments: ['test-audit-with-template'],
+      })
+
+      expect(result.exitCode).toBe(0)
+      expect(context.stdoutLines.join('\n')).toContain(
+        '→ .dust/tasks/audit-test-audit-with-template.md'
+      )
+      const writtenContent = fileSystem.writtenFiles.get(
+        '/project/.dust/tasks/audit-test-audit-with-template.md'
+      )
+      expect(writtenContent).toContain('# Audit: Test Audit')
+      expect(writtenContent).toContain('This is a test audit template.')
+    } finally {
+      // Clean up the test audit
+      const index = STOCK_AUDITS.indexOf(testAudit)
+      if (index > -1) {
+        STOCK_AUDITS.splice(index, 1)
+      }
+    }
+  })
+})
+
+describe('transformAuditContent', () => {
+  test('transforms title to include Audit prefix', () => {
+    const content = '# My Audit\n\nSome content.'
+    const result = transformAuditContent(content)
+    expect(result).toBe('# Audit: My Audit\n\nSome content.')
+  })
+
+  test('preserves content without a title', () => {
+    const content = 'No title here, just content.'
+    const result = transformAuditContent(content)
+    expect(result).toBe('No title here, just content.')
+  })
+
+  test('only transforms the first title', () => {
+    const content = '# First Title\n\nContent.\n\n# Second Title'
+    const result = transformAuditContent(content)
+    expect(result).toBe('# Audit: First Title\n\nContent.\n\n# Second Title')
   })
 })
