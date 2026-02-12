@@ -44,6 +44,10 @@ describe('audit command', () => {
     expect(output).toContain('→ stock')
     expect(output).toContain('test-coverage')
     expect(output).toContain('Identify areas with missing test coverage.')
+    expect(output).toContain('dead-code')
+    expect(output).toContain(
+      'Find unused exports, unreachable code, and orphaned files.'
+    )
   })
 
   test('lists user-configured audits from .dust/config/audits', async () => {
@@ -308,29 +312,6 @@ describe('audit add command', () => {
     )
   })
 
-  test('errors if stock audit has no template', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: {
-        '.dust': {
-          config: {},
-          tasks: {},
-        },
-      },
-    })
-
-    // 'security-review' is a stock audit without a template
-    const result = await audit({
-      ...createDependencies(context, fileSystem),
-      arguments: ['security-review'],
-    })
-
-    expect(result.exitCode).toBe(1)
-    expect(context.stderrLines.join('\n')).toContain(
-      "Error: Stock audit 'security-review' does not have a template yet"
-    )
-  })
-
   test('user audit takes precedence over stock audit with same name', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
@@ -361,47 +342,30 @@ describe('audit add command', () => {
   })
 
   test('creates task from stock audit with template', async () => {
-    // Temporarily add a stock audit with a template
-    const testAudit = {
-      name: 'test-audit-with-template',
-      description: 'A test audit with a template.',
-      template:
-        '# Test Audit\n\nThis is a test audit template.\n\n## Goals\n\n- Test Goal',
-    }
-    STOCK_AUDITS.push(testAudit)
-
-    try {
-      const context = createContextEmulator()
-      const fileSystem = createFileSystemEmulator({
-        project: {
-          '.dust': {
-            config: {},
-            tasks: {},
-          },
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {},
+          tasks: {},
         },
-      })
+      },
+    })
 
-      const result = await audit({
-        ...createDependencies(context, fileSystem),
-        arguments: ['test-audit-with-template'],
-      })
+    const result = await audit({
+      ...createDependencies(context, fileSystem),
+      arguments: ['security-review'],
+    })
 
-      expect(result.exitCode).toBe(0)
-      expect(context.stdoutLines.join('\n')).toContain(
-        '→ .dust/tasks/audit-test-audit-with-template.md'
-      )
-      const writtenContent = fileSystem.writtenFiles.get(
-        '/project/.dust/tasks/audit-test-audit-with-template.md'
-      )
-      expect(writtenContent).toContain('# Audit: Test Audit')
-      expect(writtenContent).toContain('This is a test audit template.')
-    } finally {
-      // Clean up the test audit
-      const index = STOCK_AUDITS.indexOf(testAudit)
-      if (index > -1) {
-        STOCK_AUDITS.splice(index, 1)
-      }
-    }
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain(
+      '→ .dust/tasks/audit-security-review.md'
+    )
+    const writtenContent = fileSystem.writtenFiles.get(
+      '/project/.dust/tasks/audit-security-review.md'
+    )
+    expect(writtenContent).toContain('# Audit: Security Review')
+    expect(writtenContent).toContain('Review the codebase for common security')
   })
 })
 
