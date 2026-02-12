@@ -20,7 +20,7 @@ If the audit task already exists (`.dust/tasks/audit-<name>.md`), the command sh
 
 ## Blocked By
 
-- [Implement dust audit list command](implement-dust-audit-list-command.md)
+(none)
 
 ## Definition of Done
 

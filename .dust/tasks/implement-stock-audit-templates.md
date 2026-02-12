@@ -23,7 +23,7 @@ The templates should follow the standard task file format with Goals, Blocked By
 
 ## Blocked By
 
-- [Implement dust audit list command](implement-dust-audit-list-command.md)
+(none)
 
 ## Definition of Done
 
