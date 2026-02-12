@@ -233,9 +233,14 @@ describe('createCaptureIdeaTask', () => {
     expect(content).toContain(
       'Review `.dust/goals/` and `.dust/facts/` for relevant context.'
     )
+    // Description should be under its own heading, not inline in opening sentence
+    expect(content).toContain('## Idea Description')
     expect(content).toContain(
-      'Allow agents to broadcast progress via WebSocket.'
+      '## Idea Description\n\nAllow agents to broadcast progress via WebSocket.'
     )
+    // Opening sentence should NOT reference title/description inline
+    expect(content).not.toContain('The idea should have the title')
+    expect(content).not.toContain('start from the following description')
     expect(content).toContain(
       '- [ ] Idea includes relevant context from codebase exploration'
     )

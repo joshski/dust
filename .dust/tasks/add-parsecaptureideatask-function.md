@@ -36,7 +36,7 @@ export async function parseCaptureIdeaTask(
 
 ## Blocked By
 
-- [Update capture idea task format to use Idea Description heading](update-capture-idea-task-format-to-use-idea-description-heading.md)
+(none)
 
 ## Definition of Done
 
