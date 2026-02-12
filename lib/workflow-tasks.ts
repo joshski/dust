@@ -59,20 +59,21 @@ export function titleToFilename(title: string): string {
     .replace(/^-|-$/g, '')}.md`
 }
 
-export type WorkflowTaskType = 'refine' | 'create-task' | 'shelve'
+export type WorkflowTaskType = 'refine' | 'decompose-idea' | 'shelve'
 
 export interface WorkflowTaskMatch {
   type: WorkflowTaskType
+  ideaSlug: string
   taskSlug: string
 }
 
 const WORKFLOW_TASK_TYPES: { type: WorkflowTaskType; prefix: string }[] = [
   { type: 'refine', prefix: 'Refine Idea: ' },
-  { type: 'create-task', prefix: 'Decompose Idea: ' },
+  { type: 'decompose-idea', prefix: 'Decompose Idea: ' },
   { type: 'shelve', prefix: 'Shelve Idea: ' },
 ]
 
-export async function findWorkflowTask(
+export async function findWorkflowTaskForIdea(
   fileSystem: FileSystem,
   dustPath: string,
   ideaSlug: string
@@ -84,7 +85,7 @@ export async function findWorkflowTask(
     const filePath = `${dustPath}/tasks/${filename}`
     if (fileSystem.exists(filePath)) {
       const taskSlug = filename.replace(/\.md$/, '')
-      return { type, taskSlug }
+      return { type, ideaSlug, taskSlug }
     }
   }
 
@@ -100,7 +101,7 @@ export interface OpenQuestionResponse {
   chosenOption: string
 }
 
-export interface CreateTaskFromIdeaOptions {
+export interface DecomposeIdeaOptions {
   ideaSlug: string
   description?: string
   openQuestionResponses?: OpenQuestionResponse[]
@@ -215,10 +216,10 @@ export async function createRefineIdeaTask(
   )
 }
 
-export async function createTaskFromIdea(
+export async function decomposeIdea(
   fileSystem: FileSystem,
   dustPath: string,
-  options: CreateTaskFromIdeaOptions
+  options: DecomposeIdeaOptions
 ): Promise<CreateIdeaTransitionTaskResult> {
   return createIdeaTask(
     fileSystem,

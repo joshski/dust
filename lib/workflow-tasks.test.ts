@@ -15,9 +15,9 @@ import {
   createCaptureIdeaTask,
   createRefineIdeaTask,
   createShelveIdeaTask,
-  createTaskFromIdea,
+  decomposeIdea,
   findAllCaptureIdeaTasks,
-  findWorkflowTask,
+  findWorkflowTaskForIdea,
   IDEA_TRANSITION_PREFIXES,
   type OpenQuestionResponse,
   titleToFilename,
@@ -99,10 +99,10 @@ describe('createRefineIdeaTask', () => {
   })
 })
 
-describe('createTaskFromIdea', () => {
+describe('decomposeIdea', () => {
   test('creates a task-from-idea task with auto-filled defaults', async () => {
     const fileSystem = createFileSystem()
-    const result = await createTaskFromIdea(fileSystem, '/project/.dust', {
+    const result = await decomposeIdea(fileSystem, '/project/.dust', {
       ideaSlug: 'progress-broadcasting',
     })
 
@@ -137,7 +137,7 @@ describe('createTaskFromIdea', () => {
         chosenOption: 'Retry automatically',
       },
     ]
-    const result = await createTaskFromIdea(fileSystem, '/project/.dust', {
+    const result = await decomposeIdea(fileSystem, '/project/.dust', {
       ideaSlug: 'progress-broadcasting',
       openQuestionResponses: responses,
     })
@@ -152,7 +152,7 @@ describe('createTaskFromIdea', () => {
 
   test('includes both description and open question responses', async () => {
     const fileSystem = createFileSystem()
-    const result = await createTaskFromIdea(fileSystem, '/project/.dust', {
+    const result = await decomposeIdea(fileSystem, '/project/.dust', {
       ideaSlug: 'progress-broadcasting',
       description: 'Focus on real-time updates.',
       openQuestionResponses: [
@@ -168,7 +168,7 @@ describe('createTaskFromIdea', () => {
 
   test('omits Resolved Questions section when no responses provided', async () => {
     const fileSystem = createFileSystem()
-    const result = await createTaskFromIdea(fileSystem, '/project/.dust', {
+    const result = await decomposeIdea(fileSystem, '/project/.dust', {
       ideaSlug: 'progress-broadcasting',
     })
 
@@ -178,7 +178,7 @@ describe('createTaskFromIdea', () => {
 
   test('omits Resolved Questions section when responses array is empty', async () => {
     const fileSystem = createFileSystem()
-    const result = await createTaskFromIdea(fileSystem, '/project/.dust', {
+    const result = await decomposeIdea(fileSystem, '/project/.dust', {
       ideaSlug: 'progress-broadcasting',
       openQuestionResponses: [],
     })
@@ -283,10 +283,10 @@ describe('createCaptureIdeaTask', () => {
   })
 })
 
-describe('findWorkflowTask', () => {
+describe('findWorkflowTaskForIdea', () => {
   test('returns null when no workflow task exists for the idea', async () => {
     const fileSystem = createFileSystem()
-    const result = await findWorkflowTask(
+    const result = await findWorkflowTaskForIdea(
       fileSystem,
       '/project/.dust',
       'progress-broadcasting'
@@ -301,29 +301,31 @@ describe('findWorkflowTask', () => {
       '/project/.dust',
       'progress-broadcasting'
     )
-    const result = await findWorkflowTask(
+    const result = await findWorkflowTaskForIdea(
       fileSystem,
       '/project/.dust',
       'progress-broadcasting'
     )
     expect(result).toEqual({
       type: 'refine',
+      ideaSlug: 'progress-broadcasting',
       taskSlug: 'refine-idea-progress-broadcasting',
     })
   })
 
-  test('finds a create-task task', async () => {
+  test('finds a decompose-idea task', async () => {
     const fileSystem = createFileSystem()
-    await createTaskFromIdea(fileSystem, '/project/.dust', {
+    await decomposeIdea(fileSystem, '/project/.dust', {
       ideaSlug: 'progress-broadcasting',
     })
-    const result = await findWorkflowTask(
+    const result = await findWorkflowTaskForIdea(
       fileSystem,
       '/project/.dust',
       'progress-broadcasting'
     )
     expect(result).toEqual({
-      type: 'create-task',
+      type: 'decompose-idea',
+      ideaSlug: 'progress-broadcasting',
       taskSlug: 'decompose-idea-progress-broadcasting',
     })
   })
@@ -335,13 +337,14 @@ describe('findWorkflowTask', () => {
       '/project/.dust',
       'progress-broadcasting'
     )
-    const result = await findWorkflowTask(
+    const result = await findWorkflowTaskForIdea(
       fileSystem,
       '/project/.dust',
       'progress-broadcasting'
     )
     expect(result).toEqual({
       type: 'shelve',
+      ideaSlug: 'progress-broadcasting',
       taskSlug: 'shelve-idea-progress-broadcasting',
     })
   })
@@ -349,7 +352,7 @@ describe('findWorkflowTask', () => {
   test('throws when the idea does not exist', async () => {
     const fileSystem = createFileSystem()
     await expect(
-      findWorkflowTask(fileSystem, '/project/.dust', 'nonexistent')
+      findWorkflowTaskForIdea(fileSystem, '/project/.dust', 'nonexistent')
     ).rejects.toThrow('Idea not found: "nonexistent"')
   })
 })
@@ -413,9 +416,9 @@ describe('generated tasks pass lint rules', () => {
     expect(lintTaskFile(result.filePath, content)).toEqual([])
   })
 
-  test('createTaskFromIdea produces a valid task file', async () => {
+  test('decomposeIdea produces a valid task file', async () => {
     const fileSystem = createFileSystem()
-    const result = await createTaskFromIdea(fileSystem, '/project/.dust', {
+    const result = await decomposeIdea(fileSystem, '/project/.dust', {
       ideaSlug: 'progress-broadcasting',
     })
     const content = fileSystem.writtenFiles.get(result.filePath) as string
@@ -533,7 +536,7 @@ describe('findAllCaptureIdeaTasks', () => {
     ])
   })
 
-  test('ignores idea transition tasks (refine, create-task, shelve)', async () => {
+  test('ignores idea transition tasks (refine, decompose-idea, shelve)', async () => {
     const fileSystem = createFileSystem()
     await createRefineIdeaTask(
       fileSystem,

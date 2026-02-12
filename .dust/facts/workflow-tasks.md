@@ -5,10 +5,10 @@
 ## Exported Functions
 
 - `createRefineIdeaTask(fileSystem, dustPath, ideaSlug, description?)` - Creates a task to research and refine an idea
-- `createTaskFromIdea(fileSystem, dustPath, options)` - Creates a task to convert an idea into a concrete task. `options` is a `CreateTaskFromIdeaOptions` object with `ideaSlug`, optional `description`, and optional `openQuestionResponses`
+- `decomposeIdea(fileSystem, dustPath, options)` - Creates a task to convert an idea into a concrete task. `options` is a `DecomposeIdeaOptions` object with `ideaSlug`, optional `description`, and optional `openQuestionResponses`
 - `createShelveIdeaTask(fileSystem, dustPath, ideaSlug, description?)` - Creates a task to archive and remove an idea
 - `createCaptureIdeaTask(fileSystem, dustPath, title, description)` - Creates a task to capture a new idea (no existing idea required)
-- `findWorkflowTask(fileSystem, dustPath, ideaSlug)` - Returns `null` or a `WorkflowTaskMatch` (`{ type, taskSlug }`) indicating the existing workflow task for an idea
+- `findWorkflowTaskForIdea(fileSystem, dustPath, ideaSlug)` - Returns `null` or a `WorkflowTaskMatch` (`{ type, ideaSlug, taskSlug }`) indicating the existing workflow task for an idea
 
 ## Idea Transition Prefixes
 
@@ -28,7 +28,7 @@ The `titleToFilename` function strips the colon from the prefix, producing predi
 
 ## Finding Existing Workflow Tasks
 
-`findWorkflowTask` reads the idea title, computes each possible task filename, and checks for existence. Returns a `WorkflowTaskMatch` with `type` (`'refine' | 'create-task' | 'shelve'`) and `taskSlug` (the task filename without `.md`) — or `null` if no workflow task exists.
+`findWorkflowTaskForIdea` reads the idea title, computes each possible task filename, and checks for existence. Returns a `WorkflowTaskMatch` with `type` (`'refine' | 'decompose-idea' | 'shelve'`), `ideaSlug`, and `taskSlug` (the task filename without `.md`) — or `null` if no workflow task exists.
 
 ## Linter Validation
 
