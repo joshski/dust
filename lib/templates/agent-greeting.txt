@@ -1,10 +1,4 @@
 🤖 Hello {{agentName}}, welcome to dust!
-{{#if agentInstructions}}
-
-## Project Instructions
-
-{{agentInstructions}}
-{{/if}}
 
 CRITICAL: You MUST run exactly ONE of the commands below before doing anything else.
 
@@ -29,3 +23,9 @@ Determine the user's intent and run the matching command NOW:
    If none of the above clearly apply, run this to see all available commands.
 
 Do NOT proceed without running one of these commands.
+{{#if agentInstructions}}
+
+---
+
+{{agentInstructions}}
+{{/if}}
