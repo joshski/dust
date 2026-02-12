@@ -63,38 +63,68 @@ function isWorkflowTask(taskTitle: string): boolean {
 
 ### Where should the workflow task detection logic live?
 
-#### In `lib/workflow-tasks.ts`
+#### Option A: In `lib/workflow-tasks.ts` (Recommended)
 
-Co-located with existing prefix constants and workflow task functions. This keeps all workflow task logic together and the prefixes are already defined there. The downside is that CLI commands would need to import from this module.
+Co-located with existing prefix constants and workflow task functions. This keeps all workflow task logic together and the prefixes (`IDEA_TRANSITION_PREFIXES`, `CAPTURE_IDEA_PREFIX`) are already defined there. The existing `WORKFLOW_TASK_TYPES` array already maps types to prefixes, making this a natural extension.
 
-#### In a new utility module
+**Recommendation:** This is the cleanest approach. CLI commands already import from this module for prefix constants.
 
-If the detection will be used in many places across different layers (CLI commands, hooks, templates), a dedicated module might provide better separation of concerns. However, this may be over-engineering for a simple prefix check.
+#### Option B: In a new utility module
+
+If the detection will be used in many places across different layers (CLI commands, hooks, templates), a dedicated module might provide better separation of concerns. However, this is likely over-engineering for a simple prefix check.
 
 ### How should the pre-push hook determine the task type?
 
-#### Re-read the task file being deleted
+The pre-push hook needs to know if the commit is a workflow task completion to decide whether to run the full check or just markdown validation.
 
-Parse the task file that's being deleted in the commit and check its title prefix. This is reliable but requires file I/O during the hook. The task file should be accessible from the commit being pushed.
+#### Option A: Analyze changes for `.dust/`-only pattern (Recommended)
 
-#### Analyze only the file changes
+If all committed changes are within `.dust/`, run `dust lint markdown` instead of `dust check`. This leverages the existing `analyzeChangesForTaskOnlyPattern()` function in `pre-push.ts` but extends it to check for `.dust/`-only changes (not just task-only additions).
 
-If all changes are in `.dust/`, assume it's a workflow task. This is simpler but may incorrectly classify a regular task that happened to only touch documentation. However, this could be combined with checking for a deleted task file with a known prefix.
+**Pros:** Simple, no extra I/O, works with any `.dust/`-only commit
+**Cons:** May skip full checks for a non-workflow task that only touched `.dust/` files
 
-#### Use environment variables from focus command
+#### Option B: Check deleted task file prefix
 
-The focus command could set an environment variable or write a temp file indicating the current task type. The pre-push hook would read this marker. This adds coupling between commands but provides explicit signaling.
+Parse the deleted task file from the commit and verify it starts with a workflow task prefix. This is more precise but requires reading the deleted file content from git.
+
+**Pros:** More accurate detection
+**Cons:** More complex, requires git show to read deleted file content
+
+#### Option C: Combine both approaches
+
+Require both conditions: changes are `.dust/`-only AND a deleted task file has a workflow prefix. This is the most precise but also most complex.
 
 ### What about mixed commits with both `.dust/` and code changes?
 
-#### Run full check for any non-`.dust/` changes
+#### Option A: Run full check for any non-`.dust/` changes (Recommended)
 
-Any code changes trigger full validation. This is the safest approach and keeps validation behavior predictable. Agents would need to separate workflow and code changes into different commits.
+Any code changes trigger full validation. This aligns with the "stop the line" goal and keeps validation behavior predictable. Agents would naturally separate workflow and code changes into different commits.
 
-#### Run lint markdown plus code linting only
+**Rationale:** Workflow tasks should only touch `.dust/` files. If an agent is modifying both `.dust/` and code, they're either doing multiple tasks or making implementation changes that warrant full validation.
+
+#### Option B: Run lint markdown plus code linting only
 
 Skip tests but still lint any code that was changed. This is a middle ground but complicates the validation logic and may not catch issues that tests would find.
 
-#### Block the commit with a warning
+#### Option C: Block the commit with a warning
 
 Warn the agent that they should separate workflow and code changes into different commits. This enforces cleaner commit boundaries but may be too strict for cases where updating a fact about code is legitimate.
+
+## Goal Alignment
+
+This idea supports:
+
+- **[Fast Feedback](../goals/fast-feedback.md)** - Workflow tasks complete faster without running irrelevant code checks
+- **[Context Window Efficiency](../goals/context-window-efficiency.md)** - Less output from unnecessary checks means more efficient agent context usage
+- **[Agent Autonomy](../goals/agent-autonomy.md)** - Workflow tasks can complete without being blocked by unrelated code issues
+
+## Implementation Notes
+
+Key files to modify:
+
+1. **`lib/workflow-tasks.ts`** - Add `isWorkflowTask(taskTitle: string): boolean` helper
+2. **`lib/cli/commands/focus.ts`** - Detect workflow tasks and provide tailored instructions
+3. **`lib/cli/commands/pre-push.ts`** - Add `.dust/`-only detection, conditionally call `lintMarkdown` instead of `check`
+
+The existing `analyzeChangesForTaskOnlyPattern()` in `pre-push.ts` can be extended or complemented with a new `analyzeChangesForDustOnlyPattern()` function that checks if all changes are within `.dust/`.
