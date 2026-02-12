@@ -13,6 +13,11 @@ export interface IdeaInProgress {
   ideaTitle: string
 }
 
+export interface ParsedCaptureIdeaTask {
+  ideaTitle: string
+  ideaDescription: string
+}
+
 export async function findAllCaptureIdeaTasks(
   fileSystem: FileSystem,
   dustPath: string
@@ -302,4 +307,42 @@ ${description}
 `
   await fileSystem.writeFile(filePath, content)
   return { filePath }
+}
+
+export async function parseCaptureIdeaTask(
+  fileSystem: FileSystem,
+  dustPath: string,
+  taskSlug: string
+): Promise<ParsedCaptureIdeaTask | null> {
+  const filePath = `${dustPath}/tasks/${taskSlug}.md`
+  if (!fileSystem.exists(filePath)) {
+    return null
+  }
+
+  const content = await fileSystem.readFile(filePath)
+
+  // Verify it's a capture idea task by checking the title
+  const titleMatch = content.match(/^#\s+(.+)$/m)
+  if (!titleMatch) {
+    return null
+  }
+
+  const title = titleMatch[1].trim()
+  if (!title.startsWith(CAPTURE_IDEA_PREFIX)) {
+    return null
+  }
+
+  const ideaTitle = title.slice(CAPTURE_IDEA_PREFIX.length)
+
+  // Extract the Idea Description section
+  const descriptionMatch = content.match(
+    /^## Idea Description\n\n([\s\S]*?)\n\n## /m
+  )
+  if (!descriptionMatch) {
+    return null
+  }
+
+  const ideaDescription = descriptionMatch[1]
+
+  return { ideaTitle, ideaDescription }
 }

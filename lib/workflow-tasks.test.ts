@@ -20,6 +20,7 @@ import {
   findWorkflowTaskForIdea,
   IDEA_TRANSITION_PREFIXES,
   type OpenQuestionResponse,
+  parseCaptureIdeaTask,
   titleToFilename,
 } from './workflow-tasks'
 
@@ -558,5 +559,123 @@ describe('findAllCaptureIdeaTasks', () => {
     expect(result).toEqual([
       { taskSlug: 'add-idea-auto-linting', ideaTitle: 'Auto Linting' },
     ])
+  })
+})
+
+describe('parseCaptureIdeaTask', () => {
+  test('returns null when file does not exist', async () => {
+    const fileSystem = createFileSystem()
+    const result = await parseCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'nonexistent-task'
+    )
+    expect(result).toBeNull()
+  })
+
+  test('returns null for non-capture-idea tasks', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {
+            'some-regular-task.md':
+              '# Some Regular Task\n\nDo something.\n\n## Goals\n\n(none)\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done\n',
+          },
+        },
+      },
+    })
+    const result = await parseCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'some-regular-task'
+    )
+    expect(result).toBeNull()
+  })
+
+  test('returns null for old-format tasks without Idea Description heading', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {
+            'add-idea-old-format.md':
+              '# Add Idea: Old Format\n\nSome description inline.\n\n## Goals\n\n(none)\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done\n',
+          },
+        },
+      },
+    })
+    const result = await parseCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'add-idea-old-format'
+    )
+    expect(result).toBeNull()
+  })
+
+  test('returns null for files without a title', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {
+            'no-title.md': 'Just some text without a heading.',
+          },
+        },
+      },
+    })
+    const result = await parseCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'no-title'
+    )
+    expect(result).toBeNull()
+  })
+
+  test('extracts title and description from new-format capture-idea tasks', async () => {
+    const fileSystem = createFileSystem()
+    await createCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'Progress Broadcasting',
+      'Allow agents to broadcast progress via WebSocket.'
+    )
+    const result = await parseCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'add-idea-progress-broadcasting'
+    )
+    expect(result).toEqual({
+      ideaTitle: 'Progress Broadcasting',
+      ideaDescription: 'Allow agents to broadcast progress via WebSocket.',
+    })
+  })
+
+  test('preserves raw markdown content in description', async () => {
+    const fileSystem = createFileSystem()
+    const multilineDescription = `This is a description with **bold** and *italic*.
+
+- List item 1
+- List item 2
+
+And a code block:
+\`\`\`typescript
+const x = 1;
+\`\`\``
+    await createCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'Complex Idea',
+      multilineDescription
+    )
+    const result = await parseCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'add-idea-complex-idea'
+    )
+    expect(result).toEqual({
+      ideaTitle: 'Complex Idea',
+      ideaDescription: multilineDescription,
+    })
   })
 })
