@@ -19,6 +19,131 @@ import { join } from 'node:path'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
 import { type WebSocketLike, WS_OPEN } from './bucket'
 
+// Bucket-specific event types
+export interface BucketConnectedEvent {
+  type: 'bucket.connected'
+}
+
+export interface BucketDisconnectedEvent {
+  type: 'bucket.disconnected'
+  code: number
+  reason: string
+}
+
+export interface BucketRepositoryAddedEvent {
+  type: 'bucket.repository_added'
+  repository: string
+}
+
+export interface BucketRepositoryRemovedEvent {
+  type: 'bucket.repository_removed'
+  repository: string
+}
+
+export interface BucketIterationStartedEvent {
+  type: 'bucket.iteration_started'
+  repository: string
+}
+
+export interface BucketIterationCompletedEvent {
+  type: 'bucket.iteration_completed'
+  repository: string
+  success: boolean
+  error?: string
+}
+
+export interface BucketErrorEvent {
+  type: 'bucket.error'
+  repository?: string
+  error: string
+}
+
+export type BucketEvent =
+  | BucketConnectedEvent
+  | BucketDisconnectedEvent
+  | BucketRepositoryAddedEvent
+  | BucketRepositoryRemovedEvent
+  | BucketIterationStartedEvent
+  | BucketIterationCompletedEvent
+  | BucketErrorEvent
+
+export interface BucketEventPayload {
+  type: BucketEvent['type']
+  timestamp: string
+  sessionId: string
+  sequence: number
+  repository?: string
+  details?: unknown
+}
+
+export type BucketEmitFn = (event: BucketEvent) => void
+
+// Format event for console output
+export function formatBucketEvent(event: BucketEvent): string {
+  switch (event.type) {
+    case 'bucket.connected':
+      return '✅ Container connected to dustbucket'
+    case 'bucket.disconnected':
+      return `🔌 Container disconnected (code: ${event.code}, reason: ${event.reason || 'none'})`
+    case 'bucket.repository_added':
+      return `📦 Added repository: ${event.repository}`
+    case 'bucket.repository_removed':
+      return `🗑️ Removed repository: ${event.repository}`
+    case 'bucket.iteration_started':
+      return `🚀 Starting iteration for ${event.repository}`
+    case 'bucket.iteration_completed':
+      return event.success
+        ? `✅ Completed iteration for ${event.repository}`
+        : `❌ Iteration failed for ${event.repository}: ${event.error}`
+    case 'bucket.error':
+      return event.repository
+        ? `❌ Error for ${event.repository}: ${event.error}`
+        : `❌ Error: ${event.error}`
+  }
+}
+
+// Create an event emitter that sends events via WebSocket
+export function createBucketEventEmitter(
+  getWebSocket: () => WebSocketLike | null,
+  sessionId: string
+): BucketEmitFn {
+  let sequence = 0
+
+  return (event: BucketEvent) => {
+    sequence++
+
+    const payload: BucketEventPayload = {
+      type: event.type,
+      timestamp: new Date().toISOString(),
+      sessionId,
+      sequence,
+    }
+
+    // Add repository field for repo-specific events
+    if ('repository' in event && event.repository) {
+      payload.repository = event.repository
+    }
+
+    // Add details for events with extra data
+    if (event.type === 'bucket.disconnected') {
+      payload.details = { code: event.code, reason: event.reason }
+    } else if (event.type === 'bucket.iteration_completed') {
+      payload.details = { success: event.success, error: event.error }
+    } else if (event.type === 'bucket.error') {
+      payload.details = { error: event.error }
+    }
+
+    const ws = getWebSocket()
+    if (ws && ws.readyState === WS_OPEN) {
+      try {
+        ws.send(JSON.stringify(payload))
+      } catch {
+        // Fire-and-forget: ignore send errors
+      }
+    }
+  }
+}
+
 const DUSTBUCKET_WS_URL = 'wss://dustbucket.com/ws'
 const INITIAL_RECONNECT_DELAY_MS = 1000
 const MAX_RECONNECT_DELAY_MS = 30000
@@ -42,6 +167,8 @@ export interface ContainerState {
   reconnectDelay: number
   reconnectTimer: ReturnType<typeof setTimeout> | null
   shuttingDown: boolean
+  sessionId: string
+  emit: BucketEmitFn
 }
 
 export interface ContainerDependencies {
@@ -79,13 +206,19 @@ export function createDefaultContainerDependencies(
 /* v8 ignore stop */
 
 export function createInitialContainerState(): ContainerState {
-  return {
+  const sessionId = crypto.randomUUID()
+  const state: ContainerState = {
     ws: null,
     repositories: new Map(),
     reconnectDelay: INITIAL_RECONNECT_DELAY_MS,
     reconnectTimer: null,
     shuttingDown: false,
+    sessionId,
+    emit: () => {}, // Placeholder, replaced when WebSocket connects
   }
+  // Create the emitter that references state.ws
+  state.emit = createBucketEventEmitter(() => state.ws, sessionId)
+  return state
 }
 
 /**
@@ -322,18 +455,18 @@ export async function invokeDust(
 export async function runRepositoryLoop(
   repoState: RepositoryState,
   containerDeps: ContainerDependencies,
-  context: CommandDependencies['context']
+  context: CommandDependencies['context'],
+  emit?: BucketEmitFn
 ): Promise<void> {
   const { spawn, fileSystem, sleep } = containerDeps
+  const repoName = repoState.repository.name
 
   while (!repoState.stopRequested) {
     // Step 1: git pull
     const pullResult = await gitPull(repoState.path, spawn)
     /* v8 ignore next 5 - git pull failure path */
     if (!pullResult.success) {
-      context.stderr(
-        `⚠️ git pull failed for ${repoState.repository.name}: ${pullResult.message}`
-      )
+      context.stderr(`⚠️ git pull failed for ${repoName}: ${pullResult.message}`)
     }
 
     // Step 2: Read dustCommand
@@ -342,27 +475,45 @@ export async function runRepositoryLoop(
     // Step 3: Check for tasks
     const hasTasks = await checkForTasks(repoState.path, dustCommand, spawn)
 
-    /* v8 ignore next 11 - integration path for running dust */
+    /* v8 ignore next 25 - integration path for running dust */
     if (hasTasks) {
+      // Emit iteration started
+      const startedEvent: BucketIterationStartedEvent = {
+        type: 'bucket.iteration_started',
+        repository: repoName,
+      }
+      emit?.(startedEvent)
+      context.stdout(formatBucketEvent(startedEvent))
+
       // Step 4: Invoke dust
       try {
         await invokeDust(repoState.path, dustCommand, spawn, context)
+        const completedEvent: BucketIterationCompletedEvent = {
+          type: 'bucket.iteration_completed',
+          repository: repoName,
+          success: true,
+        }
+        emit?.(completedEvent)
+        context.stdout(formatBucketEvent(completedEvent))
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)
-        context.stderr(
-          `❌ dust failed for ${repoState.repository.name}: ${message}`
-        )
+        const completedEvent: BucketIterationCompletedEvent = {
+          type: 'bucket.iteration_completed',
+          repository: repoName,
+          success: false,
+          error: message,
+        }
+        emit?.(completedEvent)
+        context.stdout(formatBucketEvent(completedEvent))
       }
     } else {
       // Step 5: Sleep before checking again
-      context.stdout(
-        `😴 No tasks for ${repoState.repository.name}. Sleeping...`
-      )
+      context.stdout(`😴 No tasks for ${repoName}. Sleeping...`)
       await sleep(SLEEP_INTERVAL_MS)
     }
   }
 
-  context.stdout(`🛑 Stopped loop for ${repoState.repository.name}`)
+  context.stdout(`🛑 Stopped loop for ${repoName}`)
 }
 
 /**
@@ -390,9 +541,15 @@ export async function addRepository(
     context
   )
 
-  /* v8 ignore next 4 - clone failure path */
+  /* v8 ignore next 7 - clone failure path */
   if (!success) {
-    context.stderr(`❌ Failed to add repository: ${repository.name}`)
+    const errorEvent: BucketErrorEvent = {
+      type: 'bucket.error',
+      repository: repository.name,
+      error: 'Clone failed',
+    }
+    state.emit(errorEvent)
+    context.stderr(formatBucketEvent(errorEvent))
     return
   }
 
@@ -405,8 +562,21 @@ export async function addRepository(
 
   state.repositories.set(repository.name, repoState)
 
+  // Emit repository added event
+  const addedEvent: BucketRepositoryAddedEvent = {
+    type: 'bucket.repository_added',
+    repository: repository.name,
+  }
+  state.emit(addedEvent)
+  context.stdout(formatBucketEvent(addedEvent))
+
   // Start the async loop
-  repoState.loopPromise = runRepositoryLoop(repoState, containerDeps, context)
+  repoState.loopPromise = runRepositoryLoop(
+    repoState,
+    containerDeps,
+    context,
+    state.emit
+  )
 }
 
 /**
@@ -423,8 +593,6 @@ export async function removeRepositoryFromContainer(
     return // Not tracking this repository
   }
 
-  context.stdout(`🗑️ Removing repository: ${repoName}`)
-
   // Signal the loop to stop
   repoState.stopRequested = true
 
@@ -440,6 +608,14 @@ export async function removeRepositoryFromContainer(
   await removeRepository(repoState.path, containerDeps.spawn, context)
 
   state.repositories.delete(repoName)
+
+  // Emit repository removed event
+  const removedEvent: BucketRepositoryRemovedEvent = {
+    type: 'bucket.repository_removed',
+    repository: repoName,
+  }
+  state.emit(removedEvent)
+  context.stdout(formatBucketEvent(removedEvent))
 }
 
 /**
@@ -492,14 +668,19 @@ export function connectWebSocket(
   state.ws = ws
 
   ws.onopen = () => {
-    context.stdout('✅ Container connected to dustbucket')
+    state.emit({ type: 'bucket.connected' })
+    context.stdout(formatBucketEvent({ type: 'bucket.connected' }))
     state.reconnectDelay = INITIAL_RECONNECT_DELAY_MS
   }
 
   ws.onclose = event => {
-    context.stdout(
-      `🔌 Container disconnected (code: ${event.code}, reason: ${event.reason || 'none'})`
-    )
+    const disconnectEvent: BucketDisconnectedEvent = {
+      type: 'bucket.disconnected',
+      code: event.code,
+      reason: event.reason || 'none',
+    }
+    state.emit(disconnectEvent)
+    context.stdout(formatBucketEvent(disconnectEvent))
     state.ws = null
 
     // Schedule reconnection

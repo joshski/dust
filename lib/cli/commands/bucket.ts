@@ -31,6 +31,7 @@ export interface WebSocketLike {
   onerror: ((error: Error) => void) | null
   onmessage: ((event: { data: string }) => void) | null
   close: () => void
+  send: (data: string) => void
   readyState: number
 }
 

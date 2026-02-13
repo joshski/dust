@@ -41,6 +41,7 @@ function createMockWebSocket(): WebSocketLike & EventEmitter {
   ws.close = () => {
     ws.readyState = WS_CLOSED
   }
+  ws.send = () => {}
   return ws
 }
 

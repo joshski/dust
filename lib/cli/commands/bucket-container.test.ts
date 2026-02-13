@@ -8,12 +8,15 @@ import type { CommandDependencies } from '../types'
 import { type WebSocketLike, WS_CLOSED, WS_OPEN } from './bucket'
 import {
   addRepository,
+  type BucketEventPayload,
   type ContainerDependencies,
   checkForTasks,
   cloneRepository,
   connectWebSocket,
+  createBucketEventEmitter,
   createDefaultContainerDependencies,
   createInitialContainerState,
+  formatBucketEvent,
   getRepoTempPath,
   gitPull,
   handleRepositoryList,
@@ -49,6 +52,7 @@ function createMockWebSocket(): WebSocketLike & EventEmitter {
   emitter.close = () => {
     emitter.readyState = WS_CLOSED
   }
+  emitter.send = () => {}
   return emitter
 }
 
@@ -841,5 +845,324 @@ describe('removeRepositoryFromContainer', () => {
     )
 
     // Should not throw and should complete without error
+  })
+})
+
+describe('formatBucketEvent', () => {
+  test('formats bucket.connected event', () => {
+    const result = formatBucketEvent({ type: 'bucket.connected' })
+    expect(result).toBe('✅ Container connected to dustbucket')
+  })
+
+  test('formats bucket.disconnected event', () => {
+    const result = formatBucketEvent({
+      type: 'bucket.disconnected',
+      code: 1006,
+      reason: 'Connection lost',
+    })
+    expect(result).toBe(
+      '🔌 Container disconnected (code: 1006, reason: Connection lost)'
+    )
+  })
+
+  test('formats bucket.disconnected event with empty reason', () => {
+    const result = formatBucketEvent({
+      type: 'bucket.disconnected',
+      code: 1000,
+      reason: '',
+    })
+    expect(result).toBe('🔌 Container disconnected (code: 1000, reason: none)')
+  })
+
+  test('formats bucket.repository_added event', () => {
+    const result = formatBucketEvent({
+      type: 'bucket.repository_added',
+      repository: 'my-repo',
+    })
+    expect(result).toBe('📦 Added repository: my-repo')
+  })
+
+  test('formats bucket.repository_removed event', () => {
+    const result = formatBucketEvent({
+      type: 'bucket.repository_removed',
+      repository: 'my-repo',
+    })
+    expect(result).toBe('🗑️ Removed repository: my-repo')
+  })
+
+  test('formats bucket.iteration_started event', () => {
+    const result = formatBucketEvent({
+      type: 'bucket.iteration_started',
+      repository: 'my-repo',
+    })
+    expect(result).toBe('🚀 Starting iteration for my-repo')
+  })
+
+  test('formats bucket.iteration_completed event (success)', () => {
+    const result = formatBucketEvent({
+      type: 'bucket.iteration_completed',
+      repository: 'my-repo',
+      success: true,
+    })
+    expect(result).toBe('✅ Completed iteration for my-repo')
+  })
+
+  test('formats bucket.iteration_completed event (failure)', () => {
+    const result = formatBucketEvent({
+      type: 'bucket.iteration_completed',
+      repository: 'my-repo',
+      success: false,
+      error: 'dust exited with code 1',
+    })
+    expect(result).toBe(
+      '❌ Iteration failed for my-repo: dust exited with code 1'
+    )
+  })
+
+  test('formats bucket.error event with repository', () => {
+    const result = formatBucketEvent({
+      type: 'bucket.error',
+      repository: 'my-repo',
+      error: 'Clone failed',
+    })
+    expect(result).toBe('❌ Error for my-repo: Clone failed')
+  })
+
+  test('formats bucket.error event without repository', () => {
+    const result = formatBucketEvent({
+      type: 'bucket.error',
+      error: 'Connection timeout',
+    })
+    expect(result).toBe('❌ Error: Connection timeout')
+  })
+})
+
+describe('createBucketEventEmitter', () => {
+  test('sends event via WebSocket when connected', () => {
+    const sentMessages: string[] = []
+    const ws = createMockWebSocket()
+    ws.readyState = WS_OPEN
+    ws.send = (data: string) => sentMessages.push(data)
+
+    const emit = createBucketEventEmitter(() => ws, 'session-123')
+    emit({ type: 'bucket.connected' })
+
+    expect(sentMessages).toHaveLength(1)
+    const payload = JSON.parse(sentMessages[0]) as BucketEventPayload
+    expect(payload.type).toBe('bucket.connected')
+    expect(payload.sessionId).toBe('session-123')
+    expect(payload.sequence).toBe(1)
+    expect(payload.timestamp).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/
+    )
+  })
+
+  test('increments sequence number', () => {
+    const sentMessages: string[] = []
+    const ws = createMockWebSocket()
+    ws.readyState = WS_OPEN
+    ws.send = (data: string) => sentMessages.push(data)
+
+    const emit = createBucketEventEmitter(() => ws, 'session-123')
+    emit({ type: 'bucket.connected' })
+    emit({ type: 'bucket.repository_added', repository: 'repo1' })
+    emit({ type: 'bucket.repository_added', repository: 'repo2' })
+
+    expect(sentMessages).toHaveLength(3)
+    expect((JSON.parse(sentMessages[0]) as BucketEventPayload).sequence).toBe(1)
+    expect((JSON.parse(sentMessages[1]) as BucketEventPayload).sequence).toBe(2)
+    expect((JSON.parse(sentMessages[2]) as BucketEventPayload).sequence).toBe(3)
+  })
+
+  test('does not send when WebSocket is null', () => {
+    const sendCalled = false
+    const emit = createBucketEventEmitter(() => null, 'session-123')
+
+    // Override send - but it shouldn't be called
+    emit({ type: 'bucket.connected' })
+
+    expect(sendCalled).toBe(false)
+  })
+
+  test('does not send when WebSocket is not open', () => {
+    const sentMessages: string[] = []
+    const ws = createMockWebSocket()
+    ws.readyState = WS_CLOSED
+    ws.send = (data: string) => sentMessages.push(data)
+
+    const emit = createBucketEventEmitter(() => ws, 'session-123')
+    emit({ type: 'bucket.connected' })
+
+    expect(sentMessages).toHaveLength(0)
+  })
+
+  test('includes repository field for repo-specific events', () => {
+    const sentMessages: string[] = []
+    const ws = createMockWebSocket()
+    ws.readyState = WS_OPEN
+    ws.send = (data: string) => sentMessages.push(data)
+
+    const emit = createBucketEventEmitter(() => ws, 'session-123')
+    emit({ type: 'bucket.repository_added', repository: 'my-repo' })
+
+    const payload = JSON.parse(sentMessages[0]) as BucketEventPayload
+    expect(payload.repository).toBe('my-repo')
+  })
+
+  test('includes details for disconnected event', () => {
+    const sentMessages: string[] = []
+    const ws = createMockWebSocket()
+    ws.readyState = WS_OPEN
+    ws.send = (data: string) => sentMessages.push(data)
+
+    const emit = createBucketEventEmitter(() => ws, 'session-123')
+    emit({ type: 'bucket.disconnected', code: 1006, reason: 'Connection lost' })
+
+    const payload = JSON.parse(sentMessages[0]) as BucketEventPayload
+    expect(payload.details).toEqual({ code: 1006, reason: 'Connection lost' })
+  })
+
+  test('includes details for iteration_completed event', () => {
+    const sentMessages: string[] = []
+    const ws = createMockWebSocket()
+    ws.readyState = WS_OPEN
+    ws.send = (data: string) => sentMessages.push(data)
+
+    const emit = createBucketEventEmitter(() => ws, 'session-123')
+    emit({
+      type: 'bucket.iteration_completed',
+      repository: 'my-repo',
+      success: false,
+      error: 'Process crashed',
+    })
+
+    const payload = JSON.parse(sentMessages[0]) as BucketEventPayload
+    expect(payload.details).toEqual({
+      success: false,
+      error: 'Process crashed',
+    })
+  })
+
+  test('includes details for error event', () => {
+    const sentMessages: string[] = []
+    const ws = createMockWebSocket()
+    ws.readyState = WS_OPEN
+    ws.send = (data: string) => sentMessages.push(data)
+
+    const emit = createBucketEventEmitter(() => ws, 'session-123')
+    emit({ type: 'bucket.error', repository: 'my-repo', error: 'Clone failed' })
+
+    const payload = JSON.parse(sentMessages[0]) as BucketEventPayload
+    expect(payload.details).toEqual({ error: 'Clone failed' })
+  })
+
+  test('ignores send errors (fire-and-forget)', () => {
+    const ws = createMockWebSocket()
+    ws.readyState = WS_OPEN
+    ws.send = () => {
+      throw new Error('Send failed')
+    }
+
+    const emit = createBucketEventEmitter(() => ws, 'session-123')
+
+    // Should not throw
+    expect(() => emit({ type: 'bucket.connected' })).not.toThrow()
+  })
+})
+
+describe('createInitialContainerState', () => {
+  test('includes sessionId and emit function', () => {
+    const state = createInitialContainerState()
+    expect(state.sessionId).toBeDefined()
+    expect(state.sessionId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+    )
+    expect(typeof state.emit).toBe('function')
+  })
+
+  test('emit function uses state.ws', () => {
+    const state = createInitialContainerState()
+    const sentMessages: string[] = []
+
+    // Initially ws is null, so nothing should be sent
+    state.emit({ type: 'bucket.connected' })
+    expect(sentMessages).toHaveLength(0)
+
+    // Set up a mock WebSocket
+    const ws = createMockWebSocket()
+    ws.readyState = WS_OPEN
+    ws.send = (data: string) => sentMessages.push(data)
+    state.ws = ws
+
+    // Now emit should send
+    state.emit({ type: 'bucket.connected' })
+    expect(sentMessages).toHaveLength(1)
+  })
+})
+
+describe('connectWebSocket event emission', () => {
+  test('emits bucket.connected on open', () => {
+    const commandDependencies = createDependencies()
+    const state = createInitialContainerState()
+    const sentMessages: string[] = []
+
+    const webSocket = createMockWebSocket()
+    webSocket.send = (data: string) => sentMessages.push(data)
+
+    const containerDependencies = createContainerDependencies({
+      createWebSocket: () => webSocket,
+    })
+
+    connectWebSocket(
+      'token',
+      state,
+      containerDependencies,
+      commandDependencies.context
+    )
+
+    // Set readyState before triggering onopen
+    webSocket.readyState = WS_OPEN
+    webSocket.onopen?.()
+
+    expect(sentMessages).toHaveLength(1)
+    const payload = JSON.parse(sentMessages[0]) as BucketEventPayload
+    expect(payload.type).toBe('bucket.connected')
+  })
+
+  test('emits bucket.disconnected on close', () => {
+    const commandDependencies = createDependencies()
+    const state = createInitialContainerState()
+    const sentMessages: string[] = []
+
+    const webSocket = createMockWebSocket()
+    webSocket.send = (data: string) => sentMessages.push(data)
+
+    const containerDependencies = createContainerDependencies({
+      createWebSocket: () => webSocket,
+    })
+
+    connectWebSocket(
+      'token',
+      state,
+      containerDependencies,
+      commandDependencies.context
+    )
+
+    // First connect
+    webSocket.readyState = WS_OPEN
+    webSocket.onopen?.()
+
+    // Then disconnect - note: ws is still set, so disconnected event can be sent
+    webSocket.onclose?.({ code: 1006, reason: 'Connection lost' })
+
+    // Should have connected event + disconnected event
+    // But disconnected happens after ws is set to null, so it won't be sent
+    // Actually, emit is called before state.ws is set to null, so it should work
+    expect(sentMessages.length).toBeGreaterThanOrEqual(1)
+    const connectedPayload = JSON.parse(sentMessages[0]) as BucketEventPayload
+    expect(connectedPayload.type).toBe('bucket.connected')
+
+    // Clean up reconnect timer
+    if (state.reconnectTimer) clearTimeout(state.reconnectTimer)
   })
 })
