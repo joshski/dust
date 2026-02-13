@@ -49,7 +49,7 @@ interface BucketEvent {
 
 ## Blocked By
 
-- [Add `dust bucket` entry point command](./add-dust-bucket-entry-point-command.md)
+(none)
 
 ## Definition of Done
 
