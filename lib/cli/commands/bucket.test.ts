@@ -1,9 +1,18 @@
-import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
-import { describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test } from 'vitest'
+import type { WebSocketLike } from '../../bucket/events'
+import { WS_CLOSED, WS_OPEN } from '../../bucket/events'
+import {
+  createLogBuffer,
+  getLogLines,
+  type LogBuffer,
+} from '../../bucket/log-buffer'
+import type { RepositoryState } from '../../bucket/repository'
 import {
   createContextEmulator,
   createFileSystemEmulator,
+  restoreEnv,
+  stubEnv,
 } from '../../test/test-utilities'
 import type { CommandDependencies } from '../types'
 import {
@@ -12,14 +21,11 @@ import {
   connectWebSocket,
   createDefaultBucketDependencies,
   createInitialState,
-  handleContainerOutput,
-  handleRepositoryList,
-  parseContainerOutput,
+  createTUIContext,
+  getWebSocketUrl,
+  logMessage,
   shutdown,
-  spawnContainer,
-  type WebSocketLike,
-  WS_CLOSED,
-  WS_OPEN,
+  waitForConnection,
 } from './bucket'
 
 function createDependencies(): CommandDependencies {
@@ -48,24 +54,30 @@ function createMockWebSocket(): WebSocketLike & EventEmitter {
   return ws
 }
 
-function createMockChildProcess(): ChildProcess & EventEmitter {
-  const proc = new EventEmitter() as ChildProcess & EventEmitter
-  proc.kill = () => true
-  return proc
+/** Create a mock ws that auto-fires onopen so waitForConnection resolves. */
+function createAutoConnectWebSocket(): WebSocketLike & EventEmitter {
+  const ws = createMockWebSocket()
+  setTimeout(() => ws.onopen?.(), 0)
+  return ws
 }
 
 function createBucketDependencies(
   overrides: Partial<BucketDependencies> = {}
 ): BucketDependencies {
   return {
-    spawn: (() => createMockChildProcess()) as BucketDependencies['spawn'],
-    createWebSocket: () => createMockWebSocket(),
+    spawn: (() => {
+      const proc = new EventEmitter()
+      return proc
+    }) as unknown as BucketDependencies['spawn'],
+    createWebSocket: () => createAutoConnectWebSocket(),
     setupKeypress: () => () => {},
     setupSignals: () => () => {},
     setupResize: () => () => {},
     getTerminalSize: () => ({ width: 80, height: 24 }),
     writeStdout: () => {},
-    isTTY: false, // Default to non-TUI mode for existing tests
+    isTTY: false,
+    sleep: () => Promise.resolve(),
+    getTempDir: () => '/tmp',
     ...overrides,
   }
 }
@@ -81,151 +93,207 @@ describe('createDefaultBucketDependencies', () => {
     expect(typeof bucketDependencies.getTerminalSize).toBe('function')
     expect(typeof bucketDependencies.writeStdout).toBe('function')
     expect(typeof bucketDependencies.isTTY).toBe('boolean')
+    expect(typeof bucketDependencies.sleep).toBe('function')
+    expect(typeof bucketDependencies.getTempDir).toBe('function')
   })
 })
 
 describe('createInitialState', () => {
-  test('returns initial state with null values and default reconnect delay', () => {
+  test('returns initial state with system buffer and session', () => {
     const state = createInitialState()
     expect(state.ws).toBeNull()
-    expect(state.containerProcess).toBeNull()
+    expect(state.repositories).toBeInstanceOf(Map)
+    expect(state.repositories.size).toBe(0)
     expect(state.reconnectDelay).toBe(1000)
     expect(state.reconnectTimer).toBeNull()
     expect(state.shuttingDown).toBe(false)
+    expect(state.sessionId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+    )
+    expect(typeof state.emit).toBe('function')
     expect(state.ui).toBeDefined()
     expect(state.logBuffers).toBeInstanceOf(Map)
-  })
-})
-
-describe('spawnContainer', () => {
-  test('spawns container process with token in environment', () => {
-    let capturedEnv: NodeJS.ProcessEnv | undefined
-    let capturedArguments: string[] | undefined
-    let capturedCommand: string | undefined
-
-    const spawn = ((
-      command: string,
-      spawnArguments: string[],
-      options: { env?: NodeJS.ProcessEnv }
-    ) => {
-      capturedCommand = command
-      capturedArguments = spawnArguments
-      capturedEnv = options.env
-      return createMockChildProcess()
-    }) as BucketDependencies['spawn']
-
-    spawnContainer('test-token', '/project', 'dust', spawn, false)
-
-    expect(capturedCommand).toBe('dust')
-    expect(capturedArguments).toEqual(['bucket', 'container'])
-    expect(capturedEnv?.DUST_API_TOKEN).toBe('test-token')
-  })
-
-  test('handles multi-word dust command', () => {
-    let capturedCommand: string | undefined
-    let capturedArguments: string[] | undefined
-
-    const spawn = ((command: string, spawnArguments: string[]) => {
-      capturedCommand = command
-      capturedArguments = spawnArguments
-      return createMockChildProcess()
-    }) as BucketDependencies['spawn']
-
-    spawnContainer('test-token', '/project', 'bun run dust', spawn, false)
-
-    expect(capturedCommand).toBe('bun')
-    expect(capturedArguments).toEqual(['run', 'dust', 'bucket', 'container'])
-  })
-})
-
-describe('parseContainerOutput', () => {
-  test('extracts repository from "Added repository" message', () => {
-    const result = parseContainerOutput('📦 Added repository: my-repo')
-    expect(result.repository).toBe('my-repo')
-    expect(result.text).toBe('📦 Added repository: my-repo')
-  })
-
-  test('extracts repository from "Starting iteration for" message', () => {
-    const result = parseContainerOutput('🚀 Starting iteration for test-repo')
-    expect(result.repository).toBe('test-repo')
-  })
-
-  test('extracts repository from "Completed iteration for" message', () => {
-    const result = parseContainerOutput('✅ Completed iteration for test-repo')
-    expect(result.repository).toBe('test-repo')
-  })
-
-  test('extracts repository from bracket format', () => {
-    const result = parseContainerOutput('[my-repo] some log message')
-    expect(result.repository).toBe('my-repo')
-    expect(result.text).toBe('some log message')
-  })
-
-  test('returns null repository for untagged messages', () => {
-    const result = parseContainerOutput('Just a plain log line')
-    expect(result.repository).toBeNull()
-    expect(result.text).toBe('Just a plain log line')
-  })
-})
-
-describe('handleContainerOutput', () => {
-  test('creates log buffer for new repository', () => {
-    const state = createInitialState()
-
-    handleContainerOutput(state, '📦 Added repository: new-repo', 'stdout')
-
-    expect(state.logBuffers.has('new-repo')).toBe(true)
-    expect(state.ui.repositories).toContain('new-repo')
-  })
-
-  test('appends to existing log buffer', () => {
-    const state = createInitialState()
-
-    handleContainerOutput(state, '[repo1] first line', 'stdout')
-    handleContainerOutput(state, '[repo1] second line', 'stdout')
-
-    const buffer = state.logBuffers.get('repo1')
-    expect(buffer?.lines.length).toBe(2)
-  })
-
-  test('uses system buffer for untagged output', () => {
-    const state = createInitialState()
-
-    handleContainerOutput(state, 'untagged message', 'stdout')
-
     expect(state.logBuffers.has('system')).toBe(true)
+    expect(state.ui.repositories).toContain('system')
+  })
+
+  test('emit function uses state.ws', () => {
+    const state = createInitialState()
+    const sentMessages: string[] = []
+
+    state.emit({ type: 'bucket.connected' })
+    expect(sentMessages).toHaveLength(0)
+
+    const ws = createMockWebSocket()
+    ws.readyState = WS_OPEN
+    ws.send = (data: string) => sentMessages.push(data)
+    state.ws = ws
+
+    state.emit({ type: 'bucket.connected' })
+    expect(sentMessages).toHaveLength(1)
   })
 })
 
-describe('handleRepositoryList', () => {
-  test('adds new repositories', () => {
-    const state = createInitialState()
-
-    handleRepositoryList(state, ['repo1', 'repo2'])
-
-    expect(state.logBuffers.has('repo1')).toBe(true)
-    expect(state.logBuffers.has('repo2')).toBe(true)
-    expect(state.ui.repositories).toContain('repo1')
-    expect(state.ui.repositories).toContain('repo2')
+describe('getWebSocketUrl', () => {
+  afterEach(() => {
+    restoreEnv()
   })
 
-  test('removes repositories not in list', () => {
-    const state = createInitialState()
-    handleRepositoryList(state, ['repo1', 'repo2'])
-
-    handleRepositoryList(state, ['repo1'])
-
-    expect(state.logBuffers.has('repo1')).toBe(true)
-    expect(state.logBuffers.has('repo2')).toBe(false)
+  test('returns default URL when env var is not set', () => {
+    expect(getWebSocketUrl()).toBe('wss://dustbucket.com/agent/connect')
   })
 
-  test('preserves system buffer', () => {
+  test('returns env var URL when DUST_BUCKET_AGENT_CONNECT_URL is set', () => {
+    stubEnv('DUST_BUCKET_AGENT_CONNECT_URL', 'ws://localhost:3000/ws')
+    expect(getWebSocketUrl()).toBe('ws://localhost:3000/ws')
+  })
+})
+
+describe('logMessage', () => {
+  test('writes to context.stdout in non-TUI mode', () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
     const state = createInitialState()
-    handleContainerOutput(state, 'system message', 'stdout')
 
-    handleRepositoryList(state, ['repo1'])
+    logMessage(state, dependencies.context, false, 'hello')
 
-    expect(state.logBuffers.has('system')).toBe(true)
+    expect(context.stdoutLines).toContain('hello')
+  })
+
+  test('writes to context.stderr in non-TUI mode for stderr stream', () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const state = createInitialState()
+
+    logMessage(state, dependencies.context, false, 'error msg', 'stderr')
+
+    expect(context.stderrLines).toContain('error msg')
+  })
+
+  test('writes to system log buffer in TUI mode', () => {
+    const dependencies = createDependencies()
+    const state = createInitialState()
+
+    logMessage(state, dependencies.context, true, 'tui message')
+
+    const systemBuffer = state.logBuffers.get('system')
+    expect(systemBuffer).toBeDefined()
+    const lines = getLogLines(systemBuffer as LogBuffer)
+    expect(lines.length).toBe(1)
+    expect(lines[0].text).toBe('tui message')
+    expect(lines[0].stream).toBe('stdout')
+  })
+
+  test('writes stderr to system log buffer in TUI mode', () => {
+    const dependencies = createDependencies()
+    const state = createInitialState()
+
+    logMessage(state, dependencies.context, true, 'tui error', 'stderr')
+
+    const systemBuffer = state.logBuffers.get('system')
+    expect(systemBuffer).toBeDefined()
+    const lines = getLogLines(systemBuffer as LogBuffer)
+    expect(lines.length).toBe(1)
+    expect(lines[0].text).toBe('tui error')
+    expect(lines[0].stream).toBe('stderr')
+  })
+})
+
+describe('createTUIContext', () => {
+  test('returns original context when not in TUI mode', () => {
+    const dependencies = createDependencies()
+    const state = createInitialState()
+
+    const wrapped = createTUIContext(state, dependencies.context, false)
+
+    expect(wrapped).toBe(dependencies.context)
+  })
+
+  test('routes stdout to system log buffer in TUI mode', () => {
+    const dependencies = createDependencies()
+    const state = createInitialState()
+
+    const wrapped = createTUIContext(state, dependencies.context, true)
+    wrapped.stdout('hello from repo')
+
+    const systemBuffer = state.logBuffers.get('system')
+    expect(systemBuffer).toBeDefined()
+    const lines = getLogLines(systemBuffer as LogBuffer)
+    const match = lines.find(l => l.text === 'hello from repo')
+    expect(match).toBeDefined()
+    expect(match?.stream).toBe('stdout')
+  })
+
+  test('routes stderr to system log buffer in TUI mode', () => {
+    const dependencies = createDependencies()
+    const state = createInitialState()
+
+    const wrapped = createTUIContext(state, dependencies.context, true)
+    wrapped.stderr('clone error details')
+
+    const systemBuffer = state.logBuffers.get('system')
+    expect(systemBuffer).toBeDefined()
+    const lines = getLogLines(systemBuffer as LogBuffer)
+    const match = lines.find(l => l.text === 'clone error details')
+    expect(match).toBeDefined()
+    expect(match?.stream).toBe('stderr')
+  })
+})
+
+describe('waitForConnection', () => {
+  test('resolves with WebSocket on successful open', async () => {
+    const bucketDependencies = createBucketDependencies()
+
+    const ws = await waitForConnection('my-token', bucketDependencies)
+
+    expect(ws).toBeDefined()
+    expect(ws.send).toBeDefined()
+  })
+
+  test('rejects on WebSocket error', async () => {
+    const ws = createMockWebSocket()
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => {
+        setTimeout(() => ws.onerror?.(new Error('Connection refused')), 0)
+        return ws
+      },
+    })
+
+    await expect(
+      waitForConnection('my-token', bucketDependencies)
+    ).rejects.toThrow('Connection refused')
+  })
+
+  test('rejects on WebSocket close before open', async () => {
+    const ws = createMockWebSocket()
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => {
+        setTimeout(() => ws.onclose?.({ code: 1006, reason: '' }), 0)
+        return ws
+      },
+    })
+
+    await expect(
+      waitForConnection('my-token', bucketDependencies)
+    ).rejects.toThrow('Connection closed (code 1006)')
+  })
+
+  test('passes token to createWebSocket', async () => {
+    let capturedToken: string | undefined
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: (_url, token) => {
+        capturedToken = token
+        return createAutoConnectWebSocket()
+      },
+    })
+
+    await waitForConnection('secret-token', bucketDependencies)
+
+    expect(capturedToken).toBe('secret-token')
   })
 })
 
@@ -249,70 +317,36 @@ describe('connectWebSocket', () => {
       state,
       bucketDependencies,
       dependencies.context,
-      'dust',
-      () => {},
+      dependencies.fileSystem,
       false
     )
 
-    expect(capturedUrl).toBe('wss://dustbucket.com/ws')
+    expect(capturedUrl).toBe('wss://dustbucket.com/agent/connect')
     expect(capturedToken).toBe('my-token')
   })
 
-  test('spawns container on WebSocket open', () => {
+  test('emits connected event and resets reconnect delay on open', () => {
     const dependencies = createDependencies()
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
     const state = createInitialState()
-    let containerSpawned = false
+    state.reconnectDelay = 16000
 
+    const sentMessages: string[] = []
     const ws = createMockWebSocket()
-    const bucketDependencies = createBucketDependencies({
-      createWebSocket: () => ws,
-      spawn: (() => {
-        containerSpawned = true
-        return createMockChildProcess()
-      }) as BucketDependencies['spawn'],
-    })
+    ws.send = (data: string) => sentMessages.push(data)
 
-    connectWebSocket(
-      'my-token',
-      state,
-      bucketDependencies,
-      dependencies.context,
-      'dust',
-      () => {},
-      false
-    )
-
-    // Simulate WebSocket opening
-    ws.readyState = WS_OPEN
-    ws.onopen?.()
-
-    expect(containerSpawned).toBe(true)
-    expect(context.stdoutLines.join('\n')).toContain('Connected to dustbucket')
-    expect(context.stdoutLines.join('\n')).toContain(
-      'Spawning container process'
-    )
-  })
-
-  test('resets reconnect delay on successful connection', () => {
-    const dependencies = createDependencies()
-    const state = createInitialState()
-    state.reconnectDelay = 16000 // Simulating previous backoff
-
-    const ws = createMockWebSocket()
     const bucketDependencies = createBucketDependencies({
       createWebSocket: () => ws,
     })
 
     connectWebSocket(
-      'my-token',
+      'token',
       state,
       bucketDependencies,
       dependencies.context,
-      'dust',
-      () => {},
+      dependencies.fileSystem,
       false
     )
 
@@ -320,6 +354,46 @@ describe('connectWebSocket', () => {
     ws.onopen?.()
 
     expect(state.reconnectDelay).toBe(1000)
+    expect(context.stdoutLines.join('\n')).toContain('Connected to dustbucket')
+    expect(sentMessages).toHaveLength(1)
+  })
+
+  test('uses pre-connected WebSocket when connectedWs is provided', () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const state = createInitialState()
+    state.reconnectDelay = 16000
+
+    const sentMessages: string[] = []
+    const ws = createMockWebSocket()
+    ws.readyState = WS_OPEN
+    ws.send = (data: string) => sentMessages.push(data)
+
+    let wsCreated = false
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => {
+        wsCreated = true
+        return createMockWebSocket()
+      },
+    })
+
+    connectWebSocket(
+      'token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false,
+      ws
+    )
+
+    expect(wsCreated).toBe(false)
+    expect(state.ws).toBe(ws)
+    expect(state.reconnectDelay).toBe(1000)
+    expect(context.stdoutLines.join('\n')).toContain('Connected to dustbucket')
+    expect(sentMessages).toHaveLength(1)
   })
 
   test('schedules reconnection on close with exponential backoff', () => {
@@ -339,20 +413,17 @@ describe('connectWebSocket', () => {
       state,
       bucketDependencies,
       dependencies.context,
-      'dust',
-      () => {},
+      dependencies.fileSystem,
       false
     )
 
-    // Simulate WebSocket closing
     ws.onclose?.({ code: 1006, reason: 'Connection lost' })
 
     expect(context.stdoutLines.join('\n')).toContain('Disconnected')
     expect(context.stdoutLines.join('\n')).toContain('Reconnecting in 1 second')
     expect(state.reconnectTimer).not.toBeNull()
-    expect(state.reconnectDelay).toBe(2000) // Doubled
+    expect(state.reconnectDelay).toBe(2000)
 
-    // Clean up timer
     if (state.reconnectTimer) clearTimeout(state.reconnectTimer)
   })
 
@@ -362,7 +433,7 @@ describe('connectWebSocket', () => {
       typeof createContextEmulator
     >
     const state = createInitialState()
-    state.reconnectDelay = 1 // Use very short delay for testing
+    state.reconnectDelay = 1
 
     let connectionAttempts = 0
     const ws = createMockWebSocket()
@@ -378,26 +449,21 @@ describe('connectWebSocket', () => {
       state,
       bucketDependencies,
       dependencies.context,
-      'dust',
-      () => {},
+      dependencies.fileSystem,
       false
     )
 
     expect(connectionAttempts).toBe(1)
 
-    // Simulate WebSocket closing
     ws.onclose?.({ code: 1006, reason: 'Connection lost' })
 
-    // Wait for the reconnection timer to fire
     await new Promise(resolve => setTimeout(resolve, 10))
 
-    // Should have attempted a second connection
     expect(connectionAttempts).toBe(2)
     expect(
       context.stdoutLines.filter(line => line.includes('Connecting')).length
     ).toBe(2)
 
-    // Clean up timer if any
     if (state.reconnectTimer) clearTimeout(state.reconnectTimer)
   })
 
@@ -413,26 +479,20 @@ describe('connectWebSocket', () => {
       createWebSocket: () => ws,
     })
 
-    // Connect first (shuttingDown is false)
     connectWebSocket(
       'my-token',
       state,
       bucketDependencies,
       dependencies.context,
-      'dust',
-      () => {},
+      dependencies.fileSystem,
       false
     )
 
-    // Then set shuttingDown before close event
     state.shuttingDown = true
 
-    // Trigger close event
     ws.onclose?.({ code: 1000, reason: 'Normal closure' })
 
-    // Should not have scheduled reconnection
     expect(state.reconnectTimer).toBeNull()
-    // Should not have output reconnection message
     expect(context.stdoutLines.join('\n')).not.toContain('Reconnecting')
   })
 
@@ -454,8 +514,7 @@ describe('connectWebSocket', () => {
       state,
       bucketDependencies,
       dependencies.context,
-      'dust',
-      () => {},
+      dependencies.fileSystem,
       false
     )
 
@@ -479,8 +538,7 @@ describe('connectWebSocket', () => {
       state,
       bucketDependencies,
       dependencies.context,
-      'dust',
-      () => {},
+      dependencies.fileSystem,
       false
     )
 
@@ -507,8 +565,7 @@ describe('connectWebSocket', () => {
       state,
       bucketDependencies,
       dependencies.context,
-      'dust',
-      () => {},
+      dependencies.fileSystem,
       false
     )
 
@@ -522,6 +579,81 @@ describe('connectWebSocket', () => {
     expect(context.stdoutLines.join('\n')).toContain(
       'Received repository list (3 repositories)'
     )
+  })
+
+  test('eagerly adds repository tabs to UI on repository-list message', () => {
+    const dependencies = createDependencies()
+    const state = createInitialState()
+
+    const ws = createMockWebSocket()
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => ws,
+    })
+
+    connectWebSocket(
+      'my-token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false
+    )
+
+    ws.onmessage?.({
+      data: JSON.stringify({
+        type: 'repository-list',
+        repositories: ['repo1', 'repo2'],
+      }),
+    })
+
+    // Tabs should appear immediately (before cloning finishes)
+    expect(state.ui.repositories).toContain('repo1')
+    expect(state.ui.repositories).toContain('repo2')
+    expect(state.logBuffers.has('repo1')).toBe(true)
+    expect(state.logBuffers.has('repo2')).toBe(true)
+  })
+
+  test('removes stale repos from UI when receiving updated repository-list', () => {
+    const dependencies = createDependencies()
+    const state = createInitialState()
+
+    const ws = createMockWebSocket()
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => ws,
+    })
+
+    connectWebSocket(
+      'my-token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false
+    )
+
+    // First list with repo1 and repo2
+    ws.onmessage?.({
+      data: JSON.stringify({
+        type: 'repository-list',
+        repositories: ['repo1', 'repo2'],
+      }),
+    })
+
+    expect(state.ui.repositories).toContain('repo1')
+    expect(state.ui.repositories).toContain('repo2')
+
+    // Updated list with only repo2
+    ws.onmessage?.({
+      data: JSON.stringify({
+        type: 'repository-list',
+        repositories: ['repo2'],
+      }),
+    })
+
+    expect(state.ui.repositories).not.toContain('repo1')
+    expect(state.ui.repositories).toContain('repo2')
+    // system should always remain
+    expect(state.ui.repositories).toContain('system')
   })
 
   test('handles repository-list messages with no repositories array', () => {
@@ -541,12 +673,10 @@ describe('connectWebSocket', () => {
       state,
       bucketDependencies,
       dependencies.context,
-      'dust',
-      () => {},
+      dependencies.fileSystem,
       false
     )
 
-    // Message with no repositories field
     ws.onmessage?.({
       data: JSON.stringify({
         type: 'repository-list',
@@ -558,21 +688,13 @@ describe('connectWebSocket', () => {
     )
   })
 
-  test('does not spawn container if already exists', () => {
+  test('logs WebSocket errors to system buffer in TUI mode', () => {
     const dependencies = createDependencies()
     const state = createInitialState()
-    let spawnCount = 0
-
-    const proc = createMockChildProcess()
-    state.containerProcess = proc // Pre-set the container process
 
     const ws = createMockWebSocket()
     const bucketDependencies = createBucketDependencies({
       createWebSocket: () => ws,
-      spawn: (() => {
-        spawnCount++
-        return createMockChildProcess()
-      }) as BucketDependencies['spawn'],
     })
 
     connectWebSocket(
@@ -580,17 +702,19 @@ describe('connectWebSocket', () => {
       state,
       bucketDependencies,
       dependencies.context,
-      'dust',
-      () => {},
-      false
+      dependencies.fileSystem,
+      true
     )
 
-    // Open WebSocket
-    ws.readyState = WS_OPEN
-    ws.onopen?.()
+    ws.onerror?.(new Error('Connection refused'))
 
-    // Container should not have been spawned since it already exists
-    expect(spawnCount).toBe(0)
+    const systemBuffer = state.logBuffers.get('system')
+    expect(systemBuffer).toBeDefined()
+    const lines = getLogLines(systemBuffer as LogBuffer)
+    const errorLines = lines.filter(l => l.stream === 'stderr')
+    expect(errorLines.some(l => l.text.includes('Connection refused'))).toBe(
+      true
+    )
   })
 
   test('logs error for invalid JSON messages', () => {
@@ -610,8 +734,7 @@ describe('connectWebSocket', () => {
       state,
       bucketDependencies,
       dependencies.context,
-      'dust',
-      () => {},
+      dependencies.fileSystem,
       false
     )
 
@@ -621,90 +744,23 @@ describe('connectWebSocket', () => {
       'Failed to parse WebSocket message'
     )
   })
-
-  test('calls onShutdown when container exits unexpectedly', () => {
-    const dependencies = createDependencies()
-    const state = createInitialState()
-    let shutdownCalled = false
-
-    const proc = createMockChildProcess()
-    const ws = createMockWebSocket()
-    const bucketDependencies = createBucketDependencies({
-      createWebSocket: () => ws,
-      spawn: (() => proc) as BucketDependencies['spawn'],
-    })
-
-    connectWebSocket(
-      'my-token',
-      state,
-      bucketDependencies,
-      dependencies.context,
-      'dust',
-      () => {
-        shutdownCalled = true
-      },
-      false
-    )
-
-    // Open WebSocket to spawn container
-    ws.readyState = WS_OPEN
-    ws.onopen?.()
-
-    // Simulate container exit
-    proc.emit('exit', 1, null)
-
-    expect(shutdownCalled).toBe(true)
-  })
-
-  test('does not call onShutdown when container exits during shutdown', () => {
-    const dependencies = createDependencies()
-    const state = createInitialState()
-    let shutdownCalled = false
-
-    const proc = createMockChildProcess()
-    const ws = createMockWebSocket()
-    const bucketDependencies = createBucketDependencies({
-      createWebSocket: () => ws,
-      spawn: (() => proc) as BucketDependencies['spawn'],
-    })
-
-    connectWebSocket(
-      'my-token',
-      state,
-      bucketDependencies,
-      dependencies.context,
-      'dust',
-      () => {
-        shutdownCalled = true
-      },
-      false
-    )
-
-    ws.readyState = WS_OPEN
-    ws.onopen?.()
-
-    // Mark as shutting down before container exits
-    state.shuttingDown = true
-    proc.emit('exit', 0, 'SIGTERM')
-
-    expect(shutdownCalled).toBe(false)
-  })
 })
 
 describe('shutdown', () => {
-  test('clears reconnect timer', () => {
+  test('clears reconnect timer', async () => {
     const dependencies = createDependencies()
     const state = createInitialState()
     state.reconnectTimer = setTimeout(() => {}, 10000)
 
-    shutdown(state, dependencies.context)
+    const bucketDependencies = createBucketDependencies()
 
-    // If timer was cleared, this should have no effect
+    await shutdown(state, bucketDependencies, dependencies.context)
+
     expect(state.reconnectTimer).toBeNull()
     expect(state.shuttingDown).toBe(true)
   })
 
-  test('closes WebSocket if open', () => {
+  test('closes WebSocket if open', async () => {
     const dependencies = createDependencies()
     const state = createInitialState()
     let wsClosed = false
@@ -716,41 +772,62 @@ describe('shutdown', () => {
     }
     state.ws = ws
 
-    shutdown(state, dependencies.context)
+    const bucketDependencies = createBucketDependencies()
+
+    await shutdown(state, bucketDependencies, dependencies.context)
 
     expect(wsClosed).toBe(true)
     expect(state.ws).toBeNull()
   })
 
-  test('kills container process', () => {
+  test('stops all repository loops and cleans up', async () => {
     const dependencies = createDependencies()
     const state = createInitialState()
-    let killSignal: NodeJS.Signals | number | undefined
 
-    const proc = createMockChildProcess()
-    proc.kill = (signal?: NodeJS.Signals | number) => {
-      killSignal = signal
-      return true
+    const repoState: RepositoryState = {
+      repository: { name: 'repo', gitUrl: 'repo' },
+      path: '/tmp/dust-bucket-repo',
+      loopPromise: Promise.resolve(),
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
     }
-    state.containerProcess = proc
+    state.repositories.set('repo', repoState)
 
-    shutdown(state, dependencies.context)
+    const rmProcesses: EventEmitter[] = []
+    const bucketDependencies = createBucketDependencies({
+      spawn: ((_command: string, _spawnArguments: string[]) => {
+        const proc = new EventEmitter() as EventEmitter & {
+          stdout: EventEmitter | null
+          stderr: EventEmitter | null
+        }
+        proc.stdout = new EventEmitter()
+        proc.stderr = new EventEmitter()
+        rmProcesses.push(proc)
+        // Auto-resolve rm -rf
+        setTimeout(() => proc.emit('close', 0), 0)
+        return proc
+      }) as BucketDependencies['spawn'],
+    })
 
-    expect(killSignal).toBe('SIGTERM')
-    expect(state.containerProcess).toBeNull()
+    await shutdown(state, bucketDependencies, dependencies.context)
+
+    expect(repoState.stopRequested).toBe(true)
+    expect(state.repositories.size).toBe(0)
   })
 
-  test('is idempotent', () => {
+  test('is idempotent', async () => {
     const dependencies = createDependencies()
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
     const state = createInitialState()
 
-    shutdown(state, dependencies.context)
+    const bucketDependencies = createBucketDependencies()
+
+    await shutdown(state, bucketDependencies, dependencies.context)
     const outputAfterFirst = context.stdoutLines.length
 
-    shutdown(state, dependencies.context)
+    await shutdown(state, bucketDependencies, dependencies.context)
     const outputAfterSecond = context.stdoutLines.length
 
     expect(outputAfterSecond).toBe(outputAfterFirst)
@@ -775,18 +852,12 @@ describe('bucket', () => {
     dependencies.arguments = ['my-secret-token']
     let capturedToken: string | undefined
 
-    const ws = createMockWebSocket()
     const bucketDependencies = createBucketDependencies({
       createWebSocket: (_url, token) => {
         capturedToken = token
-        // Immediately trigger shutdown after connection attempt
-        setTimeout(() => {
-          ws.onclose?.({ code: 1000, reason: '' })
-        }, 0)
-        return ws
+        return createAutoConnectWebSocket()
       },
       setupKeypress: onKey => {
-        // Trigger 'q' keypress to exit
         setTimeout(() => onKey('q'), 10)
         return () => {}
       },
@@ -797,7 +868,7 @@ describe('bucket', () => {
     expect(capturedToken).toBe('my-secret-token')
   })
 
-  test('exits on q keypress', async () => {
+  test('exits with error when initial connection fails', async () => {
     const dependencies = createDependencies()
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
@@ -806,7 +877,27 @@ describe('bucket', () => {
 
     const ws = createMockWebSocket()
     const bucketDependencies = createBucketDependencies({
-      createWebSocket: () => ws,
+      createWebSocket: () => {
+        setTimeout(() => ws.onerror?.(new Error('Connection refused')), 0)
+        return ws
+      },
+    })
+
+    const result = await bucket(dependencies, bucketDependencies)
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('Failed to connect')
+    expect(context.stderrLines.join('\n')).toContain('Connection refused')
+  })
+
+  test('exits on q keypress', async () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    dependencies.arguments = ['token']
+
+    const bucketDependencies = createBucketDependencies({
       setupKeypress: onKey => {
         setTimeout(() => onKey('q'), 10)
         return () => {}
@@ -824,11 +915,9 @@ describe('bucket', () => {
     const dependencies = createDependencies()
     dependencies.arguments = ['token']
 
-    const ws = createMockWebSocket()
     const bucketDependencies = createBucketDependencies({
-      createWebSocket: () => ws,
       setupKeypress: onKey => {
-        setTimeout(() => onKey('\u0003'), 10) // Ctrl+C
+        setTimeout(() => onKey('\u0003'), 10)
         return () => {}
       },
     })
@@ -842,9 +931,7 @@ describe('bucket', () => {
     const dependencies = createDependencies()
     dependencies.arguments = ['token']
 
-    const ws = createMockWebSocket()
     const bucketDependencies = createBucketDependencies({
-      createWebSocket: () => ws,
       setupSignals: onSignal => {
         setTimeout(() => onSignal(), 10)
         return () => {}
@@ -864,18 +951,15 @@ describe('bucket', () => {
     dependencies.arguments = ['token']
     let keyCallCount = 0
 
-    const ws = createMockWebSocket()
     const bucketDependencies = createBucketDependencies({
-      createWebSocket: () => ws,
       setupKeypress: onKey => {
-        // Send a non-quit key first, then 'q' to actually exit
         setTimeout(() => {
           keyCallCount++
-          onKey('x') // Should be ignored
+          onKey('x')
         }, 5)
         setTimeout(() => {
           keyCallCount++
-          onKey('q') // Should trigger shutdown
+          onKey('q')
         }, 10)
         return () => {}
       },
@@ -885,7 +969,6 @@ describe('bucket', () => {
 
     expect(result.exitCode).toBe(0)
     expect(keyCallCount).toBe(2)
-    // Only one shutdown should have occurred
     expect(
       context.stdoutLines.filter(line => line.includes('Shutting down')).length
     ).toBe(1)
@@ -897,9 +980,7 @@ describe('bucket', () => {
     let keypressCleanedUp = false
     let signalsCleanedUp = false
 
-    const ws = createMockWebSocket()
     const bucketDependencies = createBucketDependencies({
-      createWebSocket: () => ws,
       setupKeypress: onKey => {
         setTimeout(() => onKey('q'), 10)
         return () => {

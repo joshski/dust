@@ -59,6 +59,9 @@ export const REPO_COLORS = [
   ANSI.FG_RED,
 ] as const
 
+/** Fixed color for the system tab/prefix. */
+export const SYSTEM_COLOR = ANSI.DIM
+
 /**
  * Get the visible length of a string, excluding ANSI escape codes.
  */
@@ -135,6 +138,8 @@ export interface TerminalUIState {
   /** Terminal dimensions */
   width: number
   height: number
+  /** Hostname of the connected server */
+  connectedHost: string
 }
 
 /**
@@ -149,6 +154,7 @@ export function createTerminalUIState(): TerminalUIState {
     autoScroll: true,
     width: 80,
     height: 24,
+    connectedHost: '',
   }
 }
 
@@ -174,7 +180,11 @@ export function addRepository(
 ): void {
   if (!state.repositories.includes(name)) {
     state.repositories.push(name)
-    state.repositories.sort()
+    state.repositories.sort((a, b) => {
+      if (a === 'system') return 1
+      if (b === 'system') return -1
+      return a.localeCompare(b)
+    })
   }
   state.logBuffers.set(name, logBuffer)
 }
@@ -257,11 +267,43 @@ export function scrollToBottom(state: TerminalUIState): void {
 }
 
 /**
+ * Get the number of rows needed to render the tabs without breaking any tab.
+ */
+export function getTabRowCount(state: TerminalUIState): number {
+  if (state.width <= 0) return 1
+
+  // " All " = 5 visible chars
+  const tabWidths: number[] = [5]
+  for (const name of state.repositories) {
+    tabWidths.push(name.length + 2) // " name "
+  }
+
+  let rows = 1
+  let currentRowWidth = 0
+
+  for (const tabWidth of tabWidths) {
+    const separatorWidth = currentRowWidth > 0 ? 1 : 0
+    if (
+      currentRowWidth + separatorWidth + tabWidth > state.width &&
+      currentRowWidth > 0
+    ) {
+      rows++
+      currentRowWidth = tabWidth
+    } else {
+      currentRowWidth += separatorWidth + tabWidth
+    }
+  }
+
+  return rows
+}
+
+/**
  * Get the height available for the log area.
  */
 export function getLogAreaHeight(state: TerminalUIState): number {
-  // Header (1) + tabs (1) + help (1) + separator (1) = 4 lines of chrome
-  return Math.max(1, state.height - 4)
+  const tabRows = getTabRowCount(state)
+  // Header (1) + tabs (tabRows) + help (1) + separator (1)
+  return Math.max(1, state.height - (tabRows + 3))
 }
 
 /**
@@ -270,6 +312,14 @@ export function getLogAreaHeight(state: TerminalUIState): number {
 export interface DisplayLogLine extends LogLine {
   repository: string
   color: string
+}
+
+/**
+ * Get the display color for a repository by its index in the list.
+ */
+export function getRepoColor(name: string, index: number): string {
+  if (name === 'system') return SYSTEM_COLOR
+  return REPO_COLORS[index % REPO_COLORS.length]
 }
 
 /**
@@ -283,7 +333,7 @@ export function getVisibleLogs(state: TerminalUIState): DisplayLogLine[] {
 
     for (let i = 0; i < state.repositories.length; i++) {
       const repoName = state.repositories[i]
-      repoColors.set(repoName, REPO_COLORS[i % REPO_COLORS.length])
+      repoColors.set(repoName, getRepoColor(repoName, i))
     }
 
     for (const repoName of state.repositories) {
@@ -309,7 +359,7 @@ export function getVisibleLogs(state: TerminalUIState): DisplayLogLine[] {
   const buffer = state.logBuffers.get(repoName)
   if (!buffer) return []
 
-  const color = REPO_COLORS[state.selectedIndex % REPO_COLORS.length]
+  const color = getRepoColor(repoName, state.selectedIndex)
   return getLogLines(buffer).map(line => ({
     ...line,
     repository: repoName,
@@ -319,29 +369,54 @@ export function getVisibleLogs(state: TerminalUIState): DisplayLogLine[] {
 
 /**
  * Render the repository selector tabs.
+ * Returns an array of rows, wrapping tabs to the next line when they
+ * exceed the terminal width (without breaking any individual tab).
  */
-export function renderTabs(state: TerminalUIState): string {
-  const parts: string[] = []
+export function renderTabs(state: TerminalUIState): string[] {
+  // Build individual tab strings with their visible widths
+  const tabs: { text: string; width: number }[] = []
 
   // "All" tab
   if (state.selectedIndex === -1) {
-    parts.push(`${ANSI.INVERSE} All ${ANSI.RESET}`)
+    tabs.push({ text: `${ANSI.INVERSE} All ${ANSI.RESET}`, width: 5 })
   } else {
-    parts.push(' All ')
+    tabs.push({ text: ' All ', width: 5 })
   }
 
   // Repository tabs
   for (let i = 0; i < state.repositories.length; i++) {
     const name = state.repositories[i]
-    const color = REPO_COLORS[i % REPO_COLORS.length]
+    const color = getRepoColor(name, i)
+    const width = name.length + 2 // " name "
     if (i === state.selectedIndex) {
-      parts.push(`${ANSI.INVERSE}${color} ${name} ${ANSI.RESET}`)
+      tabs.push({
+        text: `${ANSI.INVERSE}${color} ${name} ${ANSI.RESET}`,
+        width,
+      })
     } else {
-      parts.push(`${color} ${name} ${ANSI.RESET}`)
+      tabs.push({ text: `${color} ${name} ${ANSI.RESET}`, width })
     }
   }
 
-  return parts.join('|')
+  // Wrap tabs into rows
+  const rows: { text: string; width: number }[][] = [[]]
+  let currentRowWidth = 0
+
+  for (const tab of tabs) {
+    const separatorWidth = currentRowWidth > 0 ? 1 : 0
+    if (
+      currentRowWidth + separatorWidth + tab.width > state.width &&
+      currentRowWidth > 0
+    ) {
+      rows.push([tab])
+      currentRowWidth = tab.width
+    } else {
+      rows[rows.length - 1].push(tab)
+      currentRowWidth += separatorWidth + tab.width
+    }
+  }
+
+  return rows.map(row => row.map(t => t.text).join('|'))
 }
 
 /**
@@ -363,20 +438,24 @@ export function renderSeparator(width: number): string {
  */
 export function formatLogLine(
   line: DisplayLogLine,
-  showPrefix: boolean,
+  prefixAlign: number,
   maxWidth: number
 ): string {
   let prefix = ''
   let prefixWidth = 0
 
-  if (showPrefix) {
-    prefix = `${line.color}[${line.repository}]${ANSI.RESET} `
-    prefixWidth = line.repository.length + 3 // "[name] "
+  if (prefixAlign > 0) {
+    const paddedName = line.repository.padEnd(prefixAlign)
+    prefix = `${line.color}${paddedName}${ANSI.RESET} ${ANSI.DIM}|${ANSI.RESET} `
+    prefixWidth = prefixAlign + 3 // "paddedName | "
   }
 
   const textColor = line.stream === 'stderr' ? ANSI.FG_RED : ''
   const textReset = line.stream === 'stderr' ? ANSI.RESET : ''
-  const text = `${textColor}${line.text}${textReset}`
+  // Strip newlines to guarantee single-line output (some event formatters
+  // include trailing \n which would push the TUI frame past terminal height)
+  const sanitizedText = line.text.replace(/[\r\n]+/g, '')
+  const text = `${textColor}${sanitizedText}${textReset}`
 
   const availableWidth = maxWidth - prefixWidth
   if (availableWidth <= 0) return prefix
@@ -391,23 +470,36 @@ export function formatLogLine(
 export function renderFrame(state: TerminalUIState): string {
   const lines: string[] = []
 
-  // Line 1: Connection status header
-  lines.push(`${ANSI.FG_GREEN}connected to dustbucket.com${ANSI.RESET}`)
+  // Line 1: Header
+  const hostLabel = state.connectedHost
+    ? ` ${ANSI.DIM}[connected to ${state.connectedHost}]${ANSI.RESET}`
+    : ''
+  lines.push(`${ANSI.BOLD}✨ dust bucket${ANSI.RESET}${hostLabel}`)
 
-  // Line 2: Repository tabs
-  const tabs = renderTabs(state)
-  lines.push(truncateLine(tabs, state.width))
+  // Line 2+: Repository tabs (may span multiple rows)
+  const tabRows = renderTabs(state)
+  for (const tabRow of tabRows) {
+    lines.push(tabRow)
+  }
+
+  // Reserve one column to prevent terminal line-wrap issues.
+  // Lines filling the exact terminal width cause the cursor to wrap,
+  // shifting the whole frame down and scrolling the header off-screen.
+  const contentWidth = state.width - 1
 
   // Line 3: Help line
-  lines.push(truncateLine(renderHelpLine(), state.width))
+  lines.push(truncateLine(renderHelpLine(), contentWidth))
 
   // Line 4: Separator
-  lines.push(renderSeparator(state.width))
+  lines.push(renderSeparator(contentWidth))
 
   // Get logs and calculate visible range
   const logs = getVisibleLogs(state)
   const logAreaHeight = getLogAreaHeight(state)
-  const showPrefix = state.selectedIndex === -1
+  const prefixAlign =
+    state.selectedIndex === -1
+      ? Math.max(0, ...state.repositories.map(r => r.length))
+      : 0
 
   // Calculate which logs to show
   const totalLogs = logs.length
@@ -417,7 +509,7 @@ export function renderFrame(state: TerminalUIState): string {
   // Render log lines
   for (let i = startIndex; i < endIndex; i++) {
     const logLine = logs[i]
-    lines.push(formatLogLine(logLine, showPrefix, state.width))
+    lines.push(formatLogLine(logLine, prefixAlign, contentWidth))
   }
 
   // Pad with empty lines if needed
@@ -433,17 +525,15 @@ export function renderFrame(state: TerminalUIState): string {
     lines[lines.length - 1] = indicator
   }
 
-  // Build the full frame
-  const output: string[] = [
-    ANSI.MOVE_TO(1, 1), // Move to top-left
-  ]
+  // Build the full frame using absolute positioning per row.
+  // This avoids terminal line-wrap issues when a line fills
+  // the entire width (which would add an extra row with \n).
+  const output: string[] = []
 
   for (let i = 0; i < lines.length; i++) {
+    output.push(ANSI.MOVE_TO(i + 1, 1))
     output.push(ANSI.CLEAR_LINE)
     output.push(lines[i])
-    if (i < lines.length - 1) {
-      output.push('\n')
-    }
   }
 
   return output.join('')
@@ -453,14 +543,20 @@ export function renderFrame(state: TerminalUIState): string {
  * Enter the alternate screen buffer and hide cursor.
  */
 export function enterAlternateScreen(): string {
-  return ANSI.ENTER_ALT_SCREEN + ANSI.HIDE_CURSOR + ANSI.CLEAR_SCREEN
+  return (
+    ANSI.ENTER_ALT_SCREEN +
+    ANSI.HIDE_CURSOR +
+    ANSI.CLEAR_SCREEN +
+    '\x1b[?1000h' +
+    '\x1b[?1006h'
+  )
 }
 
 /**
  * Exit the alternate screen buffer and show cursor.
  */
 export function exitAlternateScreen(): string {
-  return ANSI.EXIT_ALT_SCREEN + ANSI.SHOW_CURSOR
+  return `\x1b[?1006l\x1b[?1000l${ANSI.EXIT_ALT_SCREEN}${ANSI.SHOW_CURSOR}`
 }
 
 /**
@@ -479,10 +575,34 @@ export const KEYS = {
 } as const
 
 /**
+ * Parse SGR mouse events (\x1b[<button;col;rowM or m).
+ * Returns the button number or null if not a mouse event.
+ */
+// biome-ignore lint/complexity/useRegexLiterals: regex literal triggers noControlCharactersInRegex
+const SGR_MOUSE_RE = new RegExp(String.raw`^\x1b\[<(\d+);\d+;\d+[Mm]$`)
+
+function parseSGRMouse(key: string): number | null {
+  const match = key.match(SGR_MOUSE_RE)
+  if (!match) return null
+  return Number.parseInt(match[1], 10)
+}
+
+/**
  * Handle a key input and update state.
  * Returns true if the UI should quit.
  */
 export function handleKeyInput(state: TerminalUIState, key: string): boolean {
+  // Check for SGR mouse events (scroll wheel)
+  const mouseButton = parseSGRMouse(key)
+  if (mouseButton !== null) {
+    if (mouseButton === 64) {
+      scrollUp(state, 3)
+    } else if (mouseButton === 65) {
+      scrollDown(state, 3)
+    }
+    return false
+  }
+
   switch (key) {
     case 'q':
     case KEYS.CTRL_C:

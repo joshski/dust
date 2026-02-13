@@ -13,6 +13,7 @@ import {
   exitAlternateScreen,
   formatLogLine,
   getLogAreaHeight,
+  getTabRowCount,
   getVisibleLogs,
   handleKeyInput,
   KEYS,
@@ -153,6 +154,16 @@ describe('addRepository', () => {
     addRepository(state, 'middle', createLogBuffer())
 
     expect(state.repositories).toEqual(['alpha', 'middle', 'zebra'])
+  })
+
+  it('keeps system as the last tab', () => {
+    const state = createTerminalUIState()
+
+    addRepository(state, 'alpha', createLogBuffer())
+    addRepository(state, 'system', createLogBuffer())
+    addRepository(state, 'zebra', createLogBuffer())
+
+    expect(state.repositories).toEqual(['alpha', 'zebra', 'system'])
   })
 
   it('does not add duplicate repositories', () => {
@@ -360,13 +371,57 @@ describe('scrollToBottom', () => {
   })
 })
 
+describe('getTabRowCount', () => {
+  it('returns 1 when all tabs fit on one row', () => {
+    const state = createTerminalUIState()
+    updateDimensions(state, 80, 24)
+
+    expect(getTabRowCount(state)).toBe(1)
+  })
+
+  it('returns 1 for just the All tab with no repos', () => {
+    const state = createTerminalUIState()
+    updateDimensions(state, 10, 24)
+
+    expect(getTabRowCount(state)).toBe(1)
+  })
+
+  it('returns multiple rows when tabs exceed width', () => {
+    const state = createTerminalUIState()
+    updateDimensions(state, 20, 24)
+    addRepository(state, 'repo-alpha', createLogBuffer())
+    addRepository(state, 'repo-beta', createLogBuffer())
+
+    expect(getTabRowCount(state)).toBeGreaterThan(1)
+  })
+
+  it('returns 1 for zero width', () => {
+    const state = createTerminalUIState()
+    updateDimensions(state, 0, 24)
+
+    expect(getTabRowCount(state)).toBe(1)
+  })
+})
+
 describe('getLogAreaHeight', () => {
-  it('calculates available height for logs', () => {
+  it('calculates available height for logs with single tab row', () => {
     const state = createTerminalUIState()
     state.height = 24
 
-    // 24 - 4 (header, tabs, help, separator) = 20
+    // 24 - (1 tab row + 3 chrome) = 20
     expect(getLogAreaHeight(state)).toBe(20)
+  })
+
+  it('reduces log area when tabs wrap to multiple rows', () => {
+    const state = createTerminalUIState()
+    updateDimensions(state, 20, 24)
+    addRepository(state, 'repo-alpha', createLogBuffer())
+    addRepository(state, 'repo-beta', createLogBuffer())
+
+    const tabRows = getTabRowCount(state)
+    expect(tabRows).toBeGreaterThan(1)
+    // 24 - (tabRows + 3 chrome)
+    expect(getLogAreaHeight(state)).toBe(24 - (tabRows + 3))
   })
 
   it('returns minimum of 1 for very small terminals', () => {
@@ -433,10 +488,11 @@ describe('renderTabs', () => {
     const state = createTerminalUIState()
     state.selectedIndex = -1
 
-    const tabs = renderTabs(state)
+    const rows = renderTabs(state)
 
-    expect(tabs).toContain(ANSI.INVERSE)
-    expect(tabs).toContain('All')
+    expect(rows.length).toBe(1)
+    expect(rows[0]).toContain(ANSI.INVERSE)
+    expect(rows[0]).toContain('All')
   })
 
   it('renders repository tabs with colors', () => {
@@ -444,10 +500,11 @@ describe('renderTabs', () => {
     addRepository(state, 'repo1', createLogBuffer())
     state.selectedIndex = 0
 
-    const tabs = renderTabs(state)
+    const rows = renderTabs(state)
 
-    expect(tabs).toContain('repo1')
-    expect(tabs).toContain(ANSI.INVERSE) // Selected repo
+    const allText = rows.join('')
+    expect(allText).toContain('repo1')
+    expect(allText).toContain(ANSI.INVERSE) // Selected repo
   })
 
   it('joins tabs with pipe separator', () => {
@@ -455,9 +512,35 @@ describe('renderTabs', () => {
     addRepository(state, 'repo1', createLogBuffer())
     addRepository(state, 'repo2', createLogBuffer())
 
-    const tabs = renderTabs(state)
+    const rows = renderTabs(state)
 
-    expect(tabs).toContain('|')
+    expect(rows[0]).toContain('|')
+  })
+
+  it('wraps tabs to multiple rows when they exceed terminal width', () => {
+    const state = createTerminalUIState()
+    updateDimensions(state, 30, 24)
+    addRepository(state, 'repository-alpha', createLogBuffer())
+    addRepository(state, 'repository-beta', createLogBuffer())
+
+    const rows = renderTabs(state)
+
+    expect(rows.length).toBeGreaterThan(1)
+    // Each row should contain complete tab text (no broken tabs)
+    for (const row of rows) {
+      expect(row).not.toMatch(/[^|]\|$/) // no trailing pipe without tab text
+    }
+  })
+
+  it('keeps all tabs on one row when terminal is wide enough', () => {
+    const state = createTerminalUIState()
+    updateDimensions(state, 200, 24)
+    addRepository(state, 'repo1', createLogBuffer())
+    addRepository(state, 'repo2', createLogBuffer())
+
+    const rows = renderTabs(state)
+
+    expect(rows.length).toBe(1)
   })
 })
 
@@ -484,7 +567,7 @@ describe('renderSeparator', () => {
 })
 
 describe('formatLogLine', () => {
-  it('formats log line without prefix', () => {
+  it('formats log line without prefix when prefixAlign is 0', () => {
     const line = {
       text: 'test log',
       stream: 'stdout' as const,
@@ -493,13 +576,13 @@ describe('formatLogLine', () => {
       color: ANSI.FG_CYAN,
     }
 
-    const formatted = formatLogLine(line, false, 80)
+    const formatted = formatLogLine(line, 0, 80)
 
     expect(formatted).toBe('test log')
-    expect(formatted).not.toContain('[repo1]')
+    expect(formatted).not.toContain('repo1')
   })
 
-  it('formats log line with prefix', () => {
+  it('formats log line with right-padded prefix and pipe delimiter', () => {
     const line = {
       text: 'test log',
       stream: 'stdout' as const,
@@ -508,11 +591,14 @@ describe('formatLogLine', () => {
       color: ANSI.FG_CYAN,
     }
 
-    const formatted = formatLogLine(line, true, 80)
+    const formatted = formatLogLine(line, 10, 80)
 
-    expect(formatted).toContain('[repo1]')
+    expect(formatted).toContain('repo1')
+    expect(formatted).toContain('|')
     expect(formatted).toContain('test log')
     expect(formatted).toContain(ANSI.FG_CYAN)
+    // "repo1" (5) + 5 padding + " | " = 13 prefix chars + "test log" = 21
+    expect(visibleLength(formatted)).toBe(21)
   })
 
   it('colors stderr lines red', () => {
@@ -524,7 +610,7 @@ describe('formatLogLine', () => {
       color: ANSI.FG_CYAN,
     }
 
-    const formatted = formatLogLine(line, false, 80)
+    const formatted = formatLogLine(line, 0, 80)
 
     expect(formatted).toContain(ANSI.FG_RED)
   })
@@ -538,9 +624,24 @@ describe('formatLogLine', () => {
       color: ANSI.FG_CYAN,
     }
 
-    const formatted = formatLogLine(line, false, 20)
+    const formatted = formatLogLine(line, 0, 20)
 
     expect(visibleLength(formatted)).toBe(20)
+  })
+
+  it('strips newlines from text to guarantee single-line output', () => {
+    const line = {
+      text: 'message with trailing newline\n',
+      stream: 'stdout' as const,
+      timestamp: 1000,
+      repository: 'repo1',
+      color: ANSI.FG_CYAN,
+    }
+
+    const formatted = formatLogLine(line, 0, 80)
+
+    expect(formatted).not.toContain('\n')
+    expect(formatted).toBe('message with trailing newline')
   })
 })
 
@@ -556,12 +657,23 @@ describe('renderFrame', () => {
 
     const frame = renderFrame(state)
 
-    expect(frame).toContain('connected to dustbucket.com')
+    expect(frame).toContain('✨ dust bucket')
     expect(frame).toContain('All')
     expect(frame).toContain('repo1')
     expect(frame).toContain('select')
     expect(frame).toContain('quit')
     expect(frame).toContain('─')
+  })
+
+  it('shows connected host in header', () => {
+    const state = createTerminalUIState()
+    updateDimensions(state, 80, 24)
+    state.connectedHost = 'dustbucket.com'
+
+    const frame = renderFrame(state)
+
+    expect(frame).toContain('✨ dust bucket')
+    expect(frame).toContain('connected to dustbucket.com')
   })
 
   it('shows scroll indicator when scrolled up', () => {

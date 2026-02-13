@@ -12,7 +12,6 @@ import { loadSettings } from '../config/settings'
 import { agent } from './commands/agent'
 import { audit } from './commands/audit'
 import { bucket } from './commands/bucket'
-import { bucketContainer } from './commands/bucket-container'
 import { check } from './commands/check'
 import { focus } from './commands/focus'
 import { generateHelpText, help } from './commands/help'
@@ -57,7 +56,6 @@ export const commandRegistry = {
   agent,
   audit,
   bucket,
-  'bucket container': bucketContainer,
   focus,
   'new task': newTask,
   'new goal': newGoal,

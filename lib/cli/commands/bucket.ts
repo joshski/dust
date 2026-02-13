@@ -1,23 +1,41 @@
 /**
  * dust bucket <token> - Entry point for dustbucket connection
  *
- * Connects to dustbucket via WebSocket and spawns the container process.
- * The container manages dust loops across multiple repositories.
+ * Connects to dustbucket via WebSocket, manages repository loops directly
+ * in-process (single-process architecture). Each repository gets cloned,
+ * synced, and runs dust loops concurrently.
  *
  * Usage: dust bucket <token>
  * - token: Authentication token for dustbucket
  *
+ * Environment:
+ * - DUST_BUCKET_AGENT_CONNECT_URL: Override WebSocket URL (default: wss://dustbucket.com/agent/connect)
+ *
  * Exit: Press 'q' or Ctrl+C to gracefully shutdown
  */
 
-import type { ChildProcess } from 'node:child_process'
 import { spawn as nodeSpawn } from 'node:child_process'
+import { tmpdir } from 'node:os'
+import {
+  type BucketEmitFn,
+  createBucketEventEmitter,
+  formatBucketEvent,
+  type WebSocketLike,
+  WS_OPEN,
+} from '../../bucket/events'
 import {
   appendLogLine,
   createLogBuffer,
   createLogLine,
   type LogBuffer,
 } from '../../bucket/log-buffer'
+import {
+  handleRepositoryList as handleRepositoryListFromRepo,
+  parseRepository,
+  type RepositoryDependencies,
+  type RepositoryState,
+  removeRepository,
+} from '../../bucket/repository'
 import {
   addRepository as addRepoToUI,
   createTerminalUIState,
@@ -29,9 +47,10 @@ import {
   type TerminalUIState,
   updateDimensions,
 } from '../../bucket/terminal-ui'
-import type { CommandDependencies, CommandResult } from '../types'
+import { run as claudeRun } from '../../claude/run'
+import type { CommandDependencies, CommandResult, FileSystem } from '../types'
 
-const DUSTBUCKET_WS_URL = 'wss://dustbucket.com/ws'
+const DEFAULT_DUSTBUCKET_WS_URL = 'wss://dustbucket.com/agent/connect'
 const INITIAL_RECONNECT_DELAY_MS = 1000
 const MAX_RECONNECT_DELAY_MS = 30000
 
@@ -44,23 +63,9 @@ export interface BucketDependencies {
   getTerminalSize: () => { width: number; height: number }
   writeStdout: (data: string) => void
   isTTY: boolean
+  sleep: (ms: number) => Promise<void>
+  getTempDir: () => string
 }
-
-export interface WebSocketLike {
-  onopen: (() => void) | null
-  onclose: ((event: { code: number; reason: string }) => void) | null
-  onerror: ((error: Error) => void) | null
-  onmessage: ((event: { data: string }) => void) | null
-  close: () => void
-  send: (data: string) => void
-  readyState: number
-}
-
-// WebSocket readyState constants
-export const WS_CONNECTING = 0
-export const WS_OPEN = 1
-export const WS_CLOSING = 2
-export const WS_CLOSED = 3
 
 /* v8 ignore start - thin wrapper around native WebSocket */
 function defaultCreateWebSocket(url: string, token: string): WebSocketLike {
@@ -155,126 +160,181 @@ export function createDefaultBucketDependencies(): BucketDependencies {
     getTerminalSize: defaultGetTerminalSize,
     writeStdout: defaultWriteStdout,
     isTTY: process.stdout.isTTY ?? false,
+    sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
+    getTempDir: () => tmpdir(),
   }
 }
 
 export interface BucketState {
   ws: WebSocketLike | null
-  containerProcess: ChildProcess | null
+  repositories: Map<string, RepositoryState>
   reconnectDelay: number
   reconnectTimer: ReturnType<typeof setTimeout> | null
   shuttingDown: boolean
+  sessionId: string
+  emit: BucketEmitFn
   ui: TerminalUIState
   logBuffers: Map<string, LogBuffer>
 }
 
 export function createInitialState(): BucketState {
-  return {
+  const sessionId = crypto.randomUUID()
+  const systemBuffer = createLogBuffer()
+  const state: BucketState = {
     ws: null,
-    containerProcess: null,
+    repositories: new Map(),
     reconnectDelay: INITIAL_RECONNECT_DELAY_MS,
     reconnectTimer: null,
     shuttingDown: false,
+    sessionId,
+    emit: () => {},
     ui: createTerminalUIState(),
     logBuffers: new Map(),
   }
+  state.emit = createBucketEventEmitter(() => state.ws, sessionId)
+  // Register system buffer so connection messages appear in the "All" TUI view
+  state.logBuffers.set('system', systemBuffer)
+  addRepoToUI(state.ui, 'system', systemBuffer)
+  return state
 }
 
-export function spawnContainer(
+/**
+ * Get the WebSocket URL, with env var override support.
+ */
+export function getWebSocketUrl(): string {
+  return process.env.DUST_BUCKET_AGENT_CONNECT_URL || DEFAULT_DUSTBUCKET_WS_URL
+}
+
+/**
+ * Build RepositoryDependencies from BucketDependencies.
+ */
+function toRepositoryDependencies(
+  bucketDeps: BucketDependencies,
+  fileSystem: FileSystem
+): RepositoryDependencies {
+  return {
+    spawn: bucketDeps.spawn,
+    run: claudeRun,
+    fileSystem,
+    sleep: bucketDeps.sleep,
+    getTempDir: bucketDeps.getTempDir,
+  }
+}
+
+/**
+ * Eagerly sync UI tabs with a repository list from the server.
+ * Called immediately on receiving a repository-list message so
+ * tabs appear before the async clone work starts.
+ */
+function syncUIWithRepoList(state: BucketState, repos: unknown[]): void {
+  const incomingNames = new Set<string>()
+  for (const data of repos) {
+    const repo = parseRepository(data)
+    if (repo) {
+      incomingNames.add(repo.name)
+      if (!state.ui.repositories.includes(repo.name)) {
+        let buffer = state.logBuffers.get(repo.name)
+        if (!buffer) {
+          buffer = createLogBuffer()
+          state.logBuffers.set(repo.name, buffer)
+        }
+        addRepoToUI(state.ui, repo.name, buffer)
+      }
+    }
+  }
+
+  // Remove repos no longer in the list from UI
+  for (const name of [...state.ui.repositories]) {
+    if (name !== 'system' && !incomingNames.has(name)) {
+      state.logBuffers.delete(name)
+      removeRepoFromUI(state.ui, name)
+    }
+  }
+}
+
+/**
+ * Sync TUI state with current repositories.
+ * Called after async clone/loop work to reconcile any differences
+ * (e.g. repos that failed to clone get removed from UI).
+ */
+function syncTUI(state: BucketState): void {
+  const currentUIRepos = new Set(state.ui.repositories)
+  const currentRepos = new Set(state.repositories.keys())
+
+  // Always sync buffer references from RepositoryState → UI
+  for (const [name, repoState] of state.repositories) {
+    state.logBuffers.set(name, repoState.logBuffer)
+    addRepoToUI(state.ui, name, repoState.logBuffer)
+  }
+
+  // Remove repos from UI that are no longer tracked
+  for (const name of currentUIRepos) {
+    if (name !== 'system' && !currentRepos.has(name)) {
+      state.logBuffers.delete(name)
+      removeRepoFromUI(state.ui, name)
+    }
+  }
+}
+
+/**
+ * Log a message to the appropriate output.
+ * In TUI mode, appends to the system log buffer (visible under "All").
+ * In non-TUI mode, writes to context stdout/stderr.
+ */
+export function logMessage(
+  state: BucketState,
+  context: CommandDependencies['context'],
+  useTUI: boolean,
+  message: string,
+  stream: 'stdout' | 'stderr' = 'stdout'
+): void {
+  if (useTUI) {
+    const systemBuffer = state.logBuffers.get('system')
+    if (systemBuffer) {
+      appendLogLine(systemBuffer, createLogLine(message, stream))
+    }
+  } else if (stream === 'stderr') {
+    context.stderr(message)
+  } else {
+    context.stdout(message)
+  }
+}
+
+/**
+ * Wrap a context so stdout/stderr route through the TUI system log buffer.
+ */
+export function createTUIContext(
+  state: BucketState,
+  context: CommandDependencies['context'],
+  useTUI: boolean
+): CommandDependencies['context'] {
+  if (!useTUI) return context
+  return {
+    ...context,
+    stdout: (message: string) =>
+      logMessage(state, context, true, message, 'stdout'),
+    stderr: (message: string) =>
+      logMessage(state, context, true, message, 'stderr'),
+  }
+}
+
+/**
+ * Attempt initial WebSocket connection.
+ * Resolves with the connected WebSocket, or rejects on error/close.
+ */
+export function waitForConnection(
   token: string,
-  cwd: string,
-  dustCommand: string,
-  spawn: typeof nodeSpawn,
-  usePipedStdio: boolean
-): ChildProcess {
-  const commandParts = dustCommand.split(' ')
-  const command = commandParts[0]
-  const spawnArguments = [...commandParts.slice(1), 'bucket', 'container']
+  bucketDeps: BucketDependencies
+): Promise<WebSocketLike> {
+  const wsUrl = getWebSocketUrl()
+  const ws = bucketDeps.createWebSocket(wsUrl, token)
 
-  return spawn(command, spawnArguments, {
-    cwd,
-    env: {
-      ...process.env,
-      DUST_API_TOKEN: token,
-    },
-    stdio: usePipedStdio ? ['ignore', 'pipe', 'pipe'] : 'inherit',
+  return new Promise((resolve, reject) => {
+    ws.onopen = () => resolve(ws)
+    ws.onerror = error => reject(new Error(error.message))
+    ws.onclose = event =>
+      reject(new Error(`Connection closed (code ${event.code})`))
   })
-}
-
-/**
- * Parse a container output line to extract repository context.
- * Container output format includes repository prefixes like "[repo-name]".
- */
-export function parseContainerOutput(line: string): {
-  repository: string | null
-  text: string
-} {
-  // Match patterns like "📦 Added repository: repo-name" or "[repo-name] text"
-  const addedMatch = line.match(
-    /(?:Added repository|Starting iteration for|Completed iteration for|stopped loop for|Error for):? (\S+)/
-  )
-  if (addedMatch) {
-    return { repository: addedMatch[1], text: line }
-  }
-
-  // Match "[repo-name] text" format
-  const bracketMatch = line.match(/^\[([^\]]+)\] (.*)$/)
-  if (bracketMatch) {
-    return { repository: bracketMatch[1], text: bracketMatch[2] }
-  }
-
-  return { repository: null, text: line }
-}
-
-/**
- * Handle output from the container process.
- */
-export function handleContainerOutput(
-  state: BucketState,
-  line: string,
-  stream: 'stdout' | 'stderr'
-): void {
-  const { repository, text } = parseContainerOutput(line)
-
-  // Get or create log buffer for this repository (or 'system' for untagged output)
-  const repoName = repository ?? 'system'
-
-  let buffer = state.logBuffers.get(repoName)
-  if (!buffer) {
-    buffer = createLogBuffer()
-    state.logBuffers.set(repoName, buffer)
-    addRepoToUI(state.ui, repoName, buffer)
-  }
-
-  appendLogLine(buffer, createLogLine(text, stream))
-}
-
-/**
- * Handle repository list message from WebSocket.
- */
-export function handleRepositoryList(
-  state: BucketState,
-  repositories: string[]
-): void {
-  const incoming = new Set(repositories)
-
-  // Add new repositories
-  for (const repoName of repositories) {
-    if (!state.logBuffers.has(repoName)) {
-      const buffer = createLogBuffer()
-      state.logBuffers.set(repoName, buffer)
-      addRepoToUI(state.ui, repoName, buffer)
-    }
-  }
-
-  // Remove repositories that are no longer in the list
-  // (but keep 'system' for container-level logs)
-  for (const repoName of state.logBuffers.keys()) {
-    if (repoName !== 'system' && !incoming.has(repoName)) {
-      state.logBuffers.delete(repoName)
-      removeRepoFromUI(state.ui, repoName)
-    }
-  }
 }
 
 export function connectWebSocket(
@@ -282,113 +342,68 @@ export function connectWebSocket(
   state: BucketState,
   bucketDependencies: BucketDependencies,
   context: CommandDependencies['context'],
-  dustCommand: string,
-  onShutdown: () => void,
-  useTUI: boolean
+  fileSystem: FileSystem,
+  useTUI: boolean,
+  connectedWs?: WebSocketLike
 ): void {
   if (state.shuttingDown) return
 
-  if (!useTUI) {
-    context.stdout('🔌 Connecting to dustbucket...')
-  }
+  const wsUrl = getWebSocketUrl()
 
-  const ws = bucketDependencies.createWebSocket(DUSTBUCKET_WS_URL, token)
-  state.ws = ws
-
-  ws.onopen = () => {
-    if (!useTUI) {
-      context.stdout('✅ Connected to dustbucket')
-    }
+  let ws: WebSocketLike
+  if (connectedWs) {
+    ws = connectedWs
+    state.ws = ws
+    state.emit({ type: 'bucket.connected' })
+    logMessage(
+      state,
+      context,
+      useTUI,
+      formatBucketEvent({ type: 'bucket.connected' })
+    )
     state.reconnectDelay = INITIAL_RECONNECT_DELAY_MS
+  } else {
+    logMessage(state, context, useTUI, `Connecting to ${wsUrl}...`)
+    ws = bucketDependencies.createWebSocket(wsUrl, token)
+    state.ws = ws
 
-    // Spawn the container process
-    if (!state.containerProcess) {
-      if (!useTUI) {
-        context.stdout('🚀 Spawning container process...')
-      }
-      state.containerProcess = spawnContainer(
-        token,
-        context.cwd,
-        dustCommand,
-        bucketDependencies.spawn,
-        useTUI
+    ws.onopen = () => {
+      state.emit({ type: 'bucket.connected' })
+      logMessage(
+        state,
+        context,
+        useTUI,
+        formatBucketEvent({ type: 'bucket.connected' })
       )
-
-      /* v8 ignore start - TUI mode requires actual piped streams */
-      // If using TUI, capture container output
-      if (useTUI && state.containerProcess.stdout) {
-        state.containerProcess.stdout.setEncoding('utf8')
-        let stdoutBuffer = ''
-        state.containerProcess.stdout.on('data', (data: string) => {
-          stdoutBuffer += data
-          const lines = stdoutBuffer.split('\n')
-          stdoutBuffer = lines.pop() ?? ''
-          for (const line of lines) {
-            if (line.trim()) {
-              handleContainerOutput(state, line, 'stdout')
-            }
-          }
-        })
-      }
-
-      if (useTUI && state.containerProcess.stderr) {
-        state.containerProcess.stderr.setEncoding('utf8')
-        let stderrBuffer = ''
-        state.containerProcess.stderr.on('data', (data: string) => {
-          stderrBuffer += data
-          const lines = stderrBuffer.split('\n')
-          stderrBuffer = lines.pop() ?? ''
-          for (const line of lines) {
-            if (line.trim()) {
-              handleContainerOutput(state, line, 'stderr')
-            }
-          }
-        })
-      }
-      /* v8 ignore stop */
-
-      state.containerProcess.on('exit', (code, signal) => {
-        if (!useTUI) {
-          context.stdout(
-            `📦 Container process exited (code: ${code}, signal: ${signal})`
-          )
-        }
-        state.containerProcess = null
-
-        // If the container exits unexpectedly, shut down
-        if (!state.shuttingDown) {
-          if (!useTUI) {
-            context.stderr('Container process exited unexpectedly')
-          }
-          onShutdown()
-        }
-      })
+      state.reconnectDelay = INITIAL_RECONNECT_DELAY_MS
     }
   }
 
   ws.onclose = event => {
-    if (!useTUI) {
-      context.stdout(
-        `🔌 Disconnected from dustbucket (code: ${event.code}, reason: ${event.reason || 'none'})`
-      )
+    const disconnectEvent = {
+      type: 'bucket.disconnected' as const,
+      code: event.code,
+      reason: event.reason || 'none',
     }
+    state.emit(disconnectEvent)
+    logMessage(state, context, useTUI, formatBucketEvent(disconnectEvent))
     state.ws = null
 
     // Schedule reconnection
     if (!state.shuttingDown) {
-      if (!useTUI) {
-        context.stdout(
-          `⏳ Reconnecting in ${state.reconnectDelay / 1000} seconds...`
-        )
-      }
+      logMessage(
+        state,
+        context,
+        useTUI,
+        `Reconnecting in ${state.reconnectDelay / 1000} seconds...`
+      )
       state.reconnectTimer = setTimeout(() => {
         connectWebSocket(
           token,
           state,
           bucketDependencies,
           context,
-          dustCommand,
-          onShutdown,
+          fileSystem,
           useTUI
         )
       }, state.reconnectDelay)
@@ -402,9 +417,13 @@ export function connectWebSocket(
   }
 
   ws.onerror = error => {
-    if (!useTUI) {
-      context.stderr(`WebSocket error: ${error.message}`)
-    }
+    logMessage(
+      state,
+      context,
+      useTUI,
+      `WebSocket error: ${error.message}`,
+      'stderr'
+    )
   }
 
   ws.onmessage = event => {
@@ -412,29 +431,53 @@ export function connectWebSocket(
       const message = JSON.parse(event.data)
       if (message.type === 'repository-list') {
         const repos = message.repositories ?? []
-        if (!useTUI) {
-          context.stdout(
-            `📋 Received repository list (${repos.length} repositories)`
-          )
-        }
-        handleRepositoryList(state, repos)
+        logMessage(
+          state,
+          context,
+          useTUI,
+          `Received repository list (${repos.length} repositories)`
+        )
+        // Eagerly add repos to UI so tabs appear before cloning finishes
+        syncUIWithRepoList(state, repos)
+        const repoDeps = toRepositoryDependencies(
+          bucketDependencies,
+          fileSystem
+        )
+        const repoContext = createTUIContext(state, context, useTUI)
+        /* v8 ignore next 6 - async error handling */
+        handleRepositoryListFromRepo(repos, state, repoDeps, repoContext)
+          .then(() => syncTUI(state))
+          .catch(error => {
+            logMessage(
+              state,
+              context,
+              useTUI,
+              `Failed to handle repository list: ${error.message}`,
+              'stderr'
+            )
+          })
       }
     } catch {
-      if (!useTUI) {
-        context.stderr(`Failed to parse WebSocket message: ${event.data}`)
-      }
+      logMessage(
+        state,
+        context,
+        useTUI,
+        `Failed to parse WebSocket message: ${event.data}`,
+        'stderr'
+      )
     }
   }
 }
 
-export function shutdown(
+export async function shutdown(
   state: BucketState,
+  bucketDeps: BucketDependencies,
   context: CommandDependencies['context']
-): void {
+): Promise<void> {
   if (state.shuttingDown) return
   state.shuttingDown = true
 
-  context.stdout('🛑 Shutting down...')
+  context.stdout('Shutting down...')
 
   // Clear reconnect timer
   if (state.reconnectTimer) {
@@ -448,18 +491,31 @@ export function shutdown(
     state.ws = null
   }
 
-  // Kill container process
-  if (state.containerProcess) {
-    state.containerProcess.kill('SIGTERM')
-    state.containerProcess = null
+  // Stop all repository loops
+  for (const repoState of state.repositories.values()) {
+    repoState.stopRequested = true
   }
+
+  // Wait for all loops to finish
+  const loopPromises = Array.from(state.repositories.values())
+    .map(rs => rs.loopPromise)
+    .filter((p): p is Promise<void> => p !== null)
+
+  await Promise.all(loopPromises.map(p => p.catch(() => {})))
+
+  // Clean up all repository directories
+  for (const repoState of state.repositories.values()) {
+    await removeRepository(repoState.path, bucketDeps.spawn, context)
+  }
+
+  state.repositories.clear()
 }
 
 export async function bucket(
   dependencies: CommandDependencies,
   bucketDeps: BucketDependencies = createDefaultBucketDependencies()
 ): Promise<CommandResult> {
-  const { arguments: commandArgs, context, settings } = dependencies
+  const { arguments: commandArgs, context, fileSystem } = dependencies
   const token = commandArgs[0]
 
   if (!token) {
@@ -468,11 +524,31 @@ export async function bucket(
     return { exitCode: 1 }
   }
 
+  // Attempt initial connection before entering TUI
+  const wsUrl = getWebSocketUrl()
+  context.stdout(`Connecting to ${wsUrl}...`)
+
+  let initialWs: WebSocketLike
+  try {
+    initialWs = await waitForConnection(token, bucketDeps)
+  } catch (error) {
+    context.stderr(`Failed to connect: ${(error as Error).message}`)
+    return { exitCode: 1 }
+  }
+
+  context.stdout('Connected')
+
   const state = createInitialState()
   const useTUI = bucketDeps.isTTY
 
+  // Set connected host for TUI header
+  try {
+    state.ui.connectedHost = new URL(wsUrl).hostname
+  } catch {
+    state.ui.connectedHost = wsUrl
+  }
+
   /* v8 ignore start - TUI mode initialization */
-  // Initialize terminal dimensions
   if (useTUI) {
     const { width, height } = bucketDeps.getTerminalSize()
     updateDimensions(state.ui, width, height)
@@ -486,16 +562,14 @@ export async function bucket(
 
   try {
     /* v8 ignore start - TUI mode requires actual terminal */
-    // Enter alternate screen for TUI mode
     if (useTUI) {
       bucketDeps.writeStdout(enterAlternateScreen())
     }
     /* v8 ignore stop */
 
-    // Create a promise that resolves when shutdown is complete
     await new Promise<void>(resolve => {
-      const doShutdown = () => {
-        shutdown(state, context)
+      const doShutdown = async () => {
+        await shutdown(state, bucketDeps, context)
         resolve()
       }
 
@@ -519,30 +593,28 @@ export async function bucket(
       })
 
       /* v8 ignore start - TUI mode render loop */
-      // Setup resize handler for TUI mode
       if (useTUI) {
         cleanupResize = bucketDeps.setupResize((width, height) => {
           updateDimensions(state.ui, width, height)
         })
 
-        // Start render loop
         renderInterval = setInterval(() => {
           if (!state.shuttingDown) {
             bucketDeps.writeStdout(renderFrame(state.ui))
           }
-        }, 100) // 10 FPS
+        }, 100)
       }
       /* v8 ignore stop */
 
-      // Connect to WebSocket
+      // Set up WebSocket handlers with the already-connected ws
       connectWebSocket(
         token,
         state,
         bucketDeps,
         context,
-        settings.dustCommand,
-        doShutdown,
-        useTUI
+        fileSystem,
+        useTUI,
+        initialWs
       )
 
       if (!useTUI) {
@@ -551,23 +623,20 @@ export async function bucket(
     })
   } finally {
     /* v8 ignore start - TUI mode cleanup */
-    // Stop render loop
     if (renderInterval) {
       clearInterval(renderInterval)
     }
 
-    // Exit alternate screen for TUI mode
     if (useTUI) {
       bucketDeps.writeStdout(exitAlternateScreen())
     }
     /* v8 ignore stop */
 
-    // Clean up handlers
     cleanupKeypress?.()
     cleanupSignals?.()
     cleanupResize?.()
   }
 
-  context.stdout('👋 Goodbye!')
+  context.stdout('Goodbye!')
   return { exitCode: 0 }
 }

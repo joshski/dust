@@ -12,8 +12,8 @@ export default defineConfig({
       include: ['lib/**/*.ts'],
       exclude: [
         'lib/cli/run.ts',
-        'lib/cli/commands/bucket-container.ts',
         'lib/cli/commands/bucket.ts',
+        'lib/bucket/repository.ts',
         'lib/bucket/terminal-ui.ts',
       ],
       reporter: [
