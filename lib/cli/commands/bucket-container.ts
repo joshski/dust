@@ -16,6 +16,13 @@
 import { spawn as nodeSpawn } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { createInterface as nodeCreateInterface } from 'node:readline'
+import {
+  createLogBuffer,
+  getLogLines,
+  type LogBuffer,
+} from '../../bucket/log-buffer'
+import { invokeDustWithCapture } from '../../bucket/output-capture'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
 import { type WebSocketLike, WS_OPEN } from './bucket'
 
@@ -159,6 +166,7 @@ export interface RepositoryState {
   path: string
   loopPromise: Promise<void> | null
   stopRequested: boolean
+  logBuffer: LogBuffer
 }
 
 export interface ContainerState {
@@ -173,6 +181,7 @@ export interface ContainerState {
 
 export interface ContainerDependencies {
   spawn: typeof nodeSpawn
+  createInterface: typeof nodeCreateInterface
   createWebSocket: (url: string, token: string) => WebSocketLike
   fileSystem: FileSystem
   sleep: (ms: number) => Promise<void>
@@ -197,6 +206,7 @@ export function createDefaultContainerDependencies(
 ): ContainerDependencies {
   return {
     spawn: nodeSpawn,
+    createInterface: nodeCreateInterface,
     createWebSocket: defaultCreateWebSocket,
     fileSystem,
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
@@ -404,52 +414,6 @@ export async function checkForTasks(
 }
 
 /**
- * Invoke dust to work on tasks.
- */
-export async function invokeDust(
-  repoPath: string,
-  dustCommand: string,
-  spawn: typeof nodeSpawn,
-  context: CommandDependencies['context']
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const commandParts = dustCommand.split(' ')
-    const command = commandParts[0]
-    const spawnArguments = [
-      ...commandParts.slice(1),
-      'loop',
-      'claude',
-      '--max-iterations',
-      '1',
-    ]
-
-    context.stdout(`🚀 Running ${dustCommand} loop claude in ${repoPath}`)
-
-    const proc = spawn(command, spawnArguments, {
-      cwd: repoPath,
-      env: {
-        ...process.env,
-        DUST_UNATTENDED: '1',
-      },
-      stdio: 'inherit',
-    })
-
-    proc.on('close', code => {
-      if (code === 0) {
-        resolve()
-      } else {
-        reject(new Error(`dust exited with code ${code}`))
-      }
-    })
-
-    /* v8 ignore next 4 - error handler for rare spawn failures */
-    proc.on('error', error => {
-      reject(error)
-    })
-  })
-}
-
-/**
  * Run the async loop for a single repository.
  */
 export async function runRepositoryLoop(
@@ -458,7 +422,7 @@ export async function runRepositoryLoop(
   context: CommandDependencies['context'],
   emit?: BucketEmitFn
 ): Promise<void> {
-  const { spawn, fileSystem, sleep } = containerDeps
+  const { spawn, createInterface, fileSystem, sleep } = containerDeps
   const repoName = repoState.repository.name
 
   while (!repoState.stopRequested) {
@@ -475,7 +439,7 @@ export async function runRepositoryLoop(
     // Step 3: Check for tasks
     const hasTasks = await checkForTasks(repoState.path, dustCommand, spawn)
 
-    /* v8 ignore next 25 - integration path for running dust */
+    /* v8 ignore next 30 - integration path for running dust */
     if (hasTasks) {
       // Emit iteration started
       const startedEvent: BucketIterationStartedEvent = {
@@ -485,27 +449,29 @@ export async function runRepositoryLoop(
       emit?.(startedEvent)
       context.stdout(formatBucketEvent(startedEvent))
 
-      // Step 4: Invoke dust
-      try {
-        await invokeDust(repoState.path, dustCommand, spawn, context)
-        const completedEvent: BucketIterationCompletedEvent = {
-          type: 'bucket.iteration_completed',
-          repository: repoName,
-          success: true,
-        }
-        emit?.(completedEvent)
-        context.stdout(formatBucketEvent(completedEvent))
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
-        const completedEvent: BucketIterationCompletedEvent = {
-          type: 'bucket.iteration_completed',
-          repository: repoName,
-          success: false,
-          error: message,
-        }
-        emit?.(completedEvent)
-        context.stdout(formatBucketEvent(completedEvent))
+      // Step 4: Invoke dust with output capture
+      context.stdout(
+        `🚀 Running ${dustCommand} loop claude in ${repoState.path}`
+      )
+      const result = await invokeDustWithCapture({
+        repoPath: repoState.path,
+        dustCommand,
+        logBuffer: repoState.logBuffer,
+        dependencies: { spawn, createInterface },
+      })
+
+      // Log buffer size for debugging
+      const logLineCount = getLogLines(repoState.logBuffer).length
+      context.stdout(`📋 Captured ${logLineCount} log lines for ${repoName}`)
+
+      const completedEvent: BucketIterationCompletedEvent = {
+        type: 'bucket.iteration_completed',
+        repository: repoName,
+        success: result.success,
+        error: result.error,
       }
+      emit?.(completedEvent)
+      context.stdout(formatBucketEvent(completedEvent))
     } else {
       // Step 5: Sleep before checking again
       context.stdout(`😴 No tasks for ${repoName}. Sleeping...`)
@@ -558,6 +524,7 @@ export async function addRepository(
     path: repoPath,
     loopPromise: null,
     stopRequested: false,
+    logBuffer: createLogBuffer(),
   }
 
   state.repositories.set(repository.name, repoState)

@@ -1,5 +1,7 @@
 import { EventEmitter } from 'node:events'
+import type { createInterface as nodeCreateInterface } from 'node:readline'
 import { describe, expect, test } from 'vitest'
+import { createLogBuffer } from '../../bucket/log-buffer'
 import {
   createContextEmulator,
   createFileSystemEmulator,
@@ -20,7 +22,6 @@ import {
   getRepoTempPath,
   gitPull,
   handleRepositoryList,
-  invokeDust,
   parseRepository,
   type Repository,
   readDustCommand,
@@ -90,12 +91,19 @@ function createMockSpawn(): {
   return { spawn, calls, processes }
 }
 
+function createMockCreateInterface(): typeof nodeCreateInterface {
+  return ((_opts: unknown) => {
+    return new EventEmitter()
+  }) as unknown as typeof nodeCreateInterface
+}
+
 function createContainerDependencies(
   overrides: Partial<ContainerDependencies> = {}
 ): ContainerDependencies {
   const fileSystem = createFileSystemEmulator()
   return {
     spawn: createMockSpawn().spawn,
+    createInterface: createMockCreateInterface(),
     createWebSocket: () => createMockWebSocket(),
     fileSystem,
     sleep: () => Promise.resolve(),
@@ -365,39 +373,6 @@ describe('checkForTasks', () => {
   })
 })
 
-describe('invokeDust', () => {
-  test('runs dust loop claude with max-iterations 1', async () => {
-    const { spawn, calls, processes } = createMockSpawn()
-    const context = createContextEmulator()
-
-    const promise = invokeDust('/repo', 'dust', spawn, context)
-
-    const proc = processes.get('dust loop claude --max-iterations 1')
-    proc?.emit('close', 0)
-
-    await promise
-    expect(calls[0].spawnArguments).toEqual([
-      'loop',
-      'claude',
-      '--max-iterations',
-      '1',
-    ])
-    expect(calls[0].options?.env?.DUST_UNATTENDED).toBe('1')
-  })
-
-  test('rejects on non-zero exit', async () => {
-    const { spawn, processes } = createMockSpawn()
-    const context = createContextEmulator()
-
-    const promise = invokeDust('/repo', 'dust', spawn, context)
-
-    const proc = processes.get('dust loop claude --max-iterations 1')
-    proc?.emit('close', 1)
-
-    await expect(promise).rejects.toThrow('dust exited with code 1')
-  })
-})
-
 describe('connectWebSocket', () => {
   test('creates WebSocket with token', () => {
     const commandDependencies = createDependencies()
@@ -592,6 +567,7 @@ describe('handleRepositoryList', () => {
       path: '/tmp/dust-bucket-old-repo',
       loopPromise: Promise.resolve(),
       stopRequested: false,
+      logBuffer: createLogBuffer(),
     })
 
     const containerDependencies = createContainerDependencies({
@@ -672,6 +648,7 @@ describe('shutdownContainer', () => {
       path: '/tmp/dust-bucket-repo',
       loopPromise: Promise.resolve(),
       stopRequested: false,
+      logBuffer: createLogBuffer(),
     }
     state.repositories.set('repo', repoState)
 
@@ -734,6 +711,7 @@ describe('runRepositoryLoop', () => {
       path: '/tmp/repo',
       loopPromise: null,
       stopRequested: true, // Already stopped
+      logBuffer: createLogBuffer(),
     }
 
     const containerDependencies = createContainerDependencies({
@@ -756,6 +734,7 @@ describe('runRepositoryLoop', () => {
       path: '/tmp/repo',
       loopPromise: null,
       stopRequested: false,
+      logBuffer: createLogBuffer(),
     }
 
     let iterationCount = 0
@@ -809,6 +788,7 @@ describe('addRepository', () => {
       path: '/tmp/repo',
       loopPromise: null,
       stopRequested: false,
+      logBuffer: createLogBuffer(),
     })
 
     let cloneCalled = false
