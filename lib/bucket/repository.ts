@@ -27,6 +27,7 @@ import {
   type BucketErrorEvent,
   type BucketRepositoryAddedEvent,
   type BucketRepositoryRemovedEvent,
+  type BucketRepositorySessionEvent,
   formatBucketEvent,
 } from './events'
 import {
@@ -259,6 +260,9 @@ export async function runRepositoryLoop(
     postEvent: async () => {},
   }
 
+  // Track agent session ID per iteration (like loopClaude does for the HTTP path)
+  let agentSessionId: string | undefined
+
   // Map DustWireEvents to bucket events and log output
   const loopEmit: EmitFn = (event: DustWireEvent) => {
     // Log formatted event to the repo's log buffer
@@ -267,18 +271,28 @@ export async function runRepositoryLoop(
       appendLogLine(repoState.logBuffer, createLogLine(formatted, 'stdout'))
     }
 
-    // Forward all session events over WebSocket (except high-volume raw events)
-    if (event.type !== 'claude.raw_event') {
-      emit?.({
-        type: 'bucket.repository_session_event',
-        repository: repoName,
-        event: event as { type: string; [key: string]: unknown },
-      })
+    // Forward all session events over WebSocket
+    const sessionEvent: BucketRepositorySessionEvent = {
+      type: 'bucket.repository_session_event',
+      repository: repoName,
+      event: event as { type: string; [key: string]: unknown },
     }
+    if (agentSessionId && event.type.startsWith('claude.')) {
+      sessionEvent.agentSessionId = agentSessionId
+    }
+    emit?.(sessionEvent)
   }
 
   while (!repoState.stopRequested) {
-    const result = await runOneIteration(commandDeps, loopDeps, loopEmit)
+    agentSessionId = undefined
+    const result = await runOneIteration(commandDeps, loopDeps, loopEmit, {
+      onRawEvent: (rawEvent: Record<string, unknown>) => {
+        if (typeof rawEvent.session_id === 'string' && rawEvent.session_id) {
+          agentSessionId = rawEvent.session_id
+        }
+        loopEmit({ type: 'claude.raw_event', rawEvent })
+      },
+    })
 
     if (result === 'no_tasks') {
       await sleep(SLEEP_INTERVAL_MS)

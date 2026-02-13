@@ -63,6 +63,7 @@ export interface BucketErrorEvent {
 export interface BucketRepositorySessionEvent {
   type: 'bucket.repository_session_event'
   repository: string
+  agentSessionId?: string
   event: { type: string; [key: string]: unknown }
 }
 
@@ -82,6 +83,7 @@ export interface BucketEventPayload {
   sessionId: string
   sequence: number
   repository?: string
+  agentSessionId?: string
   details?: unknown
 }
 
@@ -144,6 +146,9 @@ export function createBucketEventEmitter(
       payload.details = { error: event.error }
     } else if (event.type === 'bucket.repository_session_event') {
       payload.details = { event: event.event }
+      if (event.agentSessionId) {
+        payload.agentSessionId = event.agentSessionId
+      }
     }
 
     const ws = getWebSocket()

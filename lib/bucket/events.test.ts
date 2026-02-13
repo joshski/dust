@@ -256,6 +256,41 @@ describe('createBucketEventEmitter', () => {
     })
   })
 
+  test('includes agentSessionId for repository_session_event when present', () => {
+    const sentMessages: string[] = []
+    const ws = createMockWebSocket()
+    ws.readyState = WS_OPEN
+    ws.send = (data: string) => sentMessages.push(data)
+
+    const emit = createBucketEventEmitter(() => ws, 'session-123')
+    emit({
+      type: 'bucket.repository_session_event',
+      repository: 'my-repo',
+      agentSessionId: 'agent-456',
+      event: { type: 'claude.started' },
+    })
+
+    const payload = JSON.parse(sentMessages[0]) as BucketEventPayload
+    expect(payload.agentSessionId).toBe('agent-456')
+  })
+
+  test('omits agentSessionId for repository_session_event when not present', () => {
+    const sentMessages: string[] = []
+    const ws = createMockWebSocket()
+    ws.readyState = WS_OPEN
+    ws.send = (data: string) => sentMessages.push(data)
+
+    const emit = createBucketEventEmitter(() => ws, 'session-123')
+    emit({
+      type: 'bucket.repository_session_event',
+      repository: 'my-repo',
+      event: { type: 'loop.syncing' },
+    })
+
+    const payload = JSON.parse(sentMessages[0]) as BucketEventPayload
+    expect(payload.agentSessionId).toBeUndefined()
+  })
+
   test('ignores send errors (fire-and-forget)', () => {
     const ws = createMockWebSocket()
     ws.readyState = WS_OPEN
