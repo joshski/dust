@@ -119,6 +119,17 @@ A simple terminal interface that:
 - Allows switching between repositories (keyboard shortcuts or numbered selection)
 - Aggregates/summarizes status across all repositories
 - Displays real-time logs from the focused repository
+- **Presents each repo as a continuous process** even though Claude invocations are separate subprocesses
+
+### Key UX Principle
+
+Each repository should appear as one continuous "process" in the UI, even though each Claude invocation is actually a separate subprocess. The subprocess boundaries should be invisible to the user - logs flow continuously, and switching between repos shows a seamless history.
+
+This means:
+- Capture stdout/stderr from each Claude subprocess
+- Buffer logs per repository
+- When user switches focus, display that repo's accumulated log buffer
+- New log lines append in real-time to the buffer
 
 ### Possible UI Layout
 
@@ -186,6 +197,16 @@ Key patterns to follow:
 - Commands receive `CommandDependencies` with context, fileSystem, settings
 - Settings loaded from `.dust/config/settings.json` include `dustCommand` and `eventsUrl`
 - Process spawning uses `node:child_process` spawn with typed wrappers
+
+#### Claude Event Streaming
+
+The `lib/claude/spawn-claude-code.ts` module shows how to capture Claude output:
+- Spawns `claude` with `--output-format stream-json`
+- Uses readline interface to parse JSON-per-line from stdout
+- Yields `RawEvent` objects via async generator
+- The `onRawEvent` callback pattern allows external observation
+
+This is the pattern to use for capturing subprocess output in the bucket command - spawn Claude, parse its JSON output, and feed it into the per-repo log buffer.
 
 ## Open Questions
 
@@ -370,3 +391,79 @@ Run `npm install` or similar before the first iteration. Handles repos that don'
 #### Require dust to be pre-installed
 
 Document that repos must have dust installed. Keep the container simple.
+
+### How should the log buffer be managed?
+
+Each repository needs a log buffer to enable seamless UI switching. This raises questions about memory management.
+
+#### Fixed-size ring buffer per repo
+
+Keep the last N lines (e.g., 5000) per repository. Simple and bounded memory, but old logs are lost.
+
+#### Unbounded buffer with periodic truncation
+
+Accumulate all logs, but periodically trim to a max size. More flexible but requires tuning.
+
+#### Write to temp files
+
+Buffer logs to disk files per repo. Allows unlimited history but adds I/O overhead and cleanup complexity.
+
+### Should there be an "All" view that shows multiplexed output?
+
+The demo UI shows an "All" option that displays logs from all repositories with colored prefixes.
+
+#### Yes, include multiplexed "All" view
+
+Useful for monitoring overall activity. Shows `[repo-name] log line` format with color-coding.
+
+#### No, only per-repo views
+
+Keeps the UI simpler. Users can manually switch between repos.
+
+### How should subprocess crashes be handled?
+
+If a Claude subprocess crashes (non-zero exit), what should happen?
+
+#### Log the error and continue to next iteration
+
+Emit an error event, wait, and try again. Resilient to transient failures.
+
+#### Stop the loop for that repo
+
+Mark the repo as "errored" and don't attempt further iterations until the user intervenes.
+
+#### Exponential backoff
+
+Retry with increasing delays. Good for transient issues but could delay recovery from fixed issues.
+
+### Should the container support graceful shutdown?
+
+When the user presses `q` or sends SIGINT, how should running Claude processes be handled?
+
+#### Send SIGTERM and wait
+
+Give Claude processes time to finish gracefully. Could delay exit.
+
+#### Kill immediately (SIGKILL)
+
+Fast exit but could leave repos in inconsistent state.
+
+#### Wait with timeout
+
+Try graceful shutdown, then force kill after N seconds.
+
+### Should iteration counts persist across reconnections?
+
+If the WebSocket disconnects and reconnects, should iteration counters reset?
+
+#### Reset on reconnect
+
+Each connection is a fresh session. Simple but loses context.
+
+#### Persist in memory
+
+Keep counters in the container process. Lost if container restarts.
+
+#### Server tracks iterations
+
+Dustbucket tracks iteration state. More reliable but requires protocol support.
