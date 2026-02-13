@@ -303,6 +303,36 @@ describe('loadSettings', () => {
     expect(settings.dustCommand).toBe('custom/dust')
   })
 
+  test('auto-detects installCommand when not set in settings', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: { 'settings.json': '{}' },
+        },
+        'bun.lockb': '',
+      },
+    })
+    const settings = await loadSettings('/project', fileSystem)
+
+    expect(settings.installCommand).toBe('bun install')
+  })
+
+  test('uses explicit installCommand over auto-detection', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {
+            'settings.json': '{"installCommand": "custom install"}',
+          },
+        },
+        'bun.lockb': '',
+      },
+    })
+    const settings = await loadSettings('/project', fileSystem)
+
+    expect(settings.installCommand).toBe('custom install')
+  })
+
   test('loads eventsUrl from settings.json', async () => {
     stubEnv('DUST_EVENTS_URL', '') // Clear env var to test config file only
     const fileSystem = createFileSystemEmulator({

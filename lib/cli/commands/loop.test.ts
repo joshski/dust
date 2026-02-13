@@ -491,7 +491,7 @@ describe('runOneIteration', () => {
     }
     let capturedPrompt: string | undefined
     const loopDeps = createLoopDeps({
-      run: async (prompt) => {
+      run: async prompt => {
         capturedPrompt = prompt
       },
     })
@@ -513,7 +513,7 @@ describe('runOneIteration', () => {
     })
     let capturedPrompt: string | undefined
     const loopDeps = createLoopDeps({
-      run: async (prompt) => {
+      run: async prompt => {
         capturedPrompt = prompt
       },
     })
