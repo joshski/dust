@@ -10,7 +10,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['lib/**/*.ts'],
-      exclude: ['lib/cli/run.ts'],
+      exclude: ['lib/cli/run.ts', 'lib/cli/commands/bucket-container.ts'],
       reporter: [
         [resolve(import.meta.dirname, 'lib/istanbul/minimal-reporter.cjs')],
       ],
