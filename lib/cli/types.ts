@@ -42,6 +42,7 @@ export interface CheckConfig {
 
 export interface DustSettings {
   dustCommand: string
+  installCommand?: string
   checks?: CheckConfig[]
   eventsUrl?: string
 }

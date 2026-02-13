@@ -1,10 +1,19 @@
-# Replace "go" prompt with `dust agent work` in loop
+# Replace "go" prompt with runtime-detected entry command in loop
 
-Use `dust agent work` instead of the hardcoded `"go"` prompt so the agent loop is resilient to CLAUDE.md changes.
+Use a runtime-detected entry command instead of the hardcoded `"go"` prompt so the agent loop installs dependencies, loads agent instructions, and discovers tasks — even if CLAUDE.md is damaged.
+
+The entry command should be something like:
+```
+bun install && bunx dust agent && bunx dust next
+```
+The exact commands are detected based on the JS runtime (bun/pnpm/npm).
 
 ## Goals
 
 - Resilient agent loop that works even if CLAUDE.md is damaged
+- Dependencies are installed after each git pull
+- Agent instructions are loaded via `dust agent`
+- Available tasks are discovered via `dust next`
 
 ## Blocked By
 
@@ -12,8 +21,8 @@ Use `dust agent work` instead of the hardcoded `"go"` prompt so the agent loop i
 
 ## Definition of Done
 
-- [ ] In `lib/cli/commands/loop.ts`, `runOneIteration` passes `"Run \`{dustCommand} agent work\` and follow its instructions"` (or similar) to `run()` instead of `"go"`
-- [ ] The `dustCommand` is read from settings (same as other commands use `settings.dustCommand`)
-- [ ] `runOneIteration` receives the dust command via its parameters (e.g. passed from `loopClaude`)
-- [ ] Existing tests updated to reflect the new prompt
-- [ ] `bun test` and `bun run check` pass
+- [x] In `lib/config/settings.ts`, `detectInstallCommand` detects the appropriate install command (bun install / pnpm install / npm install) based on lockfiles
+- [x] `DustSettings` includes `installCommand` field, auto-detected like `dustCommand`
+- [x] In `lib/cli/commands/loop.ts`, `runOneIteration` passes `"Run \`{installCommand} && {dustCommand} agent && {dustCommand} next\` and follow the instructions."` to `run()` instead of `"go"`
+- [x] Existing tests updated to reflect the new prompt
+- [x] `bun test` and `bun run check` pass

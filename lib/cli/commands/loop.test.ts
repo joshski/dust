@@ -477,6 +477,54 @@ describe('runOneIteration', () => {
     expect(result).toBe('ran_claude')
   })
 
+  test('sends entry prompt with install, agent, and next commands', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+        },
+      },
+    })
+    dependencies.settings = {
+      dustCommand: 'bunx dust',
+      installCommand: 'bun install',
+    }
+    let capturedPrompt: string | undefined
+    const loopDeps = createLoopDeps({
+      run: async (prompt) => {
+        capturedPrompt = prompt
+      },
+    })
+    const emit = createStubEmit()
+
+    await runOneIteration(dependencies, loopDeps, emit)
+    expect(capturedPrompt).toBe(
+      'Run `bun install && bunx dust agent && bunx dust next` and follow the instructions.'
+    )
+  })
+
+  test('uses default install command when not set in settings', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+        },
+      },
+    })
+    let capturedPrompt: string | undefined
+    const loopDeps = createLoopDeps({
+      run: async (prompt) => {
+        capturedPrompt = prompt
+      },
+    })
+    const emit = createStubEmit()
+
+    await runOneIteration(dependencies, loopDeps, emit)
+    expect(capturedPrompt).toBe(
+      'Run `npm install && dust agent && dust next` and follow the instructions.'
+    )
+  })
+
   test('passes correct cwd to Claude run', async () => {
     const dependencies = createDependencies({
       project: {

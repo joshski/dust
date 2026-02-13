@@ -4,7 +4,12 @@ import {
   restoreEnv,
   stubEnv,
 } from '../test/test-utilities'
-import { detectDustCommand, detectTestCommand, loadSettings } from './settings'
+import {
+  detectDustCommand,
+  detectInstallCommand,
+  detectTestCommand,
+  loadSettings,
+} from './settings'
 
 describe('detectDustCommand', () => {
   afterEach(() => {
@@ -70,6 +75,63 @@ describe('detectDustCommand', () => {
       project: { 'package-lock.json': '' },
     })
     expect(detectDustCommand('/project', fileSystem)).toBe('npx dust')
+  })
+})
+
+describe('detectInstallCommand', () => {
+  afterEach(() => {
+    restoreEnv()
+  })
+
+  test('returns bun install when bun.lockb exists', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { 'bun.lockb': '' },
+    })
+    expect(detectInstallCommand('/project', fileSystem)).toBe('bun install')
+  })
+
+  test('returns pnpm install when pnpm-lock.yaml exists', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { 'pnpm-lock.yaml': '' },
+    })
+    expect(detectInstallCommand('/project', fileSystem)).toBe('pnpm install')
+  })
+
+  test('returns npm install when package-lock.json exists', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { 'package-lock.json': '' },
+    })
+    expect(detectInstallCommand('/project', fileSystem)).toBe('npm install')
+  })
+
+  test('returns bun install when BUN_INSTALL env var is set and no lockfiles', () => {
+    stubEnv('BUN_INSTALL', '/home/user/.bun')
+    const fileSystem = createFileSystemEmulator()
+    expect(detectInstallCommand('/project', fileSystem)).toBe('bun install')
+  })
+
+  test('returns npm install as default when no lockfiles and no BUN_INSTALL', () => {
+    stubEnv('BUN_INSTALL', '')
+    const fileSystem = createFileSystemEmulator()
+    expect(detectInstallCommand('/project', fileSystem)).toBe('npm install')
+  })
+
+  test('prioritizes bun.lockb over pnpm-lock.yaml', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        'bun.lockb': '',
+        'pnpm-lock.yaml': '',
+      },
+    })
+    expect(detectInstallCommand('/project', fileSystem)).toBe('bun install')
+  })
+
+  test('prioritizes lockfiles over BUN_INSTALL env var', () => {
+    stubEnv('BUN_INSTALL', '/home/user/.bun')
+    const fileSystem = createFileSystemEmulator({
+      project: { 'package-lock.json': '' },
+    })
+    expect(detectInstallCommand('/project', fileSystem)).toBe('npm install')
   })
 })
 
