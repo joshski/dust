@@ -1,6 +1,7 @@
 import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
+import type { AgentSessionEvent, EventMessage } from '../../agent-events'
 import {
   createContextEmulator,
   createFileSystemEmulator,
@@ -8,18 +9,18 @@ import {
 import type { CommandDependencies } from '../types'
 import {
   createDefaultDependencies,
-  createEventPoster,
-  type DustWireEvent,
-  type EmitFn,
-  type EventMessage,
-  formatEvent,
+  createWireEventSender,
+  formatLoopEvent,
   gitPull,
   hasAvailableTasks,
   type LoopDependencies,
+  type LoopEmitFn,
+  type LoopEvent,
   loopClaude,
   type PostEventFn,
   parseMaxIterations,
   runOneIteration,
+  type SendAgentEventFn,
 } from './loop'
 
 function createDependencies(
@@ -70,12 +71,22 @@ function createLoopDeps(
   }
 }
 
-function createStubEmit(): EmitFn & { events: DustWireEvent[] } {
-  const events: DustWireEvent[] = []
-  const emit: EmitFn = (event: DustWireEvent) => {
-    events.push(event)
+function createStubCallbacks(): {
+  onLoopEvent: LoopEmitFn & { events: LoopEvent[] }
+  onAgentEvent: SendAgentEventFn & { events: AgentSessionEvent[] }
+} {
+  const loopEvents: LoopEvent[] = []
+  const agentEvents: AgentSessionEvent[] = []
+  const onLoopEvent: LoopEmitFn = (event: LoopEvent) => {
+    loopEvents.push(event)
   }
-  return Object.assign(emit, { events })
+  const onAgentEvent: SendAgentEventFn = (event: AgentSessionEvent) => {
+    agentEvents.push(event)
+  }
+  return {
+    onLoopEvent: Object.assign(onLoopEvent, { events: loopEvents }),
+    onAgentEvent: Object.assign(onAgentEvent, { events: agentEvents }),
+  }
 }
 
 describe('createDefaultDependencies', () => {
@@ -94,7 +105,7 @@ describe('createDefaultDependencies', () => {
   })
 })
 
-describe('createEventPoster', () => {
+describe('createWireEventSender', () => {
   const testSessionId = 'test-session-123'
 
   test('does not post when eventsUrl is undefined', async () => {
@@ -102,32 +113,15 @@ describe('createEventPoster', () => {
     const postEvent = async () => {
       postCalled = true
     }
-    const emit = createEventPoster(
+    const send = createWireEventSender(
       undefined,
       testSessionId,
       postEvent,
       () => {}
     )
-    emit({ type: 'loop.syncing' })
+    send({ type: 'agent-session-started' })
     await Promise.resolve()
     expect(postCalled).toBe(false)
-  })
-
-  test('does not post loop.* events (only agent session events)', async () => {
-    const postedEvents: EventMessage[] = []
-    const postEvent = async (_url: string, payload: EventMessage) => {
-      postedEvents.push(payload)
-    }
-    const emit = createEventPoster(
-      'http://example.com',
-      testSessionId,
-      postEvent,
-      () => {}
-    )
-    emit({ type: 'loop.syncing' })
-    emit({ type: 'loop.started', maxIterations: 5 })
-    await Promise.resolve()
-    expect(postedEvents).toHaveLength(0)
   })
 
   test('posts agent session events with sessionId, sequence number and timestamp', async () => {
@@ -135,14 +129,14 @@ describe('createEventPoster', () => {
     const postEvent = async (_url: string, payload: EventMessage) => {
       postedEvents.push(payload)
     }
-    const emit = createEventPoster(
+    const send = createWireEventSender(
       'http://example.com',
       testSessionId,
       postEvent,
       () => {}
     )
-    emit({ type: 'claude.started' })
-    emit({ type: 'claude.ended', success: true })
+    send({ type: 'agent-session-started' })
+    send({ type: 'agent-session-ended', success: true })
     await Promise.resolve()
     expect(postedEvents).toHaveLength(2)
     expect(postedEvents[0].sequence).toBe(1)
@@ -158,13 +152,13 @@ describe('createEventPoster', () => {
     const postEvent = async (_url: string, payload: EventMessage) => {
       postedEvents.push(payload)
     }
-    const emit = createEventPoster(
+    const send = createWireEventSender(
       'http://example.com',
       testSessionId,
       postEvent,
       () => {}
     )
-    emit({ type: 'claude.started' })
+    send({ type: 'agent-session-started' })
     await Promise.resolve()
     expect(postedEvents[0].timestamp).toMatch(
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/
@@ -176,15 +170,15 @@ describe('createEventPoster', () => {
     const postEvent = async (_url: string, payload: EventMessage) => {
       postedEvents.push(payload)
     }
-    const emit = createEventPoster(
+    const send = createWireEventSender(
       'http://example.com',
       testSessionId,
       postEvent,
       () => {},
       () => 'claude-session-abc'
     )
-    emit({ type: 'claude.started' })
-    emit({ type: 'claude.ended', success: true })
+    send({ type: 'agent-session-started' })
+    send({ type: 'agent-session-ended', success: true })
     await Promise.resolve()
 
     // All agent events should have agentSessionId
@@ -197,14 +191,14 @@ describe('createEventPoster', () => {
     const postEvent = async (_url: string, payload: EventMessage) => {
       postedEvents.push(payload)
     }
-    const emit = createEventPoster(
+    const send = createWireEventSender(
       'http://example.com',
       testSessionId,
       postEvent,
       () => {},
       () => undefined
     )
-    emit({ type: 'claude.started' })
+    send({ type: 'agent-session-started' })
     await Promise.resolve()
 
     expect(postedEvents[0].agentSessionId).toBeUndefined()
@@ -215,7 +209,7 @@ describe('createEventPoster', () => {
     const postEvent = async () => {
       throw new Error('Network error')
     }
-    const emit = createEventPoster(
+    const send = createWireEventSender(
       'http://example.com',
       testSessionId,
       postEvent,
@@ -223,7 +217,7 @@ describe('createEventPoster', () => {
         errors.push(error)
       }
     )
-    emit({ type: 'claude.started' })
+    send({ type: 'agent-session-started' })
     await Promise.resolve()
     await Promise.resolve()
     expect(errors).toHaveLength(1)
@@ -311,9 +305,9 @@ describe('runOneIteration', () => {
         return createMockChildProcess(0)
       }) as LoopDependencies['spawn'],
     })
-    const emit = createStubEmit()
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
-    await runOneIteration(dependencies, loopDeps, emit)
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
     expect(pullCalled).toBe(true)
   })
 
@@ -338,27 +332,32 @@ describe('runOneIteration', () => {
         claudePrompt = prompt
       },
     })
-    const emit = createStubEmit()
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
-    const result = await runOneIteration(dependencies, loopDeps, emit)
+    const result = await runOneIteration(
+      dependencies,
+      loopDeps,
+      onLoopEvent,
+      onAgentEvent
+    )
     expect(result).toBe('resolved_pull_conflict')
     expect(claudePrompt).toContain('merge conflict')
     expect(claudePrompt).toContain('git pull failed')
 
     // Check events
-    const syncSkippedEvent = emit.events.find(
+    const syncSkippedEvent = onLoopEvent.events.find(
       event => event.type === 'loop.sync_skipped'
     )
     expect(syncSkippedEvent).toBeDefined()
-    const claudeStarted = emit.events.find(
-      event => event.type === 'claude.started'
+    const agentStarted = onAgentEvent.events.find(
+      event => event.type === 'agent-session-started'
     )
-    const claudeEnded = emit.events.find(event => event.type === 'claude.ended')
-    expect(claudeStarted).toBeDefined()
-    expect(claudeEnded).toBeDefined()
-    expect((claudeEnded as { success: boolean } | undefined)?.success).toBe(
-      true
+    const agentEnded = onAgentEvent.events.find(
+      event => event.type === 'agent-session-ended'
     )
+    expect(agentStarted).toBeDefined()
+    expect(agentEnded).toBeDefined()
+    expect((agentEnded as { success: boolean } | undefined)?.success).toBe(true)
   })
 
   test('handles Claude failure when resolving git pull conflict', async () => {
@@ -384,19 +383,26 @@ describe('runOneIteration', () => {
         throw new Error('Claude crashed')
       },
     })
-    const emit = createStubEmit()
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
-    const result = await runOneIteration(dependencies, loopDeps, emit)
+    const result = await runOneIteration(
+      dependencies,
+      loopDeps,
+      onLoopEvent,
+      onAgentEvent
+    )
     // Should still return no_tasks and continue the loop
     expect(result).toBe('no_tasks')
     expect(context.stderrLines.join('\n')).toContain(
       'Claude failed to resolve git pull conflict'
     )
 
-    // Check claude.ended event with error
-    const claudeEnded = emit.events.find(event => event.type === 'claude.ended')
-    expect(claudeEnded).toBeDefined()
-    expect((claudeEnded as { success: boolean } | undefined)?.success).toBe(
+    // Check agent-session-ended event with error
+    const agentEnded = onAgentEvent.events.find(
+      event => event.type === 'agent-session-ended'
+    )
+    expect(agentEnded).toBeDefined()
+    expect((agentEnded as { success: boolean } | undefined)?.success).toBe(
       false
     )
   })
@@ -424,9 +430,14 @@ describe('runOneIteration', () => {
         throw 'string error'
       },
     })
-    const emit = createStubEmit()
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
-    const result = await runOneIteration(dependencies, loopDeps, emit)
+    const result = await runOneIteration(
+      dependencies,
+      loopDeps,
+      onLoopEvent,
+      onAgentEvent
+    )
     expect(result).toBe('no_tasks')
     expect(context.stderrLines.join('\n')).toContain('string error')
   })
@@ -434,9 +445,14 @@ describe('runOneIteration', () => {
   test('returns no_tasks when no tasks available', async () => {
     const dependencies = createDependencies()
     const loopDeps = createLoopDeps()
-    const emit = createStubEmit()
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
-    const result = await runOneIteration(dependencies, loopDeps, emit)
+    const result = await runOneIteration(
+      dependencies,
+      loopDeps,
+      onLoopEvent,
+      onAgentEvent
+    )
     expect(result).toBe('no_tasks')
   })
 
@@ -454,9 +470,14 @@ describe('runOneIteration', () => {
         claudeCalled = true
       },
     })
-    const emit = createStubEmit()
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
-    const result = await runOneIteration(dependencies, loopDeps, emit)
+    const result = await runOneIteration(
+      dependencies,
+      loopDeps,
+      onLoopEvent,
+      onAgentEvent
+    )
     expect(claudeCalled).toBe(true)
     expect(result).toBe('ran_claude')
   })
@@ -479,9 +500,9 @@ describe('runOneIteration', () => {
         capturedPrompt = prompt
       },
     })
-    const emit = createStubEmit()
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
-    await runOneIteration(dependencies, loopDeps, emit)
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
     expect(capturedPrompt).toBe(
       'Run `bun install && bunx dust agent && bunx dust pick task` and follow the instructions.'
     )
@@ -501,9 +522,9 @@ describe('runOneIteration', () => {
         capturedPrompt = prompt
       },
     })
-    const emit = createStubEmit()
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
-    await runOneIteration(dependencies, loopDeps, emit)
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
     expect(capturedPrompt).toBe(
       'Run `npm install && dust agent && dust pick task` and follow the instructions.'
     )
@@ -525,9 +546,9 @@ describe('runOneIteration', () => {
         capturedCwd = runOptions?.spawnOptions?.cwd
       },
     })
-    const emit = createStubEmit()
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
-    await runOneIteration(dependencies, loopDeps, emit)
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
     expect(capturedCwd).toBe('/project')
   })
 
@@ -548,9 +569,9 @@ describe('runOneIteration', () => {
         capturedEnv = runOptions?.spawnOptions?.env
       },
     })
-    const emit = createStubEmit()
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
-    await runOneIteration(dependencies, loopDeps, emit, {})
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent, {})
 
     expect(capturedEnv).toBeDefined()
     expect(capturedEnv?.DUST_UNATTENDED).toBe('1')
@@ -572,9 +593,14 @@ describe('runOneIteration', () => {
         throw new Error('Claude crashed')
       },
     })
-    const emit = createStubEmit()
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
-    const result = await runOneIteration(dependencies, loopDeps, emit)
+    const result = await runOneIteration(
+      dependencies,
+      loopDeps,
+      onLoopEvent,
+      onAgentEvent
+    )
     expect(result).toBe('claude_error')
     expect(context.stderrLines.join('\n')).toContain('Claude exited with error')
     expect(context.stderrLines.join('\n')).toContain('Claude crashed')
@@ -596,14 +622,19 @@ describe('runOneIteration', () => {
         throw 'string error'
       },
     })
-    const emit = createStubEmit()
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
-    const result = await runOneIteration(dependencies, loopDeps, emit)
+    const result = await runOneIteration(
+      dependencies,
+      loopDeps,
+      onLoopEvent,
+      onAgentEvent
+    )
     expect(result).toBe('claude_error')
     expect(context.stderrLines.join('\n')).toContain('string error')
   })
 
-  test('emits claude.started and claude.ended events', async () => {
+  test('emits agent-session-started and agent-session-ended events', async () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
@@ -614,22 +645,24 @@ describe('runOneIteration', () => {
     const loopDeps = createLoopDeps({
       run: async () => {},
     })
-    const emit = createStubEmit()
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
-    await runOneIteration(dependencies, loopDeps, emit)
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
 
-    const startedEvent = emit.events.find(
-      event => event.type === 'claude.started'
+    const startedEvent = onAgentEvent.events.find(
+      event => event.type === 'agent-session-started'
     )
-    const endedEvent = emit.events.find(event => event.type === 'claude.ended')
+    const endedEvent = onAgentEvent.events.find(
+      event => event.type === 'agent-session-ended'
+    )
     expect(startedEvent).toBeDefined()
-    expect(startedEvent?.type).toBe('claude.started')
+    expect(startedEvent?.type).toBe('agent-session-started')
     expect(endedEvent).toBeDefined()
-    expect(endedEvent?.type).toBe('claude.ended')
+    expect(endedEvent?.type).toBe('agent-session-ended')
     expect((endedEvent as { success: boolean } | undefined)?.success).toBe(true)
   })
 
-  test('emits claude.ended with error message on failure', async () => {
+  test('emits agent-session-ended with error message on failure', async () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
@@ -642,11 +675,13 @@ describe('runOneIteration', () => {
         throw new Error('Claude crashed')
       },
     })
-    const emit = createStubEmit()
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
-    await runOneIteration(dependencies, loopDeps, emit)
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
 
-    const endedEvent = emit.events.find(event => event.type === 'claude.ended')
+    const endedEvent = onAgentEvent.events.find(
+      event => event.type === 'agent-session-ended'
+    )
     expect(endedEvent).toBeDefined()
     expect((endedEvent as { success: boolean } | undefined)?.success).toBe(
       false
@@ -664,7 +699,7 @@ describe('runOneIteration', () => {
         },
       },
     })
-    const emit = createStubEmit()
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
     const rawEvents: Record<string, unknown>[] = []
 
     const loopDeps = createLoopDeps({
@@ -680,7 +715,7 @@ describe('runOneIteration', () => {
       },
     })
 
-    await runOneIteration(dependencies, loopDeps, emit, {
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent, {
       onRawEvent: rawEvent => rawEvents.push(rawEvent),
     })
 
@@ -700,7 +735,7 @@ describe('runOneIteration', () => {
         },
       },
     })
-    const emit = createStubEmit()
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
     let capturedOnRawEvent: unknown = 'not-set'
 
     const loopDeps = createLoopDeps({
@@ -709,38 +744,29 @@ describe('runOneIteration', () => {
       },
     })
 
-    await runOneIteration(dependencies, loopDeps, emit)
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
 
     expect(capturedOnRawEvent).toBeUndefined()
   })
 })
 
-describe('formatEvent', () => {
-  test('returns null for claude.raw_event', () => {
-    const result = formatEvent({
-      type: 'claude.raw_event',
-      rawEvent: { type: 'text_delta', text: 'Hello' },
-    })
-    expect(result).toBeNull()
-  })
-
+describe('formatLoopEvent', () => {
   test('returns null for loop.checking_tasks', () => {
-    const result = formatEvent({ type: 'loop.checking_tasks' })
+    const result = formatLoopEvent({ type: 'loop.checking_tasks' })
     expect(result).toBeNull()
   })
 
   test('returns string for other event types', () => {
-    expect(formatEvent({ type: 'loop.syncing' })).toBe('🌍 Syncing with remote')
-    expect(formatEvent({ type: 'loop.started', maxIterations: 5 })).toBe(
-      '🔄 Starting dust loop claude (max 5 iterations)...'
+    expect(formatLoopEvent({ type: 'loop.syncing' })).toBe(
+      '🌍 Syncing with remote'
     )
-    expect(formatEvent({ type: 'claude.started' })).toBe(
-      '🤖 Starting Claude...'
+    expect(formatLoopEvent({ type: 'loop.started', maxIterations: 5 })).toBe(
+      '🔄 Starting dust loop claude (max 5 iterations)...'
     )
   })
 
   test('returns no_tasks message with trailing newline', () => {
-    const result = formatEvent({ type: 'loop.no_tasks' })
+    const result = formatLoopEvent({ type: 'loop.no_tasks' })
     expect(result).toBe('😴 No tasks available. Sleeping...\n')
   })
 })
@@ -861,25 +887,13 @@ describe('loopClaude', () => {
   })
 
   test('sleep iterations do not count toward max', async () => {
-    // Create two tasks - one blocked, one unblocked
-    // The blocked task references the unblocked one, so completing unblocked task
-    // would unblock the second one.
-    // But for this test, we just want to verify sleeps don't count:
-    // - Start with one blocked task (sleeps once)
-    // - Add an unblocked task during sleep
-    // - Claude runs twice
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: {
-            // This task is blocked because it references a non-existent task
-            // Actually no - blockers are only blocked if the referenced task EXISTS
-            // So we need a different setup: just use an empty tasks dir
-          },
+          tasks: {},
         },
       },
     })
-    // Remove the empty object from files since it's not a valid file
     const fileSystem = dependencies.fileSystem as ReturnType<
       typeof createFileSystemEmulator
     >
@@ -936,7 +950,7 @@ describe('loopClaude', () => {
     expect(context.stdoutLines.join('\n')).toContain('max 10 iterations')
   })
 
-  test('outputs formatted claude.ended error message when Claude fails', async () => {
+  test('outputs formatted agent-session-ended error message when Claude fails', async () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
@@ -1285,7 +1299,7 @@ describe('loopClaude', () => {
         .rawEvent
     ).toEqual({ type: 'text_delta', text: 'Hello' })
 
-    // Verify raw events are NOT output to console (formatEvent returns null)
+    // Verify raw events are NOT output to console (formatAgentEvent returns null)
     expect(context.stdoutLines.join('\n')).not.toContain('text_delta')
     expect(context.stdoutLines.join('\n')).not.toContain('raw_event')
   })

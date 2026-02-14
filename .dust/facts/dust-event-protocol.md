@@ -60,20 +60,19 @@ type AgentSessionEvent =
 
 The following event categories exist in the codebase but are never sent over the wire:
 
-- **`loop.*` events** (`loop.started`, `loop.syncing`, `loop.no_tasks`, etc.) — formatted for local console output only
-- **`bucket.*` events** (`bucket.connected`, `bucket.disconnected`, `bucket.repository_added`, etc.) — local UI lifecycle state only
+- **`LoopEvent` types** (`loop.started`, `loop.syncing`, `loop.no_tasks`, etc.) — formatted for local console output only
+- **`BucketEvent` types** (`bucket.connected`, `bucket.disconnected`, `bucket.repository_added`, etc.) — local UI lifecycle state only
 
-## Event Mapping
+## Raw Event Conversion
 
-The `mapToAgentEvent()` function in `lib/agent-events.ts` converts internal `DustWireEvent` types to wire events:
+The `rawEventToAgentEvent()` function in `lib/agent-events.ts` converts raw Claude streaming events to wire events:
 
-| Internal Event | Wire Event | Notes |
-|---------------|------------|-------|
-| `claude.started` | `agent-session-started` | |
-| `claude.ended` | `agent-session-ended` | Preserves `success` and `error` fields |
-| `claude.raw_event` (stream_event) | `agent-session-activity` | When `rawEvent.type === 'stream_event'` |
-| `claude.raw_event` (other) | `claude-event` | All other raw events |
-| `loop.*` | *(not sent)* | Returns `null` — local console only |
+| Raw Event | Wire Event | Notes |
+|-----------|------------|-------|
+| `rawEvent.type === 'stream_event'` | `agent-session-activity` | Heartbeat, not stored |
+| Any other raw event | `claude-event` | Forwarded with full rawEvent payload |
+
+Agent session lifecycle events (`agent-session-started`, `agent-session-ended`) are emitted directly by `runOneIteration` — they are not derived from raw events.
 
 ## Example Payloads
 

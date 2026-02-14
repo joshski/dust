@@ -17,12 +17,17 @@
  */
 
 import { spawn as nodeSpawn } from 'node:child_process'
-import { type EventMessage, mapToAgentEvent } from '../../agent-events'
+import {
+  type AgentSessionEvent,
+  type EventMessage,
+  formatAgentEvent,
+  rawEventToAgentEvent,
+} from '../../agent-events'
 import { run as claudeRun } from '../../claude/run'
 import type { CommandDependencies, CommandResult } from '../types'
 import { next } from './next'
 
-// Strongly typed events - discriminated union
+// Strongly typed loop-only events (never sent over the wire)
 export interface LoopWarningEvent {
   type: 'loop.warning'
 }
@@ -53,21 +58,6 @@ export interface LoopTasksFoundEvent {
   type: 'loop.tasks_found'
 }
 
-export interface ClaudeStartedEvent {
-  type: 'claude.started'
-}
-
-export interface ClaudeEndedEvent {
-  type: 'claude.ended'
-  success: boolean
-  error?: string
-}
-
-export interface ClaudeRawEvent {
-  type: 'claude.raw_event'
-  rawEvent: Record<string, unknown>
-}
-
 export interface LoopIterationCompleteEvent {
   type: 'loop.iteration_complete'
   iteration: number
@@ -79,7 +69,7 @@ export interface LoopEndedEvent {
   maxIterations: number
 }
 
-export type DustWireEvent =
+export type LoopEvent =
   | LoopWarningEvent
   | LoopStartedEvent
   | LoopSyncingEvent
@@ -87,17 +77,14 @@ export type DustWireEvent =
   | LoopCheckingTasksEvent
   | LoopNoTasksEvent
   | LoopTasksFoundEvent
-  | ClaudeStartedEvent
-  | ClaudeEndedEvent
-  | ClaudeRawEvent
   | LoopIterationCompleteEvent
   | LoopEndedEvent
 
-export type EmitFn = (event: DustWireEvent) => void
+export type LoopEmitFn = (event: LoopEvent) => void
 
-// Format event for console output
-// Returns null for events that should not be displayed to console
-export function formatEvent(event: DustWireEvent): string | null {
+// Format a loop event for console output.
+// Returns null for events that should not be displayed.
+export function formatLoopEvent(event: LoopEvent): string | null {
   switch (event.type) {
     case 'loop.warning':
       return '⚠️  WARNING: This command skips all permission checks. Only use in a sandbox environment!'
@@ -113,23 +100,12 @@ export function formatEvent(event: DustWireEvent): string | null {
       return '😴 No tasks available. Sleeping...\n'
     case 'loop.tasks_found':
       return '✨ Found a task. Going to work!\n'
-    case 'claude.started':
-      return '🤖 Starting Claude...'
-    case 'claude.ended':
-      return event.success
-        ? '🤖 Claude session ended (success)'
-        : `🤖 Claude session ended (error: ${event.error})`
-    case 'claude.raw_event':
-      // Raw events are high-volume and not displayed to console
-      return null
     case 'loop.iteration_complete':
       return `📋 Completed iteration ${event.iteration}/${event.maxIterations}`
     case 'loop.ended':
       return `🏁 Reached max iterations (${event.maxIterations}). Exiting.`
   }
 }
-
-export type { AgentSessionEvent, EventMessage } from '../../agent-events'
 
 export type PostEventFn = (url: string, payload: EventMessage) => Promise<void>
 
@@ -162,21 +138,20 @@ export function createDefaultDependencies(): LoopDependencies {
   }
 }
 
-export function createEventPoster(
+export type SendAgentEventFn = (event: AgentSessionEvent) => void
+
+export function createWireEventSender(
   eventsUrl: string | undefined,
   sessionId: string,
   postEvent: PostEventFn,
   onError: (error: unknown) => void,
   getAgentSessionId?: () => string | undefined,
   repository = ''
-): EmitFn {
+): SendAgentEventFn {
   let sequence = 0
 
-  return (event: DustWireEvent) => {
+  return (event: AgentSessionEvent) => {
     if (!eventsUrl) return
-
-    const agentEvent = mapToAgentEvent(event)
-    if (!agentEvent) return
 
     sequence++
 
@@ -185,7 +160,7 @@ export function createEventPoster(
       timestamp: new Date().toISOString(),
       sessionId,
       repository,
-      event: agentEvent,
+      event,
     }
 
     const agentSessionId = getAgentSessionId?.()
@@ -256,7 +231,8 @@ export interface IterationOptions {
 export async function runOneIteration(
   dependencies: CommandDependencies,
   loopDependencies: LoopDependencies,
-  emit: EmitFn,
+  onLoopEvent: LoopEmitFn,
+  onAgentEvent?: SendAgentEventFn,
   options: IterationOptions = {}
 ): Promise<IterationResult> {
   const { context } = dependencies
@@ -265,16 +241,16 @@ export async function runOneIteration(
   const { onRawEvent } = options
 
   // Step 1: Sync with remote
-  emit({ type: 'loop.syncing' })
+  onLoopEvent({ type: 'loop.syncing' })
   const pullResult = await gitPull(context.cwd, spawn)
   if (!pullResult.success) {
-    emit({
+    onLoopEvent({
       type: 'loop.sync_skipped',
       /* v8 ignore next - message is always set when success is false */
       reason: pullResult.message ?? 'unknown error',
     })
 
-    emit({ type: 'claude.started' })
+    onAgentEvent?.({ type: 'agent-session-started' })
     const prompt = `git pull failed with the following error:
 
 ${pullResult.message}
@@ -295,7 +271,7 @@ Make sure the repository is in a clean state and synced with remote before finis
         },
         onRawEvent,
       })
-      emit({ type: 'claude.ended', success: true })
+      onAgentEvent?.({ type: 'agent-session-ended', success: true })
       return 'resolved_pull_conflict'
     } catch (error) {
       const errorMessage =
@@ -303,22 +279,26 @@ Make sure the repository is in a clean state and synced with remote before finis
       context.stderr(
         `Claude failed to resolve git pull conflict: ${errorMessage}`
       )
-      emit({ type: 'claude.ended', success: false, error: errorMessage })
+      onAgentEvent?.({
+        type: 'agent-session-ended',
+        success: false,
+        error: errorMessage,
+      })
     }
   }
 
   // Step 2: Check for available tasks
-  emit({ type: 'loop.checking_tasks' })
+  onLoopEvent({ type: 'loop.checking_tasks' })
   const hasTasks = await hasAvailableTasks(dependencies)
 
   if (!hasTasks) {
-    emit({ type: 'loop.no_tasks' })
+    onLoopEvent({ type: 'loop.no_tasks' })
     return 'no_tasks'
   }
 
   // Step 3: Invoke Claude Code
-  emit({ type: 'loop.tasks_found' })
-  emit({ type: 'claude.started' })
+  onLoopEvent({ type: 'loop.tasks_found' })
+  onAgentEvent?.({ type: 'agent-session-started' })
 
   const { dustCommand, installCommand = 'npm install' } = dependencies.settings
   const prompt = `Run \`${installCommand} && ${dustCommand} agent && ${dustCommand} pick task\` and follow the instructions.`
@@ -332,12 +312,16 @@ Make sure the repository is in a clean state and synced with remote before finis
       },
       onRawEvent,
     })
-    emit({ type: 'claude.ended', success: true })
+    onAgentEvent?.({ type: 'agent-session-ended', success: true })
     return 'ran_claude'
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
     context.stderr(`Claude exited with error: ${errorMessage}`)
-    emit({ type: 'claude.ended', success: false, error: errorMessage })
+    onAgentEvent?.({
+      type: 'agent-session-ended',
+      success: false,
+      error: errorMessage,
+    })
     return 'claude_error'
   }
 }
@@ -364,7 +348,8 @@ export async function loopClaude(
   const eventsUrl = settings.eventsUrl
   const sessionId = crypto.randomUUID()
   let agentSessionId: string | undefined
-  const postEventFn = createEventPoster(
+
+  const sendWireEvent = createWireEventSender(
     eventsUrl,
     sessionId,
     postEvent,
@@ -375,16 +360,23 @@ export async function loopClaude(
     () => agentSessionId
   )
 
-  const emit: EmitFn = event => {
-    const formatted = formatEvent(event)
+  const onLoopEvent: LoopEmitFn = event => {
+    const formatted = formatLoopEvent(event)
     if (formatted !== null) {
       context.stdout(formatted)
     }
-    postEventFn(event)
   }
 
-  emit({ type: 'loop.warning' })
-  emit({ type: 'loop.started', maxIterations })
+  const onAgentEvent: SendAgentEventFn = event => {
+    const formatted = formatAgentEvent(event)
+    if (formatted !== null) {
+      context.stdout(formatted)
+    }
+    sendWireEvent(event)
+  }
+
+  onLoopEvent({ type: 'loop.warning' })
+  onLoopEvent({ type: 'loop.started', maxIterations })
   context.stdout('   Press Ctrl+C to stop')
   context.stdout('')
 
@@ -397,7 +389,7 @@ export async function loopClaude(
       if (typeof rawEvent.session_id === 'string' && rawEvent.session_id) {
         agentSessionId = rawEvent.session_id
       }
-      emit({ type: 'claude.raw_event', rawEvent })
+      onAgentEvent(rawEventToAgentEvent(rawEvent))
     }
   }
 
@@ -406,7 +398,8 @@ export async function loopClaude(
     const result = await runOneIteration(
       dependencies,
       loopDependencies,
-      emit,
+      onLoopEvent,
+      onAgentEvent,
       iterationOptions
     )
 
@@ -415,7 +408,7 @@ export async function loopClaude(
     } else {
       // Count iterations where Claude actually ran (ran_claude, claude_error, resolved_pull_conflict)
       completedIterations++
-      emit({
+      onLoopEvent({
         type: 'loop.iteration_complete',
         iteration: completedIterations,
         maxIterations,
@@ -423,6 +416,6 @@ export async function loopClaude(
     }
   }
 
-  emit({ type: 'loop.ended', maxIterations })
+  onLoopEvent({ type: 'loop.ended', maxIterations })
   return { exitCode: 0 }
 }

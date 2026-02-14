@@ -8,19 +8,20 @@
 import { spawn as nodeSpawn } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { EventMessage } from '../agent-events'
-import { mapToAgentEvent } from '../agent-events'
+import type { AgentSessionEvent, EventMessage } from '../agent-events'
+import { formatAgentEvent, rawEventToAgentEvent } from '../agent-events'
 import {
   run as claudeRun,
   defaultRunnerDependencies,
   type RunnerDependencies,
 } from '../claude/run'
 import {
-  type DustWireEvent,
-  type EmitFn,
-  formatEvent,
+  formatLoopEvent,
   type LoopDependencies,
+  type LoopEmitFn,
+  type LoopEvent,
   runOneIteration,
+  type SendAgentEventFn,
 } from '../cli/commands/loop'
 import type { CommandDependencies, FileSystem } from '../cli/types'
 import { loadSettings } from '../config/settings'
@@ -265,28 +266,33 @@ export async function runRepositoryLoop(
     postEvent: async () => {},
   }
 
-  // Track agent session ID per iteration (like loopClaude does for the HTTP path)
+  // Track agent session ID per iteration
   let agentSessionId: string | undefined
   let sequence = 0
 
-  // Map DustWireEvents to bucket events, log output, and send over WebSocket
-  const loopEmit: EmitFn = (event: DustWireEvent) => {
-    // Log formatted event to the repo's log buffer
-    const formatted = formatEvent(event)
+  // Log formatted loop events to the repo's log buffer
+  const onLoopEvent: LoopEmitFn = (event: LoopEvent) => {
+    const formatted = formatLoopEvent(event)
+    if (formatted !== null) {
+      appendLogLine(repoState.logBuffer, createLogLine(formatted, 'stdout'))
+    }
+  }
+
+  // Log formatted agent events and send over WebSocket
+  const onAgentEvent: SendAgentEventFn = (event: AgentSessionEvent) => {
+    const formatted = formatAgentEvent(event)
     if (formatted !== null) {
       appendLogLine(repoState.logBuffer, createLogLine(formatted, 'stdout'))
     }
 
-    // Send agent session events over WebSocket
-    const agentEvent = mapToAgentEvent(event)
-    if (agentEvent && sendEvent && sessionId) {
+    if (sendEvent && sessionId) {
       sequence++
       const msg: EventMessage = {
         sequence,
         timestamp: new Date().toISOString(),
         sessionId,
         repository: repoName,
-        event: agentEvent,
+        event,
       }
       if (agentSessionId) {
         msg.agentSessionId = agentSessionId
@@ -297,14 +303,20 @@ export async function runRepositoryLoop(
 
   while (!repoState.stopRequested) {
     agentSessionId = undefined
-    const result = await runOneIteration(commandDeps, loopDeps, loopEmit, {
-      onRawEvent: (rawEvent: Record<string, unknown>) => {
-        if (typeof rawEvent.session_id === 'string' && rawEvent.session_id) {
-          agentSessionId = rawEvent.session_id
-        }
-        loopEmit({ type: 'claude.raw_event', rawEvent })
-      },
-    })
+    const result = await runOneIteration(
+      commandDeps,
+      loopDeps,
+      onLoopEvent,
+      onAgentEvent,
+      {
+        onRawEvent: (rawEvent: Record<string, unknown>) => {
+          if (typeof rawEvent.session_id === 'string' && rawEvent.session_id) {
+            agentSessionId = rawEvent.session_id
+          }
+          onAgentEvent(rawEventToAgentEvent(rawEvent))
+        },
+      }
+    )
 
     if (result === 'no_tasks') {
       await sleep(SLEEP_INTERVAL_MS)
