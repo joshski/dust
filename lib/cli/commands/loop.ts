@@ -321,7 +321,7 @@ Make sure the repository is in a clean state and synced with remote before finis
   emit({ type: 'claude.started' })
 
   const { dustCommand, installCommand = 'npm install' } = dependencies.settings
-  const prompt = `Run \`${installCommand} && ${dustCommand} agent && ${dustCommand} pick task\` and follow the instructions.`
+  const prompt = `Run \`${installCommand} && ${dustCommand} agent && ${dustCommand} next\` and follow the instructions.`
 
   try {
     await run(prompt, {

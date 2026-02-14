@@ -37,7 +37,7 @@ describe('agent command', () => {
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toMatch(/Hello .+, welcome to dust/)
-    expect(context.stdoutLines.join('\n')).toContain('dust pick task')
+    expect(context.stdoutLines.join('\n')).toContain('dust next')
     expect(context.stdoutLines.join('\n')).toContain('dust focus')
     expect(context.stdoutLines.join('\n')).toContain('dust new task')
     expect(context.stdoutLines.join('\n')).toContain('dust new goal')
@@ -51,7 +51,7 @@ describe('agent command', () => {
 
     await agent(createDependencies(context, [], settings))
 
-    expect(context.stdoutLines.join('\n')).toContain('bin/dust pick task')
+    expect(context.stdoutLines.join('\n')).toContain('bin/dust next')
   })
 })
 

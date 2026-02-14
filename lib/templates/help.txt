@@ -10,12 +10,10 @@ Commands:
   ideas             List ideas (vague proposals, convert to tasks when ready)
   goals             List goals (guiding principles, stable, rarely change)
   facts             List facts (documentation of current system state)
-  next              Show tasks ready to work on (not blocked)
+  next              Pick the next task to work on
   check             Run project-defined quality gate hook
   agent             Agent greeting and routing instructions
   focus             Declare current objective (for remote session tracking)
-  pick task         Pick the next task to work on
-  implement task    Implement a task
   new task          Create a new task
   new goal          Create a new goal
   new idea          Create a new idea

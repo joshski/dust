@@ -16,6 +16,7 @@ import type {
   CommandResult,
   FileSystem,
 } from '../types'
+import { templateVariables } from './agent-shared'
 
 function extractBlockedBy(content: string): string[] {
   // Find the "## Blocked By" section
@@ -134,7 +135,7 @@ export function printTaskList(
 export async function next(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
-  const { context, fileSystem } = dependencies
+  const { context, fileSystem, settings } = dependencies
 
   const result = await findUnblockedTasks(context.cwd, fileSystem)
 
@@ -149,6 +150,11 @@ export async function next(
   }
 
   printTaskList(context, result.tasks)
+
+  const vars = templateVariables(settings, false)
+  context.stdout(
+    `Pick ONE task, read its file to understand the requirements, then run \`${vars.bin} focus "<task name>"\`.`
+  )
 
   return { exitCode: 0 }
 }

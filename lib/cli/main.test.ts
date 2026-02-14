@@ -401,23 +401,6 @@ describe('multi-word command routing', () => {
     expect(context.stdoutLines.join('\n')).toContain('Adding a New Task')
   })
 
-  test('routes pick task correctly', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: { '.dust': { tasks: { 'a.md': '# A' } } },
-    })
-
-    const result = await main({
-      commandArguments: ['pick', 'task'],
-      context,
-      fileSystem,
-      glob: fileSystem,
-    })
-
-    expect(result.exitCode).toBe(0)
-    expect(context.stdoutLines.join('\n')).toContain('Pick a Task')
-  })
-
   test('routes pre push correctly', async () => {
     stubEnv('CLAUDECODE', '1')
     const context = createContextEmulator()

@@ -463,7 +463,7 @@ describe('prePush command', () => {
       const output = context.stderrLines.join('\n')
       expect(output).toContain('Task-only commit detected')
       expect(output).toContain('.dust/tasks/new-feature.md')
-      expect(output).toContain('bin/dust implement task')
+      expect(output).toContain('bin/dust next')
     })
 
     test('fails with helpful message when task added with idea deletions', async () => {

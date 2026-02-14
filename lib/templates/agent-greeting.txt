@@ -4,7 +4,7 @@ CRITICAL: You MUST run exactly ONE of the commands below before doing anything e
 
 Determine the user's intent and run the matching command NOW:
 
-1. **Pick up work from the backlog** → `{{bin}} pick task`
+1. **Pick up work from the backlog** → `{{bin}} next`
    User wants to start working. Examples: "work", "go", "pick a task", "what's next?"
 
 2. **Implement a specific task** → `{{bin}} focus "<task name>"`

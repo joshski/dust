@@ -212,6 +212,22 @@ describe('next command', () => {
     expect(output).toContain('.dust/tasks/still-exists.md')
   })
 
+  test('instructs agent to pick one and run focus', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: { 'my-task.md': '# My Task\n\nDo the thing.' },
+        },
+      },
+    })
+
+    await next(createDependencies(context, fileSystem))
+    const output = context.stdoutLines.join('\n')
+
+    expect(output).toContain('dust focus "<task name>"')
+  })
+
   test('lists multiple unblocked tasks sorted alphabetically', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({

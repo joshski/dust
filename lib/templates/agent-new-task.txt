@@ -27,4 +27,4 @@ Use a todo list to track your progress through these steps.
     - Deletion of any ideas that were fully realized
     - Updates to any ideas whose scope changed
 {{#unless isClaudeCodeWeb}}12. Push your commit to the remote repository
-{{/unless}}{{#if isClaudeCodeWeb}}12. **Start a sub-agent** to implement the task: "Run `{{bin}} implement task` and implement the task in `.dust/tasks/[task-file].md`"{{/if}}
+{{/unless}}{{#if isClaudeCodeWeb}}12. **Start a sub-agent** to implement the task: "Run `{{bin}} next` and implement the task in `.dust/tasks/[task-file].md`"{{/if}}

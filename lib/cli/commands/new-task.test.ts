@@ -56,7 +56,7 @@ Use a todo list to track your progress through these steps.
     - The new task file
     - Deletion of any ideas that were fully realized
     - Updates to any ideas whose scope changed
-12. **Start a sub-agent** to implement the task: "Run \`dust implement task\` and implement the task in \`.dust/tasks/[task-file].md\`"
+12. **Start a sub-agent** to implement the task: "Run \`dust next\` and implement the task in \`.dust/tasks/[task-file].md\`"
 `)
 
     // Verify no stray template syntax or formatting issues

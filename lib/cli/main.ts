@@ -15,7 +15,6 @@ import { bucket } from './commands/bucket'
 import { check } from './commands/check'
 import { focus } from './commands/focus'
 import { generateHelpText, help } from './commands/help'
-import { implementTask } from './commands/implement-task'
 import { init } from './commands/init'
 import { lintMarkdown } from './commands/lint-markdown'
 import { list } from './commands/list'
@@ -24,7 +23,6 @@ import { newGoal } from './commands/new-goal'
 import { newIdea } from './commands/new-idea'
 import { newTask } from './commands/new-task'
 import { next } from './commands/next'
-import { pickTask } from './commands/pick-task'
 import { prePush } from './commands/pre-push'
 import { facts, goals, ideas, tasks } from './commands/type-list'
 import type {
@@ -60,8 +58,6 @@ export const commandRegistry = {
   'new task': newTask,
   'new goal': newGoal,
   'new idea': newIdea,
-  'implement task': implementTask,
-  'pick task': pickTask,
   'loop claude': loopClaude,
   'pre push': prePush,
   help,

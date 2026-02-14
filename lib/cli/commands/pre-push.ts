@@ -237,7 +237,7 @@ export async function prePush(
       }
       context.stderr('')
       context.stderr(
-        'Start a new sub-agent to implement the task: `bin/dust implement task`'
+        'Start a new sub-agent to implement the task: `bin/dust next`'
       )
       context.stderr('')
       return { exitCode: 1 }

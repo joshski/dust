@@ -483,7 +483,7 @@ describe('runOneIteration', () => {
 
     await runOneIteration(dependencies, loopDeps, emit)
     expect(capturedPrompt).toBe(
-      'Run `bun install && bunx dust agent && bunx dust pick task` and follow the instructions.'
+      'Run `bun install && bunx dust agent && bunx dust next` and follow the instructions.'
     )
   })
 
@@ -505,7 +505,7 @@ describe('runOneIteration', () => {
 
     await runOneIteration(dependencies, loopDeps, emit)
     expect(capturedPrompt).toBe(
-      'Run `npm install && dust agent && dust pick task` and follow the instructions.'
+      'Run `npm install && dust agent && dust next` and follow the instructions.'
     )
   })
 

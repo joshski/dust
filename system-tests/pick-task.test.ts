@@ -31,20 +31,19 @@ test('agent picks task from backlog with inline task list', async () => {
     },
     handlers: [
       {
-        pattern: /Pick up work.*pick task/s,
-        getCommand: () => 'bin/dust pick task',
+        pattern: /Pick up work.*next/s,
+        getCommand: () => 'bin/dust next',
       },
       { pattern: /Add Logging/, getCommand: () => null },
     ],
   })
 
-  // pick task now includes the task list inline (no separate `next` turn)
   expect(session.turns).toHaveLength(2)
   expect(session.turns[0].command).toBe('bin/dust agent')
   expect(session.turns[0].result.exitCode).toBe(0)
-  expect(session.turns[1].command).toBe('bin/dust pick task')
+  expect(session.turns[1].command).toBe('bin/dust next')
   expect(session.turns[1].result.exitCode).toBe(0)
-  expect(session.turns[1].result.stdout).toMatch(/Pick a Task/)
+  expect(session.turns[1].result.stdout).toMatch(/Next tasks/)
   expect(session.turns[1].result.stdout).toMatch(/Add Logging/)
   expect(session.turns[1].result.stdout).toMatch(/focus/)
 })
@@ -70,8 +69,8 @@ test('agent can pick from multiple available tasks listed inline', async () => {
     },
     handlers: [
       {
-        pattern: /Pick up work.*pick task/s,
-        getCommand: () => 'bin/dust pick task',
+        pattern: /Pick up work.*next/s,
+        getCommand: () => 'bin/dust next',
       },
       { pattern: /Task C/, getCommand: () => null },
     ],
@@ -79,6 +78,6 @@ test('agent can pick from multiple available tasks listed inline', async () => {
 
   expect(session.turns).toHaveLength(2)
   expect(session.turns[0].command).toBe('bin/dust agent')
-  expect(session.turns[1].command).toBe('bin/dust pick task')
+  expect(session.turns[1].command).toBe('bin/dust next')
   expect(session.turns[1].result.stdout).toMatch(/Task A.*Task B.*Task C/s)
 })

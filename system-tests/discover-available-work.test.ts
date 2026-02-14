@@ -28,7 +28,7 @@ test('agent discovers available work through dust agent flow', async () => {
     },
     handlers: [
       {
-        pattern: /Pick up work.*pick task/s,
+        pattern: /Pick up work.*next/s,
         getCommand: () => 'bin/dust next',
       },
       { pattern: /Implement Caching/, getCommand: () => null },

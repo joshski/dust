@@ -27,7 +27,7 @@ test('agent sees only unblocked tasks when some are blocked', async () => {
     },
     handlers: [
       {
-        pattern: /Pick up work.*pick task/s,
+        pattern: /Pick up work.*next/s,
         getCommand: () => 'bin/dust next',
       },
       { pattern: /Setup Database/, getCommand: () => null },
@@ -61,7 +61,7 @@ test('blocked task becomes available when blocker is completed', async () => {
     },
     handlers: [
       {
-        pattern: /Pick up work.*pick task/s,
+        pattern: /Pick up work.*next/s,
         getCommand: () => 'bin/dust next',
       },
       { pattern: /Add User Model/, getCommand: () => null },
@@ -97,7 +97,7 @@ test('task with multiple blockers waits for all to complete', async () => {
     },
     handlers: [
       {
-        pattern: /Pick up work.*pick task/s,
+        pattern: /Pick up work.*next/s,
         getCommand: () => 'bin/dust next',
       },
       { pattern: /Setup Auth/, getCommand: () => null },
@@ -134,7 +134,7 @@ test('chain of blocked tasks shows only the first available', async () => {
     },
     handlers: [
       {
-        pattern: /Pick up work.*pick task/s,
+        pattern: /Pick up work.*next/s,
         getCommand: () => 'bin/dust next',
       },
       { pattern: /Step One/, getCommand: () => null },

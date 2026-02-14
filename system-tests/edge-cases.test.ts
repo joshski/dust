@@ -20,7 +20,7 @@ test('empty backlog shows no tasks available', async () => {
     },
     handlers: [
       {
-        pattern: /Pick up work.*pick task/s,
+        pattern: /Pick up work.*next/s,
         getCommand: () => 'bin/dust next',
       },
       // No tasks means empty output, match on exit
@@ -92,7 +92,7 @@ test('all tasks blocked shows no available work', async () => {
     },
     handlers: [
       {
-        pattern: /Pick up work.*pick task/s,
+        pattern: /Pick up work.*next/s,
         getCommand: () => 'bin/dust next',
       },
       // Only the unblocked task should appear
@@ -218,7 +218,7 @@ test('agent handles task with special characters in filename', async () => {
     },
     handlers: [
       {
-        pattern: /Pick up work.*pick task/s,
+        pattern: /Pick up work.*next/s,
         getCommand: () => 'bin/dust next',
       },
       { pattern: /Add API v2 Endpoint/, getCommand: () => null },

@@ -2,7 +2,7 @@
 
 Add a priority level (low, medium, high) to each task as a mandatory markdown element.
 
-Currently, `bin/dust pick task` displays all unblocked tasks in alphabetical order by filename. The agent then chooses which task to work on with no guidance about relative importance. A priority field would let task authors signal which work matters most, and the pick-task flow could present high-priority tasks first.
+Currently, `bin/dust next` displays all unblocked tasks in alphabetical order by filename. The agent then chooses which task to work on with no guidance about relative importance. A priority field would let task authors signal which work matters most, and the next flow could present high-priority tasks first.
 
 ## How it could work
 
@@ -39,7 +39,7 @@ New tasks start as low priority and must be explicitly promoted. This forces aut
 
 #### Affect selection (agent must pick highest priority first)
 
-The pick-task flow would only show tasks at the highest available priority level. If any high-priority tasks exist, medium and low tasks are hidden. This guarantees urgent work gets done first, but removes agent discretion. It also means a single high-priority task can starve lower-priority work indefinitely.
+The next flow would only show tasks at the highest available priority level. If any high-priority tasks exist, medium and low tasks are hidden. This guarantees urgent work gets done first, but removes agent discretion. It also means a single high-priority task can starve lower-priority work indefinitely.
 
 #### Affect display order only
 
