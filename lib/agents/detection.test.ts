@@ -2,32 +2,16 @@ import { describe, expect, test } from 'vitest'
 import { detectAgent } from './detection'
 
 describe('detectAgent', () => {
-  test('detects Claude Code Web when CLAUDECODE and CLAUDE_CODE_ENTRYPOINT=remote', () => {
-    const env = { CLAUDECODE: '1', CLAUDE_CODE_ENTRYPOINT: 'remote' }
+  test('detects Claude Code Web when CLAUDECODE and CLAUDE_CODE_REMOTE are set', () => {
+    const env = { CLAUDECODE: '1', CLAUDE_CODE_REMOTE: 'true' }
     expect(detectAgent(env)).toEqual({
       type: 'claude-code-web',
       name: 'Claude Code Web',
     })
   })
 
-  test('detects Claude Code Web when CLAUDE_CODE_ENTRYPOINT=remote_mobile', () => {
-    const env = { CLAUDECODE: '1', CLAUDE_CODE_ENTRYPOINT: 'remote_mobile' }
-    expect(detectAgent(env)).toEqual({
-      type: 'claude-code-web',
-      name: 'Claude Code Web',
-    })
-  })
-
-  test('detects Claude Code when CLAUDECODE is set without remote entrypoint', () => {
+  test('detects Claude Code when CLAUDECODE is set without CLAUDE_CODE_REMOTE', () => {
     const env = { CLAUDECODE: '1' }
-    expect(detectAgent(env)).toEqual({
-      type: 'claude-code',
-      name: 'Claude Code',
-    })
-  })
-
-  test('detects Claude Code when CLAUDECODE is set with non-remote entrypoint', () => {
-    const env = { CLAUDECODE: '1', CLAUDE_CODE_ENTRYPOINT: 'local' }
     expect(detectAgent(env)).toEqual({
       type: 'claude-code',
       name: 'Claude Code',
@@ -55,7 +39,7 @@ describe('detectAgent', () => {
   test('prioritizes Claude Code Web over Codex when all are set', () => {
     const env = {
       CLAUDECODE: '1',
-      CLAUDE_CODE_ENTRYPOINT: 'remote',
+      CLAUDE_CODE_REMOTE: 'true',
       CODEX_HOME: '/home/user/.codex',
     }
     expect(detectAgent(env)).toEqual({
