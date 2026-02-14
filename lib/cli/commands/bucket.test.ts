@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events'
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import type { WebSocketLike } from '../../bucket/events'
 import { WS_CLOSED, WS_OPEN } from '../../bucket/events'
 import {
@@ -152,7 +152,16 @@ describe('createInitialState', () => {
 })
 
 describe('getWebSocketUrl', () => {
+  const savedUrl = process.env.DUST_BUCKET_AGENT_CONNECT_URL
+
+  beforeEach(() => {
+    delete process.env.DUST_BUCKET_AGENT_CONNECT_URL
+  })
+
   afterEach(() => {
+    if (savedUrl !== undefined) {
+      process.env.DUST_BUCKET_AGENT_CONNECT_URL = savedUrl
+    }
     restoreEnv()
   })
 
@@ -315,6 +324,18 @@ describe('waitForConnection', () => {
 })
 
 describe('connectWebSocket', () => {
+  const savedUrl = process.env.DUST_BUCKET_AGENT_CONNECT_URL
+
+  beforeEach(() => {
+    delete process.env.DUST_BUCKET_AGENT_CONNECT_URL
+  })
+
+  afterEach(() => {
+    if (savedUrl !== undefined) {
+      process.env.DUST_BUCKET_AGENT_CONNECT_URL = savedUrl
+    }
+  })
+
   test('creates WebSocket with token', () => {
     const dependencies = createDependencies()
     const state = createInitialState()
