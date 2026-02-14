@@ -1,5 +1,6 @@
 import { EventEmitter } from 'node:events'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import type { AuthDependencies } from '../../bucket/auth'
 import type { WebSocketLike } from '../../bucket/events'
 import { WS_CLOSED, WS_OPEN } from '../../bucket/events'
 import {
@@ -31,6 +32,18 @@ import {
   syncUIWithRepoList,
   waitForConnection,
 } from './bucket'
+
+function createMockAuthDeps(
+  overrides: Partial<AuthDependencies> = {}
+): AuthDependencies {
+  return {
+    createServer: () => ({ port: 9999, stop: () => {} }),
+    openBrowser: () => {},
+    getHomeDir: () => '/home',
+    fileSystem: createFileSystemEmulator(),
+    ...overrides,
+  }
+}
 
 function createDependencies(): CommandDependencies {
   const context = createContextEmulator()
@@ -82,6 +95,7 @@ function createBucketDependencies(
     isTTY: false,
     sleep: () => Promise.resolve(),
     getTempDir: () => '/tmp',
+    auth: createMockAuthDeps(),
     ...overrides,
   }
 }
@@ -895,19 +909,116 @@ describe('shutdown', () => {
 })
 
 describe('bucket', () => {
-  test('returns error when token is missing', async () => {
+  test('uses stored credential when available', async () => {
+    const dependencies = createDependencies()
+    let capturedToken: string | undefined
+
+    const authFs = createFileSystemEmulator({
+      home: { '.dust': { 'credentials.json': '{"token":"stored-tok"}' } },
+    })
+
+    const bucketDependencies = createBucketDependencies({
+      auth: createMockAuthDeps({ fileSystem: authFs }),
+      createWebSocket: (_url, token) => {
+        capturedToken = token
+        return createAutoConnectWebSocket()
+      },
+      setupKeypress: onKey => {
+        setTimeout(() => onKey('q'), 10)
+        return () => {}
+      },
+    })
+
+    await bucket(dependencies, bucketDependencies)
+
+    expect(capturedToken).toBe('stored-tok')
+  })
+
+  test('runs browser auth when no token and no stored credential', async () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    let capturedToken: string | undefined
+
+    const bucketDependencies = createBucketDependencies({
+      auth: createMockAuthDeps({
+        createServer: handler => {
+          setTimeout(() => {
+            handler(
+              new Request('http://localhost:9999/callback?token=browser-tok')
+            )
+          }, 0)
+          return { port: 9999, stop: () => {} }
+        },
+      }),
+      createWebSocket: (_url, token) => {
+        capturedToken = token
+        return createAutoConnectWebSocket()
+      },
+      setupKeypress: onKey => {
+        setTimeout(() => onKey('q'), 10)
+        return () => {}
+      },
+    })
+
+    await bucket(dependencies, bucketDependencies)
+
+    expect(capturedToken).toBe('browser-tok')
+    expect(context.stdoutLines.join('\n')).toContain('Opening browser')
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Authenticated successfully'
+    )
+  })
+
+  test('stores token after browser auth', async () => {
+    const dependencies = createDependencies()
+    const authFs = createFileSystemEmulator()
+
+    const bucketDependencies = createBucketDependencies({
+      auth: createMockAuthDeps({
+        fileSystem: authFs,
+        createServer: handler => {
+          setTimeout(() => {
+            handler(new Request('http://localhost:9999/callback?token=new-tok'))
+          }, 0)
+          return { port: 9999, stop: () => {} }
+        },
+      }),
+      setupKeypress: onKey => {
+        setTimeout(() => onKey('q'), 10)
+        return () => {}
+      },
+    })
+
+    await bucket(dependencies, bucketDependencies)
+
+    expect(authFs.writtenFiles.get('/home/.dust/credentials.json')).toBe(
+      '{"token":"new-tok"}'
+    )
+  })
+
+  test('returns error when browser auth fails', async () => {
     const dependencies = createDependencies()
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
 
-    const result = await bucket(dependencies, createBucketDependencies())
+    const bucketDependencies = createBucketDependencies({
+      auth: createMockAuthDeps({
+        createServer: () => {
+          throw new Error('Cannot start server')
+        },
+      }),
+    })
+
+    const result = await bucket(dependencies, bucketDependencies)
 
     expect(result.exitCode).toBe(1)
-    expect(context.stderrLines.join('\n')).toContain('Missing required <token>')
+    expect(context.stderrLines.join('\n')).toContain('Authentication failed')
   })
 
-  test('connects to WebSocket with provided token', async () => {
+  test('connects to WebSocket with provided token argument', async () => {
     const dependencies = createDependencies()
     dependencies.arguments = ['my-secret-token']
     let capturedToken: string | undefined
@@ -948,6 +1059,31 @@ describe('bucket', () => {
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain('Failed to connect')
     expect(context.stderrLines.join('\n')).toContain('Connection refused')
+  })
+
+  test('clears stored credential on 401-like close code', async () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const authFs = createFileSystemEmulator({
+      home: { '.dust': { 'credentials.json': '{"token":"bad-tok"}' } },
+    })
+
+    const ws = createMockWebSocket()
+    const bucketDependencies = createBucketDependencies({
+      auth: createMockAuthDeps({ fileSystem: authFs }),
+      createWebSocket: () => {
+        setTimeout(() => ws.onclose?.({ code: 1008, reason: '' }), 0)
+        return ws
+      },
+    })
+
+    const result = await bucket(dependencies, bucketDependencies)
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('Token rejected')
+    expect(authFs.writtenFiles.get('/home/.dust/credentials.json')).toBe('{}')
   })
 
   test('exits on q keypress', async () => {

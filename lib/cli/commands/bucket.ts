@@ -1,21 +1,30 @@
 /**
- * dust bucket <token> - Entry point for dustbucket connection
+ * dust bucket - Entry point for dustbucket connection
  *
  * Connects to dustbucket via WebSocket, manages repository loops directly
  * in-process (single-process architecture). Each repository gets cloned,
  * synced, and runs dust loops concurrently.
  *
- * Usage: dust bucket <token>
- * - token: Authentication token for dustbucket
+ * Usage: dust bucket
+ * On first run, opens a browser to authenticate with dustbucket.
+ * Credentials are stored in ~/.dust/credentials.json for subsequent runs.
  *
  * Environment:
+ * - DUST_BUCKET_HOST: Override dustbucket host for auth (default: https://dustbucket.com)
  * - DUST_BUCKET_AGENT_CONNECT_URL: Override WebSocket URL (default: wss://dustbucket.com/agent/connect)
  *
  * Exit: Press 'q' or Ctrl+C to gracefully shutdown
  */
 
 import { spawn as nodeSpawn } from 'node:child_process'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
+import {
+  type AuthDependencies,
+  authenticate,
+  clearToken,
+  loadStoredToken,
+  storeToken,
+} from '../../bucket/auth'
 import {
   type BucketEmitFn,
   createEventMessageSender,
@@ -66,6 +75,7 @@ export interface BucketDependencies {
   isTTY: boolean
   sleep: (ms: number) => Promise<void>
   getTempDir: () => string
+  auth: AuthDependencies
 }
 
 /* v8 ignore start - thin wrapper around native WebSocket */
@@ -151,7 +161,51 @@ function defaultWriteStdout(data: string): void {
 }
 /* v8 ignore stop */
 
+/* v8 ignore start - thin wrappers around native functions */
+function defaultCreateServer(handler: (request: Request) => Response): {
+  port: number
+  stop: () => void
+} {
+  const server = Bun.serve({
+    port: 0,
+    fetch: handler,
+  })
+  return { port: server.port ?? 0, stop: () => server.stop() }
+}
+
+function defaultOpenBrowser(url: string): void {
+  const cmd = process.platform === 'darwin' ? 'open' : 'xdg-open'
+  nodeSpawn(cmd, [url], { stdio: 'ignore', detached: true }).unref()
+}
+/* v8 ignore stop */
+
 export function createDefaultBucketDependencies(): BucketDependencies {
+  const authFileSystem: FileSystem = {
+    exists: (path: string) => {
+      try {
+        const file = Bun.file(path)
+        return file.size > 0
+      } catch {
+        return false
+      }
+    },
+    readFile: (path: string) => Bun.file(path).text(),
+    writeFile: (path: string, content: string) =>
+      Bun.write(path, content).then(() => {}),
+    mkdir: (path: string, options?: { recursive?: boolean }) => {
+      const { mkdir } = require('node:fs/promises')
+      return mkdir(path, options)
+    },
+    readdir: (path: string) => {
+      const { readdir } = require('node:fs/promises')
+      return readdir(path)
+    },
+    chmod: (path: string, mode: number) => {
+      const { chmod } = require('node:fs/promises')
+      return chmod(path, mode)
+    },
+  }
+
   return {
     spawn: nodeSpawn,
     createWebSocket: defaultCreateWebSocket,
@@ -165,6 +219,12 @@ export function createDefaultBucketDependencies(): BucketDependencies {
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
     getTempDir: () => tmpdir(),
     /* v8 ignore stop */
+    auth: {
+      createServer: defaultCreateServer,
+      openBrowser: defaultOpenBrowser,
+      getHomeDir: () => homedir(),
+      fileSystem: authFileSystem,
+    },
   }
 }
 
@@ -581,16 +641,46 @@ export function createKeypressHandler(
   }
 }
 
+async function resolveToken(
+  commandArgs: string[],
+  authDeps: AuthDependencies,
+  context: CommandDependencies['context']
+): Promise<string | null> {
+  // 1. Explicit token argument (backward compat)
+  if (commandArgs[0]) {
+    return commandArgs[0]
+  }
+
+  // 2. Stored credential
+  const stored = await loadStoredToken(
+    authDeps.fileSystem,
+    authDeps.getHomeDir()
+  )
+  if (stored) {
+    return stored
+  }
+
+  // 3. Browser auth flow
+  context.stdout('Opening browser to authenticate with dustbucket...')
+  try {
+    const token = await authenticate(authDeps)
+    await storeToken(authDeps.fileSystem, authDeps.getHomeDir(), token)
+    context.stdout('Authenticated successfully')
+    return token
+  } catch (error) {
+    context.stderr(`Authentication failed: ${(error as Error).message}`)
+    return null
+  }
+}
+
 export async function bucket(
   dependencies: CommandDependencies,
   bucketDeps: BucketDependencies = createDefaultBucketDependencies()
 ): Promise<CommandResult> {
   const { arguments: commandArgs, context, fileSystem } = dependencies
-  const token = commandArgs[0]
 
+  const token = await resolveToken(commandArgs, bucketDeps.auth, context)
   if (!token) {
-    context.stderr('Usage: dust bucket <token>')
-    context.stderr('Missing required <token> argument')
     return { exitCode: 1 }
   }
 
@@ -602,7 +692,17 @@ export async function bucket(
   try {
     initialWs = await waitForConnection(token, bucketDeps)
   } catch (error) {
-    context.stderr(`Failed to connect: ${(error as Error).message}`)
+    // On 401-like failures, clear stored credential and suggest re-auth
+    if (
+      (error as Error).message.includes('1008') ||
+      (error as Error).message.includes('401')
+    ) {
+      context.stderr('Token rejected. Clearing stored credentials...')
+      await clearToken(bucketDeps.auth.fileSystem, bucketDeps.auth.getHomeDir())
+      context.stderr('Run `dust bucket` again to re-authenticate.')
+    } else {
+      context.stderr(`Failed to connect: ${(error as Error).message}`)
+    }
     return { exitCode: 1 }
   }
 
