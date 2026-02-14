@@ -54,8 +54,7 @@ Use a todo list to track your progress through these steps.
 10. Run \`dust lint markdown\` to catch any issues with the task format
 11. Create a single atomic commit with a message in the format "Add task: <title>" that includes:
     - The new task file
-    - Deletion of any ideas that were fully realized
-    - Updates to any ideas whose scope changed
+    - Deletion of the idea file that spawned this task (if remaining scope exists, create new ideas for it)
 12. **Start a sub-agent** to implement the task: "Run \`dust implement task\` and implement the task in \`.dust/tasks/[task-file].md\`"
 `)
 

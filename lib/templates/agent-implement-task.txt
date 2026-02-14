@@ -12,7 +12,7 @@
    - All implementation changes
    - Deletion of the completed task file
    - Updates to any facts that changed
-   - Deletion of any ideas that were fully realized
+   - Deletion of the idea file that spawned this task (if remaining scope exists, create new ideas for it)
 
    Use the task title as the commit message. Task titles are written in imperative form, which is the recommended style for git commit messages. Do not add prefixes like "Complete task:" - use the title directly.
 
