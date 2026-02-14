@@ -5,8 +5,10 @@ The `dust init` command adds an instruction to both `AGENTS.md` and `CLAUDE.md` 
 The instruction it adds (creating the files if needed):
 
 ```markdown
-Always immediately run `npx dust agent` when you start working in this repository.
+Always immediately run `<dustCommand> agent` when you start working in this repository.
 ```
+
+Where `<dustCommand>` is dynamically detected based on the project's package manager (`npx dust`, `bunx dust`, or `pnpx dust`). See [Configuration System](./configuration-system.md).
 
 The `dust agent` command guides agents to available tasks and project context.
 
