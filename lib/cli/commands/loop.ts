@@ -17,6 +17,7 @@
  */
 
 import { spawn as nodeSpawn } from 'node:child_process'
+import { type EventMessage, mapToAgentEvent } from '../../agent-events'
 import { run as claudeRun } from '../../claude/run'
 import type { CommandDependencies, CommandResult } from '../types'
 import { next } from './next'
@@ -128,17 +129,9 @@ export function formatEvent(event: DustWireEvent): string | null {
   }
 }
 
-// Wire format for HTTP POST (dust event protocol)
-export interface EventPayload {
-  sequence: number
-  timestamp: string
-  sessionId: string
-  agentType?: string
-  agentSessionId?: string
-  event: DustWireEvent
-}
+export type { AgentSessionEvent, EventMessage } from '../../agent-events'
 
-export type PostEventFn = (url: string, payload: EventPayload) => Promise<void>
+export type PostEventFn = (url: string, payload: EventMessage) => Promise<void>
 
 export interface LoopDependencies {
   spawn: typeof nodeSpawn
@@ -150,7 +143,7 @@ export interface LoopDependencies {
 /* v8 ignore start - thin wrapper around fetch, tested via integration */
 async function defaultPostEvent(
   url: string,
-  payload: EventPayload
+  payload: EventMessage
 ): Promise<void> {
   await fetch(url, {
     method: 'POST',
@@ -174,28 +167,30 @@ export function createEventPoster(
   sessionId: string,
   postEvent: PostEventFn,
   onError: (error: unknown) => void,
-  getAgentSessionId?: () => string | undefined
+  getAgentSessionId?: () => string | undefined,
+  repository = ''
 ): EmitFn {
   let sequence = 0
 
   return (event: DustWireEvent) => {
     if (!eventsUrl) return
+
+    const agentEvent = mapToAgentEvent(event)
+    if (!agentEvent) return
+
     sequence++
 
-    const payload: EventPayload = {
+    const payload: EventMessage = {
       sequence,
       timestamp: new Date().toISOString(),
       sessionId,
-      event,
+      repository,
+      event: agentEvent,
     }
 
-    // Include agent info for claude.* events
-    if (event.type.startsWith('claude.')) {
-      payload.agentType = 'claude'
-      const agentSessionId = getAgentSessionId?.()
-      if (agentSessionId) {
-        payload.agentSessionId = agentSessionId
-      }
+    const agentSessionId = getAgentSessionId?.()
+    if (agentSessionId) {
+      payload.agentSessionId = agentSessionId
     }
 
     postEvent(eventsUrl, payload).catch(onError)
@@ -326,7 +321,7 @@ Make sure the repository is in a clean state and synced with remote before finis
   emit({ type: 'claude.started' })
 
   const { dustCommand, installCommand = 'npm install' } = dependencies.settings
-  const prompt = `Run \`${installCommand} && ${dustCommand} agent && ${dustCommand} next\` and follow the instructions.`
+  const prompt = `Run \`${installCommand} && ${dustCommand} agent && ${dustCommand} pick task\` and follow the instructions.`
 
   try {
     await run(prompt, {

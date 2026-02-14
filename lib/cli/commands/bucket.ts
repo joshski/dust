@@ -18,8 +18,9 @@ import { spawn as nodeSpawn } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import {
   type BucketEmitFn,
-  createBucketEventEmitter,
+  createEventMessageSender,
   formatBucketEvent,
+  type SendEventFn,
   type WebSocketLike,
   WS_OPEN,
 } from '../../bucket/events'
@@ -173,6 +174,7 @@ export interface BucketState {
   shuttingDown: boolean
   sessionId: string
   emit: BucketEmitFn
+  sendEvent: SendEventFn
   ui: TerminalUIState
   logBuffers: Map<string, LogBuffer>
 }
@@ -188,10 +190,11 @@ export function createInitialState(): BucketState {
     shuttingDown: false,
     sessionId,
     emit: () => {},
+    sendEvent: () => {},
     ui: createTerminalUIState(),
     logBuffers: new Map(),
   }
-  state.emit = createBucketEventEmitter(() => state.ws, sessionId)
+  state.sendEvent = createEventMessageSender(() => state.ws)
   // Register system buffer so connection messages appear in the "All" TUI view
   state.logBuffers.set('system', systemBuffer)
   addRepoToUI(state.ui, 'system', systemBuffer)

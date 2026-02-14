@@ -1,9 +1,11 @@
 /**
- * Bucket event types and WebSocket event emission.
+ * Bucket event types and WebSocket event sending.
  *
- * Defines the event schema for dustbucket communication and provides
- * helpers for formatting events and sending them over WebSocket.
+ * BucketEvent types are local-only (UI lifecycle). Wire events use
+ * EventMessage from agent-events.ts and are sent via createEventMessageSender.
  */
+
+import type { EventMessage } from '../agent-events'
 
 // WebSocket readyState constants
 export const WS_CONNECTING = 0
@@ -21,7 +23,7 @@ export interface WebSocketLike {
   readyState: number
 }
 
-// Bucket-specific event types
+// Local-only bucket event types (UI lifecycle, never sent over wire)
 export interface BucketConnectedEvent {
   type: 'bucket.connected'
 }
@@ -42,29 +44,10 @@ export interface BucketRepositoryRemovedEvent {
   repository: string
 }
 
-export interface BucketIterationStartedEvent {
-  type: 'bucket.iteration_started'
-  repository: string
-}
-
-export interface BucketIterationCompletedEvent {
-  type: 'bucket.iteration_completed'
-  repository: string
-  success: boolean
-  error?: string
-}
-
 export interface BucketErrorEvent {
   type: 'bucket.error'
   repository?: string
   error: string
-}
-
-export interface BucketRepositorySessionEvent {
-  type: 'bucket.repository_session_event'
-  repository: string
-  agentSessionId?: string
-  event: { type: string; [key: string]: unknown }
 }
 
 export type BucketEvent =
@@ -72,22 +55,11 @@ export type BucketEvent =
   | BucketDisconnectedEvent
   | BucketRepositoryAddedEvent
   | BucketRepositoryRemovedEvent
-  | BucketIterationStartedEvent
-  | BucketIterationCompletedEvent
   | BucketErrorEvent
-  | BucketRepositorySessionEvent
-
-export interface BucketEventPayload {
-  type: BucketEvent['type']
-  timestamp: string
-  sessionId: string
-  sequence: number
-  repository?: string
-  agentSessionId?: string
-  details?: unknown
-}
 
 export type BucketEmitFn = (event: BucketEvent) => void
+
+export type SendEventFn = (msg: EventMessage) => void
 
 // Format event for console output
 export function formatBucketEvent(event: BucketEvent): string {
@@ -100,61 +72,22 @@ export function formatBucketEvent(event: BucketEvent): string {
       return `Added repository: ${event.repository}`
     case 'bucket.repository_removed':
       return `Removed repository: ${event.repository}`
-    case 'bucket.iteration_started':
-      return `Starting iteration for ${event.repository}`
-    case 'bucket.iteration_completed':
-      return event.success
-        ? `Completed iteration for ${event.repository}`
-        : `Iteration failed for ${event.repository}: ${event.error}`
     case 'bucket.error':
       return event.repository
         ? `Error for ${event.repository}: ${event.error}`
         : `Error: ${event.error}`
-    case 'bucket.repository_session_event':
-      return `[${event.repository}] ${event.event.type}`
   }
 }
 
-// Create an event emitter that sends events via WebSocket
-export function createBucketEventEmitter(
-  getWebSocket: () => WebSocketLike | null,
-  sessionId: string
-): BucketEmitFn {
-  let sequence = 0
-
-  return (event: BucketEvent) => {
-    sequence++
-
-    const payload: BucketEventPayload = {
-      type: event.type,
-      timestamp: new Date().toISOString(),
-      sessionId,
-      sequence,
-    }
-
-    // Add repository field for repo-specific events
-    if ('repository' in event && event.repository) {
-      payload.repository = event.repository
-    }
-
-    // Add details for events with extra data
-    if (event.type === 'bucket.disconnected') {
-      payload.details = { code: event.code, reason: event.reason }
-    } else if (event.type === 'bucket.iteration_completed') {
-      payload.details = { success: event.success, error: event.error }
-    } else if (event.type === 'bucket.error') {
-      payload.details = { error: event.error }
-    } else if (event.type === 'bucket.repository_session_event') {
-      payload.details = { event: event.event }
-      if (event.agentSessionId) {
-        payload.agentSessionId = event.agentSessionId
-      }
-    }
-
+// Create a sender that serializes EventMessage and sends via WebSocket
+export function createEventMessageSender(
+  getWebSocket: () => WebSocketLike | null
+): SendEventFn {
+  return (msg: EventMessage) => {
     const ws = getWebSocket()
     if (ws && ws.readyState === WS_OPEN) {
       try {
-        ws.send(JSON.stringify(payload))
+        ws.send(JSON.stringify(msg))
       } catch {
         // Fire-and-forget: ignore send errors
       }

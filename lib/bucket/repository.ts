@@ -8,6 +8,8 @@
 import { spawn as nodeSpawn } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import type { EventMessage } from '../agent-events'
+import { mapToAgentEvent } from '../agent-events'
 import {
   run as claudeRun,
   defaultRunnerDependencies,
@@ -27,8 +29,8 @@ import {
   type BucketErrorEvent,
   type BucketRepositoryAddedEvent,
   type BucketRepositoryRemovedEvent,
-  type BucketRepositorySessionEvent,
   formatBucketEvent,
+  type SendEventFn,
 } from './events'
 import {
   appendLogLine,
@@ -58,6 +60,8 @@ export interface RepositoryManager {
   repositories: Map<string, RepositoryState>
   logBuffers: Map<string, LogBuffer>
   emit: BucketEmitFn
+  sendEvent: SendEventFn
+  sessionId: string
 }
 
 export interface RepositoryDependencies {
@@ -197,7 +201,8 @@ function createNoOpGlobScanner() {
 export async function runRepositoryLoop(
   repoState: RepositoryState,
   repoDeps: RepositoryDependencies,
-  emit?: BucketEmitFn
+  sendEvent?: SendEventFn,
+  sessionId?: string
 ): Promise<void> {
   const { spawn, run, fileSystem, sleep } = repoDeps
   const repoName = repoState.repository.name
@@ -262,8 +267,9 @@ export async function runRepositoryLoop(
 
   // Track agent session ID per iteration (like loopClaude does for the HTTP path)
   let agentSessionId: string | undefined
+  let sequence = 0
 
-  // Map DustWireEvents to bucket events and log output
+  // Map DustWireEvents to bucket events, log output, and send over WebSocket
   const loopEmit: EmitFn = (event: DustWireEvent) => {
     // Log formatted event to the repo's log buffer
     const formatted = formatEvent(event)
@@ -271,16 +277,22 @@ export async function runRepositoryLoop(
       appendLogLine(repoState.logBuffer, createLogLine(formatted, 'stdout'))
     }
 
-    // Forward all session events over WebSocket
-    const sessionEvent: BucketRepositorySessionEvent = {
-      type: 'bucket.repository_session_event',
-      repository: repoName,
-      event: event as { type: string; [key: string]: unknown },
+    // Send agent session events over WebSocket
+    const agentEvent = mapToAgentEvent(event)
+    if (agentEvent && sendEvent && sessionId) {
+      sequence++
+      const msg: EventMessage = {
+        sequence,
+        timestamp: new Date().toISOString(),
+        sessionId,
+        repository: repoName,
+        event: agentEvent,
+      }
+      if (agentSessionId) {
+        msg.agentSessionId = agentSessionId
+      }
+      sendEvent(msg)
     }
-    if (agentSessionId && event.type.startsWith('claude.')) {
-      sessionEvent.agentSessionId = agentSessionId
-    }
-    emit?.(sessionEvent)
   }
 
   while (!repoState.stopRequested) {
@@ -363,7 +375,12 @@ export async function addRepository(
   manager.emit(addedEvent)
   context.stdout(formatBucketEvent(addedEvent))
 
-  repoState.loopPromise = runRepositoryLoop(repoState, repoDeps, manager.emit)
+  repoState.loopPromise = runRepositoryLoop(
+    repoState,
+    repoDeps,
+    manager.sendEvent,
+    manager.sessionId
+  )
 }
 
 /**

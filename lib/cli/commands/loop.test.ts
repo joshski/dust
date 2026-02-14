@@ -11,7 +11,7 @@ import {
   createEventPoster,
   type DustWireEvent,
   type EmitFn,
-  type EventPayload,
+  type EventMessage,
   formatEvent,
   gitPull,
   hasAvailableTasks,
@@ -113,9 +113,9 @@ describe('createEventPoster', () => {
     expect(postCalled).toBe(false)
   })
 
-  test('posts event with sessionId, sequence number and timestamp', async () => {
-    const postedEvents: EventPayload[] = []
-    const postEvent = async (_url: string, payload: EventPayload) => {
+  test('does not post loop.* events (only agent session events)', async () => {
+    const postedEvents: EventMessage[] = []
+    const postEvent = async (_url: string, payload: EventMessage) => {
       postedEvents.push(payload)
     }
     const emit = createEventPoster(
@@ -127,21 +127,12 @@ describe('createEventPoster', () => {
     emit({ type: 'loop.syncing' })
     emit({ type: 'loop.started', maxIterations: 5 })
     await Promise.resolve()
-    expect(postedEvents).toHaveLength(2)
-    expect(postedEvents[0].sequence).toBe(1)
-    expect(postedEvents[0].sessionId).toBe(testSessionId)
-    expect(postedEvents[0].event.type).toBe('loop.syncing')
-    expect(postedEvents[1].sequence).toBe(2)
-    expect(postedEvents[1].sessionId).toBe(testSessionId)
-    expect(postedEvents[1].event.type).toBe('loop.started')
-    expect(
-      (postedEvents[1].event as { maxIterations: number }).maxIterations
-    ).toBe(5)
+    expect(postedEvents).toHaveLength(0)
   })
 
-  test('includes ISO timestamp in posted events', async () => {
-    const postedEvents: EventPayload[] = []
-    const postEvent = async (_url: string, payload: EventPayload) => {
+  test('posts agent session events with sessionId, sequence number and timestamp', async () => {
+    const postedEvents: EventMessage[] = []
+    const postEvent = async (_url: string, payload: EventMessage) => {
       postedEvents.push(payload)
     }
     const emit = createEventPoster(
@@ -150,42 +141,39 @@ describe('createEventPoster', () => {
       postEvent,
       () => {}
     )
-    emit({ type: 'loop.syncing' })
+    emit({ type: 'claude.started' })
+    emit({ type: 'claude.ended', success: true })
+    await Promise.resolve()
+    expect(postedEvents).toHaveLength(2)
+    expect(postedEvents[0].sequence).toBe(1)
+    expect(postedEvents[0].sessionId).toBe(testSessionId)
+    expect(postedEvents[0].event.type).toBe('agent-session-started')
+    expect(postedEvents[1].sequence).toBe(2)
+    expect(postedEvents[1].sessionId).toBe(testSessionId)
+    expect(postedEvents[1].event.type).toBe('agent-session-ended')
+  })
+
+  test('includes ISO timestamp in posted events', async () => {
+    const postedEvents: EventMessage[] = []
+    const postEvent = async (_url: string, payload: EventMessage) => {
+      postedEvents.push(payload)
+    }
+    const emit = createEventPoster(
+      'http://example.com',
+      testSessionId,
+      postEvent,
+      () => {}
+    )
+    emit({ type: 'claude.started' })
     await Promise.resolve()
     expect(postedEvents[0].timestamp).toMatch(
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/
     )
   })
 
-  test('includes agentType for claude events', async () => {
-    const postedEvents: EventPayload[] = []
-    const postEvent = async (_url: string, payload: EventPayload) => {
-      postedEvents.push(payload)
-    }
-    const emit = createEventPoster(
-      'http://example.com',
-      testSessionId,
-      postEvent,
-      () => {}
-    )
-    emit({ type: 'loop.tasks_found' })
-    emit({ type: 'claude.started' })
-    emit({ type: 'claude.ended', success: true })
-    await Promise.resolve()
-
-    // loop.tasks_found should not have agent info
-    expect(postedEvents[0].agentType).toBeUndefined()
-
-    // claude.started should have agentType
-    expect(postedEvents[1].agentType).toBe('claude')
-
-    // claude.ended should have agentType
-    expect(postedEvents[2].agentType).toBe('claude')
-  })
-
-  test('includes agentSessionId for claude events when getter returns a value', async () => {
-    const postedEvents: EventPayload[] = []
-    const postEvent = async (_url: string, payload: EventPayload) => {
+  test('includes agentSessionId for all agent events when getter returns a value', async () => {
+    const postedEvents: EventMessage[] = []
+    const postEvent = async (_url: string, payload: EventMessage) => {
       postedEvents.push(payload)
     }
     const emit = createEventPoster(
@@ -195,22 +183,18 @@ describe('createEventPoster', () => {
       () => {},
       () => 'claude-session-abc'
     )
-    emit({ type: 'loop.tasks_found' })
     emit({ type: 'claude.started' })
     emit({ type: 'claude.ended', success: true })
     await Promise.resolve()
 
-    // loop event should not have agentSessionId
-    expect(postedEvents[0].agentSessionId).toBeUndefined()
-
-    // claude events should have agentSessionId
+    // All agent events should have agentSessionId
+    expect(postedEvents[0].agentSessionId).toBe('claude-session-abc')
     expect(postedEvents[1].agentSessionId).toBe('claude-session-abc')
-    expect(postedEvents[2].agentSessionId).toBe('claude-session-abc')
   })
 
   test('does not include agentSessionId when getter returns undefined', async () => {
-    const postedEvents: EventPayload[] = []
-    const postEvent = async (_url: string, payload: EventPayload) => {
+    const postedEvents: EventMessage[] = []
+    const postEvent = async (_url: string, payload: EventMessage) => {
       postedEvents.push(payload)
     }
     const emit = createEventPoster(
@@ -239,7 +223,7 @@ describe('createEventPoster', () => {
         errors.push(error)
       }
     )
-    emit({ type: 'loop.syncing' })
+    emit({ type: 'claude.started' })
     await Promise.resolve()
     await Promise.resolve()
     expect(errors).toHaveLength(1)
@@ -499,7 +483,7 @@ describe('runOneIteration', () => {
 
     await runOneIteration(dependencies, loopDeps, emit)
     expect(capturedPrompt).toBe(
-      'Run `bun install && bunx dust agent && bunx dust next` and follow the instructions.'
+      'Run `bun install && bunx dust agent && bunx dust pick task` and follow the instructions.'
     )
   })
 
@@ -521,7 +505,7 @@ describe('runOneIteration', () => {
 
     await runOneIteration(dependencies, loopDeps, emit)
     expect(capturedPrompt).toBe(
-      'Run `npm install && dust agent && dust next` and follow the instructions.'
+      'Run `npm install && dust agent && dust pick task` and follow the instructions.'
     )
   })
 
@@ -1026,7 +1010,7 @@ describe('loopClaude', () => {
       dustCommand: 'dust',
       eventsUrl: 'http://example.com/events',
     }
-    const postedEvents: { url: string; payload: EventPayload }[] = []
+    const postedEvents: { url: string; payload: EventMessage }[] = []
     const loopDeps = createLoopDeps({
       run: async () => {},
       postEvent: async (url, payload) => {
@@ -1036,22 +1020,22 @@ describe('loopClaude', () => {
 
     await loopClaude(dependencies, loopDeps)
 
+    // Only agent session events are posted (loop.* events are filtered out)
     expect(postedEvents.length).toBeGreaterThan(0)
     expect(postedEvents[0].url).toBe('http://example.com/events')
     expect(postedEvents[0].payload.sequence).toBe(1)
-    expect(postedEvents[0].payload.event.type).toBe('loop.warning')
-    expect(postedEvents[1].payload.sequence).toBe(2)
-    expect(postedEvents[1].payload.event.type).toBe('loop.started')
+    expect(postedEvents[0].payload.event.type).toBe('agent-session-started')
 
-    // Check for claude.started and claude.ended events
-    const claudeStarted = postedEvents.find(
-      event => event.payload.event.type === 'claude.started'
+    const sessionEnded = postedEvents.find(
+      event => event.payload.event.type === 'agent-session-ended'
     )
-    const claudeEnded = postedEvents.find(
-      event => event.payload.event.type === 'claude.ended'
+    expect(sessionEnded).toBeDefined()
+
+    // Verify no loop.* events were posted
+    const loopEvents = postedEvents.filter(event =>
+      event.payload.event.type.startsWith('loop.')
     )
-    expect(claudeStarted).toBeDefined()
-    expect(claudeEnded).toBeDefined()
+    expect(loopEvents).toHaveLength(0)
   })
 
   test('does not post events when eventsUrl is not configured', async () => {
@@ -1175,7 +1159,7 @@ describe('loopClaude', () => {
       dustCommand: 'dust',
       eventsUrl: 'http://example.com/events',
     }
-    const postedEvents: { url: string; payload: EventPayload }[] = []
+    const postedEvents: { url: string; payload: EventMessage }[] = []
     const loopDeps = createLoopDeps({
       run: async (_prompt, options) => {
         const onRawEvent = (
@@ -1193,11 +1177,11 @@ describe('loopClaude', () => {
 
     await loopClaude(dependencies, loopDeps)
 
-    // claude.ended is emitted after run completes, so it should have the agentSessionId
-    const claudeEnded = postedEvents.find(
-      e => e.payload.event.type === 'claude.ended'
+    // agent-session-ended is emitted after run completes, so it should have the agentSessionId
+    const sessionEnded = postedEvents.find(
+      e => e.payload.event.type === 'agent-session-ended'
     )
-    expect(claudeEnded?.payload.agentSessionId).toBe('claude-session-xyz')
+    expect(sessionEnded?.payload.agentSessionId).toBe('claude-session-xyz')
   })
 
   test('resets agentSessionId between iterations', async () => {
@@ -1213,7 +1197,7 @@ describe('loopClaude', () => {
       dustCommand: 'dust',
       eventsUrl: 'http://example.com/events',
     }
-    const postedEvents: { url: string; payload: EventPayload }[] = []
+    const postedEvents: { url: string; payload: EventMessage }[] = []
     let runCount = 0
     const loopDeps = createLoopDeps({
       run: async (_prompt, options) => {
@@ -1236,25 +1220,25 @@ describe('loopClaude', () => {
 
     await loopClaude(dependencies, loopDeps)
 
-    // Find claude.started events (there should be 2, one per iteration)
-    const claudeStartedEvents = postedEvents.filter(
-      e => e.payload.event.type === 'claude.started'
+    // Find agent-session-started events (there should be 2, one per iteration)
+    const sessionStartedEvents = postedEvents.filter(
+      e => e.payload.event.type === 'agent-session-started'
     )
-    expect(claudeStartedEvents).toHaveLength(2)
+    expect(sessionStartedEvents).toHaveLength(2)
 
-    // First iteration's claude.started won't have agentSessionId (it's emitted before run)
-    expect(claudeStartedEvents[0].payload.agentSessionId).toBeUndefined()
-    // Second iteration's claude.started also won't have it (reset between iterations)
-    expect(claudeStartedEvents[1].payload.agentSessionId).toBeUndefined()
+    // First iteration's agent-session-started won't have agentSessionId (it's emitted before run)
+    expect(sessionStartedEvents[0].payload.agentSessionId).toBeUndefined()
+    // Second iteration's agent-session-started also won't have it (reset between iterations)
+    expect(sessionStartedEvents[1].payload.agentSessionId).toBeUndefined()
 
-    // First iteration's claude.ended should have session-1
-    const claudeEndedEvents = postedEvents.filter(
-      e => e.payload.event.type === 'claude.ended'
+    // First iteration's agent-session-ended should have session-1
+    const sessionEndedEvents = postedEvents.filter(
+      e => e.payload.event.type === 'agent-session-ended'
     )
-    expect(claudeEndedEvents).toHaveLength(2)
-    expect(claudeEndedEvents[0].payload.agentSessionId).toBe('session-1')
-    // Second iteration's claude.ended should NOT have agentSessionId
-    expect(claudeEndedEvents[1].payload.agentSessionId).toBeUndefined()
+    expect(sessionEndedEvents).toHaveLength(2)
+    expect(sessionEndedEvents[0].payload.agentSessionId).toBe('session-1')
+    // Second iteration's agent-session-ended should NOT have agentSessionId
+    expect(sessionEndedEvents[1].payload.agentSessionId).toBeUndefined()
   })
 
   test('emits raw events automatically when eventsUrl is configured', async () => {
@@ -1273,7 +1257,7 @@ describe('loopClaude', () => {
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
-    const postedEvents: { url: string; payload: EventPayload }[] = []
+    const postedEvents: { url: string; payload: EventMessage }[] = []
     const loopDeps = createLoopDeps({
       run: async (_prompt, options) => {
         // Simulate raw events from Claude by calling the callback
@@ -1291,13 +1275,13 @@ describe('loopClaude', () => {
 
     await loopClaude(dependencies, loopDeps)
 
-    // Verify raw events were posted
-    const rawEvents = postedEvents.filter(
-      e => e.payload.event.type === 'claude.raw_event'
+    // Verify raw events were posted as claude-event type
+    const claudeEvents = postedEvents.filter(
+      e => e.payload.event.type === 'claude-event'
     )
-    expect(rawEvents.length).toBe(1)
+    expect(claudeEvents.length).toBe(1)
     expect(
-      (rawEvents[0].payload.event as { rawEvent: Record<string, unknown> })
+      (claudeEvents[0].payload.event as { rawEvent: Record<string, unknown> })
         .rawEvent
     ).toEqual({ type: 'text_delta', text: 'Hello' })
 
@@ -1312,7 +1296,7 @@ describe('integration: HTTP event posting', () => {
     const { createServer } = await import('node:http')
 
     // Create a mock HTTP server that collects posted events
-    const receivedEvents: EventPayload[] = []
+    const receivedEvents: EventMessage[] = []
     const server = createServer((request, response) => {
       if (request.method === 'POST') {
         let body = ''
@@ -1374,8 +1358,8 @@ describe('integration: HTTP event posting', () => {
 
       // Yield to I/O until events arrive (including raw events)
       const hasExpectedEvents = () =>
-        receivedEvents.some(e => e.event.type === 'claude.ended') &&
-        receivedEvents.some(e => e.event.type === 'claude.raw_event')
+        receivedEvents.some(e => e.event.type === 'agent-session-ended') &&
+        receivedEvents.some(e => e.event.type === 'claude-event')
       for (let i = 0; i < 100 && !hasExpectedEvents(); i++) {
         await new Promise(resolve => setTimeout(resolve, 5))
       }
@@ -1392,28 +1376,33 @@ describe('integration: HTTP event posting', () => {
       )
       expect(firstEvent.event.type).toBeDefined()
 
-      // Verify raw event was received
-      const rawEvent = receivedEvents.find(
-        e => e.event.type === 'claude.raw_event'
+      // Verify claude-event was received
+      const claudeEvent = receivedEvents.find(
+        e => e.event.type === 'claude-event'
       )
-      expect(rawEvent).toBeDefined()
+      expect(claudeEvent).toBeDefined()
       expect(
-        (rawEvent?.event as { rawEvent: Record<string, unknown> }).rawEvent
+        (claudeEvent?.event as { rawEvent: Record<string, unknown> }).rawEvent
       ).toEqual({
         type: 'text_delta',
         text: 'Integration test',
       })
 
-      // Verify agentType for claude events
-      const claudeStarted = receivedEvents.find(
-        e => e.event.type === 'claude.started'
+      // Verify agent session events
+      const sessionStarted = receivedEvents.find(
+        e => e.event.type === 'agent-session-started'
       )
-      const claudeEnded = receivedEvents.find(
-        e => e.event.type === 'claude.ended'
+      const sessionEnded = receivedEvents.find(
+        e => e.event.type === 'agent-session-ended'
       )
-      expect(claudeStarted?.agentType).toBe('claude')
-      expect(claudeEnded?.agentType).toBe('claude')
-      expect(rawEvent?.agentType).toBe('claude')
+      expect(sessionStarted).toBeDefined()
+      expect(sessionEnded).toBeDefined()
+
+      // Verify no loop.* events were posted
+      const loopEvents = receivedEvents.filter(e =>
+        e.event.type.startsWith('loop.')
+      )
+      expect(loopEvents).toHaveLength(0)
     } finally {
       server.close()
     }

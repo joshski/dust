@@ -107,6 +107,8 @@ function createMockManager(): RepositoryManager {
     repositories: new Map(),
     logBuffers: new Map(),
     emit: () => {},
+    sendEvent: () => {},
+    sessionId: 'test-session-id',
   }
 }
 
@@ -309,7 +311,7 @@ describe('runRepositoryLoop', () => {
     expect(sleepCount).toBe(1)
   })
 
-  test('emits bucket events when tasks are found and claude runs', async () => {
+  test('sends agent events over WebSocket when tasks are found and claude runs', async () => {
     const { spawn } = createAutoResolvingSpawn()
 
     // Set up filesystem with a task file (tmp = /tmp directory)
@@ -335,7 +337,7 @@ describe('runRepositoryLoop', () => {
     }
 
     let iterationCount = 0
-    const emittedEvents: unknown[] = []
+    const sentEvents: unknown[] = []
 
     const repoDeps = createRepositoryDependencies({
       spawn,
@@ -353,25 +355,30 @@ describe('runRepositoryLoop', () => {
       },
     })
 
-    await runRepositoryLoop(repoState, repoDeps, event => {
-      emittedEvents.push(event)
-    })
+    await runRepositoryLoop(
+      repoState,
+      repoDeps,
+      msg => {
+        sentEvents.push(msg)
+      },
+      'bucket-session-1'
+    )
 
-    // Should have emitted session events wrapping DustWireEvents
+    // Should have sent agent-session-started and agent-session-ended EventMessages
     expect(
-      emittedEvents.some(
+      sentEvents.some(
         e =>
-          (e as { type: string }).type === 'bucket.repository_session_event' &&
           (e as { repository: string }).repository === 'repo' &&
-          (e as { event: { type: string } }).event.type === 'loop.tasks_found'
+          (e as { event: { type: string } }).event.type ===
+            'agent-session-started'
       )
     ).toBe(true)
     expect(
-      emittedEvents.some(
+      sentEvents.some(
         e =>
-          (e as { type: string }).type === 'bucket.repository_session_event' &&
           (e as { repository: string }).repository === 'repo' &&
-          (e as { event: { type: string } }).event.type === 'claude.ended'
+          (e as { event: { type: string } }).event.type ===
+            'agent-session-ended'
       )
     ).toBe(true)
 

@@ -117,11 +117,18 @@ describe('createInitialState', () => {
     expect(state.ui.repositories).toContain('system')
   })
 
-  test('emit function uses state.ws', () => {
+  test('sendEvent function uses state.ws', () => {
     const state = createInitialState()
     const sentMessages: string[] = []
 
-    state.emit({ type: 'bucket.connected' })
+    // No ws set - sendEvent should not send
+    state.sendEvent({
+      sequence: 1,
+      timestamp: new Date().toISOString(),
+      sessionId: state.sessionId,
+      repository: 'test',
+      event: { type: 'agent-session-started' },
+    })
     expect(sentMessages).toHaveLength(0)
 
     const ws = createMockWebSocket()
@@ -129,7 +136,13 @@ describe('createInitialState', () => {
     ws.send = (data: string) => sentMessages.push(data)
     state.ws = ws
 
-    state.emit({ type: 'bucket.connected' })
+    state.sendEvent({
+      sequence: 2,
+      timestamp: new Date().toISOString(),
+      sessionId: state.sessionId,
+      repository: 'test',
+      event: { type: 'agent-session-started' },
+    })
     expect(sentMessages).toHaveLength(1)
   })
 })
@@ -333,9 +346,7 @@ describe('connectWebSocket', () => {
     const state = createInitialState()
     state.reconnectDelay = 16000
 
-    const sentMessages: string[] = []
     const ws = createMockWebSocket()
-    ws.send = (data: string) => sentMessages.push(data)
 
     const bucketDependencies = createBucketDependencies({
       createWebSocket: () => ws,
@@ -355,7 +366,6 @@ describe('connectWebSocket', () => {
 
     expect(state.reconnectDelay).toBe(1000)
     expect(context.stdoutLines.join('\n')).toContain('Connected to dustbucket')
-    expect(sentMessages).toHaveLength(1)
   })
 
   test('uses pre-connected WebSocket when connectedWs is provided', () => {
@@ -366,10 +376,8 @@ describe('connectWebSocket', () => {
     const state = createInitialState()
     state.reconnectDelay = 16000
 
-    const sentMessages: string[] = []
     const ws = createMockWebSocket()
     ws.readyState = WS_OPEN
-    ws.send = (data: string) => sentMessages.push(data)
 
     let wsCreated = false
     const bucketDependencies = createBucketDependencies({
@@ -393,7 +401,6 @@ describe('connectWebSocket', () => {
     expect(state.ws).toBe(ws)
     expect(state.reconnectDelay).toBe(1000)
     expect(context.stdoutLines.join('\n')).toContain('Connected to dustbucket')
-    expect(sentMessages).toHaveLength(1)
   })
 
   test('schedules reconnection on close with exponential backoff', () => {
