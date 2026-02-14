@@ -5,7 +5,7 @@ import {
   type FileSystemEmulator,
 } from '../../test/test-utilities'
 import type { CommandContext, CommandDependencies } from '../types'
-import { audit, STOCK_AUDITS, transformAuditContent } from './audit'
+import { audit, loadStockAudits, transformAuditContent } from './audit'
 
 function createDependencies(
   context: CommandContext,
@@ -39,14 +39,16 @@ describe('audit command', () => {
     )
     expect(output).toContain('security-review')
     expect(output).toContain(
-      'Check for common security issues in the codebase.'
+      'Review the codebase for common security vulnerabilities and misconfigurations.'
     )
     expect(output).toContain('→ stock')
     expect(output).toContain('test-coverage')
-    expect(output).toContain('Identify areas with missing test coverage.')
+    expect(output).toContain(
+      'Identify untested code paths and areas that need additional test coverage.'
+    )
     expect(output).toContain('dead-code')
     expect(output).toContain(
-      'Find unused exports, unreachable code, and orphaned files.'
+      'Find and remove unused code to improve maintainability and reduce bundle size.'
     )
   })
 
@@ -211,15 +213,21 @@ describe('audit command', () => {
     expect(output).toContain('→ .dust/config/audits/empty-desc.md')
   })
 
-  test('stock audits array has expected structure', () => {
-    expect(STOCK_AUDITS).toBeInstanceOf(Array)
-    expect(STOCK_AUDITS.length).toBeGreaterThan(0)
+  test('loadStockAudits loads audits from markdown files', () => {
+    const audits = loadStockAudits()
+    expect(audits).toBeInstanceOf(Array)
+    expect(audits.length).toBe(3)
 
-    for (const audit of STOCK_AUDITS) {
-      expect(audit).toHaveProperty('name')
-      expect(audit).toHaveProperty('description')
+    const names = audits.map(a => a.name)
+    expect(names).toContain('dead-code')
+    expect(names).toContain('security-review')
+    expect(names).toContain('test-coverage')
+
+    for (const audit of audits) {
       expect(typeof audit.name).toBe('string')
       expect(typeof audit.description).toBe('string')
+      expect(typeof audit.template).toBe('string')
+      expect(audit.template).toContain('# ')
     }
   })
 })
