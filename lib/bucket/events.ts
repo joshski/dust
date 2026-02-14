@@ -8,9 +8,7 @@
 import type { EventMessage } from '../agent-events'
 
 // WebSocket readyState constants
-export const WS_CONNECTING = 0
 export const WS_OPEN = 1
-export const WS_CLOSING = 2
 export const WS_CLOSED = 3
 
 export interface WebSocketLike {

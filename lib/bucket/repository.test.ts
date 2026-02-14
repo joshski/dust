@@ -305,7 +305,7 @@ describe('runRepositoryLoop', () => {
 
     await runRepositoryLoop(repoState, repoDeps)
 
-    // "No tasks" message is written by loopEmit via formatEvent('loop.no_tasks')
+    // "No tasks" message is written by onLoopEvent via formatLoopEvent('loop.no_tasks')
     const logLines = getLogLines(repoState.logBuffer)
     expect(logLines.some(l => l.text.includes('No tasks'))).toBe(true)
     expect(sleepCount).toBe(1)
