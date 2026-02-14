@@ -21,7 +21,7 @@ describe('new-task', () => {
 
   test('renders full content correctly for Claude Code Web', async () => {
     stubEnv('CLAUDECODE', '1')
-    stubEnv('CLAUDE_CODE_ENTRYPOINT', 'remote')
+    stubEnv('CLAUDE_CODE_REMOTE', 'true')
     const { context, dependencies } = createCommandDependencies()
     const result = await newTask(dependencies)
 

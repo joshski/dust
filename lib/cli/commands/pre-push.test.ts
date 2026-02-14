@@ -436,7 +436,7 @@ describe('prePush command', () => {
   describe('task-only detection for Claude Code Web', () => {
     const claudeCodeWebEnv = {
       CLAUDECODE: '1',
-      CLAUDE_CODE_ENTRYPOINT: 'remote',
+      CLAUDE_CODE_REMOTE: 'true',
     }
 
     test('fails with helpful message when only task files are added', async () => {
@@ -821,7 +821,7 @@ describe('prePush command', () => {
       const result = await prePush(
         createDependencies(context, fileSystem, defaultSettings),
         gitRunner,
-        { CLAUDECODE: '1', CLAUDE_CODE_ENTRYPOINT: 'remote' }
+        { CLAUDECODE: '1', CLAUDE_CODE_REMOTE: 'true' }
       )
 
       expect(result.exitCode).toBe(1)
@@ -851,7 +851,7 @@ describe('prePush command', () => {
       const result = await prePush(
         createDependencies(context, fileSystem, defaultSettings),
         gitRunner,
-        { CLAUDECODE: '1', CLAUDE_CODE_ENTRYPOINT: 'remote' }
+        { CLAUDECODE: '1', CLAUDE_CODE_REMOTE: 'true' }
       )
 
       expect(result.exitCode).toBe(1)

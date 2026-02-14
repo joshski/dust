@@ -22,7 +22,7 @@ describe('templateVariables', () => {
   test('includes detected agent name for Claude Code Web', () => {
     const vars = templateVariables(defaultSettings, false, {
       CLAUDECODE: '1',
-      CLAUDE_CODE_ENTRYPOINT: 'remote',
+      CLAUDE_CODE_REMOTE: 'true',
     })
     expect(vars.agentName).toBe('Claude Code Web')
   })
@@ -37,7 +37,7 @@ describe('templateVariables', () => {
   test('isClaudeCodeWeb is "true" when agent is Claude Code Web', () => {
     const vars = templateVariables(defaultSettings, false, {
       CLAUDECODE: '1',
-      CLAUDE_CODE_ENTRYPOINT: 'remote',
+      CLAUDE_CODE_REMOTE: 'true',
     })
     expect(vars.isClaudeCodeWeb).toBe('true')
   })
@@ -181,7 +181,7 @@ describe('templateVariablesWithInstructions', () => {
       fileSystem,
       defaultSettings,
       false,
-      { CLAUDECODE: '1', CLAUDE_CODE_ENTRYPOINT: 'remote' }
+      { CLAUDECODE: '1', CLAUDE_CODE_REMOTE: 'true' }
     )
     expect(vars.agentInstructions).toBe('Web-specific instructions')
   })
@@ -205,7 +205,7 @@ describe('templateVariablesWithInstructions', () => {
       fileSystem,
       defaultSettings,
       true,
-      { CLAUDECODE: '1', CLAUDE_CODE_ENTRYPOINT: 'remote' }
+      { CLAUDECODE: '1', CLAUDE_CODE_REMOTE: 'true' }
     )
     expect(vars.bin).toBe('dust')
     expect(vars.agentName).toBe('Claude Code Web')
