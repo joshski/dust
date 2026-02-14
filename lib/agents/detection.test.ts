@@ -10,6 +10,14 @@ describe('detectAgent', () => {
     })
   })
 
+  test('detects Claude Code Web when CLAUDE_CODE_ENTRYPOINT=remote_mobile', () => {
+    const env = { CLAUDECODE: '1', CLAUDE_CODE_ENTRYPOINT: 'remote_mobile' }
+    expect(detectAgent(env)).toEqual({
+      type: 'claude-code-web',
+      name: 'Claude Code Web',
+    })
+  })
+
   test('detects Claude Code when CLAUDECODE is set without remote entrypoint', () => {
     const env = { CLAUDECODE: '1' }
     expect(detectAgent(env)).toEqual({
