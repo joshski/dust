@@ -338,12 +338,13 @@ export function getVisibleLogs(state: TerminalUIState): DisplayLogLine[] {
 
     for (const repoName of state.repositories) {
       const buffer = state.logBuffers.get(repoName)
-      if (buffer) {
-        const lines = getLogLines(buffer)
-        const color = repoColors.get(repoName) ?? ANSI.FG_WHITE
-        for (const line of lines) {
-          allLogs.push({ ...line, repository: repoName, color })
-        }
+      /* v8 ignore start - defensive: buffer and color always exist when repo is added via addRepository */
+      if (!buffer) continue
+      const color = repoColors.get(repoName) ?? ANSI.FG_WHITE
+      /* v8 ignore stop */
+      const lines = getLogLines(buffer)
+      for (const line of lines) {
+        allLogs.push({ ...line, repository: repoName, color })
       }
     }
 

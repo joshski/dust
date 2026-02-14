@@ -12,9 +12,11 @@ export default defineConfig({
       include: ['lib/**/*.ts'],
       exclude: [
         'lib/cli/run.ts',
-        'lib/cli/commands/bucket.ts',
         'lib/bucket/repository.ts',
-        'lib/bucket/terminal-ui.ts',
+        // bucket.ts: 100% line/statement/branch but v8 reports <100% function
+        // coverage for the `/* v8 ignore */`-wrapped thin wrappers (defaultSetup*).
+        // Excluded until v8 honors ignore comments for function-level metrics.
+        'lib/cli/commands/bucket.ts',
       ],
       reporter: [
         [resolve(import.meta.dirname, 'lib/istanbul/minimal-reporter.cjs')],

@@ -161,8 +161,10 @@ export function createDefaultBucketDependencies(): BucketDependencies {
     getTerminalSize: defaultGetTerminalSize,
     writeStdout: defaultWriteStdout,
     isTTY: process.stdout.isTTY ?? false,
+    /* v8 ignore start - thin wrappers around native functions */
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
     getTempDir: () => tmpdir(),
+    /* v8 ignore stop */
   }
 }
 
@@ -229,7 +231,7 @@ function toRepositoryDependencies(
  * Called immediately on receiving a repository-list message so
  * tabs appear before the async clone work starts.
  */
-function syncUIWithRepoList(state: BucketState, repos: unknown[]): void {
+export function syncUIWithRepoList(state: BucketState, repos: unknown[]): void {
   const incomingNames = new Set<string>()
   for (const data of repos) {
     const repo = parseRepository(data)
@@ -260,7 +262,7 @@ function syncUIWithRepoList(state: BucketState, repos: unknown[]): void {
  * Called after async clone/loop work to reconcile any differences
  * (e.g. repos that failed to clone get removed from UI).
  */
-function syncTUI(state: BucketState): void {
+export function syncTUI(state: BucketState): void {
   const currentUIRepos = new Set(state.ui.repositories)
   const currentRepos = new Set(state.repositories.keys())
 
@@ -293,9 +295,10 @@ export function logMessage(
 ): void {
   if (useTUI) {
     const systemBuffer = state.logBuffers.get('system')
-    if (systemBuffer) {
-      appendLogLine(systemBuffer, createLogLine(message, stream))
-    }
+    /* v8 ignore start - defensive: system buffer is always created in createInitialState */
+    if (!systemBuffer) return
+    /* v8 ignore stop */
+    appendLogLine(systemBuffer, createLogLine(message, stream))
   } else if (stream === 'stderr') {
     context.stderr(message)
   } else {
@@ -447,7 +450,7 @@ export function connectWebSocket(
           fileSystem
         )
         const repoContext = createTUIContext(state, context, useTUI)
-        /* v8 ignore next 6 - async error handling */
+        /* v8 ignore start - async error handling */
         handleRepositoryListFromRepo(repos, state, repoDeps, repoContext)
           .then(() => syncTUI(state))
           .catch(error => {
@@ -459,6 +462,7 @@ export function connectWebSocket(
               'stderr'
             )
           })
+        /* v8 ignore stop */
       }
     } catch {
       logMessage(
@@ -514,6 +518,69 @@ export async function shutdown(
   state.repositories.clear()
 }
 
+/**
+ * TUI lifecycle handle returned by setupTUI.
+ * Call cleanup() to tear down the alternate screen, render loop, and resize handler.
+ */
+export interface TUIHandle {
+  cleanup: () => void
+}
+
+/**
+ * Initialize the TUI: enter alternate screen, start the render loop,
+ * and subscribe to resize events.
+ *
+ * Returns a handle whose cleanup() restores the terminal to normal.
+ */
+export function setupTUI(
+  state: BucketState,
+  bucketDeps: BucketDependencies
+): TUIHandle {
+  const { width, height } = bucketDeps.getTerminalSize()
+  updateDimensions(state.ui, width, height)
+
+  bucketDeps.writeStdout(enterAlternateScreen())
+
+  const cleanupResize = bucketDeps.setupResize((w, h) => {
+    updateDimensions(state.ui, w, h)
+  })
+
+  const renderInterval = setInterval(() => {
+    if (!state.shuttingDown) {
+      bucketDeps.writeStdout(renderFrame(state.ui))
+    }
+  }, 100)
+
+  return {
+    cleanup: () => {
+      clearInterval(renderInterval)
+      bucketDeps.writeStdout(exitAlternateScreen())
+      cleanupResize()
+    },
+  }
+}
+
+/**
+ * Create a keypress handler appropriate for the current mode.
+ * In TUI mode, routes all keys through handleKeyInput.
+ * In non-TUI mode, only responds to 'q' and Ctrl+C.
+ */
+export function createKeypressHandler(
+  useTUI: boolean,
+  state: BucketState,
+  onQuit: () => void
+): (key: string) => void {
+  if (useTUI) {
+    return (key: string) => {
+      const shouldQuit = handleKeyInput(state.ui, key)
+      if (shouldQuit) onQuit()
+    }
+  }
+  return (key: string) => {
+    if (key === 'q' || key === '\u0003') onQuit()
+  }
+}
+
 export async function bucket(
   dependencies: CommandDependencies,
   bucketDeps: BucketDependencies = createDefaultBucketDependencies()
@@ -551,24 +618,14 @@ export async function bucket(
     state.ui.connectedHost = wsUrl
   }
 
-  /* v8 ignore start - TUI mode initialization */
-  if (useTUI) {
-    const { width, height } = bucketDeps.getTerminalSize()
-    updateDimensions(state.ui, width, height)
-  }
-  /* v8 ignore stop */
-
+  let tuiHandle: TUIHandle | undefined
   let cleanupKeypress: (() => void) | undefined
   let cleanupSignals: (() => void) | undefined
-  let cleanupResize: (() => void) | undefined
-  let renderInterval: ReturnType<typeof setInterval> | undefined
 
   try {
-    /* v8 ignore start - TUI mode requires actual terminal */
     if (useTUI) {
-      bucketDeps.writeStdout(enterAlternateScreen())
+      tuiHandle = setupTUI(state, bucketDeps)
     }
-    /* v8 ignore stop */
 
     await new Promise<void>(resolve => {
       const doShutdown = async () => {
@@ -577,37 +634,15 @@ export async function bucket(
       }
 
       // Setup keypress handler
-      cleanupKeypress = bucketDeps.setupKeypress(key => {
-        /* v8 ignore start - TUI mode keypress handling */
-        if (useTUI) {
-          const shouldQuit = handleKeyInput(state.ui, key)
-          if (shouldQuit) {
-            doShutdown()
-          }
-        } else if (key === 'q' || key === '\u0003') {
-          /* v8 ignore stop */
-          doShutdown()
-        }
+      const onKey = createKeypressHandler(useTUI, state, () => {
+        doShutdown()
       })
+      cleanupKeypress = bucketDeps.setupKeypress(onKey)
 
       // Setup signal handlers
       cleanupSignals = bucketDeps.setupSignals(() => {
         doShutdown()
       })
-
-      /* v8 ignore start - TUI mode render loop */
-      if (useTUI) {
-        cleanupResize = bucketDeps.setupResize((width, height) => {
-          updateDimensions(state.ui, width, height)
-        })
-
-        renderInterval = setInterval(() => {
-          if (!state.shuttingDown) {
-            bucketDeps.writeStdout(renderFrame(state.ui))
-          }
-        }, 100)
-      }
-      /* v8 ignore stop */
 
       // Set up WebSocket handlers with the already-connected ws
       connectWebSocket(
@@ -625,19 +660,9 @@ export async function bucket(
       }
     })
   } finally {
-    /* v8 ignore start - TUI mode cleanup */
-    if (renderInterval) {
-      clearInterval(renderInterval)
-    }
-
-    if (useTUI) {
-      bucketDeps.writeStdout(exitAlternateScreen())
-    }
-    /* v8 ignore stop */
-
+    tuiHandle?.cleanup()
     cleanupKeypress?.()
     cleanupSignals?.()
-    cleanupResize?.()
   }
 
   context.stdout('Goodbye!')

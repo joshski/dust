@@ -21,10 +21,14 @@ import {
   connectWebSocket,
   createDefaultBucketDependencies,
   createInitialState,
+  createKeypressHandler,
   createTUIContext,
   getWebSocketUrl,
   logMessage,
+  setupTUI,
   shutdown,
+  syncTUI,
+  syncUIWithRepoList,
   waitForConnection,
 } from './bucket'
 
@@ -401,6 +405,34 @@ describe('connectWebSocket', () => {
     expect(state.ws).toBe(ws)
     expect(state.reconnectDelay).toBe(1000)
     expect(context.stdoutLines.join('\n')).toContain('Connected to dustbucket')
+  })
+
+  test('uses "none" as reason when close event has empty reason', () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const state = createInitialState()
+
+    const ws = createMockWebSocket()
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => ws,
+    })
+
+    connectWebSocket(
+      'my-token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false
+    )
+
+    ws.onclose?.({ code: 1000, reason: '' })
+
+    expect(context.stdoutLines.join('\n')).toContain('reason: none')
+
+    if (state.reconnectTimer) clearTimeout(state.reconnectTimer)
   })
 
   test('schedules reconnection on close with exponential backoff', () => {
@@ -1005,5 +1037,286 @@ describe('bucket', () => {
 
     expect(keypressCleanedUp).toBe(true)
     expect(signalsCleanedUp).toBe(true)
+  })
+
+  test('uses setupTUI in TUI mode and cleans up on exit', async () => {
+    const dependencies = createDependencies()
+    dependencies.arguments = ['token']
+    const written: string[] = []
+
+    const bucketDependencies = createBucketDependencies({
+      isTTY: true,
+      writeStdout: (data: string) => written.push(data),
+      getTerminalSize: () => ({ width: 100, height: 30 }),
+      setupResize: () => () => {},
+      setupKeypress: onKey => {
+        setTimeout(() => onKey('q'), 10)
+        return () => {}
+      },
+    })
+
+    const result = await bucket(dependencies, bucketDependencies)
+
+    expect(result.exitCode).toBe(0)
+    // Verify alternate screen was entered and exited
+    expect(written.some(s => s.includes('\x1b[?1049h'))).toBe(true)
+    expect(written.some(s => s.includes('\x1b[?1049l'))).toBe(true)
+  })
+
+  test('falls back to raw URL when wsUrl is not parseable', async () => {
+    const dependencies = createDependencies()
+    dependencies.arguments = ['token']
+
+    stubEnv('DUST_BUCKET_AGENT_CONNECT_URL', 'not-a-valid-url')
+
+    const bucketDependencies = createBucketDependencies({
+      setupKeypress: onKey => {
+        setTimeout(() => onKey('q'), 10)
+        return () => {}
+      },
+    })
+
+    const result = await bucket(dependencies, bucketDependencies)
+
+    expect(result.exitCode).toBe(0)
+  })
+})
+
+describe('setupTUI', () => {
+  test('enters alternate screen and writes initial frame', () => {
+    const state = createInitialState()
+    const written: string[] = []
+
+    const bucketDependencies = createBucketDependencies({
+      getTerminalSize: () => ({ width: 120, height: 40 }),
+      writeStdout: (data: string) => written.push(data),
+      setupResize: () => () => {},
+    })
+
+    const handle = setupTUI(state, bucketDependencies)
+
+    expect(state.ui.width).toBe(120)
+    expect(state.ui.height).toBe(40)
+    expect(written.some(s => s.includes('\x1b[?1049h'))).toBe(true)
+
+    handle.cleanup()
+  })
+
+  test('cleanup exits alternate screen and clears render interval', async () => {
+    const state = createInitialState()
+    const written: string[] = []
+    let resizeCleanedUp = false
+
+    const bucketDependencies = createBucketDependencies({
+      writeStdout: (data: string) => written.push(data),
+      setupResize: () => () => {
+        resizeCleanedUp = true
+      },
+    })
+
+    const handle = setupTUI(state, bucketDependencies)
+
+    // Wait for at least one render tick
+    await new Promise(resolve => setTimeout(resolve, 150))
+
+    const framesBefore = written.filter(s => s.includes('dust bucket')).length
+    expect(framesBefore).toBeGreaterThan(0)
+
+    handle.cleanup()
+
+    expect(written.some(s => s.includes('\x1b[?1049l'))).toBe(true)
+    expect(resizeCleanedUp).toBe(true)
+
+    // Verify render loop stopped
+    const framesAfter = written.filter(s => s.includes('dust bucket')).length
+    await new Promise(resolve => setTimeout(resolve, 150))
+    const framesLater = written.filter(s => s.includes('dust bucket')).length
+    expect(framesLater).toBe(framesAfter)
+  })
+
+  test('render loop skips frames when shutting down', async () => {
+    const state = createInitialState()
+    state.shuttingDown = true
+    const written: string[] = []
+
+    const bucketDependencies = createBucketDependencies({
+      writeStdout: (data: string) => written.push(data),
+      setupResize: () => () => {},
+    })
+
+    const handle = setupTUI(state, bucketDependencies)
+
+    await new Promise(resolve => setTimeout(resolve, 150))
+
+    // Only the enterAlternateScreen write should be present, no renderFrame
+    const frames = written.filter(s => s.includes('dust bucket'))
+    expect(frames.length).toBe(0)
+
+    handle.cleanup()
+  })
+
+  test('resize handler updates UI dimensions', () => {
+    const state = createInitialState()
+    let resizeCallback: ((w: number, h: number) => void) | undefined
+
+    const bucketDependencies = createBucketDependencies({
+      writeStdout: () => {},
+      setupResize: onResize => {
+        resizeCallback = onResize
+        return () => {}
+      },
+    })
+
+    const handle = setupTUI(state, bucketDependencies)
+
+    expect(resizeCallback).toBeDefined()
+    resizeCallback?.(200, 60)
+    expect(state.ui.width).toBe(200)
+    expect(state.ui.height).toBe(60)
+
+    handle.cleanup()
+  })
+})
+
+describe('createKeypressHandler', () => {
+  test('TUI mode routes keys through handleKeyInput', () => {
+    const state = createInitialState()
+    let quitCalled = false
+
+    const handler = createKeypressHandler(true, state, () => {
+      quitCalled = true
+    })
+
+    handler('\x1b[C') // right arrow
+    expect(state.ui.selectedIndex).toBe(0) // system is the only repo
+
+    handler('q')
+    expect(quitCalled).toBe(true)
+  })
+
+  test('non-TUI mode only responds to q and Ctrl+C', () => {
+    const state = createInitialState()
+    let quitCalled = false
+
+    const handler = createKeypressHandler(false, state, () => {
+      quitCalled = true
+    })
+
+    handler('x')
+    expect(quitCalled).toBe(false)
+
+    handler('\x1b[C') // right arrow
+    expect(quitCalled).toBe(false)
+
+    handler('q')
+    expect(quitCalled).toBe(true)
+  })
+
+  test('non-TUI mode responds to Ctrl+C', () => {
+    const state = createInitialState()
+    let quitCalled = false
+
+    const handler = createKeypressHandler(false, state, () => {
+      quitCalled = true
+    })
+
+    handler('\u0003')
+    expect(quitCalled).toBe(true)
+  })
+})
+
+describe('syncUIWithRepoList', () => {
+  test('adds new repos to UI tabs', () => {
+    const state = createInitialState()
+
+    syncUIWithRepoList(state, [
+      { name: 'repo1', gitUrl: 'https://github.com/user/repo1.git' },
+      { name: 'repo2', gitUrl: 'https://github.com/user/repo2.git' },
+    ])
+
+    expect(state.ui.repositories).toContain('repo1')
+    expect(state.ui.repositories).toContain('repo2')
+    expect(state.logBuffers.has('repo1')).toBe(true)
+    expect(state.logBuffers.has('repo2')).toBe(true)
+  })
+
+  test('removes repos no longer in the list', () => {
+    const state = createInitialState()
+
+    syncUIWithRepoList(state, [
+      { name: 'repo1', gitUrl: 'url1' },
+      { name: 'repo2', gitUrl: 'url2' },
+    ])
+    syncUIWithRepoList(state, [{ name: 'repo2', gitUrl: 'url2' }])
+
+    expect(state.ui.repositories).not.toContain('repo1')
+    expect(state.ui.repositories).toContain('repo2')
+    expect(state.ui.repositories).toContain('system')
+  })
+
+  test('skips invalid repository entries', () => {
+    const state = createInitialState()
+
+    syncUIWithRepoList(state, [
+      null,
+      undefined,
+      123,
+      { name: 'valid', gitUrl: 'url' },
+    ])
+
+    expect(state.ui.repositories).toContain('valid')
+    expect(state.ui.repositories.length).toBe(2) // valid + system
+  })
+
+  test('reuses existing log buffers when buffer is pre-populated', () => {
+    const state = createInitialState()
+    const existingBuffer = createLogBuffer()
+    state.logBuffers.set('repo1', existingBuffer)
+
+    syncUIWithRepoList(state, [{ name: 'repo1', gitUrl: 'url1' }])
+
+    expect(state.logBuffers.get('repo1')).toBe(existingBuffer)
+    expect(state.ui.repositories).toContain('repo1')
+  })
+})
+
+describe('syncTUI', () => {
+  test('syncs buffer references from RepositoryState to UI', () => {
+    const state = createInitialState()
+    const repoBuffer = createLogBuffer()
+    state.repositories.set('repo1', {
+      repository: { name: 'repo1', gitUrl: 'url1' },
+      path: '/tmp/repo1',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: repoBuffer,
+    })
+
+    syncTUI(state)
+
+    expect(state.ui.repositories).toContain('repo1')
+    expect(state.logBuffers.get('repo1')).toBe(repoBuffer)
+  })
+
+  test('removes UI repos that are no longer tracked', () => {
+    const state = createInitialState()
+
+    // Add a repo to UI directly (simulating eager add)
+    syncUIWithRepoList(state, [{ name: 'stale-repo', gitUrl: 'url' }])
+    expect(state.ui.repositories).toContain('stale-repo')
+
+    // syncTUI should remove it since it's not in state.repositories
+    syncTUI(state)
+
+    expect(state.ui.repositories).not.toContain('stale-repo')
+    expect(state.logBuffers.has('stale-repo')).toBe(false)
+  })
+
+  test('preserves system tab', () => {
+    const state = createInitialState()
+
+    syncTUI(state)
+
+    expect(state.ui.repositories).toContain('system')
   })
 })

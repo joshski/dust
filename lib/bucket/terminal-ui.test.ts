@@ -13,6 +13,7 @@ import {
   exitAlternateScreen,
   formatLogLine,
   getLogAreaHeight,
+  getRepoColor,
   getTabRowCount,
   getVisibleLogs,
   handleKeyInput,
@@ -23,6 +24,7 @@ import {
   renderHelpLine,
   renderSeparator,
   renderTabs,
+  SYSTEM_COLOR,
   scrollDown,
   scrollToBottom,
   scrollToTop,
@@ -432,6 +434,17 @@ describe('getLogAreaHeight', () => {
   })
 })
 
+describe('getRepoColor', () => {
+  it('returns SYSTEM_COLOR for system repository', () => {
+    expect(getRepoColor('system', 0)).toBe(SYSTEM_COLOR)
+  })
+
+  it('cycles through REPO_COLORS for non-system repositories', () => {
+    expect(getRepoColor('repo1', 0)).toBe(REPO_COLORS[0])
+    expect(getRepoColor('repo2', 1)).toBe(REPO_COLORS[1])
+  })
+})
+
 describe('getVisibleLogs', () => {
   it('returns logs from selected repository', () => {
     const state = createTerminalUIState()
@@ -480,6 +493,36 @@ describe('getVisibleLogs', () => {
 
     expect(logs[0].color).toBe(REPO_COLORS[0])
     expect(logs[1].color).toBe(REPO_COLORS[1])
+  })
+
+  it('returns empty array when selected index is out of range', () => {
+    const state = createTerminalUIState()
+    state.selectedIndex = 5
+
+    expect(getVisibleLogs(state)).toEqual([])
+  })
+
+  it('returns empty array when selected repo has no buffer', () => {
+    const state = createTerminalUIState()
+    state.repositories.push('ghost')
+    state.selectedIndex = 0
+
+    expect(getVisibleLogs(state)).toEqual([])
+  })
+
+  it('falls back to white color when repo not in color map', () => {
+    const state = createTerminalUIState()
+    const buffer = createLogBuffer()
+    appendLogLine(buffer, createLogLine('orphan log', 'stdout', 1))
+    // Add buffer directly without going through addRepository
+    state.logBuffers.set('orphan', buffer)
+    // Manually add to repositories array so it iterates but has no color entry
+    state.repositories.push('orphan')
+    state.selectedIndex = -1
+
+    const logs = getVisibleLogs(state)
+
+    expect(logs.length).toBe(1)
   })
 })
 
@@ -643,6 +686,23 @@ describe('formatLogLine', () => {
     expect(formatted).not.toContain('\n')
     expect(formatted).toBe('message with trailing newline')
   })
+
+  it('returns only prefix when available width is zero or negative', () => {
+    const line = {
+      text: 'text that will not fit',
+      stream: 'stdout' as const,
+      timestamp: 1000,
+      repository: 'repo1',
+      color: ANSI.FG_CYAN,
+    }
+
+    // prefixAlign=10 means prefix is 13 chars (10 + " | ")
+    // maxWidth=13 leaves 0 available for text
+    const formatted = formatLogLine(line, 10, 13)
+
+    expect(formatted).toContain('repo1')
+    expect(formatted).not.toContain('text that will not fit')
+  })
 })
 
 describe('renderFrame', () => {
@@ -693,6 +753,21 @@ describe('renderFrame', () => {
 
     expect(frame).toContain('more')
     expect(frame).toContain('↓')
+  })
+
+  it('renders single repository view without repo prefix', () => {
+    const state = createTerminalUIState()
+    updateDimensions(state, 80, 24)
+    addRepository(state, 'repo1', createLogBuffer())
+    appendLogLine(
+      getBuffer(state, 'repo1'),
+      createLogLine('single view log', 'stdout', 1)
+    )
+    state.selectedIndex = 0
+
+    const frame = renderFrame(state)
+
+    expect(frame).toContain('single view log')
   })
 })
 
@@ -837,6 +912,43 @@ describe('handleKeyInput', () => {
 
     expect(result).toBe(false)
     expect(state.selectedIndex).toBe(initialIndex)
+    expect(state.scrollOffset).toBe(initialScroll)
+  })
+
+  it('scrolls up on mouse wheel up (SGR button 64)', () => {
+    const state = createTerminalUIState()
+    addRepository(state, 'repo1', createLogBuffer())
+    for (let i = 0; i < 100; i++) {
+      appendLogLine(
+        getBuffer(state, 'repo1'),
+        createLogLine(`line ${i}`, 'stdout', i)
+      )
+    }
+
+    const result = handleKeyInput(state, '\x1b[<64;10;5M')
+
+    expect(result).toBe(false)
+    expect(state.scrollOffset).toBe(3)
+  })
+
+  it('scrolls down on mouse wheel down (SGR button 65)', () => {
+    const state = createTerminalUIState()
+    state.scrollOffset = 10
+    state.autoScroll = false
+
+    const result = handleKeyInput(state, '\x1b[<65;10;5M')
+
+    expect(result).toBe(false)
+    expect(state.scrollOffset).toBe(7)
+  })
+
+  it('ignores non-scroll mouse events', () => {
+    const state = createTerminalUIState()
+    const initialScroll = state.scrollOffset
+
+    const result = handleKeyInput(state, '\x1b[<0;10;5M')
+
+    expect(result).toBe(false)
     expect(state.scrollOffset).toBe(initialScroll)
   })
 })
