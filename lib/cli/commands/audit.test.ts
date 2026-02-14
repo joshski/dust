@@ -37,14 +37,18 @@ describe('audit command', () => {
     expect(output).toContain(
       'Audits are canned tasks that help maintain project health.'
     )
-    expect(output).toContain('security-review')
+    expect(output).toContain("Run 'dust audit <name>' to create an audit task.")
+    expect(output).toContain('# Security Review')
     expect(output).toContain(
       'Check for common security issues in the codebase.'
     )
-    expect(output).toContain('→ stock')
-    expect(output).toContain('test-coverage')
-    expect(output).toContain('Identify areas with missing test coverage.')
-    expect(output).toContain('dead-code')
+    expect(output).toContain('dust audit security-review')
+    expect(output).toContain('(stock)')
+    expect(output).toContain('# Test Coverage')
+    expect(output).toContain(
+      'Identify untested code paths and recommend tests to add.'
+    )
+    expect(output).toContain('# Dead Code')
     expect(output).toContain(
       'Find unused exports, unreachable code, and orphaned files.'
     )
@@ -71,7 +75,8 @@ describe('audit command', () => {
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('Custom Audit')
     expect(output).toContain('This is a custom audit for our project.')
-    expect(output).toContain('→ .dust/config/audits/custom-audit.md')
+    expect(output).toContain('dust audit custom-audit')
+    expect(output).toContain('(.dust/config/audits/custom-audit.md)')
   })
 
   test('user audits take precedence over stock audits with the same name', async () => {
@@ -96,7 +101,7 @@ describe('audit command', () => {
     // Should show user's custom version
     expect(output).toContain('Custom Security Review')
     expect(output).toContain('Our custom security review process.')
-    expect(output).toContain('→ .dust/config/audits/security-review.md')
+    expect(output).toContain('(.dust/config/audits/security-review.md)')
     // Should NOT show stock version source (stock overridden)
     const lines = context.stdoutLines
     const securityReviewIndex = lines.findIndex(l =>
@@ -186,7 +191,8 @@ describe('audit command', () => {
     expect(result.exitCode).toBe(0)
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('no-title-audit')
-    expect(output).toContain('→ .dust/config/audits/no-title-audit.md')
+    expect(output).toContain('dust audit no-title-audit')
+    expect(output).toContain('(.dust/config/audits/no-title-audit.md)')
   })
 
   test('handles empty description gracefully', async () => {
@@ -208,7 +214,8 @@ describe('audit command', () => {
     expect(result.exitCode).toBe(0)
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('Empty Description Audit')
-    expect(output).toContain('→ .dust/config/audits/empty-desc.md')
+    expect(output).toContain('dust audit empty-desc')
+    expect(output).toContain('(.dust/config/audits/empty-desc.md)')
   })
 
   test('stock audits array has expected structure', () => {
@@ -365,7 +372,7 @@ describe('audit add command', () => {
       '/project/.dust/tasks/audit-security-review.md'
     )
     expect(writtenContent).toContain('# Audit: Security Review')
-    expect(writtenContent).toContain('Review the codebase for common security')
+    expect(writtenContent).toContain('Review the codebase for security')
   })
 })
 
