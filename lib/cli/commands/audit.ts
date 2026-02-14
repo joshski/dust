@@ -47,7 +47,7 @@ Focus on these areas:
 
 ## Goals
 
-(Link to relevant project goals)
+(none)
 
 ## Blocked By
 
@@ -82,7 +82,7 @@ Focus on these areas:
 
 ## Goals
 
-(Link to relevant project goals)
+(none)
 
 ## Blocked By
 
@@ -116,7 +116,7 @@ Focus on these areas:
 
 ## Goals
 
-(Link to relevant project goals)
+(none)
 
 ## Blocked By
 
