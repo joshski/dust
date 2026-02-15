@@ -1,23 +1,28 @@
 # Emit loop.start_agent event with prompt
 
-Add a new `loop.start_agent` event that includes the exact prompt passed to Claude when starting an agent session. This gives observers visibility into what the agent is being asked to do before it starts working.
+When the loop starts an agent session, emit a `loop.start_agent` event that includes the exact prompt being passed to Claude. This gives observers visibility into what the agent was asked to do.
 
-The event should be emitted just before calling `run()` in `runOneIteration`, and should include:
-- The full prompt string that will be passed to Claude
+Currently, `runOneIteration` emits `agent-session-started` (a wire event) but no local loop event that captures the prompt. Add a new `LoopEvent` type:
 
-This event is local-only (not sent over the wire to `eventsUrl`) since it contains potentially large prompt content and is primarily useful for debugging and observability of the loop.
+```typescript
+{ type: 'loop.start_agent'; prompt: string }
+```
+
+Emit this event via `onLoopEvent` just before calling `run(prompt, ...)`.
+
+The listing below shows the contents of the task file you are reading now. When you create your commit, delete this file: `.dust/tasks/emit-loop-startagent-event-with-prompt.md`
 
 ## Goals
 
-- [Context Window Efficiency](../goals/context-window-efficiency.md)
+- [Development Traceability](../goals/development-traceability.md)
 
 ## Blocked By
 
-(none)
+- [Bypass dust agent in loop and bucket prompt](bypass-dust-agent-in-loop-and-bucket-prompt.md)
 
 ## Definition of Done
 
-- [ ] New `loop.start_agent` event type added to LoopEvent union
-- [ ] Event emitted with `prompt` field in `runOneIteration` before calling `run()`
-- [ ] Event formatted for console output in `formatLoopEvent`
-- [ ] Tests verify the event is emitted with correct prompt content
+- [ ] A `loop.start_agent` event type is added to the `LoopEvent` discriminated union
+- [ ] The event includes the full prompt string passed to Claude
+- [ ] The event is emitted before `run()` is called in `runOneIteration`
+- [ ] Loop event formatting handles the new event type
