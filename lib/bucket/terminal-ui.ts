@@ -280,7 +280,7 @@ export function getTabRowCount(state: TerminalUIState): number {
   // " All " = 5 visible chars
   const tabWidths: number[] = [5]
   for (const name of state.repositories) {
-    tabWidths.push(name.length + 2) // " name "
+    tabWidths.push(name.length + 4) // " ● name " (dot + space + name + surrounding spaces)
   }
 
   let rows = 1
@@ -382,25 +382,28 @@ export function renderTabs(state: TerminalUIState): string[] {
   // Build individual tab strings with their visible widths
   const tabs: { text: string; width: number }[] = []
 
-  // "All" tab
+  // "All" tab (no status dot)
   if (state.selectedIndex === -1) {
     tabs.push({ text: `${ANSI.INVERSE} All ${ANSI.RESET}`, width: 5 })
   } else {
     tabs.push({ text: ' All ', width: 5 })
   }
 
-  // Repository tabs
+  // Repository tabs (with status dots)
   for (let i = 0; i < state.repositories.length; i++) {
     const name = state.repositories[i]
     const color = getRepoColor(name, i)
-    const width = name.length + 2 // " name "
+    const agentStatus = state.agentStatuses.get(name) ?? 'idle'
+    const dotColor = agentStatus === 'busy' ? ANSI.FG_GREEN : ANSI.DIM
+    const dot = `${dotColor}●${ANSI.RESET}`
+    const width = name.length + 4 // " ● name " (space + dot + space + name + space = 3 + name.length + 1)
     if (i === state.selectedIndex) {
       tabs.push({
-        text: `${ANSI.INVERSE}${color} ${name} ${ANSI.RESET}`,
+        text: `${ANSI.INVERSE} ${dot}${ANSI.INVERSE}${color} ${name} ${ANSI.RESET}`,
         width,
       })
     } else {
-      tabs.push({ text: `${color} ${name} ${ANSI.RESET}`, width })
+      tabs.push({ text: ` ${dot}${color} ${name} ${ANSI.RESET}`, width })
     }
   }
 

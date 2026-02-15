@@ -629,6 +629,83 @@ describe('renderTabs', () => {
 
     expect(rows.length).toBe(1)
   })
+
+  it('shows status dot before repository name', () => {
+    const state = createTerminalUIState()
+    addRepository(state, 'repo1', createLogBuffer())
+
+    const rows = renderTabs(state)
+    const allText = rows.join('')
+
+    expect(allText).toContain('●')
+    // Dot should appear before repo name
+    const dotIndex = allText.indexOf('●')
+    const repoIndex = allText.indexOf('repo1')
+    expect(dotIndex).toBeLessThan(repoIndex)
+  })
+
+  it('shows dim dot for idle status', () => {
+    const state = createTerminalUIState()
+    addRepository(state, 'repo1', createLogBuffer())
+    state.agentStatuses.set('repo1', 'idle')
+
+    const rows = renderTabs(state)
+    const allText = rows.join('')
+
+    // Dot should be styled with DIM
+    expect(allText).toContain(`${ANSI.DIM}●`)
+  })
+
+  it('shows dim dot when agent status is undefined', () => {
+    const state = createTerminalUIState()
+    addRepository(state, 'repo1', createLogBuffer())
+    // Remove the agent status entry to test the fallback
+    state.agentStatuses.delete('repo1')
+
+    const rows = renderTabs(state)
+    const allText = rows.join('')
+
+    // Dot should default to DIM when status is undefined
+    expect(allText).toContain(`${ANSI.DIM}●`)
+  })
+
+  it('shows green dot for busy status', () => {
+    const state = createTerminalUIState()
+    addRepository(state, 'repo1', createLogBuffer())
+    state.agentStatuses.set('repo1', 'busy')
+
+    const rows = renderTabs(state)
+    const allText = rows.join('')
+
+    // Dot should be styled with FG_GREEN
+    expect(allText).toContain(`${ANSI.FG_GREEN}●`)
+  })
+
+  it('does not show dot on the All tab', () => {
+    const state = createTerminalUIState()
+    state.selectedIndex = -1
+
+    const rows = renderTabs(state)
+
+    // "All" tab should not have a dot
+    const allTabText = rows[0].split('|')[0] // Get just the "All" tab portion
+    expect(allTabText).not.toContain('●')
+  })
+
+  it('accounts for dot width in tab wrapping calculation', () => {
+    const state = createTerminalUIState()
+    // Set width that would fit tabs without dots but not with dots
+    // Without dots: " All " = 5, " repo1 " = 7, separator = 1 => total = 13
+    // With dots: " All " = 5, " ● repo1 " = 9, separator = 1 => total = 15
+    // Width 13 would fit without dots but not with dots
+    updateDimensions(state, 13, 24)
+    addRepository(state, 'repo1', createLogBuffer())
+
+    const rows = renderTabs(state)
+
+    // Should wrap to multiple rows because dot adds 2 chars
+    expect(rows.length).toBe(2)
+  })
 })
 
 describe('renderHelpLine', () => {
