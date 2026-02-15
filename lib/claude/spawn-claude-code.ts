@@ -78,10 +78,21 @@ export async function* spawnClaudeCode(
     }
   }
 
+  // Capture stderr for error reporting
+  let stderrOutput = ''
+  proc.stderr?.on('data', (data: Buffer) => {
+    stderrOutput += data.toString()
+  })
+
   await new Promise<void>((resolve, reject) => {
     proc.on('close', code => {
       if (code === 0 || code === null) resolve()
-      else reject(new Error(`claude exited with code ${code}`))
+      else {
+        const errMsg = stderrOutput.trim()
+          ? `claude exited with code ${code}: ${stderrOutput.trim()}`
+          : `claude exited with code ${code}`
+        reject(new Error(errMsg))
+      }
     })
     proc.on('error', reject)
   })

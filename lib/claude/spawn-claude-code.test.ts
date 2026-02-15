@@ -12,18 +12,30 @@ type EventListener = (...values: unknown[]) => void
 function createMockDependencies(
   lines: string[],
   exitCode: number | null = 0,
-  errorToThrow?: Error
+  errorToThrow?: Error,
+  stderrData?: string
 ): EventSourceDependencies {
   return {
     spawn: (() => {
       const listeners: Record<string, EventListener[]> = {}
+      const stderrListeners: Record<string, EventListener[]> = {}
       return {
         stdout: {},
+        stderr: {
+          on(event: string, listener: EventListener) {
+            stderrListeners[event] = stderrListeners[event] || []
+            stderrListeners[event].push(listener)
+            if (event === 'data' && stderrData) {
+              setTimeout(() => listener(Buffer.from(stderrData)), 0)
+            }
+            return this
+          },
+        },
         on(event: string, listener: EventListener) {
           listeners[event] = listeners[event] || []
           listeners[event].push(listener)
           if (event === 'close' && !errorToThrow) {
-            setTimeout(() => listener(exitCode), 0)
+            setTimeout(() => listener(exitCode), 10)
           }
           if (event === 'error' && errorToThrow) {
             setTimeout(() => listener(errorToThrow), 0)
@@ -192,6 +204,25 @@ describe('spawnClaudeCode', () => {
     }
 
     expect(capturedArguments).toContain('--dangerously-skip-permissions')
+  })
+
+  test('includes stderr in error message on non-zero exit', async () => {
+    const dependencies = createMockDependencies(
+      ['{"type": "event"}'],
+      1,
+      undefined,
+      'Something went wrong'
+    )
+
+    const consume = async () => {
+      for await (const _ of spawnClaudeCode('test', {}, dependencies)) {
+        // consume
+      }
+    }
+
+    await expect(consume()).rejects.toThrow(
+      'claude exited with code 1: Something went wrong'
+    )
   })
 
   test('handles process error', async () => {
