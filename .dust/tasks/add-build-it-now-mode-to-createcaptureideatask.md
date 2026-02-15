@@ -24,7 +24,7 @@ In `lib/workflow-tasks.ts`:
 
 ## Blocked By
 
-- [Refactor createCaptureIdeaTask to accept options object](refactor-createcaptureideatask-to-accept-options-object.md)
+(none)
 
 ## Definition of Done
 

@@ -216,12 +216,10 @@ describe('createShelveIdeaTask', () => {
 describe('createCaptureIdeaTask', () => {
   test('creates a capture-idea task with title and description', async () => {
     const fileSystem = createFileSystem()
-    const result = await createCaptureIdeaTask(
-      fileSystem,
-      '/project/.dust',
-      'Progress Broadcasting',
-      'Allow agents to broadcast progress via WebSocket.'
-    )
+    const result = await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'Allow agents to broadcast progress via WebSocket.',
+    })
 
     expect(result.filePath).toBe(
       '/project/.dust/tasks/add-idea-progress-broadcasting.md'
@@ -253,38 +251,40 @@ describe('createCaptureIdeaTask', () => {
   test('throws if title is empty', async () => {
     const fileSystem = createFileSystem()
     await expect(
-      createCaptureIdeaTask(
-        fileSystem,
-        '/project/.dust',
-        '',
-        'Some description'
-      )
+      createCaptureIdeaTask(fileSystem, '/project/.dust', {
+        title: '',
+        description: 'Some description',
+      })
     ).rejects.toThrow('title is required and must not be whitespace-only')
   })
 
   test('throws if title is whitespace-only', async () => {
     const fileSystem = createFileSystem()
     await expect(
-      createCaptureIdeaTask(
-        fileSystem,
-        '/project/.dust',
-        '   ',
-        'Some description'
-      )
+      createCaptureIdeaTask(fileSystem, '/project/.dust', {
+        title: '   ',
+        description: 'Some description',
+      })
     ).rejects.toThrow('title is required and must not be whitespace-only')
   })
 
   test('throws if description is empty', async () => {
     const fileSystem = createFileSystem()
     await expect(
-      createCaptureIdeaTask(fileSystem, '/project/.dust', 'Some Title', '')
+      createCaptureIdeaTask(fileSystem, '/project/.dust', {
+        title: 'Some Title',
+        description: '',
+      })
     ).rejects.toThrow('description is required and must not be whitespace-only')
   })
 
   test('throws if description is whitespace-only', async () => {
     const fileSystem = createFileSystem()
     await expect(
-      createCaptureIdeaTask(fileSystem, '/project/.dust', 'Some Title', '   ')
+      createCaptureIdeaTask(fileSystem, '/project/.dust', {
+        title: 'Some Title',
+        description: '   ',
+      })
     ).rejects.toThrow('description is required and must not be whitespace-only')
   })
 })
@@ -444,12 +444,10 @@ describe('generated tasks pass lint rules', () => {
 
   test('createCaptureIdeaTask produces a valid task file', async () => {
     const fileSystem = createFileSystem()
-    const result = await createCaptureIdeaTask(
-      fileSystem,
-      '/project/.dust',
-      'Progress Broadcasting',
-      'Allow agents to broadcast progress via WebSocket.'
-    )
+    const result = await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'Allow agents to broadcast progress via WebSocket.',
+    })
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(lintTaskFile(result.filePath, content)).toEqual([])
   })
@@ -503,12 +501,10 @@ describe('findAllCaptureIdeaTasks', () => {
 
   test('finds capture-idea tasks created by createCaptureIdeaTask', async () => {
     const fileSystem = createFileSystem()
-    await createCaptureIdeaTask(
-      fileSystem,
-      '/project/.dust',
-      'Progress Broadcasting',
-      'Allow agents to broadcast progress via WebSocket.'
-    )
+    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'Allow agents to broadcast progress via WebSocket.',
+    })
     const result = await findAllCaptureIdeaTasks(fileSystem, '/project/.dust')
     expect(result).toEqual([
       {
@@ -520,18 +516,14 @@ describe('findAllCaptureIdeaTasks', () => {
 
   test('returns multiple capture-idea tasks sorted by filename', async () => {
     const fileSystem = createFileSystem()
-    await createCaptureIdeaTask(
-      fileSystem,
-      '/project/.dust',
-      'Progress Broadcasting',
-      'WebSocket-based progress.'
-    )
-    await createCaptureIdeaTask(
-      fileSystem,
-      '/project/.dust',
-      'Auto Linting',
-      'Lint on save.'
-    )
+    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'WebSocket-based progress.',
+    })
+    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Auto Linting',
+      description: 'Lint on save.',
+    })
     const result = await findAllCaptureIdeaTasks(fileSystem, '/project/.dust')
     expect(result).toEqual([
       { taskSlug: 'add-idea-auto-linting', ideaTitle: 'Auto Linting' },
@@ -549,12 +541,10 @@ describe('findAllCaptureIdeaTasks', () => {
       '/project/.dust',
       'progress-broadcasting'
     )
-    await createCaptureIdeaTask(
-      fileSystem,
-      '/project/.dust',
-      'Auto Linting',
-      'Lint on save.'
-    )
+    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Auto Linting',
+      description: 'Lint on save.',
+    })
     const result = await findAllCaptureIdeaTasks(fileSystem, '/project/.dust')
     expect(result).toEqual([
       { taskSlug: 'add-idea-auto-linting', ideaTitle: 'Auto Linting' },
@@ -634,12 +624,10 @@ describe('parseCaptureIdeaTask', () => {
 
   test('extracts title and description from new-format capture-idea tasks', async () => {
     const fileSystem = createFileSystem()
-    await createCaptureIdeaTask(
-      fileSystem,
-      '/project/.dust',
-      'Progress Broadcasting',
-      'Allow agents to broadcast progress via WebSocket.'
-    )
+    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'Allow agents to broadcast progress via WebSocket.',
+    })
     const result = await parseCaptureIdeaTask(
       fileSystem,
       '/project/.dust',
@@ -662,12 +650,10 @@ And a code block:
 \`\`\`typescript
 const x = 1;
 \`\`\``
-    await createCaptureIdeaTask(
-      fileSystem,
-      '/project/.dust',
-      'Complex Idea',
-      multilineDescription
-    )
+    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Complex Idea',
+      description: multilineDescription,
+    })
     const result = await parseCaptureIdeaTask(
       fileSystem,
       '/project/.dust',

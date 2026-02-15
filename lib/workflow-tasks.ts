@@ -266,9 +266,9 @@ export async function createShelveIdeaTask(
 export async function createCaptureIdeaTask(
   fileSystem: FileSystem,
   dustPath: string,
-  title: string,
-  description: string
+  options: { title: string; description: string }
 ): Promise<CreateIdeaTransitionTaskResult> {
+  const { title, description } = options
   if (!title || !title.trim()) {
     throw new Error('title is required and must not be whitespace-only')
   }
