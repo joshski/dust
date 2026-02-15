@@ -131,6 +131,8 @@ export interface TerminalUIState {
   selectedIndex: number
   /** Log buffers for each repository, keyed by name */
   logBuffers: Map<string, LogBuffer>
+  /** Agent status for each repository, keyed by name */
+  agentStatuses: Map<string, 'idle' | 'busy'>
   /** Current scroll offset (0 = bottom, positive = scrolled up) */
   scrollOffset: number
   /** Whether auto-scroll is enabled (follows new logs) */
@@ -150,6 +152,7 @@ export function createTerminalUIState(): TerminalUIState {
     repositories: [],
     selectedIndex: -1, // -1 = "All"
     logBuffers: new Map(),
+    agentStatuses: new Map(),
     scrollOffset: 0,
     autoScroll: true,
     width: 80,
@@ -185,6 +188,7 @@ export function addRepository(
       if (b === 'system') return -1
       return a.localeCompare(b)
     })
+    state.agentStatuses.set(name, 'idle')
   }
   state.logBuffers.set(name, logBuffer)
 }
@@ -197,6 +201,7 @@ export function removeRepository(state: TerminalUIState, name: string): void {
   if (index >= 0) {
     state.repositories.splice(index, 1)
     state.logBuffers.delete(name)
+    state.agentStatuses.delete(name)
     // Adjust selected index if needed
     if (state.selectedIndex >= state.repositories.length) {
       state.selectedIndex = state.repositories.length - 1

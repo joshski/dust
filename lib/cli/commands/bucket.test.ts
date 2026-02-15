@@ -28,6 +28,7 @@ import {
   logMessage,
   setupTUI,
   shutdown,
+  syncAgentStatuses,
   syncTUI,
   syncUIWithRepoList,
   waitForConnection,
@@ -1490,6 +1491,53 @@ describe('syncUIWithRepoList', () => {
   })
 })
 
+describe('syncAgentStatuses', () => {
+  test('copies agent statuses from RepositoryState to UI', () => {
+    const state = createInitialState()
+    state.repositories.set('repo1', {
+      repository: { name: 'repo1', gitUrl: 'url1' },
+      path: '/tmp/repo1',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'busy',
+    })
+    state.repositories.set('repo2', {
+      repository: { name: 'repo2', gitUrl: 'url2' },
+      path: '/tmp/repo2',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle',
+    })
+
+    syncAgentStatuses(state)
+
+    expect(state.ui.agentStatuses.get('repo1')).toBe('busy')
+    expect(state.ui.agentStatuses.get('repo2')).toBe('idle')
+  })
+
+  test('updates existing status when agent status changes', () => {
+    const state = createInitialState()
+    const repoState: RepositoryState = {
+      repository: { name: 'repo1', gitUrl: 'url1' },
+      path: '/tmp/repo1',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle',
+    }
+    state.repositories.set('repo1', repoState)
+    state.ui.agentStatuses.set('repo1', 'idle')
+
+    // Simulate agent becoming busy
+    repoState.agentStatus = 'busy'
+    syncAgentStatuses(state)
+
+    expect(state.ui.agentStatuses.get('repo1')).toBe('busy')
+  })
+})
+
 describe('syncTUI', () => {
   test('syncs buffer references from RepositoryState to UI', () => {
     const state = createInitialState()
@@ -1507,6 +1555,22 @@ describe('syncTUI', () => {
 
     expect(state.ui.repositories).toContain('repo1')
     expect(state.logBuffers.get('repo1')).toBe(repoBuffer)
+  })
+
+  test('syncs agent statuses from RepositoryState to UI', () => {
+    const state = createInitialState()
+    state.repositories.set('repo1', {
+      repository: { name: 'repo1', gitUrl: 'url1' },
+      path: '/tmp/repo1',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'busy',
+    })
+
+    syncTUI(state)
+
+    expect(state.ui.agentStatuses.get('repo1')).toBe('busy')
   })
 
   test('removes UI repos that are no longer tracked', () => {

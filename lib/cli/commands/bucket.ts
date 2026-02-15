@@ -336,6 +336,16 @@ export function syncUIWithRepoList(state: BucketState, repos: unknown[]): void {
 }
 
 /**
+ * Sync agent statuses from RepositoryState to TUI state.
+ * Called on each render frame to reflect status changes from agent events.
+ */
+export function syncAgentStatuses(state: BucketState): void {
+  for (const [name, repoState] of state.repositories) {
+    state.ui.agentStatuses.set(name, repoState.agentStatus)
+  }
+}
+
+/**
  * Sync TUI state with current repositories.
  * Called after async clone/loop work to reconcile any differences
  * (e.g. repos that failed to clone get removed from UI).
@@ -344,10 +354,11 @@ export function syncTUI(state: BucketState): void {
   const currentUIRepos = new Set(state.ui.repositories)
   const currentRepos = new Set(state.repositories.keys())
 
-  // Always sync buffer references from RepositoryState → UI
+  // Always sync buffer references and agent statuses from RepositoryState → UI
   for (const [name, repoState] of state.repositories) {
     state.logBuffers.set(name, repoState.logBuffer)
     addRepoToUI(state.ui, name, repoState.logBuffer)
+    state.ui.agentStatuses.set(name, repoState.agentStatus)
   }
 
   // Remove repos from UI that are no longer tracked
@@ -621,6 +632,7 @@ export function setupTUI(
 
   const renderInterval = setInterval(() => {
     if (!state.shuttingDown) {
+      syncAgentStatuses(state)
       bucketDeps.writeStdout(renderFrame(state.ui))
     }
   }, 100)

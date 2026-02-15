@@ -129,6 +129,7 @@ describe('createTerminalUIState', () => {
     expect(state.repositories).toEqual([])
     expect(state.selectedIndex).toBe(-1) // "All" selected by default
     expect(state.logBuffers.size).toBe(0)
+    expect(state.agentStatuses.size).toBe(0)
     expect(state.scrollOffset).toBe(0)
     expect(state.autoScroll).toBe(true)
     expect(state.width).toBe(80)
@@ -154,6 +155,15 @@ describe('addRepository', () => {
 
     expect(state.repositories).toContain('repo1')
     expect(state.logBuffers.get('repo1')).toBe(buffer)
+  })
+
+  it('initializes agent status to idle', () => {
+    const state = createTerminalUIState()
+    const buffer = createLogBuffer()
+
+    addRepository(state, 'repo1', buffer)
+
+    expect(state.agentStatuses.get('repo1')).toBe('idle')
   })
 
   it('maintains alphabetical order', () => {
@@ -200,6 +210,17 @@ describe('removeRepository', () => {
     expect(state.repositories).not.toContain('repo1')
     expect(state.repositories).toContain('repo2')
     expect(state.logBuffers.has('repo1')).toBe(false)
+  })
+
+  it('removes agent status entry', () => {
+    const state = createTerminalUIState()
+    addRepository(state, 'repo1', createLogBuffer())
+    addRepository(state, 'repo2', createLogBuffer())
+
+    removeRepository(state, 'repo1')
+
+    expect(state.agentStatuses.has('repo1')).toBe(false)
+    expect(state.agentStatuses.has('repo2')).toBe(true)
   })
 
   it('adjusts selected index when removing selected repo', () => {

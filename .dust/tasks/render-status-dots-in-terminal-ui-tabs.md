@@ -23,7 +23,7 @@ In `lib/bucket/terminal-ui.ts`, in `renderTabs()`:
 
 ## Blocked By
 
-- [Expose agent status to terminal UI state](expose-agent-status-to-terminal-ui-state.md)
+(none)
 
 ## Definition of Done
 
