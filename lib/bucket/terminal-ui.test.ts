@@ -186,6 +186,23 @@ describe('addRepository', () => {
     expect(state.repositories).toEqual(['alpha', 'zebra', 'system'])
   })
 
+  it('initializes agent status to idle', () => {
+    const state = createTerminalUIState()
+    addRepository(state, 'repo1', createLogBuffer())
+
+    expect(state.agentStatuses.get('repo1')).toBe('idle')
+  })
+
+  it('does not overwrite existing agent status', () => {
+    const state = createTerminalUIState()
+    addRepository(state, 'repo1', createLogBuffer())
+    state.agentStatuses.set('repo1', 'busy')
+
+    addRepository(state, 'repo1', createLogBuffer())
+
+    expect(state.agentStatuses.get('repo1')).toBe('busy')
+  })
+
   it('does not add duplicate repositories', () => {
     const state = createTerminalUIState()
     const buffer1 = createLogBuffer()
