@@ -11,6 +11,7 @@ import {
 } from './cli/commands/lint-markdown'
 import { createFileSystemEmulator } from './test/test-utilities'
 import {
+  BUILD_IDEA_PREFIX,
   CAPTURE_IDEA_PREFIX,
   createCaptureIdeaTask,
   createRefineIdeaTask,
@@ -286,6 +287,52 @@ describe('createCaptureIdeaTask', () => {
         description: '   ',
       })
     ).rejects.toThrow('description is required and must not be whitespace-only')
+  })
+
+  test('creates a build-idea task when buildItNow is true', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'Allow agents to broadcast progress via WebSocket.',
+      buildItNow: true,
+    })
+
+    expect(result.filePath).toBe(
+      '/project/.dust/tasks/build-idea-progress-broadcasting.md'
+    )
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain(`# ${BUILD_IDEA_PREFIX}Progress Broadcasting`)
+    expect(content).toContain(
+      'create one or more narrowly-scoped task files in `.dust/tasks/`'
+    )
+    expect(content).toContain('review `.dust/goals/` and `.dust/facts/`')
+    expect(content).toContain(
+      '- [ ] One or more new tasks are created in `.dust/tasks/`'
+    )
+    expect(content).toContain(
+      '- [ ] Tasks link to relevant goals from `.dust/goals/`'
+    )
+    expect(content).toContain('- [ ] Tasks are narrowly scoped vertical slices')
+    // Should NOT contain idea-file-specific instructions
+    expect(content).not.toContain('Idea file exists at')
+    expect(content).not.toContain('create an idea file')
+  })
+
+  test('creates a capture-idea task when buildItNow is false', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'Allow agents to broadcast progress via WebSocket.',
+      buildItNow: false,
+    })
+
+    expect(result.filePath).toBe(
+      '/project/.dust/tasks/add-idea-progress-broadcasting.md'
+    )
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain(`# ${CAPTURE_IDEA_PREFIX}Progress Broadcasting`)
+    expect(content).toContain('create an idea file')
+    expect(content).not.toContain(BUILD_IDEA_PREFIX)
   })
 })
 

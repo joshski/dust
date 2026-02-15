@@ -7,6 +7,7 @@ export const IDEA_TRANSITION_PREFIXES = [
 ]
 
 export const CAPTURE_IDEA_PREFIX = 'Add Idea: '
+export const BUILD_IDEA_PREFIX = 'Build Idea: '
 
 export interface IdeaInProgress {
   taskSlug: string
@@ -266,9 +267,9 @@ export async function createShelveIdeaTask(
 export async function createCaptureIdeaTask(
   fileSystem: FileSystem,
   dustPath: string,
-  options: { title: string; description: string }
+  options: { title: string; description: string; buildItNow?: boolean }
 ): Promise<CreateIdeaTransitionTaskResult> {
-  const { title, description } = options
+  const { title, description, buildItNow } = options
   if (!title || !title.trim()) {
     throw new Error('title is required and must not be whitespace-only')
   }
@@ -276,7 +277,38 @@ export async function createCaptureIdeaTask(
     throw new Error('description is required and must not be whitespace-only')
   }
 
-  const taskTitle = `Add Idea: ${title}`
+  if (buildItNow) {
+    const taskTitle = `${BUILD_IDEA_PREFIX}${title}`
+    const filename = titleToFilename(taskTitle)
+    const filePath = `${dustPath}/tasks/${filename}`
+
+    const content = `# ${taskTitle}
+
+Research this idea thoroughly, review \`.dust/goals/\` and \`.dust/facts/\` for relevant context, then create one or more narrowly-scoped task files in \`.dust/tasks/\`. Each task should deliver a thin but complete vertical slice of working software.
+
+## Idea Description
+
+${description}
+
+## Goals
+
+(none)
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- [ ] One or more new tasks are created in \`.dust/tasks/\`
+- [ ] Tasks link to relevant goals from \`.dust/goals/\`
+- [ ] Tasks are narrowly scoped vertical slices
+`
+    await fileSystem.writeFile(filePath, content)
+    return { filePath }
+  }
+
+  const taskTitle = `${CAPTURE_IDEA_PREFIX}${title}`
   const filename = titleToFilename(taskTitle)
   const filePath = `${dustPath}/tasks/${filename}`
   const ideaFilename = titleToFilename(title)

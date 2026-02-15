@@ -20,7 +20,7 @@ In `lib/workflow-tasks.ts`:
 
 ## Blocked By
 
-- [Add build-it-now mode to createCaptureIdeaTask](add-build-it-now-mode-to-createcaptureideatask.md)
+(none)
 
 ## Definition of Done
 
