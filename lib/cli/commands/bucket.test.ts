@@ -242,6 +242,16 @@ describe('logMessage', () => {
     expect(lines[0].text).toBe('tui error')
     expect(lines[0].stream).toBe('stderr')
   })
+
+  test('does nothing in TUI mode when system buffer is missing', () => {
+    const dependencies = createDependencies()
+    const state = createInitialState()
+    state.logBuffers.delete('system')
+
+    logMessage(state, dependencies.context, true, 'should be dropped')
+
+    expect(state.logBuffers.has('system')).toBe(false)
+  })
 })
 
 describe('createTUIContext', () => {
@@ -817,6 +827,45 @@ describe('connectWebSocket', () => {
 
     expect(context.stderrLines.join('\n')).toContain(
       'Failed to parse WebSocket message'
+    )
+  })
+
+  test('logs error when handleRepositoryList rejects', async () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const state = createInitialState()
+
+    const ws = createMockWebSocket()
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => ws,
+      spawn: (() => {
+        throw new Error('spawn exploded')
+      }) as unknown as BucketDependencies['spawn'],
+    })
+
+    connectWebSocket(
+      'my-token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false
+    )
+
+    ws.onmessage?.({
+      data: JSON.stringify({
+        type: 'repository-list',
+        repositories: ['repo1'],
+      }),
+    })
+
+    // Wait for the async catch handler to fire
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    expect(context.stderrLines.join('\n')).toContain(
+      'Failed to handle repository list'
     )
   })
 })

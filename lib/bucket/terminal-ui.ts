@@ -105,8 +105,7 @@ export function truncateLine(text: string, maxWidth: number): string {
     lastIndex = match.index + match[0].length
   }
 
-  /* v8 ignore start - edge case when remaining text exactly fills maxWidth */
-  // Add remaining text
+  // Add remaining text after the last ANSI code (or all text if no ANSI codes)
   const remaining = text.slice(lastIndex)
   for (const char of remaining) {
     if (visibleCount >= maxWidth - 1) {
@@ -117,6 +116,7 @@ export function truncateLine(text: string, maxWidth: number): string {
     visibleCount++
   }
 
+  /* v8 ignore start - unreachable: visibleLength guard on line 80 ensures truncation always occurs above */
   return result
   /* v8 ignore stop */
 }
@@ -338,8 +338,8 @@ export function getVisibleLogs(state: TerminalUIState): DisplayLogLine[] {
 
     for (const repoName of state.repositories) {
       const buffer = state.logBuffers.get(repoName)
-      /* v8 ignore start - defensive: buffer and color always exist when repo is added via addRepository */
       if (!buffer) continue
+      /* v8 ignore start - fallback unreachable: repoColors is built from the same repositories array */
       const color = repoColors.get(repoName) ?? ANSI.FG_WHITE
       /* v8 ignore stop */
       const lines = getLogLines(buffer)

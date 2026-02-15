@@ -113,6 +113,14 @@ describe('truncateLine', () => {
     expect(result).toContain('a')
     expect(result).toContain('b')
   })
+
+  it('truncates trailing text after ANSI codes', () => {
+    // Text: ANSI-coded "a" then "bcdef" plain text - truncation happens in post-loop
+    const text = `${ANSI.FG_RED}a${ANSI.RESET}bcdef`
+    const result = truncateLine(text, 4)
+    expect(visibleLength(result)).toBe(4) // "abc…"
+    expect(result).toContain('…')
+  })
 })
 
 describe('createTerminalUIState', () => {
@@ -508,6 +516,21 @@ describe('getVisibleLogs', () => {
     state.selectedIndex = 0
 
     expect(getVisibleLogs(state)).toEqual([])
+  })
+
+  it('skips repos with no buffer in "All" view', () => {
+    const state = createTerminalUIState()
+    const buffer = createLogBuffer()
+    appendLogLine(buffer, createLogLine('has buffer', 'stdout', 1))
+    addRepository(state, 'repo1', buffer)
+    // Add repo without a buffer
+    state.repositories.push('no-buffer-repo')
+    state.selectedIndex = -1
+
+    const logs = getVisibleLogs(state)
+
+    expect(logs.length).toBe(1)
+    expect(logs[0].text).toBe('has buffer')
   })
 
   it('falls back to white color when repo not in color map', () => {

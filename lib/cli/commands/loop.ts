@@ -200,10 +200,14 @@ export function createEventPoster(
 const SLEEP_INTERVAL_MS = 30000
 const DEFAULT_MAX_ITERATIONS = 10
 
+export type GitPullResult =
+  | { success: true }
+  | { success: false; message: string }
+
 export async function gitPull(
   cwd: string,
   spawn: typeof nodeSpawn
-): Promise<{ success: boolean; message?: string }> {
+): Promise<GitPullResult> {
   return new Promise(resolve => {
     const proc = spawn('git', ['pull'], {
       cwd,
@@ -270,8 +274,7 @@ export async function runOneIteration(
   if (!pullResult.success) {
     emit({
       type: 'loop.sync_skipped',
-      /* v8 ignore next - message is always set when success is false */
-      reason: pullResult.message ?? 'unknown error',
+      reason: pullResult.message,
     })
 
     emit({ type: 'claude.started' })

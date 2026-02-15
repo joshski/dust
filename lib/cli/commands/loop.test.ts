@@ -254,14 +254,18 @@ describe('gitPull', () => {
     }) as LoopDependencies['spawn']
     const result = await gitPull('/project', spawn)
     expect(result.success).toBe(false)
-    expect(result.message).toContain('fatal: not a git repository')
+    if (!result.success) {
+      expect(result.message).toContain('fatal: not a git repository')
+    }
   })
 
   test('returns default message when stderr is empty', async () => {
     const spawn = createMockSpawn(1)
     const result = await gitPull('/project', spawn)
     expect(result.success).toBe(false)
-    expect(result.message).toBe('git pull failed')
+    if (!result.success) {
+      expect(result.message).toBe('git pull failed')
+    }
   })
 
   test('handles spawn errors', async () => {
@@ -277,7 +281,9 @@ describe('gitPull', () => {
     }) as LoopDependencies['spawn']
     const result = await gitPull('/project', spawn)
     expect(result.success).toBe(false)
-    expect(result.message).toBe('spawn ENOENT')
+    if (!result.success) {
+      expect(result.message).toBe('spawn ENOENT')
+    }
   })
 })
 
