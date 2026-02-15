@@ -18,7 +18,7 @@
 
 import { spawn as nodeSpawn } from 'node:child_process'
 import { accessSync } from 'node:fs'
-import { readFile, writeFile, mkdir, readdir, chmod } from 'node:fs/promises'
+import { chmod, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { createServer as httpCreateServer } from 'node:http'
 import { homedir, tmpdir } from 'node:os'
 import {
@@ -170,15 +170,20 @@ function defaultCreateServer(handler: (request: Request) => Response): {
   stop: () => void
 } {
   let resolvedPort = 0
-  const server = httpCreateServer(async (req, res) => {
-    const url = new URL(req.url ?? '/', `http://localhost:${resolvedPort}`)
-    const request = new Request(url.toString(), { method: req.method ?? 'GET' })
+  const server = httpCreateServer(async (nodeRequest, nodeResponse) => {
+    const url = new URL(
+      nodeRequest.url ?? '/',
+      `http://localhost:${resolvedPort}`
+    )
+    const request = new Request(url.toString(), {
+      method: nodeRequest.method ?? 'GET',
+    })
     const response = handler(request)
     const body = await response.text()
-    res.writeHead(response.status, {
+    nodeResponse.writeHead(response.status, {
       'Content-Type': response.headers.get('content-type') ?? 'text/plain',
     })
-    res.end(body)
+    nodeResponse.end(body)
   })
   server.listen(0, () => {
     const addr = server.address()
