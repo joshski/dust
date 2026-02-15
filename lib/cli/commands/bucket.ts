@@ -17,6 +17,9 @@
  */
 
 import { spawn as nodeSpawn } from 'node:child_process'
+import { accessSync } from 'node:fs'
+import { readFile, writeFile, mkdir, readdir, chmod } from 'node:fs/promises'
+import { createServer as httpCreateServer } from 'node:http'
 import { homedir, tmpdir } from 'node:os'
 import {
   type AuthDependencies,
@@ -166,11 +169,29 @@ function defaultCreateServer(handler: (request: Request) => Response): {
   port: number
   stop: () => void
 } {
-  const server = Bun.serve({
-    port: 0,
-    fetch: handler,
+  let resolvedPort = 0
+  const server = httpCreateServer(async (req, res) => {
+    const url = new URL(req.url ?? '/', `http://localhost:${resolvedPort}`)
+    const request = new Request(url.toString(), { method: req.method ?? 'GET' })
+    const response = handler(request)
+    const body = await response.text()
+    res.writeHead(response.status, {
+      'Content-Type': response.headers.get('content-type') ?? 'text/plain',
+    })
+    res.end(body)
   })
-  return { port: server.port ?? 0, stop: () => server.stop() }
+  server.listen(0, () => {
+    const addr = server.address()
+    if (addr && typeof addr === 'object') {
+      resolvedPort = addr.port
+    }
+  })
+  // Block until port is assigned (listen is sync for port 0 in practice)
+  const addr = server.address()
+  if (addr && typeof addr === 'object') {
+    resolvedPort = addr.port
+  }
+  return { port: resolvedPort, stop: () => server.close() }
 }
 
 function defaultOpenBrowser(url: string): void {
@@ -183,27 +204,19 @@ export function createDefaultBucketDependencies(): BucketDependencies {
   const authFileSystem: FileSystem = {
     exists: (path: string) => {
       try {
-        const file = Bun.file(path)
-        return file.size > 0
+        accessSync(path)
+        return true
       } catch {
         return false
       }
     },
-    readFile: (path: string) => Bun.file(path).text(),
+    readFile: (path: string) => readFile(path, 'utf8'),
     writeFile: (path: string, content: string) =>
-      Bun.write(path, content).then(() => {}),
-    mkdir: (path: string, options?: { recursive?: boolean }) => {
-      const { mkdir } = require('node:fs/promises')
-      return mkdir(path, options)
-    },
-    readdir: (path: string) => {
-      const { readdir } = require('node:fs/promises')
-      return readdir(path)
-    },
-    chmod: (path: string, mode: number) => {
-      const { chmod } = require('node:fs/promises')
-      return chmod(path, mode)
-    },
+      writeFile(path, content, 'utf8'),
+    mkdir: (path: string, options?: { recursive?: boolean }) =>
+      mkdir(path, options).then(() => {}),
+    readdir: (path: string) => readdir(path),
+    chmod: (path: string, mode: number) => chmod(path, mode),
   }
 
   return {
