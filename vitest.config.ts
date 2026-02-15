@@ -12,10 +12,10 @@ export default defineConfig({
       include: ['lib/**/*.ts'],
       exclude: [
         'lib/cli/run.ts',
-        'lib/bucket/repository.ts',
-        // bucket.ts: 100% line/statement/branch but v8 reports <100% function
-        // coverage for the `/* v8 ignore */`-wrapped thin wrappers (defaultSetup*).
+        // v8 reports <100% function/branch coverage for `/* v8 ignore */`-wrapped
+        // thin wrappers, even though lines/statements are 100%.
         // Excluded until v8 honors ignore comments for function-level metrics.
+        'lib/bucket/repository.ts',
         'lib/cli/commands/bucket.ts',
       ],
       reporter: [

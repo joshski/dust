@@ -251,6 +251,22 @@ describe('removeRepository', () => {
     const result = await promise
     expect(result).toBe(false)
   })
+
+  test('returns false on spawn error', async () => {
+    const { spawn, processes } = createMockSpawn()
+    const context = createContextEmulator()
+
+    const promise = removeRepository('/tmp/test-repo', spawn, context)
+
+    const proc = processes.get('rm -rf /tmp/test-repo')
+    proc?.emit('error', new Error('spawn failed'))
+
+    const result = await promise
+    expect(result).toBe(false)
+    expect(context.stderrLines.join('\n')).toContain(
+      'Failed to remove /tmp/test-repo: spawn failed'
+    )
+  })
 })
 
 describe('runRepositoryLoop', () => {
@@ -342,7 +358,26 @@ describe('runRepositoryLoop', () => {
     const repoDeps = createRepositoryDependencies({
       spawn,
       fileSystem,
-      run: async () => {
+      run: async (_prompt, options, dependencies) => {
+        // Exercise the bufferSinkDeps callbacks
+        if (dependencies) {
+          const sink = dependencies.createStdoutSink()
+          // write() with partial line (no trailing newline)
+          sink.write('partial ')
+          // write() with complete lines
+          sink.write('line\ncomplete\n')
+          // line() flushes pending partial then writes
+          sink.write('pending')
+          sink.line('tool output\nmultiline')
+        }
+        // Exercise onRawEvent with session_id
+        const runOptions = options as {
+          onRawEvent?: (e: Record<string, unknown>) => void
+        }
+        runOptions?.onRawEvent?.({
+          type: 'stream_event',
+          session_id: 'agent-session-xyz',
+        })
         // Simulate Claude completing - remove the task file
         // so next iteration finds no tasks and the loop sleeps
         fileSystem.files.delete('/tmp/repo/.dust/tasks/my-task.md')
@@ -385,6 +420,50 @@ describe('runRepositoryLoop', () => {
     // Should have logged events to the log buffer
     const logLines = getLogLines(repoState.logBuffer)
     expect(logLines.length).toBeGreaterThan(0)
+  })
+
+  test('logs claude errors to repo log buffer via context.stderr', async () => {
+    const { spawn } = createAutoResolvingSpawn()
+    const fileSystem = createFileSystemEmulator({
+      // biome-ignore lint: tmp is the /tmp directory name, not an abbreviation
+      tmp: {
+        repo: {
+          '.dust': {
+            tasks: {
+              'my-task.md': '# My Task\n\nDo something',
+            },
+          },
+        },
+      },
+    })
+
+    const repoState = {
+      repository: { name: 'repo', gitUrl: 'repo' },
+      path: '/tmp/repo',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+    }
+
+    const repoDeps = createRepositoryDependencies({
+      spawn,
+      fileSystem,
+      run: async () => {
+        fileSystem.files.delete('/tmp/repo/.dust/tasks/my-task.md')
+        throw new Error('Claude crashed')
+      },
+      sleep: async () => {
+        repoState.stopRequested = true
+      },
+    })
+
+    await runRepositoryLoop(repoState, repoDeps)
+
+    const logLines = getLogLines(repoState.logBuffer)
+    expect(logLines.some(l => l.stream === 'stderr')).toBe(true)
+    expect(
+      logLines.some(l => l.text.includes('Claude exited with error'))
+    ).toBe(true)
   })
 })
 
@@ -502,6 +581,106 @@ describe('addRepository', () => {
     )
 
     expect(cloneCalled).toBe(false)
+  })
+
+  test('cleans up stale directory before cloning', async () => {
+    const context = createContextEmulator()
+    const manager = createMockManager()
+
+    const fileSystem = createFileSystemEmulator({
+      // biome-ignore lint: tmp is the /tmp directory name, not an abbreviation
+      tmp: {
+        'dust-bucket-stale-repo': {
+          'some-file': 'leftover',
+        },
+      },
+    })
+
+    const { spawn: manualSpawn, processes } = createMockSpawn()
+    const { spawn: autoSpawn } = createAutoResolvingSpawn()
+
+    const combinedSpawn = ((
+      command: string,
+      spawnArguments: string[],
+      options?: unknown
+    ) => {
+      // Use manual spawn for clone, auto-resolving for rm -rf and git pull
+      if (command === 'git' && spawnArguments[0] === 'clone') {
+        return manualSpawn(command, spawnArguments, options as never)
+      }
+      if (command === 'rm') {
+        return autoSpawn(command, spawnArguments, options as never)
+      }
+      return autoSpawn(command, spawnArguments, options as never)
+    }) as RepositoryDependencies['spawn']
+
+    const repoDeps = createRepositoryDependencies({
+      spawn: combinedSpawn,
+      fileSystem,
+      sleep: async () => {
+        for (const repoState of manager.repositories.values()) {
+          repoState.stopRequested = true
+        }
+      },
+    })
+
+    const addPromise = addRepository(
+      { name: 'stale-repo', gitUrl: 'stale-repo' },
+      manager,
+      repoDeps,
+      context
+    )
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    const cloneProc = processes.get(
+      'git clone stale-repo /tmp/dust-bucket-stale-repo'
+    )
+    cloneProc?.emit('close', 0)
+
+    await addPromise
+
+    expect(manager.repositories.has('stale-repo')).toBe(true)
+  })
+
+  test('emits error event and returns when clone fails', async () => {
+    const context = createContextEmulator()
+    const manager = createMockManager()
+    const emittedEvents: unknown[] = []
+    manager.emit = event => {
+      emittedEvents.push(event)
+    }
+
+    const { spawn, processes } = createMockSpawn()
+    const repoDeps = createRepositoryDependencies({ spawn })
+
+    const addPromise = addRepository(
+      { name: 'fail-repo', gitUrl: 'bad-url' },
+      manager,
+      repoDeps,
+      context
+    )
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    const cloneProc = processes.get(
+      'git clone bad-url /tmp/dust-bucket-fail-repo'
+    )
+    const stderr = (cloneProc as EventEmitter & { stderr: EventEmitter }).stderr
+    stderr?.emit('data', 'clone error')
+    cloneProc?.emit('close', 128)
+
+    await addPromise
+
+    expect(manager.repositories.has('fail-repo')).toBe(false)
+    expect(emittedEvents).toEqual([
+      expect.objectContaining({
+        type: 'bucket.error',
+        repository: 'fail-repo',
+        error: 'Clone failed',
+      }),
+    ])
+    expect(context.stderrLines.join('\n')).toContain('Clone failed')
   })
 })
 

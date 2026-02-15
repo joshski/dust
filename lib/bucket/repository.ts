@@ -174,7 +174,6 @@ export async function removeRepository(
       resolve(code === 0)
     })
 
-    /* v8 ignore next 4 - error handler for rare spawn failures */
     proc.on('error', error => {
       context.stderr(`Failed to remove ${path}: ${error.message}`)
       resolve(false)
@@ -186,7 +185,6 @@ export async function removeRepository(
  * Create a no-op glob scanner for CommandDependencies.
  * The `next` command only uses fileSystem, not globScanner.
  */
-/* v8 ignore start */
 function createNoOpGlobScanner() {
   return {
     scan: async function* () {
@@ -194,7 +192,6 @@ function createNoOpGlobScanner() {
     },
   }
 }
-/* v8 ignore stop */
 
 /**
  * Run the async loop for a single repository.
@@ -214,6 +211,7 @@ export async function runRepositoryLoop(
     arguments: [],
     context: {
       cwd: repoState.path,
+      /* v8 ignore next 2 - stdout not called by runOneIteration (it uses emit) */
       stdout: (msg: string) =>
         appendLogLine(repoState.logBuffer, createLogLine(msg, 'stdout')),
       stderr: (msg: string) =>
@@ -358,7 +356,6 @@ export async function addRepository(
     context
   )
 
-  /* v8 ignore next 7 - clone failure path */
   if (!success) {
     const errorEvent: BucketErrorEvent = {
       type: 'bucket.error',

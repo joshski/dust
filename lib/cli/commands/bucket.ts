@@ -373,9 +373,7 @@ export function logMessage(
 ): void {
   if (useTUI) {
     const systemBuffer = state.logBuffers.get('system')
-    /* v8 ignore start - defensive: system buffer is always created in createInitialState */
     if (!systemBuffer) return
-    /* v8 ignore stop */
     appendLogLine(systemBuffer, createLogLine(message, stream))
   } else if (stream === 'stderr') {
     context.stderr(message)
@@ -528,7 +526,6 @@ export function connectWebSocket(
           fileSystem
         )
         const repoContext = createTUIContext(state, context, useTUI)
-        /* v8 ignore start - async error handling */
         handleRepositoryListFromRepo(repos, state, repoDeps, repoContext)
           .then(() => syncTUI(state))
           .catch(error => {
@@ -540,7 +537,6 @@ export function connectWebSocket(
               'stderr'
             )
           })
-        /* v8 ignore stop */
       }
     } catch {
       logMessage(
