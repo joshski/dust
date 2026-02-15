@@ -581,6 +581,43 @@ describe('findAllCaptureIdeaTasks', () => {
     ])
   })
 
+  test('finds build-idea tasks created by createCaptureIdeaTask with buildItNow', async () => {
+    const fileSystem = createFileSystem()
+    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'Allow agents to broadcast progress via WebSocket.',
+      buildItNow: true,
+    })
+    const result = await findAllCaptureIdeaTasks(fileSystem, '/project/.dust')
+    expect(result).toEqual([
+      {
+        taskSlug: 'build-idea-progress-broadcasting',
+        ideaTitle: 'Progress Broadcasting',
+      },
+    ])
+  })
+
+  test('finds both add-idea and build-idea tasks', async () => {
+    const fileSystem = createFileSystem()
+    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Auto Linting',
+      description: 'Lint on save.',
+    })
+    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'WebSocket-based progress.',
+      buildItNow: true,
+    })
+    const result = await findAllCaptureIdeaTasks(fileSystem, '/project/.dust')
+    expect(result).toEqual([
+      { taskSlug: 'add-idea-auto-linting', ideaTitle: 'Auto Linting' },
+      {
+        taskSlug: 'build-idea-progress-broadcasting',
+        ideaTitle: 'Progress Broadcasting',
+      },
+    ])
+  })
+
   test('ignores idea transition tasks (refine, decompose-idea, shelve)', async () => {
     const fileSystem = createFileSystem()
     await createRefineIdeaTask(
@@ -683,6 +720,26 @@ describe('parseCaptureIdeaTask', () => {
     expect(result).toEqual({
       ideaTitle: 'Progress Broadcasting',
       ideaDescription: 'Allow agents to broadcast progress via WebSocket.',
+      buildItNow: false,
+    })
+  })
+
+  test('returns buildItNow true for Build Idea tasks', async () => {
+    const fileSystem = createFileSystem()
+    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'Allow agents to broadcast progress via WebSocket.',
+      buildItNow: true,
+    })
+    const result = await parseCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'build-idea-progress-broadcasting'
+    )
+    expect(result).toEqual({
+      ideaTitle: 'Progress Broadcasting',
+      ideaDescription: 'Allow agents to broadcast progress via WebSocket.',
+      buildItNow: true,
     })
   })
 
@@ -709,6 +766,7 @@ const x = 1;
     expect(result).toEqual({
       ideaTitle: 'Complex Idea',
       ideaDescription: multilineDescription,
+      buildItNow: false,
     })
   })
 })

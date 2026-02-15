@@ -17,6 +17,7 @@ export interface IdeaInProgress {
 export interface ParsedCaptureIdeaTask {
   ideaTitle: string
   ideaDescription: string
+  buildItNow: boolean
 }
 
 export async function findAllCaptureIdeaTasks(
@@ -39,6 +40,11 @@ export async function findAllCaptureIdeaTasks(
       results.push({
         taskSlug: file.replace(/\.md$/, ''),
         ideaTitle: title.slice(CAPTURE_IDEA_PREFIX.length),
+      })
+    } else if (title.startsWith(BUILD_IDEA_PREFIX)) {
+      results.push({
+        taskSlug: file.replace(/\.md$/, ''),
+        ideaTitle: title.slice(BUILD_IDEA_PREFIX.length),
       })
     }
   }
@@ -360,11 +366,18 @@ export async function parseCaptureIdeaTask(
   }
 
   const title = titleMatch[1].trim()
-  if (!title.startsWith(CAPTURE_IDEA_PREFIX)) {
+  let ideaTitle: string
+  let buildItNow: boolean
+
+  if (title.startsWith(BUILD_IDEA_PREFIX)) {
+    ideaTitle = title.slice(BUILD_IDEA_PREFIX.length)
+    buildItNow = true
+  } else if (title.startsWith(CAPTURE_IDEA_PREFIX)) {
+    ideaTitle = title.slice(CAPTURE_IDEA_PREFIX.length)
+    buildItNow = false
+  } else {
     return null
   }
-
-  const ideaTitle = title.slice(CAPTURE_IDEA_PREFIX.length)
 
   // Extract the Idea Description section
   const descriptionMatch = content.match(
@@ -376,5 +389,5 @@ export async function parseCaptureIdeaTask(
 
   const ideaDescription = descriptionMatch[1]
 
-  return { ideaTitle, ideaDescription }
+  return { ideaTitle, ideaDescription, buildItNow }
 }
