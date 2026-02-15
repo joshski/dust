@@ -403,14 +403,22 @@ describe('runRepositoryLoop', () => {
     )
 
     // Should have sent agent-session-started and agent-session-ended EventMessages
+    const startedEvent = sentEvents.find(
+      e =>
+        (e as { repository: string }).repository === 'repo' &&
+        (e as { event: { type: string } }).event.type ===
+          'agent-session-started'
+    )
+    expect(startedEvent).toBeDefined()
+    // agentSessionId should be present from the first event (dust-generated)
     expect(
-      sentEvents.some(
-        e =>
-          (e as { repository: string }).repository === 'repo' &&
-          (e as { event: { type: string } }).event.type ===
-            'agent-session-started'
-      )
-    ).toBe(true)
+      (startedEvent as { agentSessionId?: string }).agentSessionId
+    ).toBeDefined()
+    // title should be present on agent-session-started
+    expect((startedEvent as { event: { title?: string } }).event.title).toBe(
+      'My Task'
+    )
+
     expect(
       sentEvents.some(
         e =>

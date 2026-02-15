@@ -119,7 +119,7 @@ describe('createWireEventSender', () => {
       postEvent,
       () => {}
     )
-    send({ type: 'agent-session-started' })
+    send({ type: 'agent-session-started', title: 'Test' })
     await Promise.resolve()
     expect(postCalled).toBe(false)
   })
@@ -135,7 +135,7 @@ describe('createWireEventSender', () => {
       postEvent,
       () => {}
     )
-    send({ type: 'agent-session-started' })
+    send({ type: 'agent-session-started', title: 'Test' })
     send({ type: 'agent-session-ended', success: true })
     await Promise.resolve()
     expect(postedEvents).toHaveLength(2)
@@ -158,7 +158,7 @@ describe('createWireEventSender', () => {
       postEvent,
       () => {}
     )
-    send({ type: 'agent-session-started' })
+    send({ type: 'agent-session-started', title: 'Test' })
     await Promise.resolve()
     expect(postedEvents[0].timestamp).toMatch(
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/
@@ -177,7 +177,7 @@ describe('createWireEventSender', () => {
       () => {},
       () => 'claude-session-abc'
     )
-    send({ type: 'agent-session-started' })
+    send({ type: 'agent-session-started', title: 'Test' })
     send({ type: 'agent-session-ended', success: true })
     await Promise.resolve()
 
@@ -198,7 +198,7 @@ describe('createWireEventSender', () => {
       () => {},
       () => undefined
     )
-    send({ type: 'agent-session-started' })
+    send({ type: 'agent-session-started', title: 'Test' })
     await Promise.resolve()
 
     expect(postedEvents[0].agentSessionId).toBeUndefined()
@@ -217,7 +217,7 @@ describe('createWireEventSender', () => {
         errors.push(error)
       }
     )
-    send({ type: 'agent-session-started' })
+    send({ type: 'agent-session-started', title: 'Test' })
     await Promise.resolve()
     await Promise.resolve()
     expect(errors).toHaveLength(1)
@@ -363,6 +363,9 @@ describe('runOneIteration', () => {
       event => event.type === 'agent-session-ended'
     )
     expect(agentStarted).toBeDefined()
+    expect((agentStarted as { title?: string })?.title).toBe(
+      'Resolving git conflict'
+    )
     expect(agentEnded).toBeDefined()
     expect((agentEnded as { success: boolean } | undefined)?.success).toBe(true)
   })
@@ -679,9 +682,34 @@ describe('runOneIteration', () => {
     )
     expect(startedEvent).toBeDefined()
     expect(startedEvent?.type).toBe('agent-session-started')
+    expect((startedEvent as { title?: string })?.title).toBe('Task')
     expect(endedEvent).toBeDefined()
     expect(endedEvent?.type).toBe('agent-session-ended')
     expect((endedEvent as { success: boolean } | undefined)?.success).toBe(true)
+  })
+
+  test('uses task path as title fallback when task has no title', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': 'No heading here\n\n## Blocked By\n\n(none)' },
+        },
+      },
+    })
+    const loopDeps = createLoopDeps({
+      run: async () => {},
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
+
+    const startedEvent = onAgentEvent.events.find(
+      event => event.type === 'agent-session-started'
+    )
+    expect(startedEvent).toBeDefined()
+    expect((startedEvent as { title: string }).title).toBe(
+      '.dust/tasks/task.md'
+    )
   })
 
   test('emits agent-session-ended with error message on failure', async () => {
@@ -1132,6 +1160,9 @@ describe('loopClaude', () => {
     expect(postedEvents[0].url).toBe('http://example.com/events')
     expect(postedEvents[0].payload.sequence).toBe(1)
     expect(postedEvents[0].payload.event.type).toBe('agent-session-started')
+    expect((postedEvents[0].payload.event as { title?: string }).title).toBe(
+      'Task'
+    )
 
     const sessionEnded = postedEvents.find(
       event => event.payload.event.type === 'agent-session-ended'
@@ -1253,7 +1284,7 @@ describe('loopClaude', () => {
     expect(capturedOnRawEvent).toBeUndefined()
   })
 
-  test('includes agentSessionId in events after session_id is extracted from a raw event', async () => {
+  test('includes dust-generated agentSessionId on all events from first event', async () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
@@ -1268,15 +1299,7 @@ describe('loopClaude', () => {
     }
     const postedEvents: { url: string; payload: EventMessage }[] = []
     const loopDeps = createLoopDeps({
-      run: async (_prompt, options) => {
-        const onRawEvent = (
-          options as { onRawEvent?: (e: Record<string, unknown>) => void }
-        )?.onRawEvent
-        if (onRawEvent) {
-          // Simulate a result event with session_id
-          onRawEvent({ type: 'stream_event', session_id: 'claude-session-xyz' })
-        }
-      },
+      run: async () => {},
       postEvent: async (url, payload) => {
         postedEvents.push({ url, payload })
       },
@@ -1284,14 +1307,16 @@ describe('loopClaude', () => {
 
     await loopClaude(dependencies, loopDeps)
 
-    // agent-session-ended is emitted after run completes, so it should have the agentSessionId
-    const sessionEnded = postedEvents.find(
-      e => e.payload.event.type === 'agent-session-ended'
-    )
-    expect(sessionEnded?.payload.agentSessionId).toBe('claude-session-xyz')
+    // All events should have the same dust-generated agentSessionId
+    expect(postedEvents.length).toBeGreaterThan(0)
+    const agentSessionId = postedEvents[0].payload.agentSessionId
+    expect(agentSessionId).toBeDefined()
+    for (const event of postedEvents) {
+      expect(event.payload.agentSessionId).toBe(agentSessionId)
+    }
   })
 
-  test('resets agentSessionId between iterations', async () => {
+  test('generates different agentSessionId for each iteration', async () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
@@ -1305,21 +1330,8 @@ describe('loopClaude', () => {
       eventsUrl: 'http://example.com/events',
     }
     const postedEvents: { url: string; payload: EventMessage }[] = []
-    let runCount = 0
     const loopDeps = createLoopDeps({
-      run: async (_prompt, options) => {
-        runCount++
-        const onRawEvent = (
-          options as { onRawEvent?: (e: Record<string, unknown>) => void }
-        )?.onRawEvent
-        if (onRawEvent) {
-          // Only emit session_id on first run
-          if (runCount === 1) {
-            onRawEvent({ type: 'stream_event', session_id: 'session-1' })
-          }
-          // Second run: no result event, so agentSessionId should be undefined
-        }
-      },
+      run: async () => {},
       postEvent: async (url, payload) => {
         postedEvents.push({ url, payload })
       },
@@ -1333,19 +1345,26 @@ describe('loopClaude', () => {
     )
     expect(sessionStartedEvents).toHaveLength(2)
 
-    // First iteration's agent-session-started won't have agentSessionId (it's emitted before run)
-    expect(sessionStartedEvents[0].payload.agentSessionId).toBeUndefined()
-    // Second iteration's agent-session-started also won't have it (reset between iterations)
-    expect(sessionStartedEvents[1].payload.agentSessionId).toBeUndefined()
+    // Both should have agentSessionId (dust-generated UUID)
+    expect(sessionStartedEvents[0].payload.agentSessionId).toBeDefined()
+    expect(sessionStartedEvents[1].payload.agentSessionId).toBeDefined()
 
-    // First iteration's agent-session-ended should have session-1
+    // They should be different UUIDs
+    expect(sessionStartedEvents[0].payload.agentSessionId).not.toBe(
+      sessionStartedEvents[1].payload.agentSessionId
+    )
+
+    // agent-session-ended events should have the same agentSessionId as their corresponding started event
     const sessionEndedEvents = postedEvents.filter(
       e => e.payload.event.type === 'agent-session-ended'
     )
     expect(sessionEndedEvents).toHaveLength(2)
-    expect(sessionEndedEvents[0].payload.agentSessionId).toBe('session-1')
-    // Second iteration's agent-session-ended should NOT have agentSessionId
-    expect(sessionEndedEvents[1].payload.agentSessionId).toBeUndefined()
+    expect(sessionEndedEvents[0].payload.agentSessionId).toBe(
+      sessionStartedEvents[0].payload.agentSessionId
+    )
+    expect(sessionEndedEvents[1].payload.agentSessionId).toBe(
+      sessionStartedEvents[1].payload.agentSessionId
+    )
   })
 
   test('emits raw events automatically when eventsUrl is configured', async () => {
@@ -1503,6 +1522,8 @@ describe('integration: HTTP event posting', () => {
         e => e.event.type === 'agent-session-ended'
       )
       expect(sessionStarted).toBeDefined()
+      expect((sessionStarted?.event as { title?: string }).title).toBe('Task')
+      expect(sessionStarted?.agentSessionId).toBeDefined()
       expect(sessionEnded).toBeDefined()
 
       // Verify no loop.* events were posted

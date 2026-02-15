@@ -307,7 +307,7 @@ export async function runRepositoryLoop(
   }
 
   while (!repoState.stopRequested) {
-    agentSessionId = undefined
+    agentSessionId = crypto.randomUUID()
     const result = await runOneIteration(
       commandDeps,
       loopDeps,
@@ -315,9 +315,6 @@ export async function runRepositoryLoop(
       onAgentEvent,
       {
         onRawEvent: (rawEvent: Record<string, unknown>) => {
-          if (typeof rawEvent.session_id === 'string' && rawEvent.session_id) {
-            agentSessionId = rawEvent.session_id
-          }
           onAgentEvent(rawEventToAgentEvent(rawEvent))
         },
       }

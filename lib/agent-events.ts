@@ -7,7 +7,7 @@
 
 // The 4 agent session event types sent over the wire
 export type AgentSessionEvent =
-  | { type: 'agent-session-started' }
+  | { type: 'agent-session-started'; title: string }
   | { type: 'agent-session-ended'; success: boolean; error?: string }
   | { type: 'agent-session-activity' }
   | { type: 'claude-event'; rawEvent: Record<string, unknown> }
@@ -43,7 +43,7 @@ export function rawEventToAgentEvent(
 export function formatAgentEvent(event: AgentSessionEvent): string | null {
   switch (event.type) {
     case 'agent-session-started':
-      return '🤖 Starting Claude...'
+      return `🤖 Starting Claude: ${event.title}`
     case 'agent-session-ended':
       return event.success
         ? '🤖 Claude session ended (success)'

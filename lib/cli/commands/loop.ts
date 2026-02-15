@@ -256,7 +256,10 @@ export async function runOneIteration(
       reason: pullResult.message,
     })
 
-    onAgentEvent?.({ type: 'agent-session-started' })
+    onAgentEvent?.({
+      type: 'agent-session-started',
+      title: 'Resolving git conflict',
+    })
     const prompt = `git pull failed with the following error:
 
 ${pullResult.message}
@@ -304,10 +307,12 @@ Make sure the repository is in a clean state and synced with remote before finis
   }
 
   // Step 3: Invoke Claude Code with the first available task
-  onLoopEvent({ type: 'loop.tasks_found' })
-  onAgentEvent?.({ type: 'agent-session-started' })
-
   const task = tasks[0]
+  onLoopEvent({ type: 'loop.tasks_found' })
+  onAgentEvent?.({
+    type: 'agent-session-started',
+    title: task.title ?? task.path,
+  })
   const taskContent = await dependencies.fileSystem.readFile(
     `${dependencies.context.cwd}/${task.path}`
   )
@@ -410,16 +415,12 @@ export async function loopClaude(
   const iterationOptions: IterationOptions = {}
   if (eventsUrl) {
     iterationOptions.onRawEvent = (rawEvent: Record<string, unknown>) => {
-      // Extract session_id from any event that has it
-      if (typeof rawEvent.session_id === 'string' && rawEvent.session_id) {
-        agentSessionId = rawEvent.session_id
-      }
       onAgentEvent(rawEventToAgentEvent(rawEvent))
     }
   }
 
   while (completedIterations < maxIterations) {
-    agentSessionId = undefined
+    agentSessionId = crypto.randomUUID()
     const result = await runOneIteration(
       dependencies,
       loopDependencies,
