@@ -518,6 +518,12 @@ describe('runOneIteration', () => {
     expect(capturedPrompt).toContain('## Task: Task')
     expect(capturedPrompt).toContain('Do the thing.')
     expect(capturedPrompt).toContain('`bunx dust check`')
+    expect(capturedPrompt).toContain(
+      'contents of the task file `.dust/tasks/task.md`'
+    )
+    expect(capturedPrompt).toContain(
+      'delete the task file `.dust/tasks/task.md`'
+    )
     expect(capturedPrompt).not.toContain('dust agent')
     expect(capturedPrompt).not.toContain('pick task')
   })

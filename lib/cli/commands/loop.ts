@@ -317,7 +317,11 @@ Make sure the repository is in a clean state and synced with remote before finis
 
 ## Task: ${task.title}
 
+The following is the contents of the task file \`${task.path}\`:
+
 ${taskContent}
+
+When the task is complete, delete the task file \`${task.path}\`.
 
 ## Instructions
 
