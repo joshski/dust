@@ -10,33 +10,15 @@
 import type { CommandDependencies, CommandResult } from '../types'
 import { manageGitHooks, templateVariables } from './agent-shared'
 
-export async function focus(
-  dependencies: CommandDependencies
-): Promise<CommandResult> {
-  const { context, settings } = dependencies
-
-  // Parse objective from arguments
-  const objective = dependencies.arguments.join(' ').trim()
-
-  if (!objective) {
-    context.stderr('Error: No objective provided')
-    context.stderr('Usage: dust focus "your objective here"')
-    return { exitCode: 1 }
-  }
-
-  const hooksInstalled = await manageGitHooks(dependencies)
-  const vars = templateVariables(settings, hooksInstalled)
-
-  // Output confirmation
-  context.stdout(`🎯 Focus: ${objective}`)
-  context.stdout('')
-
-  // Implementation instructions
+export function buildImplementationInstructions(
+  bin: string,
+  hooksInstalled: boolean
+): string {
   const steps: string[] = []
   let step = 1
 
   steps.push(
-    `${step}. Run \`${vars.bin} check\` to verify the project is in a good state`
+    `${step}. Run \`${bin} check\` to verify the project is in a good state`
   )
   step++
 
@@ -44,7 +26,7 @@ export async function focus(
   step++
 
   if (!hooksInstalled) {
-    steps.push(`${step}. Run \`${vars.bin} check\` before committing`)
+    steps.push(`${step}. Run \`${bin} check\` before committing`)
     step++
   }
 
@@ -70,7 +52,31 @@ export async function focus(
   steps.push('')
   steps.push('Keep your change small and focused. One task, one commit.')
 
-  context.stdout(steps.join('\n'))
+  return steps.join('\n')
+}
+
+export async function focus(
+  dependencies: CommandDependencies
+): Promise<CommandResult> {
+  const { context, settings } = dependencies
+
+  // Parse objective from arguments
+  const objective = dependencies.arguments.join(' ').trim()
+
+  if (!objective) {
+    context.stderr('Error: No objective provided')
+    context.stderr('Usage: dust focus "your objective here"')
+    return { exitCode: 1 }
+  }
+
+  const hooksInstalled = await manageGitHooks(dependencies)
+  const vars = templateVariables(settings, hooksInstalled)
+
+  // Output confirmation
+  context.stdout(`🎯 Focus: ${objective}`)
+  context.stdout('')
+
+  context.stdout(buildImplementationInstructions(vars.bin, hooksInstalled))
 
   return { exitCode: 0 }
 }

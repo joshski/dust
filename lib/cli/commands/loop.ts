@@ -25,7 +25,8 @@ import {
 } from '../../agent-events'
 import { run as claudeRun } from '../../claude/run'
 import type { CommandDependencies, CommandResult } from '../types'
-import { next } from './next'
+import { buildImplementationInstructions } from './focus'
+import { findUnblockedTasks, type UnblockedTask } from './next'
 
 // Strongly typed loop-only events (never sent over the wire)
 export interface LoopWarningEvent {
@@ -216,18 +217,12 @@ export async function gitPull(
   })
 }
 
-export async function hasAvailableTasks(
+export async function findAvailableTasks(
   dependencies: CommandDependencies
-): Promise<boolean> {
-  let hasOutput = false
-  const captureContext = {
-    ...dependencies.context,
-    stdout: () => {
-      hasOutput = true
-    },
-  }
-  await next({ ...dependencies, context: captureContext })
-  return hasOutput
+): Promise<UnblockedTask[]> {
+  const { context, fileSystem } = dependencies
+  const result = await findUnblockedTasks(context.cwd, fileSystem)
+  return result.tasks
 }
 
 export type IterationResult =
@@ -301,19 +296,32 @@ Make sure the repository is in a clean state and synced with remote before finis
 
   // Step 2: Check for available tasks
   onLoopEvent({ type: 'loop.checking_tasks' })
-  const hasTasks = await hasAvailableTasks(dependencies)
+  const tasks = await findAvailableTasks(dependencies)
 
-  if (!hasTasks) {
+  if (tasks.length === 0) {
     onLoopEvent({ type: 'loop.no_tasks' })
     return 'no_tasks'
   }
 
-  // Step 3: Invoke Claude Code
+  // Step 3: Invoke Claude Code with the first available task
   onLoopEvent({ type: 'loop.tasks_found' })
   onAgentEvent?.({ type: 'agent-session-started' })
 
+  const task = tasks[0]
+  const taskContent = await dependencies.fileSystem.readFile(
+    `${dependencies.context.cwd}/${task.path}`
+  )
   const { dustCommand, installCommand = 'npm install' } = dependencies.settings
-  const prompt = `Run \`${installCommand} && ${dustCommand} agent && ${dustCommand} pick task\` and follow the instructions.`
+  const instructions = buildImplementationInstructions(dustCommand, true)
+  const prompt = `Run \`${installCommand}\` to install dependencies, then implement the following task.
+
+## Task: ${task.title}
+
+${taskContent}
+
+## Instructions
+
+${instructions}`
 
   onLoopEvent({ type: 'loop.start_agent', prompt })
   try {

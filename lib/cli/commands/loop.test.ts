@@ -10,9 +10,9 @@ import type { CommandDependencies } from '../types'
 import {
   createDefaultDependencies,
   createWireEventSender,
+  findAvailableTasks,
   formatLoopEvent,
   gitPull,
-  hasAvailableTasks,
   type LoopDependencies,
   type LoopEmitFn,
   type LoopEvent,
@@ -281,14 +281,14 @@ describe('gitPull', () => {
   })
 })
 
-describe('hasAvailableTasks', () => {
-  test('returns false when no tasks exist', async () => {
+describe('findAvailableTasks', () => {
+  test('returns empty array when no tasks exist', async () => {
     const dependencies = createDependencies()
-    const result = await hasAvailableTasks(dependencies)
-    expect(result).toBe(false)
+    const result = await findAvailableTasks(dependencies)
+    expect(result).toEqual([])
   })
 
-  test('returns true when tasks exist', async () => {
+  test('returns tasks when they exist', async () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
@@ -296,8 +296,9 @@ describe('hasAvailableTasks', () => {
         },
       },
     })
-    const result = await hasAvailableTasks(dependencies)
-    expect(result).toBe(true)
+    const result = await findAvailableTasks(dependencies)
+    expect(result).toHaveLength(1)
+    expect(result[0].title).toBe('Task')
   })
 })
 
@@ -488,11 +489,13 @@ describe('runOneIteration', () => {
     expect(result).toBe('ran_claude')
   })
 
-  test('sends entry prompt with install, agent, and next commands', async () => {
+  test('constructs prompt with task content and implementation instructions', async () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md': '# Task\n\nDo the thing.\n\n## Blocked By\n\n(none)',
+          },
         },
       },
     })
@@ -509,9 +512,14 @@ describe('runOneIteration', () => {
     const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
     await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
-    expect(capturedPrompt).toBe(
-      'Run `bun install && bunx dust agent && bunx dust pick task` and follow the instructions.'
+    expect(capturedPrompt).toContain(
+      'Run `bun install` to install dependencies'
     )
+    expect(capturedPrompt).toContain('## Task: Task')
+    expect(capturedPrompt).toContain('Do the thing.')
+    expect(capturedPrompt).toContain('`bunx dust check`')
+    expect(capturedPrompt).not.toContain('dust agent')
+    expect(capturedPrompt).not.toContain('pick task')
   })
 
   test('uses default install command when not set in settings', async () => {
@@ -531,9 +539,11 @@ describe('runOneIteration', () => {
     const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
     await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
-    expect(capturedPrompt).toBe(
-      'Run `npm install && dust agent && dust pick task` and follow the instructions.'
+    expect(capturedPrompt).toContain(
+      'Run `npm install` to install dependencies'
     )
+    expect(capturedPrompt).toContain('## Task: Task')
+    expect(capturedPrompt).toContain('`dust check`')
   })
 
   test('passes correct cwd to Claude run', async () => {
@@ -720,9 +730,10 @@ describe('runOneIteration', () => {
       event => event.type === 'loop.start_agent'
     )
     expect(startAgentEvent).toBeDefined()
-    expect((startAgentEvent as { prompt: string } | undefined)?.prompt).toBe(
-      'Run `bun install && bunx dust agent && bunx dust pick task` and follow the instructions.'
-    )
+    const prompt = (startAgentEvent as { prompt: string } | undefined)?.prompt
+    expect(prompt).toContain('Run `bun install` to install dependencies')
+    expect(prompt).toContain('## Task: Task')
+    expect(prompt).toContain('`bunx dust check`')
   })
 
   test('emits loop.start_agent event with prompt before calling run when resolving git conflict', async () => {
