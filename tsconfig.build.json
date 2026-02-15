@@ -11,5 +11,5 @@
     "emitDeclarationOnly": true,
     "outDir": "dist"
   },
-  "include": ["lib/workflow-tasks.ts", "lib/cli/types.ts"]
+  "include": ["lib/workflow-tasks.ts", "lib/cli/types.ts", "lib/types.ts"]
 }

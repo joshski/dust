@@ -7,6 +7,9 @@
     "dust": "./dist/dust.js"
   },
   "exports": {
+    "./types": {
+      "types": "./dist/types.d.ts"
+    },
     "./workflow-tasks": {
       "import": "./dist/workflow-tasks.js",
       "types": "./dist/workflow-tasks.d.ts"
