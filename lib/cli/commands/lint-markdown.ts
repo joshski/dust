@@ -22,7 +22,6 @@ export { IDEA_TRANSITION_PREFIXES, titleToFilename }
 export type { GlobScanner }
 
 const REQUIRED_HEADINGS = ['## Goals', '## Blocked By', '## Definition of Done']
-const OPTIONAL_TASK_HEADINGS = ['## Idea Description', '## Resolved Questions']
 const REQUIRED_GOAL_HEADINGS = ['## Parent Goal', '## Sub-Goals']
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.md$/
