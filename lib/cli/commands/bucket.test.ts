@@ -914,6 +914,7 @@ describe('shutdown', () => {
       loopPromise: Promise.resolve(),
       stopRequested: false,
       logBuffer: createLogBuffer(),
+      agentStatus: 'idle',
     }
     state.repositories.set('repo', repoState)
 
@@ -1499,6 +1500,7 @@ describe('syncTUI', () => {
       loopPromise: null,
       stopRequested: false,
       logBuffer: repoBuffer,
+      agentStatus: 'idle',
     })
 
     syncTUI(state)

@@ -51,6 +51,7 @@ export interface RepositoryState {
   loopPromise: Promise<void> | null
   stopRequested: boolean
   logBuffer: LogBuffer
+  agentStatus: 'idle' | 'busy'
 }
 
 /**
@@ -278,6 +279,12 @@ export async function runRepositoryLoop(
 
   // Log formatted agent events and send over WebSocket
   const onAgentEvent: SendAgentEventFn = (event: AgentSessionEvent) => {
+    if (event.type === 'agent-session-started') {
+      repoState.agentStatus = 'busy'
+    } else if (event.type === 'agent-session-ended') {
+      repoState.agentStatus = 'idle'
+    }
+
     const formatted = formatAgentEvent(event)
     if (formatted !== null) {
       appendLogLine(repoState.logBuffer, createLogLine(formatted, 'stdout'))
@@ -373,6 +380,7 @@ export async function addRepository(
     loopPromise: null,
     stopRequested: false,
     logBuffer: manager.logBuffers.get(repository.name) ?? createLogBuffer(),
+    agentStatus: 'idle',
   }
 
   manager.repositories.set(repository.name, repoState)

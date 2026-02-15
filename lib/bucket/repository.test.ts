@@ -280,6 +280,7 @@ describe('runRepositoryLoop', () => {
       loopPromise: null,
       stopRequested: true,
       logBuffer: createLogBuffer(),
+      agentStatus: 'idle' as const,
     }
 
     const repoDeps = createRepositoryDependencies({
@@ -305,6 +306,7 @@ describe('runRepositoryLoop', () => {
       loopPromise: null,
       stopRequested: false,
       logBuffer: createLogBuffer(),
+      agentStatus: 'idle' as const,
     }
 
     let sleepCount = 0
@@ -350,6 +352,7 @@ describe('runRepositoryLoop', () => {
       loopPromise: null,
       stopRequested: false,
       logBuffer: createLogBuffer(),
+      agentStatus: 'idle' as const,
     }
 
     let iterationCount = 0
@@ -443,6 +446,7 @@ describe('runRepositoryLoop', () => {
       loopPromise: null,
       stopRequested: false,
       logBuffer: createLogBuffer(),
+      agentStatus: 'idle' as const,
     }
 
     const repoDeps = createRepositoryDependencies({
@@ -464,6 +468,53 @@ describe('runRepositoryLoop', () => {
     expect(
       logLines.some(l => l.text.includes('Claude exited with error'))
     ).toBe(true)
+  })
+
+  test('sets agentStatus to busy on agent-session-started and idle on agent-session-ended', async () => {
+    const { spawn } = createAutoResolvingSpawn()
+
+    const fileSystem = createFileSystemEmulator({
+      // biome-ignore lint: tmp is the /tmp directory name, not an abbreviation
+      tmp: {
+        repo: {
+          '.dust': {
+            tasks: {
+              'my-task.md': '# My Task\n\nDo something',
+            },
+          },
+        },
+      },
+    })
+
+    const repoState = {
+      repository: { name: 'repo', gitUrl: 'repo' },
+      path: '/tmp/repo',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle' as const,
+    }
+
+    let statusDuringRun: string | undefined
+
+    const repoDeps = createRepositoryDependencies({
+      spawn,
+      fileSystem,
+      run: async () => {
+        // By the time run is called, agent-session-started has been emitted
+        // so agentStatus should be 'busy'
+        statusDuringRun = repoState.agentStatus
+        fileSystem.files.delete('/tmp/repo/.dust/tasks/my-task.md')
+      },
+      sleep: async () => {
+        repoState.stopRequested = true
+      },
+    })
+
+    await runRepositoryLoop(repoState, repoDeps)
+
+    expect(statusDuringRun).toBe('busy')
+    expect(repoState.agentStatus).toBe('idle')
   })
 })
 
@@ -531,6 +582,7 @@ describe('handleRepositoryList', () => {
       loopPromise: Promise.resolve(),
       stopRequested: false,
       logBuffer: createLogBuffer(),
+      agentStatus: 'idle' as const,
     })
 
     const repoDeps = createRepositoryDependencies({
@@ -562,6 +614,7 @@ describe('addRepository', () => {
       loopPromise: null,
       stopRequested: false,
       logBuffer: createLogBuffer(),
+      agentStatus: 'idle' as const,
     })
 
     let cloneCalled = false

@@ -21,7 +21,7 @@ In `lib/cli/commands/bucket.ts`:
 
 ## Blocked By
 
-- [Track agent status in RepositoryState](track-agent-status-in-repositorystate.md)
+(none)
 
 ## Definition of Done
 
