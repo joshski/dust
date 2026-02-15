@@ -697,6 +697,68 @@ describe('runOneIteration', () => {
     )
   })
 
+  test('emits loop.start_agent event with prompt before calling run when tasks available', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+        },
+      },
+    })
+    dependencies.settings = {
+      dustCommand: 'bunx dust',
+      installCommand: 'bun install',
+    }
+    const loopDeps = createLoopDeps({
+      run: async () => {},
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
+
+    const startAgentEvent = onLoopEvent.events.find(
+      event => event.type === 'loop.start_agent'
+    )
+    expect(startAgentEvent).toBeDefined()
+    expect((startAgentEvent as { prompt: string } | undefined)?.prompt).toBe(
+      'Run `bun install && bunx dust agent && bunx dust pick task` and follow the instructions.'
+    )
+  })
+
+  test('emits loop.start_agent event with prompt before calling run when resolving git conflict', async () => {
+    const dependencies = createDependencies()
+    const loopDeps = createLoopDeps({
+      spawn: (() => {
+        const proc = new EventEmitter() as EventEmitter & {
+          stdout: EventEmitter | null
+          stderr: EventEmitter
+        }
+        proc.stdout = null
+        proc.stderr = new EventEmitter()
+        setTimeout(() => {
+          proc.stderr.emit('data', Buffer.from('merge conflict'))
+          proc.emit('close', 1)
+        }, 0)
+        return proc as unknown as ChildProcess
+      }) as LoopDependencies['spawn'],
+      run: async () => {},
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
+
+    const startAgentEvent = onLoopEvent.events.find(
+      event => event.type === 'loop.start_agent'
+    )
+    expect(startAgentEvent).toBeDefined()
+    expect(
+      (startAgentEvent as { prompt: string } | undefined)?.prompt
+    ).toContain('git pull failed')
+    expect(
+      (startAgentEvent as { prompt: string } | undefined)?.prompt
+    ).toContain('merge conflict')
+  })
+
   test('passes onRawEvent callback to Claude run when provided', async () => {
     const dependencies = createDependencies({
       project: {
@@ -759,6 +821,14 @@ describe('runOneIteration', () => {
 describe('formatLoopEvent', () => {
   test('returns null for loop.checking_tasks', () => {
     const result = formatLoopEvent({ type: 'loop.checking_tasks' })
+    expect(result).toBeNull()
+  })
+
+  test('returns null for loop.start_agent', () => {
+    const result = formatLoopEvent({
+      type: 'loop.start_agent',
+      prompt: 'test prompt',
+    })
     expect(result).toBeNull()
   })
 

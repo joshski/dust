@@ -35,7 +35,7 @@ These decisions are already resolved in the idea file:
 
 ## Blocked By
 
-- [Emit loop.start_agent event with prompt](emit-loop-startagent-event-with-prompt.md)
+(none)
 
 ## Definition of Done
 

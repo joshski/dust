@@ -69,6 +69,11 @@ export interface LoopEndedEvent {
   maxIterations: number
 }
 
+export interface LoopStartAgentEvent {
+  type: 'loop.start_agent'
+  prompt: string
+}
+
 export type LoopEvent =
   | LoopWarningEvent
   | LoopStartedEvent
@@ -79,6 +84,7 @@ export type LoopEvent =
   | LoopTasksFoundEvent
   | LoopIterationCompleteEvent
   | LoopEndedEvent
+  | LoopStartAgentEvent
 
 export type LoopEmitFn = (event: LoopEvent) => void
 
@@ -104,6 +110,8 @@ export function formatLoopEvent(event: LoopEvent): string | null {
       return `📋 Completed iteration ${event.iteration}/${event.maxIterations}`
     case 'loop.ended':
       return `🏁 Reached max iterations (${event.maxIterations}). Exiting.`
+    case 'loop.start_agent':
+      return null
   }
 }
 
@@ -265,6 +273,7 @@ Please resolve this issue. Common approaches:
 
 Make sure the repository is in a clean state and synced with remote before finishing.`
 
+    onLoopEvent({ type: 'loop.start_agent', prompt })
     try {
       await run(prompt, {
         spawnOptions: {
@@ -306,6 +315,7 @@ Make sure the repository is in a clean state and synced with remote before finis
   const { dustCommand, installCommand = 'npm install' } = dependencies.settings
   const prompt = `Run \`${installCommand} && ${dustCommand} agent && ${dustCommand} pick task\` and follow the instructions.`
 
+  onLoopEvent({ type: 'loop.start_agent', prompt })
   try {
     await run(prompt, {
       spawnOptions: {
