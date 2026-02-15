@@ -10,6 +10,28 @@ If the next task were always the first item in a deterministic ordering, the `pi
 
 The `focus` command already accepts an arbitrary objective string and doesn't validate it against task files, so the integration between `pick task` and `focus` would be straightforward — `pick task` outputs the one task, and the agent focuses on it.
 
+## Codebase Context
+
+### Current implementation
+
+`findUnblockedTasks()` in `lib/cli/commands/next.ts` (lines 59–106) reads all `.md` files from `.dust/tasks/`, sorts them alphabetically (`.sort()`), filters out tasks with incomplete blockers, and returns an array of `UnblockedTask` objects. The `pick-task.ts` command calls this function and displays all results via `printTaskList()`, then instructs the agent to "Pick ONE task."
+
+### What would change
+
+The change is small: `pick task` would display only the first unblocked task instead of all of them, and the instructional text would say "This is your next task" rather than "Pick ONE task." The `findUnblockedTasks()` function itself can remain unchanged — the filtering happens at the presentation layer in `pick-task.ts`.
+
+### Task file format
+
+Task files have three required headings: `## Goals`, `## Blocked By`, and `## Definition of Done`. There is no existing ordering metadata (no priority field, no creation date, no sequence number). The `task-file-format.md` fact documents this structure.
+
+### Goal alignment
+
+This idea supports several goals:
+- **Agent Autonomy** — removing a decision point means agents can proceed without subjective judgment
+- **Agent Context Inference** — the system makes the decision rather than requiring the agent to infer intent
+- **Ideal Agent Developer Experience** — fewer decision points mean less human oversight needed
+- **Lightweight Planning** — the system stays simple while becoming more deterministic
+
 ## Proposal
 
 Change `pick task` to present only the first unblocked task instead of the full list. The ordering would be deterministic so that every invocation yields the same result given the same set of task files.
@@ -57,3 +79,23 @@ This idea can be implemented with any ordering strategy (alphabetical, creation 
 #### Dependent — priority should be the primary ordering input
 
 Deterministic ordering is most useful when it reflects task importance. Without priority, the ordering is arbitrary and may not match what the task author intended. This view says the two ideas should be implemented together.
+
+### Should the `next` command also change to show a single task?
+
+#### Yes — both commands show only one task
+
+Consistency between `pick task` and `next`. Both commands serve the same purpose of surfacing the next piece of work. Having them behave differently would be confusing.
+
+#### No — `next` remains a full list view
+
+`next` serves as a backlog overview for humans, while `pick task` is the agent-facing command. Keeping `next` as a full list provides a way to see all unblocked tasks without affecting the deterministic agent workflow.
+
+### Should `pick task` automatically run `focus`?
+
+#### Yes — merge pick and focus into one step
+
+If there's only one deterministic task, `pick task` could skip the display step and directly output the focus instructions, saving a round-trip in the agent workflow. This makes the agent path faster and removes another decision point.
+
+#### No — keep pick and focus as separate commands
+
+Separating selection from execution makes the system easier to debug. You can see what would be picked without starting work. It also preserves the option for the agent (or human) to inspect the task before committing to it.
