@@ -43,7 +43,7 @@ Events are a discriminated union with a `type` field. Only these 4 types are sen
 
 ```typescript
 type AgentSessionEvent =
-  | { type: 'agent-session-started'; title: string }
+  | { type: 'agent-session-started'; title: string; prompt: string; agentType: string; purpose: string }
   | { type: 'agent-session-ended'; success: boolean; error?: string }
   | { type: 'agent-session-activity' }
   | { type: 'claude-event'; rawEvent: Record<string, unknown> }
@@ -51,7 +51,7 @@ type AgentSessionEvent =
 
 | Type | Fields | Description |
 |------|--------|-------------|
-| `agent-session-started` | `title: string` | An agent run has started. Title is the task name or a description like "Resolving git conflict". |
+| `agent-session-started` | `title: string`, `prompt: string`, `agentType: string`, `purpose: string` | An agent run has started. Title is the task name or a description like "Resolving git conflict". Prompt is the full prompt sent to the agent. AgentType identifies the agent (e.g., `'claude'`). Purpose describes the reason (e.g., `'task'` or `'git-conflict'`). |
 | `agent-session-ended` | `success: boolean`, `error?: string` | An agent run has ended |
 | `agent-session-activity` | - | Heartbeat indicating the agent is active (not stored) |
 | `claude-event` | `rawEvent: object` | Raw Claude streaming event |
@@ -84,7 +84,13 @@ Agent session started:
   "sessionId": "550e8400-e29b-41d4-a716-446655440000",
   "repository": "my-repo",
   "agentSessionId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "event": { "type": "agent-session-started", "title": "Implement auth feature" }
+  "event": {
+    "type": "agent-session-started",
+    "title": "Implement auth feature",
+    "prompt": "Run `npm install` to install dependencies, then implement the following task...",
+    "agentType": "claude",
+    "purpose": "task"
+  }
 }
 ```
 

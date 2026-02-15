@@ -7,7 +7,13 @@
 
 // The 4 agent session event types sent over the wire
 export type AgentSessionEvent =
-  | { type: 'agent-session-started'; title: string }
+  | {
+      type: 'agent-session-started'
+      title: string
+      prompt: string
+      agentType: string
+      purpose: string
+    }
   | { type: 'agent-session-ended'; success: boolean; error?: string }
   | { type: 'agent-session-activity' }
   | { type: 'claude-event'; rawEvent: Record<string, unknown> }

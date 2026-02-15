@@ -119,7 +119,13 @@ describe('createWireEventSender', () => {
       postEvent,
       () => {}
     )
-    send({ type: 'agent-session-started', title: 'Test' })
+    send({
+      type: 'agent-session-started',
+      title: 'Test',
+      prompt: 'Test prompt',
+      agentType: 'claude',
+      purpose: 'task',
+    })
     await Promise.resolve()
     expect(postCalled).toBe(false)
   })
@@ -135,7 +141,13 @@ describe('createWireEventSender', () => {
       postEvent,
       () => {}
     )
-    send({ type: 'agent-session-started', title: 'Test' })
+    send({
+      type: 'agent-session-started',
+      title: 'Test',
+      prompt: 'Test prompt',
+      agentType: 'claude',
+      purpose: 'task',
+    })
     send({ type: 'agent-session-ended', success: true })
     await Promise.resolve()
     expect(postedEvents).toHaveLength(2)
@@ -158,7 +170,13 @@ describe('createWireEventSender', () => {
       postEvent,
       () => {}
     )
-    send({ type: 'agent-session-started', title: 'Test' })
+    send({
+      type: 'agent-session-started',
+      title: 'Test',
+      prompt: 'Test prompt',
+      agentType: 'claude',
+      purpose: 'task',
+    })
     await Promise.resolve()
     expect(postedEvents[0].timestamp).toMatch(
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/
@@ -177,7 +195,13 @@ describe('createWireEventSender', () => {
       () => {},
       () => 'claude-session-abc'
     )
-    send({ type: 'agent-session-started', title: 'Test' })
+    send({
+      type: 'agent-session-started',
+      title: 'Test',
+      prompt: 'Test prompt',
+      agentType: 'claude',
+      purpose: 'task',
+    })
     send({ type: 'agent-session-ended', success: true })
     await Promise.resolve()
 
@@ -198,7 +222,13 @@ describe('createWireEventSender', () => {
       () => {},
       () => undefined
     )
-    send({ type: 'agent-session-started', title: 'Test' })
+    send({
+      type: 'agent-session-started',
+      title: 'Test',
+      prompt: 'Test prompt',
+      agentType: 'claude',
+      purpose: 'task',
+    })
     await Promise.resolve()
 
     expect(postedEvents[0].agentSessionId).toBeUndefined()
@@ -217,7 +247,13 @@ describe('createWireEventSender', () => {
         errors.push(error)
       }
     )
-    send({ type: 'agent-session-started', title: 'Test' })
+    send({
+      type: 'agent-session-started',
+      title: 'Test',
+      prompt: 'Test prompt',
+      agentType: 'claude',
+      purpose: 'task',
+    })
     await Promise.resolve()
     await Promise.resolve()
     expect(errors).toHaveLength(1)
@@ -741,7 +777,7 @@ describe('runOneIteration', () => {
     )
   })
 
-  test('emits loop.start_agent event with prompt before calling run when tasks available', async () => {
+  test('includes prompt, agentType, and purpose in agent-session-started event for tasks', async () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
@@ -760,17 +796,24 @@ describe('runOneIteration', () => {
 
     await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
 
-    const startAgentEvent = onLoopEvent.events.find(
-      event => event.type === 'loop.start_agent'
+    const startedEvent = onAgentEvent.events.find(
+      event => event.type === 'agent-session-started'
+    ) as {
+      prompt: string
+      agentType: string
+      purpose: string
+    }
+    expect(startedEvent).toBeDefined()
+    expect(startedEvent.prompt).toContain(
+      'Run `bun install` to install dependencies'
     )
-    expect(startAgentEvent).toBeDefined()
-    const prompt = (startAgentEvent as { prompt: string } | undefined)?.prompt
-    expect(prompt).toContain('Run `bun install` to install dependencies')
-    expect(prompt).toContain('## Task: Task')
-    expect(prompt).toContain('`bunx dust check`')
+    expect(startedEvent.prompt).toContain('## Task: Task')
+    expect(startedEvent.prompt).toContain('`bunx dust check`')
+    expect(startedEvent.agentType).toBe('claude')
+    expect(startedEvent.purpose).toBe('task')
   })
 
-  test('emits loop.start_agent event with prompt before calling run when resolving git conflict', async () => {
+  test('includes prompt, agentType, and purpose in agent-session-started event for git conflicts', async () => {
     const dependencies = createDependencies()
     const loopDeps = createLoopDeps({
       spawn: (() => {
@@ -792,16 +835,18 @@ describe('runOneIteration', () => {
 
     await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
 
-    const startAgentEvent = onLoopEvent.events.find(
-      event => event.type === 'loop.start_agent'
-    )
-    expect(startAgentEvent).toBeDefined()
-    expect(
-      (startAgentEvent as { prompt: string } | undefined)?.prompt
-    ).toContain('git pull failed')
-    expect(
-      (startAgentEvent as { prompt: string } | undefined)?.prompt
-    ).toContain('merge conflict')
+    const startedEvent = onAgentEvent.events.find(
+      event => event.type === 'agent-session-started'
+    ) as {
+      prompt: string
+      agentType: string
+      purpose: string
+    }
+    expect(startedEvent).toBeDefined()
+    expect(startedEvent.prompt).toContain('git pull failed')
+    expect(startedEvent.prompt).toContain('merge conflict')
+    expect(startedEvent.agentType).toBe('claude')
+    expect(startedEvent.purpose).toBe('git-conflict')
   })
 
   test('passes onRawEvent callback to Claude run when provided', async () => {
@@ -866,14 +911,6 @@ describe('runOneIteration', () => {
 describe('formatLoopEvent', () => {
   test('returns null for loop.checking_tasks', () => {
     const result = formatLoopEvent({ type: 'loop.checking_tasks' })
-    expect(result).toBeNull()
-  })
-
-  test('returns null for loop.start_agent', () => {
-    const result = formatLoopEvent({
-      type: 'loop.start_agent',
-      prompt: 'test prompt',
-    })
     expect(result).toBeNull()
   })
 

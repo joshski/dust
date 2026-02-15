@@ -31,7 +31,13 @@ function createTestEventMessage(
     timestamp: new Date().toISOString(),
     sessionId: 'session-123',
     repository: 'my-repo',
-    event: { type: 'agent-session-started', title: 'Test' },
+    event: {
+      type: 'agent-session-started',
+      title: 'Test',
+      prompt: 'Test prompt',
+      agentType: 'claude',
+      purpose: 'task',
+    },
     ...overrides,
   }
 }

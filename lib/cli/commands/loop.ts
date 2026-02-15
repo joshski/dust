@@ -70,11 +70,6 @@ export interface LoopEndedEvent {
   maxIterations: number
 }
 
-export interface LoopStartAgentEvent {
-  type: 'loop.start_agent'
-  prompt: string
-}
-
 export type LoopEvent =
   | LoopWarningEvent
   | LoopStartedEvent
@@ -85,7 +80,6 @@ export type LoopEvent =
   | LoopTasksFoundEvent
   | LoopIterationCompleteEvent
   | LoopEndedEvent
-  | LoopStartAgentEvent
 
 export type LoopEmitFn = (event: LoopEvent) => void
 
@@ -111,8 +105,6 @@ export function formatLoopEvent(event: LoopEvent): string | null {
       return `📋 Completed iteration ${event.iteration}/${event.maxIterations}`
     case 'loop.ended':
       return `🏁 Reached max iterations (${event.maxIterations}). Exiting.`
-    case 'loop.start_agent':
-      return null
   }
 }
 
@@ -256,10 +248,6 @@ export async function runOneIteration(
       reason: pullResult.message,
     })
 
-    onAgentEvent?.({
-      type: 'agent-session-started',
-      title: 'Resolving git conflict',
-    })
     const prompt = `git pull failed with the following error:
 
 ${pullResult.message}
@@ -271,7 +259,13 @@ Please resolve this issue. Common approaches:
 
 Make sure the repository is in a clean state and synced with remote before finishing.`
 
-    onLoopEvent({ type: 'loop.start_agent', prompt })
+    onAgentEvent?.({
+      type: 'agent-session-started',
+      title: 'Resolving git conflict',
+      prompt,
+      agentType: 'claude',
+      purpose: 'git-conflict',
+    })
     try {
       await run(prompt, {
         spawnOptions: {
@@ -309,10 +303,6 @@ Make sure the repository is in a clean state and synced with remote before finis
   // Step 3: Invoke Claude Code with the first available task
   const task = tasks[0]
   onLoopEvent({ type: 'loop.tasks_found' })
-  onAgentEvent?.({
-    type: 'agent-session-started',
-    title: task.title ?? task.path,
-  })
   const taskContent = await dependencies.fileSystem.readFile(
     `${dependencies.context.cwd}/${task.path}`
   )
@@ -332,7 +322,13 @@ When the task is complete, delete the task file \`${task.path}\`.
 
 ${instructions}`
 
-  onLoopEvent({ type: 'loop.start_agent', prompt })
+  onAgentEvent?.({
+    type: 'agent-session-started',
+    title: task.title ?? task.path,
+    prompt,
+    agentType: 'claude',
+    purpose: 'task',
+  })
   try {
     await run(prompt, {
       spawnOptions: {

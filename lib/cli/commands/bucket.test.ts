@@ -147,7 +147,13 @@ describe('createInitialState', () => {
       timestamp: new Date().toISOString(),
       sessionId: state.sessionId,
       repository: 'test',
-      event: { type: 'agent-session-started', title: 'Test' },
+      event: {
+        type: 'agent-session-started',
+        title: 'Test',
+        prompt: 'Test prompt',
+        agentType: 'claude',
+        purpose: 'task',
+      },
     })
     expect(sentMessages).toHaveLength(0)
 
@@ -161,7 +167,13 @@ describe('createInitialState', () => {
       timestamp: new Date().toISOString(),
       sessionId: state.sessionId,
       repository: 'test',
-      event: { type: 'agent-session-started', title: 'Test' },
+      event: {
+        type: 'agent-session-started',
+        title: 'Test',
+        prompt: 'Test prompt',
+        agentType: 'claude',
+        purpose: 'task',
+      },
     })
     expect(sentMessages).toHaveLength(1)
   })
