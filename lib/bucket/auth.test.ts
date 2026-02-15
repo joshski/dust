@@ -8,6 +8,7 @@ import {
   type AuthDependencies,
   authenticate,
   clearToken,
+  defaultExchangeCode,
   loadStoredToken,
   storeToken,
 } from './auth'
@@ -85,6 +86,48 @@ describe('clearToken', () => {
   })
 })
 
+describe('defaultExchangeCode', () => {
+  afterEach(() => {
+    restoreEnv()
+    globalThis.fetch = originalFetch
+  })
+
+  const originalFetch = globalThis.fetch
+
+  test('exchanges code for token', async () => {
+    stubEnv('DUST_BUCKET_HOST', 'http://localhost:9999')
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ token: 'exchanged-token' }), {
+        status: 200,
+      })) as unknown as typeof fetch
+
+    const token = await defaultExchangeCode('my-code')
+    expect(token).toBe('exchanged-token')
+  })
+
+  test('throws when response is not ok', async () => {
+    stubEnv('DUST_BUCKET_HOST', 'http://localhost:9999')
+    globalThis.fetch = (async () =>
+      new Response('error', { status: 401 })) as unknown as typeof fetch
+
+    await expect(defaultExchangeCode('bad-code')).rejects.toThrow(
+      'Token exchange failed: 401'
+    )
+  })
+
+  test('throws when response has no token string', async () => {
+    stubEnv('DUST_BUCKET_HOST', 'http://localhost:9999')
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ token: 42 }), {
+        status: 200,
+      })) as unknown as typeof fetch
+
+    await expect(defaultExchangeCode('my-code')).rejects.toThrow(
+      'Invalid token exchange response'
+    )
+  })
+})
+
 describe('authenticate', () => {
   afterEach(() => {
     restoreEnv()
@@ -96,15 +139,14 @@ describe('authenticate', () => {
     return {
       createServer: handler => {
         setTimeout(() => {
-          handler(
-            new Request('http://localhost:9999/callback?token=test-token')
-          )
+          handler(new Request('http://localhost:9999/callback?code=test-code'))
         }, 0)
         return { port: 9999, stop: () => {} }
       },
       openBrowser: () => {},
       getHomeDir: () => '/home',
       fileSystem: createFileSystemEmulator(),
+      exchangeCode: async () => 'test-token',
       ...overrides,
     }
   }
@@ -128,6 +170,25 @@ describe('authenticate', () => {
     expect(token).toBe('test-token')
   })
 
+  test('uses defaultExchangeCode when exchangeCode not provided', async () => {
+    stubEnv('DUST_BUCKET_HOST', 'http://localhost:9999')
+    const originalFetch = globalThis.fetch
+    globalThis.fetch = (async () =>
+      new Response(JSON.stringify({ token: 'default-exchanged' }), {
+        status: 200,
+      })) as unknown as typeof fetch
+
+    try {
+      const authDependencies = createMockDependencies({
+        exchangeCode: undefined,
+      })
+      const token = await authenticate(authDependencies)
+      expect(token).toBe('default-exchanged')
+    } finally {
+      globalThis.fetch = originalFetch
+    }
+  })
+
   test('uses DUST_BUCKET_HOST env var when set', async () => {
     stubEnv('DUST_BUCKET_HOST', 'http://localhost:3000')
     let openedUrl: string | undefined
@@ -147,7 +208,7 @@ describe('authenticate', () => {
     const authDependencies = createMockDependencies({
       createServer: handler => {
         setTimeout(() => {
-          handler(new Request('http://localhost:9999/callback?token=tok'))
+          handler(new Request('http://localhost:9999/callback?code=test-code'))
         }, 0)
         return {
           port: 9999,
@@ -163,13 +224,13 @@ describe('authenticate', () => {
     expect(stopped).toBe(true)
   })
 
-  test('handler returns 400 for callback without token', async () => {
+  test('handler returns 400 for callback without code', async () => {
     let capturedHandler: ((request: Request) => Response) | undefined
     const authDependencies = createMockDependencies({
       createServer: handler => {
         capturedHandler = handler
         setTimeout(() => {
-          handler(new Request('http://localhost:9999/callback?token=tok'))
+          handler(new Request('http://localhost:9999/callback?code=test-code'))
         }, 0)
         return { port: 9999, stop: () => {} }
       },
@@ -189,7 +250,7 @@ describe('authenticate', () => {
       createServer: handler => {
         capturedHandler = handler
         setTimeout(() => {
-          handler(new Request('http://localhost:9999/callback?token=tok'))
+          handler(new Request('http://localhost:9999/callback?code=test-code'))
         }, 0)
         return { port: 9999, stop: () => {} }
       },

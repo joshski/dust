@@ -19,6 +19,7 @@ export interface AuthDependencies {
   getHomeDir: () => string
   fileSystem: FileSystem
   authTimeoutMs?: number
+  exchangeCode?: (code: string) => Promise<string>
 }
 
 function credentialsPath(homeDir: string): string {
@@ -64,9 +65,29 @@ export async function clearToken(
   }
 }
 
+/** Visible for testing */
+export async function defaultExchangeCode(code: string): Promise<string> {
+  const host = getDustbucketHost()
+  const response = await fetch(`${host}/auth/cli/exchange`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code }),
+  })
+  if (!response.ok) {
+    throw new Error(`Token exchange failed: ${response.status}`)
+  }
+  const body = await response.json()
+  if (typeof body.token !== 'string') {
+    throw new Error('Invalid token exchange response')
+  }
+  return body.token
+}
+
 export async function authenticate(
   authDeps: AuthDependencies
 ): Promise<string> {
+  const exchange = authDeps.exchangeCode ?? defaultExchangeCode
+
   return new Promise<string>((resolve, reject) => {
     let timer: ReturnType<typeof setTimeout> | null = null
     let serverHandle: { stop: () => void } | null = null
@@ -85,16 +106,16 @@ export async function authenticate(
     const handler = (request: Request): Response => {
       const url = new URL(request.url)
       if (url.pathname === '/callback') {
-        const token = url.searchParams.get('token')
-        if (token) {
+        const code = url.searchParams.get('code')
+        if (code) {
           cleanup()
-          resolve(token)
+          exchange(code).then(resolve, reject)
           return new Response(
             '<html><body><p>Authentication successful! You can close this tab.</p></body></html>',
             { headers: { 'Content-Type': 'text/html' } }
           )
         }
-        return new Response('Missing token', { status: 400 })
+        return new Response('Missing code', { status: 400 })
       }
       return new Response('Not found', { status: 404 })
     }

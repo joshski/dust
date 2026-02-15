@@ -41,6 +41,7 @@ function createMockAuthDeps(
     openBrowser: () => {},
     getHomeDir: () => '/home',
     fileSystem: createFileSystemEmulator(),
+    exchangeCode: async () => 'browser-tok',
     ...overrides,
   }
 }
@@ -946,7 +947,7 @@ describe('bucket', () => {
         createServer: handler => {
           setTimeout(() => {
             handler(
-              new Request('http://localhost:9999/callback?token=browser-tok')
+              new Request('http://localhost:9999/callback?code=test-code')
             )
           }, 0)
           return { port: 9999, stop: () => {} }
@@ -980,7 +981,9 @@ describe('bucket', () => {
         fileSystem: authFs,
         createServer: handler => {
           setTimeout(() => {
-            handler(new Request('http://localhost:9999/callback?token=new-tok'))
+            handler(
+              new Request('http://localhost:9999/callback?code=test-code')
+            )
           }, 0)
           return { port: 9999, stop: () => {} }
         },
@@ -994,7 +997,7 @@ describe('bucket', () => {
     await bucket(dependencies, bucketDependencies)
 
     expect(authFs.writtenFiles.get('/home/.dust/credentials.json')).toBe(
-      '{"token":"new-tok"}'
+      '{"token":"browser-tok"}'
     )
   })
 
