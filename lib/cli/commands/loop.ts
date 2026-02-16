@@ -34,15 +34,25 @@ import { findUnblockedTasks, type UnblockedTask } from './next'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
+/* v8 ignore start - catch/fallback branches unreachable in test */
 function getDustVersion(): string {
-  try {
-    const packageJsonPath = join(__dirname, '../../../package.json')
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
-    return packageJson.version ?? 'unknown'
-  } catch {
-    return 'unknown'
+  // In dev: __dirname is lib/cli/commands/, package.json at ../../../package.json
+  // Bundled: __dirname is dist/, package.json at ../package.json
+  const candidates = [
+    join(__dirname, '../../../package.json'),
+    join(__dirname, '../package.json'),
+  ]
+  for (const candidate of candidates) {
+    try {
+      const packageJson = JSON.parse(readFileSync(candidate, 'utf-8'))
+      return packageJson.version ?? 'unknown'
+    } catch {
+      // try next candidate
+    }
   }
+  return 'unknown'
 }
+/* v8 ignore stop */
 
 function getEnvironmentContext(cwd: string): {
   machineName: string

@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'vitest'
-import type { DustSettings, FileSystem } from '../types'
+import type { CommandDependencies, DustSettings, FileSystem } from '../types'
 import {
   loadAgentInstructions,
+  manageGitHooks,
   templateVariables,
   templateVariablesWithInstructions,
 } from './agent-shared'
@@ -67,6 +68,23 @@ describe('templateVariables', () => {
   test('hooksInstalled is "false" when hooks are not installed', () => {
     const vars = templateVariables(defaultSettings, false, {})
     expect(vars.hooksInstalled).toBe('false')
+  })
+
+  test('hasIdeaFile defaults to "true" when not specified', () => {
+    const vars = templateVariables(defaultSettings, false, {})
+    expect(vars.hasIdeaFile).toBe('true')
+  })
+
+  test('hasIdeaFile is empty string when set to false', () => {
+    const vars = templateVariables(
+      defaultSettings,
+      false,
+      {},
+      {
+        hasIdeaFile: false,
+      }
+    )
+    expect(vars.hasIdeaFile).toBe('')
   })
 })
 
@@ -211,5 +229,98 @@ describe('templateVariablesWithInstructions', () => {
     expect(vars.agentName).toBe('Claude Code Web')
     expect(vars.hooksInstalled).toBe('true')
     expect(vars.isClaudeCodeWeb).toBe('true')
+  })
+
+  test('hasIdeaFile is empty string when set to false', async () => {
+    const fileSystem = createFileSystem({})
+    const vars = await templateVariablesWithInstructions(
+      '/project',
+      fileSystem,
+      defaultSettings,
+      false,
+      {},
+      { hasIdeaFile: false }
+    )
+    expect(vars.hasIdeaFile).toBe('')
+  })
+})
+
+describe('manageGitHooks', () => {
+  const hookContent =
+    '#!/bin/sh\n\n# BEGIN DUST HOOK\ndust pre push\nif [ $? -ne 0 ]; then\n  echo "dust pre-push check failed"\n  exit 1\nfi\n# END DUST HOOK\n'
+
+  function createTestDependencies(
+    files: Record<string, string>,
+    settings: DustSettings = { dustCommand: 'dust' }
+  ): CommandDependencies {
+    const written: Record<string, string> = {}
+    const fileSystem: FileSystem = {
+      exists: (path: string) => path in files,
+      readFile: async (path: string) => {
+        if (path in written) return written[path]
+        if (path in files) return files[path]
+        const error = new Error('ENOENT') as NodeJS.ErrnoException
+        error.code = 'ENOENT'
+        throw error
+      },
+      writeFile: async (path: string, content: string) => {
+        written[path] = content
+      },
+      mkdir: async () => {},
+      readdir: async () => [],
+      chmod: async () => {},
+    }
+    return {
+      arguments: [],
+      context: {
+        cwd: '/project',
+        stdout: () => {},
+        stderr: () => {},
+      },
+      fileSystem,
+      globScanner: {
+        async *scan() {
+          yield* []
+        },
+      },
+      settings,
+    }
+  }
+
+  test('returns false when not a git repo', async () => {
+    const dependencies = createTestDependencies({})
+    expect(await manageGitHooks(dependencies)).toBe(false)
+  })
+
+  test('installs hooks when not already installed', async () => {
+    const dependencies = createTestDependencies({ '/project/.git': '' })
+    expect(await manageGitHooks(dependencies)).toBe(true)
+  })
+
+  test('returns true when hooks already installed', async () => {
+    const dependencies = createTestDependencies({
+      '/project/.git': '',
+      '/project/.git/hooks/pre-push': hookContent,
+    })
+    expect(await manageGitHooks(dependencies)).toBe(true)
+  })
+
+  test('updates binary path when it differs from settings', async () => {
+    const dependencies = createTestDependencies(
+      {
+        '/project/.git': '',
+        '/project/.git/hooks/pre-push': hookContent,
+      },
+      { dustCommand: 'npx dust' }
+    )
+    expect(await manageGitHooks(dependencies)).toBe(true)
+  })
+
+  test('does not update binary path when it matches settings', async () => {
+    const dependencies = createTestDependencies({
+      '/project/.git': '',
+      '/project/.git/hooks/pre-push': hookContent,
+    })
+    expect(await manageGitHooks(dependencies)).toBe(true)
   })
 })

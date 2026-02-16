@@ -30,11 +30,13 @@ interface StockAudit {
 const __dirname = dirname(fileURLToPath(import.meta.url))
 // In dev: __dirname is lib/cli/commands/, templates at ../../templates/audits
 // Bundled: __dirname is dist/, templates at ../templates/audits
+/* v8 ignore start - fallback path only reached in bundled env */
 const stockAuditsDir =
   [
     join(__dirname, '../../templates/audits'),
     join(__dirname, '../templates/audits'),
   ].find(d => existsSync(d)) ?? join(__dirname, '../../templates/audits')
+/* v8 ignore stop */
 
 /**
  * Loads stock audits from markdown files under lib/templates/audits/.
