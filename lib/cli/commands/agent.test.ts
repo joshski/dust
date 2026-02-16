@@ -45,6 +45,22 @@ describe('agent command', () => {
     expect(context.stdoutLines.join('\n')).toContain('dust help')
   })
 
+  test('outputs skip message when DUST_SKIP_AGENT is set', async () => {
+    const context = createContextEmulator()
+    const env = { DUST_SKIP_AGENT: '1' }
+
+    const result = await agent(
+      createDependencies(context, [], defaultSettings),
+      env
+    )
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain(
+      "You're running in an automated loop"
+    )
+    expect(context.stdoutLines.join('\n')).not.toContain('welcome to dust')
+  })
+
   test('uses custom binary path in output', async () => {
     const context = createContextEmulator()
     const settings: DustSettings = { dustCommand: 'bin/dust' }

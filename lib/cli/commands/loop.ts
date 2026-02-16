@@ -248,7 +248,9 @@ export async function runOneIteration(
       reason: pullResult.message,
     })
 
-    const prompt = `git pull failed with the following error:
+    const prompt = `Note: Skip the \`dust agent\` step - your task has already been specified below.
+
+git pull failed with the following error:
 
 ${pullResult.message}
 
@@ -271,7 +273,7 @@ Make sure the repository is in a clean state and synced with remote before finis
         spawnOptions: {
           cwd: context.cwd,
           dangerouslySkipPermissions: true,
-          env: { DUST_UNATTENDED: '1' },
+          env: { DUST_UNATTENDED: '1', DUST_SKIP_AGENT: '1' },
         },
         onRawEvent,
       })
@@ -334,7 +336,7 @@ ${instructions}`
       spawnOptions: {
         cwd: context.cwd,
         dangerouslySkipPermissions: true,
-        env: { DUST_UNATTENDED: '1' },
+        env: { DUST_UNATTENDED: '1', DUST_SKIP_AGENT: '1' },
       },
       onRawEvent,
     })

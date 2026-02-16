@@ -18,6 +18,11 @@ export function buildImplementationInstructions(
   let step = 1
 
   steps.push(
+    `Note: Skip the \`${bin} agent\` step - your task has already been specified below.`,
+    ''
+  )
+
+  steps.push(
     `${step}. Run \`${bin} check\` to verify the project is in a good state`
   )
   step++

@@ -563,8 +563,10 @@ describe('runOneIteration', () => {
     expect(capturedPrompt).toContain(
       'delete the task file `.dust/tasks/task.md`'
     )
-    expect(capturedPrompt).not.toContain('dust agent')
+    // Should include skip guidance but not routing commands
+    expect(capturedPrompt).toContain('Skip the `bunx dust agent` step')
     expect(capturedPrompt).not.toContain('pick task')
+    expect(capturedPrompt).not.toContain('run the matching command')
   })
 
   test('uses default install command when not set in settings', async () => {
