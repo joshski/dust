@@ -2,7 +2,8 @@
  * dust lint - Run lint checks on .dust/ markdown files
  */
 
-import { dirname, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
+import { validateSettingsJson } from '../../config/settings'
 import {
   extractOpeningSentence,
   extractTitle,
@@ -788,6 +789,27 @@ export async function lintMarkdown(
       dependencies.settings.extraDirectories
     ))
   )
+
+  // Validate settings.json schema
+  const settingsPath = join(dustPath, 'config', 'settings.json')
+  if (fileSystem.exists(settingsPath)) {
+    context.stdout('Validating settings.json...')
+    try {
+      const settingsContent = await fileSystem.readFile(settingsPath)
+      const settingsViolations = validateSettingsJson(settingsContent)
+      for (const sv of settingsViolations) {
+        violations.push({
+          file: settingsPath,
+          message: sv.message,
+        })
+      }
+    } catch (error) {
+      // File may have been deleted between exists check and read - skip it
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error
+      }
+    }
+  }
 
   // Validate all markdown files for links
   context.stdout('Validating links in .dust/...')

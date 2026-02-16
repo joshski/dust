@@ -10,6 +10,192 @@ import type { CheckConfig, DustSettings, FileSystem } from '../cli/types'
 // Re-export for backwards compatibility
 export type { CheckConfig, DustSettings }
 
+export interface SettingsViolation {
+  message: string
+}
+
+const KNOWN_SETTINGS_KEYS = new Set([
+  'dustCommand',
+  'checks',
+  'extraDirectories',
+  'installCommand',
+  'eventsUrl',
+])
+
+const KNOWN_CHECK_KEYS = new Set([
+  'name',
+  'command',
+  'hints',
+  'timeoutMilliseconds',
+])
+
+export function validateSettingsJson(content: string): SettingsViolation[] {
+  const violations: SettingsViolation[] = []
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(content)
+  } catch (error) {
+    // JSON.parse always throws a SyntaxError which extends Error
+    violations.push({
+      message: `Invalid JSON: ${(error as Error).message}`,
+    })
+    return violations
+  }
+
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    violations.push({
+      message: 'settings.json must be a JSON object',
+    })
+    return violations
+  }
+
+  const settings = parsed as Record<string, unknown>
+
+  // Check for unknown top-level keys
+  for (const key of Object.keys(settings)) {
+    if (!KNOWN_SETTINGS_KEYS.has(key)) {
+      violations.push({
+        message: `Unknown key "${key}" in settings.json. Known keys: ${[...KNOWN_SETTINGS_KEYS].sort().join(', ')}`,
+      })
+    }
+  }
+
+  // Validate checks array
+  if ('checks' in settings) {
+    if (!Array.isArray(settings.checks)) {
+      violations.push({
+        message: '"checks" must be an array',
+      })
+    } else {
+      for (let i = 0; i < settings.checks.length; i++) {
+        const check = settings.checks[i]
+        const checkPath = `checks[${i}]`
+
+        if (typeof check === 'string') {
+          // String shorthand is valid
+          continue
+        }
+
+        if (
+          typeof check !== 'object' ||
+          check === null ||
+          Array.isArray(check)
+        ) {
+          violations.push({
+            message: `${checkPath} must be a string or object`,
+          })
+          continue
+        }
+
+        const checkObj = check as Record<string, unknown>
+
+        // Check for unknown keys in check entry
+        for (const key of Object.keys(checkObj)) {
+          if (!KNOWN_CHECK_KEYS.has(key)) {
+            violations.push({
+              message: `Unknown key "${key}" in ${checkPath}. Known keys: ${[...KNOWN_CHECK_KEYS].sort().join(', ')}`,
+            })
+          }
+        }
+
+        // Check required fields
+        if (!('name' in checkObj)) {
+          violations.push({
+            message: `${checkPath} is missing required field "name"`,
+          })
+        } else if (typeof checkObj.name !== 'string') {
+          violations.push({
+            message: `${checkPath}.name must be a string`,
+          })
+        }
+
+        if (!('command' in checkObj)) {
+          violations.push({
+            message: `${checkPath} is missing required field "command"`,
+          })
+        } else if (typeof checkObj.command !== 'string') {
+          violations.push({
+            message: `${checkPath}.command must be a string`,
+          })
+        }
+
+        // Check optional hints field
+        if ('hints' in checkObj) {
+          if (!Array.isArray(checkObj.hints)) {
+            violations.push({
+              message: `${checkPath}.hints must be an array of strings`,
+            })
+          } else {
+            for (let j = 0; j < checkObj.hints.length; j++) {
+              if (typeof checkObj.hints[j] !== 'string') {
+                violations.push({
+                  message: `${checkPath}.hints[${j}] must be a string`,
+                })
+              }
+            }
+          }
+        }
+
+        // Check optional timeoutMilliseconds field
+        if ('timeoutMilliseconds' in checkObj) {
+          if (
+            typeof checkObj.timeoutMilliseconds !== 'number' ||
+            checkObj.timeoutMilliseconds <= 0
+          ) {
+            violations.push({
+              message: `${checkPath}.timeoutMilliseconds must be a positive number`,
+            })
+          }
+        }
+      }
+    }
+  }
+
+  // Validate extraDirectories
+  if ('extraDirectories' in settings) {
+    if (!Array.isArray(settings.extraDirectories)) {
+      violations.push({
+        message: '"extraDirectories" must be an array of strings',
+      })
+    } else {
+      for (let i = 0; i < settings.extraDirectories.length; i++) {
+        if (typeof settings.extraDirectories[i] !== 'string') {
+          violations.push({
+            message: `extraDirectories[${i}] must be a string`,
+          })
+        }
+      }
+    }
+  }
+
+  // Validate dustCommand
+  if ('dustCommand' in settings && typeof settings.dustCommand !== 'string') {
+    violations.push({
+      message: '"dustCommand" must be a string',
+    })
+  }
+
+  // Validate installCommand
+  if (
+    'installCommand' in settings &&
+    typeof settings.installCommand !== 'string'
+  ) {
+    violations.push({
+      message: '"installCommand" must be a string',
+    })
+  }
+
+  // Validate eventsUrl
+  if ('eventsUrl' in settings && typeof settings.eventsUrl !== 'string') {
+    violations.push({
+      message: '"eventsUrl" must be a string',
+    })
+  }
+
+  return violations
+}
+
 const DEFAULT_SETTINGS: DustSettings = {
   dustCommand: 'npx dust',
   installCommand: 'npm install',

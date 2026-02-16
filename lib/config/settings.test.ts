@@ -9,6 +9,7 @@ import {
   detectInstallCommand,
   detectTestCommand,
   loadSettings,
+  validateSettingsJson,
 } from './settings'
 
 describe('detectDustCommand', () => {
@@ -517,5 +518,298 @@ describe('stubEnv and restoreEnv', () => {
 
     // Clean up
     delete process.env[uniqueVarName]
+  })
+})
+
+describe('validateSettingsJson', () => {
+  test('returns empty array for valid settings', () => {
+    const settings = JSON.stringify({
+      dustCommand: 'bin/dust',
+      checks: [
+        { name: 'lint', command: 'npm run lint' },
+        { name: 'test', command: 'npm test', hints: ['Run tests first'] },
+      ],
+    })
+    expect(validateSettingsJson(settings)).toEqual([])
+  })
+
+  test('returns violation for invalid JSON', () => {
+    const violations = validateSettingsJson('not valid json')
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('Invalid JSON')
+  })
+
+  test('returns violation when settings is not an object', () => {
+    expect(validateSettingsJson('[]')[0].message).toBe(
+      'settings.json must be a JSON object'
+    )
+    expect(validateSettingsJson('null')[0].message).toBe(
+      'settings.json must be a JSON object'
+    )
+    expect(validateSettingsJson('"string"')[0].message).toBe(
+      'settings.json must be a JSON object'
+    )
+  })
+
+  test('returns violation for unknown top-level key', () => {
+    const settings = JSON.stringify({
+      dustCommand: 'bin/dust',
+      unknownKey: 'value',
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('Unknown key "unknownKey"')
+    expect(violations[0].message).toContain('Known keys:')
+  })
+
+  test('returns violation for typo like "check" instead of "checks"', () => {
+    const settings = JSON.stringify({
+      check: [{ name: 'lint', command: 'npm run lint' }],
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('Unknown key "check"')
+  })
+
+  test('returns violation when checks is not an array', () => {
+    const settings = JSON.stringify({
+      checks: 'not an array',
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe('"checks" must be an array')
+  })
+
+  test('accepts string shorthand in checks array', () => {
+    const settings = JSON.stringify({
+      checks: ['npm run lint', 'npm test'],
+    })
+    expect(validateSettingsJson(settings)).toEqual([])
+  })
+
+  test('returns violation for check entry that is not string or object', () => {
+    const settings = JSON.stringify({
+      checks: [123],
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe('checks[0] must be a string or object')
+  })
+
+  test('returns violation for check entry missing name', () => {
+    const settings = JSON.stringify({
+      checks: [{ command: 'npm test' }],
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe(
+      'checks[0] is missing required field "name"'
+    )
+  })
+
+  test('returns violation for check entry missing command', () => {
+    const settings = JSON.stringify({
+      checks: [{ name: 'lint' }],
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe(
+      'checks[0] is missing required field "command"'
+    )
+  })
+
+  test('returns violation for check entry with name not being a string', () => {
+    const settings = JSON.stringify({
+      checks: [{ name: 123, command: 'npm test' }],
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe('checks[0].name must be a string')
+  })
+
+  test('returns violation for check entry with command not being a string', () => {
+    const settings = JSON.stringify({
+      checks: [{ name: 'lint', command: 123 }],
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe('checks[0].command must be a string')
+  })
+
+  test('returns violation for unknown key in check entry', () => {
+    const settings = JSON.stringify({
+      checks: [{ name: 'lint', command: 'npm run lint', unknownField: true }],
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('Unknown key "unknownField"')
+    expect(violations[0].message).toContain('checks[0]')
+  })
+
+  test('returns violation when hints is not an array', () => {
+    const settings = JSON.stringify({
+      checks: [
+        { name: 'lint', command: 'npm run lint', hints: 'not an array' },
+      ],
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe(
+      'checks[0].hints must be an array of strings'
+    )
+  })
+
+  test('returns violation when hints contains non-string', () => {
+    const settings = JSON.stringify({
+      checks: [
+        { name: 'lint', command: 'npm run lint', hints: ['valid', 123] },
+      ],
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe('checks[0].hints[1] must be a string')
+  })
+
+  test('returns violation when timeoutMilliseconds is not a positive number', () => {
+    const settings = JSON.stringify({
+      checks: [
+        {
+          name: 'lint',
+          command: 'npm run lint',
+          timeoutMilliseconds: 'not a number',
+        },
+      ],
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe(
+      'checks[0].timeoutMilliseconds must be a positive number'
+    )
+  })
+
+  test('returns violation when timeoutMilliseconds is zero', () => {
+    const settings = JSON.stringify({
+      checks: [
+        { name: 'lint', command: 'npm run lint', timeoutMilliseconds: 0 },
+      ],
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe(
+      'checks[0].timeoutMilliseconds must be a positive number'
+    )
+  })
+
+  test('returns violation when timeoutMilliseconds is negative', () => {
+    const settings = JSON.stringify({
+      checks: [
+        { name: 'lint', command: 'npm run lint', timeoutMilliseconds: -100 },
+      ],
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe(
+      'checks[0].timeoutMilliseconds must be a positive number'
+    )
+  })
+
+  test('accepts valid positive timeoutMilliseconds', () => {
+    const settings = JSON.stringify({
+      checks: [
+        { name: 'lint', command: 'npm run lint', timeoutMilliseconds: 30000 },
+      ],
+    })
+    expect(validateSettingsJson(settings)).toEqual([])
+  })
+
+  test('returns violation when extraDirectories is not an array', () => {
+    const settings = JSON.stringify({
+      extraDirectories: 'not an array',
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe(
+      '"extraDirectories" must be an array of strings'
+    )
+  })
+
+  test('returns violation when extraDirectories contains non-string', () => {
+    const settings = JSON.stringify({
+      extraDirectories: ['templates', 123],
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe('extraDirectories[1] must be a string')
+  })
+
+  test('accepts valid extraDirectories', () => {
+    const settings = JSON.stringify({
+      extraDirectories: ['templates', 'examples'],
+    })
+    expect(validateSettingsJson(settings)).toEqual([])
+  })
+
+  test('returns violation when dustCommand is not a string', () => {
+    const settings = JSON.stringify({
+      dustCommand: 123,
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe('"dustCommand" must be a string')
+  })
+
+  test('returns violation when installCommand is not a string', () => {
+    const settings = JSON.stringify({
+      installCommand: 123,
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe('"installCommand" must be a string')
+  })
+
+  test('returns violation when eventsUrl is not a string', () => {
+    const settings = JSON.stringify({
+      eventsUrl: 123,
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe('"eventsUrl" must be a string')
+  })
+
+  test('reports all schema violations at once', () => {
+    const settings = JSON.stringify({
+      unknownKey: 'value',
+      dustCommand: 123,
+      checks: [
+        { wrongField: true },
+        { name: 'lint', command: 'npm run lint', hints: 'not array' },
+      ],
+    })
+    const violations = validateSettingsJson(settings)
+    // Should have: unknown key, dustCommand not string, wrongField in checks[0],
+    // missing name in checks[0], missing command in checks[0], hints not array in checks[1]
+    expect(violations.length).toBeGreaterThan(1)
+    const messages = violations.map(v => v.message)
+    expect(messages.some(m => m.includes('Unknown key "unknownKey"'))).toBe(
+      true
+    )
+    expect(
+      messages.some(m => m.includes('"dustCommand" must be a string'))
+    ).toBe(true)
+  })
+
+  test('validates all known settings keys are accepted', () => {
+    const settings = JSON.stringify({
+      dustCommand: 'bin/dust',
+      installCommand: 'bun install',
+      eventsUrl: 'https://example.com',
+      checks: [{ name: 'lint', command: 'npm run lint' }],
+      extraDirectories: ['templates'],
+    })
+    expect(validateSettingsJson(settings)).toEqual([])
+  })
+
+  test('returns empty array for empty object', () => {
+    expect(validateSettingsJson('{}')).toEqual([])
   })
 })

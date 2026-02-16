@@ -2965,3 +2965,292 @@ Implement the task functionality.
     expect(result.exitCode).toBe(0)
   })
 })
+
+describe('lintMarkdown settings.json validation', () => {
+  test('passes with valid settings.json', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+          config: {
+            'settings.json': JSON.stringify({
+              dustCommand: 'bin/dust',
+              checks: [{ name: 'lint', command: 'npm run lint' }],
+            }),
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain('Validating settings.json')
+  })
+
+  test('reports invalid JSON in settings.json', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+          config: {
+            'settings.json': 'not valid json',
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    const output = context.stderrLines.join('\n')
+    expect(output).toContain('Invalid JSON')
+    expect(output).toContain('settings.json')
+  })
+
+  test('reports unknown keys in settings.json', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+          config: {
+            'settings.json': JSON.stringify({
+              check: [{ name: 'lint', command: 'npm run lint' }],
+            }),
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    const output = context.stderrLines.join('\n')
+    expect(output).toContain('Unknown key "check"')
+  })
+
+  test('reports invalid checks entries in settings.json', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+          config: {
+            'settings.json': JSON.stringify({
+              checks: [{ wrongField: 'value' }],
+            }),
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    const output = context.stderrLines.join('\n')
+    expect(output).toContain('missing required field "name"')
+    expect(output).toContain('missing required field "command"')
+  })
+
+  test('reports all settings.json violations at once', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+          config: {
+            'settings.json': JSON.stringify({
+              unknownKey: 'value',
+              dustCommand: 123,
+              checks: [{ name: 'lint' }],
+            }),
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    const output = context.stderrLines.join('\n')
+    expect(output).toContain('Unknown key "unknownKey"')
+    expect(output).toContain('"dustCommand" must be a string')
+    expect(output).toContain('missing required field "command"')
+  })
+
+  test('skips settings.json validation when file does not exist', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).not.toContain(
+      'Validating settings.json'
+    )
+  })
+
+  test('skips settings.json that disappears between exists check and read (ENOENT)', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+          config: {
+            'settings.json': '{}',
+          },
+        },
+      },
+    })
+    const originalReadFile = fileSystem.readFile.bind(fileSystem)
+    fileSystem.readFile = async (path: string) => {
+      if (path.includes('settings.json')) {
+        const error = new Error('ENOENT: file deleted')
+        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
+        throw error
+      }
+      return originalReadFile(path)
+    }
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+    expect(result.exitCode).toBe(0)
+  })
+
+  test('rethrows non-ENOENT errors when reading settings.json', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+          config: {
+            'settings.json': '{}',
+          },
+        },
+      },
+    })
+    const originalReadFile = fileSystem.readFile.bind(fileSystem)
+    fileSystem.readFile = async (path: string) => {
+      if (path.includes('settings.json')) {
+        throw new Error('Permission denied')
+      }
+      return originalReadFile(path)
+    }
+
+    await expect(
+      lintMarkdown(createDependencies(context, fileSystem))
+    ).rejects.toThrow('Permission denied')
+  })
+})
