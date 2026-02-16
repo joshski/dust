@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'vitest'
+import { loadStockAudits } from '../../audits/stock-audits'
 import {
   createContextEmulator,
   createFileSystemEmulator,
   type FileSystemEmulator,
 } from '../../test/test-utilities'
 import type { CommandContext, CommandDependencies } from '../types'
-import { loadStockAudits } from '../../audits/stock-audits'
 import { audit, transformAuditContent } from './audit'
 
 function createDependencies(
