@@ -10,6 +10,7 @@
  * Credentials are stored in ~/.dust/credentials.json for subsequent runs.
  *
  * Environment:
+ * - DUST_BUCKET_TOKEN: Authentication token (takes precedence over stored credential)
  * - DUST_BUCKET_HOST: Override dustbucket host for auth (default: https://dustbucket.com)
  * - DUST_BUCKET_AGENT_CONNECT_URL: Override WebSocket URL (default: wss://dustbucket.com/agent/connect)
  *
@@ -673,13 +674,13 @@ export function createKeypressHandler(
 }
 
 async function resolveToken(
-  commandArgs: string[],
   authDeps: AuthDependencies,
   context: CommandDependencies['context']
 ): Promise<string | null> {
-  // 1. Explicit token argument (backward compat)
-  if (commandArgs[0]) {
-    return commandArgs[0]
+  // 1. Environment variable
+  const envToken = process.env.DUST_BUCKET_TOKEN
+  if (envToken) {
+    return envToken
   }
 
   // 2. Stored credential
@@ -708,9 +709,9 @@ export async function bucket(
   dependencies: CommandDependencies,
   bucketDeps: BucketDependencies = createDefaultBucketDependencies()
 ): Promise<CommandResult> {
-  const { arguments: commandArgs, context, fileSystem } = dependencies
+  const { context, fileSystem } = dependencies
 
-  const token = await resolveToken(commandArgs, bucketDeps.auth, context)
+  const token = await resolveToken(bucketDeps.auth, context)
   if (!token) {
     return { exitCode: 1 }
   }
