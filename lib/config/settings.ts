@@ -55,7 +55,9 @@ function validateCheckEntry(
   }
 
   if (!('name' in checkObj)) {
-    violations.push({ message: `${checkPath} is missing required field "name"` })
+    violations.push({
+      message: `${checkPath} is missing required field "name"`,
+    })
   } else if (typeof checkObj.name !== 'string') {
     violations.push({ message: `${checkPath}.name must be a string` })
   }

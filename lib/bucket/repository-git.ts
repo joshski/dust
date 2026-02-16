@@ -4,7 +4,7 @@
  * Handles cloning, removing, and path resolution for repositories.
  */
 
-import { spawn as nodeSpawn } from 'node:child_process'
+import type { spawn as nodeSpawn } from 'node:child_process'
 import { join } from 'node:path'
 import type { CommandDependencies } from '../cli/types'
 
