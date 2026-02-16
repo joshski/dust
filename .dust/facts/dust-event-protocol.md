@@ -43,7 +43,18 @@ Events are a discriminated union with a `type` field. Only these 4 types are sen
 
 ```typescript
 type AgentSessionEvent =
-  | { type: 'agent-session-started'; title: string; prompt: string; agentType: string; purpose: string }
+  | {
+      type: 'agent-session-started'
+      title: string
+      prompt: string
+      agentType: string
+      purpose: string
+      machineName: string
+      cwd: string
+      platform: string
+      dustVersion: string
+      runtimeVersion: string
+    }
   | { type: 'agent-session-ended'; success: boolean; error?: string }
   | { type: 'agent-session-activity' }
   | { type: 'claude-event'; rawEvent: Record<string, unknown> }
@@ -51,7 +62,7 @@ type AgentSessionEvent =
 
 | Type | Fields | Description |
 |------|--------|-------------|
-| `agent-session-started` | `title: string`, `prompt: string`, `agentType: string`, `purpose: string` | An agent run has started. Title is the task name or a description like "Resolving git conflict". Prompt is the full prompt sent to the agent. AgentType identifies the agent (e.g., `'claude'`). Purpose describes the reason (e.g., `'task'` or `'git-conflict'`). |
+| `agent-session-started` | `title: string`, `prompt: string`, `agentType: string`, `purpose: string`, `machineName: string`, `cwd: string`, `platform: string`, `dustVersion: string`, `runtimeVersion: string` | An agent run has started. Title is the task name or a description like "Resolving git conflict". Prompt is the full prompt sent to the agent. AgentType identifies the agent (e.g., `'claude'`). Purpose describes the reason (e.g., `'task'` or `'git-conflict'`). MachineName is the hostname. Cwd is the working directory. Platform is OS name and version (e.g., `'darwin 24.1.0'`). DustVersion is the dust CLI version. RuntimeVersion is the Node/Bun version (e.g., `'v22.0.0'`). |
 | `agent-session-ended` | `success: boolean`, `error?: string` | An agent run has ended |
 | `agent-session-activity` | - | Heartbeat indicating the agent is active (not stored) |
 | `claude-event` | `rawEvent: object` | Raw Claude streaming event |
@@ -89,7 +100,12 @@ Agent session started:
     "title": "Implement auth feature",
     "prompt": "Run `npm install` to install dependencies, then implement the following task...",
     "agentType": "claude",
-    "purpose": "task"
+    "purpose": "task",
+    "machineName": "dev-machine.local",
+    "cwd": "/home/user/projects/my-repo",
+    "platform": "darwin 24.1.0",
+    "dustVersion": "0.1.42",
+    "runtimeVersion": "v22.0.0"
   }
 }
 ```

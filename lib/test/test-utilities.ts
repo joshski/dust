@@ -6,6 +6,7 @@
  * See .dust/goals/stubs-over-mocks.md for the rationale.
  */
 
+import type { AgentSessionEvent } from '../agent-events'
 import type {
   CommandContext,
   CommandDependencies,
@@ -14,6 +15,37 @@ import type {
   GlobScanner,
   WriteOptions,
 } from '../cli/types'
+
+/**
+ * Default environment context values for tests
+ */
+export const testEnvironmentContext = {
+  machineName: 'test-machine',
+  cwd: '/test/cwd',
+  platform: 'test-os 1.0.0',
+  dustVersion: '0.0.0-test',
+  runtimeVersion: 'v0.0.0-test',
+} as const
+
+/**
+ * Creates a test agent-session-started event with required environment fields.
+ * Merges provided fields with default test environment context.
+ */
+export function createTestAgentSessionStartedEvent(
+  overrides: Partial<
+    Omit<Extract<AgentSessionEvent, { type: 'agent-session-started' }>, 'type'>
+  > = {}
+): Extract<AgentSessionEvent, { type: 'agent-session-started' }> {
+  return {
+    type: 'agent-session-started',
+    title: 'Test',
+    prompt: 'Test prompt',
+    agentType: 'claude',
+    purpose: 'task',
+    ...testEnvironmentContext,
+    ...overrides,
+  }
+}
 
 /**
  * Recursive type for defining file system structure.

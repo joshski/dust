@@ -13,6 +13,11 @@ export type AgentSessionEvent =
       prompt: string
       agentType: string
       purpose: string
+      machineName: string
+      cwd: string
+      platform: string
+      dustVersion: string
+      runtimeVersion: string
     }
   | { type: 'agent-session-ended'; success: boolean; error?: string }
   | { type: 'agent-session-activity' }

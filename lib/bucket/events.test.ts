@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
 import type { EventMessage } from '../agent-events'
+import { createTestAgentSessionStartedEvent } from '../test/test-utilities'
 import {
   createEventMessageSender,
   formatBucketEvent,
@@ -31,13 +32,7 @@ function createTestEventMessage(
     timestamp: new Date().toISOString(),
     sessionId: 'session-123',
     repository: 'my-repo',
-    event: {
-      type: 'agent-session-started',
-      title: 'Test',
-      prompt: 'Test prompt',
-      agentType: 'claude',
-      purpose: 'task',
-    },
+    event: createTestAgentSessionStartedEvent(),
     ...overrides,
   }
 }

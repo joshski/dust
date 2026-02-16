@@ -12,6 +12,7 @@ import type { RepositoryState } from '../../bucket/repository'
 import {
   createContextEmulator,
   createFileSystemEmulator,
+  createTestAgentSessionStartedEvent,
   restoreEnv,
   stubEnv,
 } from '../../test/test-utilities'
@@ -147,13 +148,7 @@ describe('createInitialState', () => {
       timestamp: new Date().toISOString(),
       sessionId: state.sessionId,
       repository: 'test',
-      event: {
-        type: 'agent-session-started',
-        title: 'Test',
-        prompt: 'Test prompt',
-        agentType: 'claude',
-        purpose: 'task',
-      },
+      event: createTestAgentSessionStartedEvent(),
     })
     expect(sentMessages).toHaveLength(0)
 
@@ -167,13 +162,7 @@ describe('createInitialState', () => {
       timestamp: new Date().toISOString(),
       sessionId: state.sessionId,
       repository: 'test',
-      event: {
-        type: 'agent-session-started',
-        title: 'Test',
-        prompt: 'Test prompt',
-        agentType: 'claude',
-        purpose: 'task',
-      },
+      event: createTestAgentSessionStartedEvent(),
     })
     expect(sentMessages).toHaveLength(1)
   })

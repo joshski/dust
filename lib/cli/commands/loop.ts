@@ -17,6 +17,10 @@
  */
 
 import { spawn as nodeSpawn } from 'node:child_process'
+import { readFileSync } from 'node:fs'
+import os from 'node:os'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   type AgentSessionEvent,
   type EventMessage,
@@ -27,6 +31,34 @@ import { run as claudeRun } from '../../claude/run'
 import type { CommandDependencies, CommandResult } from '../types'
 import { buildImplementationInstructions } from './focus'
 import { findUnblockedTasks, type UnblockedTask } from './next'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
+function getDustVersion(): string {
+  try {
+    const packageJsonPath = join(__dirname, '../../../package.json')
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'))
+    return packageJson.version ?? 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
+
+function getEnvironmentContext(cwd: string): {
+  machineName: string
+  cwd: string
+  platform: string
+  dustVersion: string
+  runtimeVersion: string
+} {
+  return {
+    machineName: os.hostname(),
+    cwd,
+    platform: `${os.platform()} ${os.release()}`,
+    dustVersion: getDustVersion(),
+    runtimeVersion: process.version,
+  }
+}
 
 // Strongly typed loop-only events (never sent over the wire)
 export interface LoopWarningEvent {
@@ -267,6 +299,7 @@ Make sure the repository is in a clean state and synced with remote before finis
       prompt,
       agentType: 'claude',
       purpose: 'git-conflict',
+      ...getEnvironmentContext(context.cwd),
     })
     try {
       await run(prompt, {
@@ -334,6 +367,7 @@ ${instructions}`
     prompt,
     agentType: 'claude',
     purpose: 'task',
+    ...getEnvironmentContext(context.cwd),
   })
   try {
     await run(prompt, {

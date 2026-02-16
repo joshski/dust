@@ -5,6 +5,7 @@ import type { AgentSessionEvent, EventMessage } from '../../agent-events'
 import {
   createContextEmulator,
   createFileSystemEmulator,
+  createTestAgentSessionStartedEvent,
 } from '../../test/test-utilities'
 import type { CommandDependencies } from '../types'
 import {
@@ -119,13 +120,7 @@ describe('createWireEventSender', () => {
       postEvent,
       () => {}
     )
-    send({
-      type: 'agent-session-started',
-      title: 'Test',
-      prompt: 'Test prompt',
-      agentType: 'claude',
-      purpose: 'task',
-    })
+    send(createTestAgentSessionStartedEvent())
     await Promise.resolve()
     expect(postCalled).toBe(false)
   })
@@ -141,13 +136,7 @@ describe('createWireEventSender', () => {
       postEvent,
       () => {}
     )
-    send({
-      type: 'agent-session-started',
-      title: 'Test',
-      prompt: 'Test prompt',
-      agentType: 'claude',
-      purpose: 'task',
-    })
+    send(createTestAgentSessionStartedEvent())
     send({ type: 'agent-session-ended', success: true })
     await Promise.resolve()
     expect(postedEvents).toHaveLength(2)
@@ -170,13 +159,7 @@ describe('createWireEventSender', () => {
       postEvent,
       () => {}
     )
-    send({
-      type: 'agent-session-started',
-      title: 'Test',
-      prompt: 'Test prompt',
-      agentType: 'claude',
-      purpose: 'task',
-    })
+    send(createTestAgentSessionStartedEvent())
     await Promise.resolve()
     expect(postedEvents[0].timestamp).toMatch(
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/
@@ -195,13 +178,7 @@ describe('createWireEventSender', () => {
       () => {},
       () => 'claude-session-abc'
     )
-    send({
-      type: 'agent-session-started',
-      title: 'Test',
-      prompt: 'Test prompt',
-      agentType: 'claude',
-      purpose: 'task',
-    })
+    send(createTestAgentSessionStartedEvent())
     send({ type: 'agent-session-ended', success: true })
     await Promise.resolve()
 
@@ -222,13 +199,7 @@ describe('createWireEventSender', () => {
       () => {},
       () => undefined
     )
-    send({
-      type: 'agent-session-started',
-      title: 'Test',
-      prompt: 'Test prompt',
-      agentType: 'claude',
-      purpose: 'task',
-    })
+    send(createTestAgentSessionStartedEvent())
     await Promise.resolve()
 
     expect(postedEvents[0].agentSessionId).toBeUndefined()
@@ -247,13 +218,7 @@ describe('createWireEventSender', () => {
         errors.push(error)
       }
     )
-    send({
-      type: 'agent-session-started',
-      title: 'Test',
-      prompt: 'Test prompt',
-      agentType: 'claude',
-      purpose: 'task',
-    })
+    send(createTestAgentSessionStartedEvent())
     await Promise.resolve()
     await Promise.resolve()
     expect(errors).toHaveLength(1)
