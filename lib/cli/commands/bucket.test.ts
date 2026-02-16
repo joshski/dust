@@ -97,7 +97,7 @@ function createBucketDependencies(
     writeStdout: () => {},
     isTTY: false,
     sleep: () => Promise.resolve(),
-    getTempDir: () => '/tmp',
+    getReposDir: () => '/tmp',
     auth: createMockAuthDeps(),
     ...overrides,
   }
@@ -115,7 +115,7 @@ describe('createDefaultBucketDependencies', () => {
     expect(typeof bucketDependencies.writeStdout).toBe('function')
     expect(typeof bucketDependencies.isTTY).toBe('boolean')
     expect(typeof bucketDependencies.sleep).toBe('function')
-    expect(typeof bucketDependencies.getTempDir).toBe('function')
+    expect(typeof bucketDependencies.getReposDir).toBe('function')
   })
 })
 

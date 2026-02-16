@@ -9,7 +9,7 @@ import {
   addRepository,
   cloneRepository,
   createDefaultRepositoryDependencies,
-  getRepoTempPath,
+  getRepoPath,
   handleRepositoryList,
   parseRepository,
   type Repository,
@@ -97,7 +97,7 @@ function createRepositoryDependencies(
     run: createMockRun(),
     fileSystem,
     sleep: () => Promise.resolve(),
-    getTempDir: () => '/tmp',
+    getReposDir: () => '/tmp',
     ...overrides,
   }
 }
@@ -120,7 +120,7 @@ describe('createDefaultRepositoryDependencies', () => {
     expect(typeof repoDeps.run).toBe('function')
     expect(repoDeps.fileSystem).toBe(fileSystem)
     expect(typeof repoDeps.sleep).toBe('function')
-    expect(typeof repoDeps.getTempDir).toBe('function')
+    expect(typeof repoDeps.getReposDir).toBe('function')
   })
 })
 
@@ -176,15 +176,20 @@ describe('parseRepository', () => {
   })
 })
 
-describe('getRepoTempPath', () => {
-  test('creates safe directory name', () => {
-    const path = getRepoTempPath('my-repo', '/tmp')
-    expect(path).toBe('/tmp/dust-bucket-my-repo')
+describe('getRepoPath', () => {
+  test('creates directory matching repo name', () => {
+    const path = getRepoPath('my-repo', '/tmp')
+    expect(path).toBe('/tmp/my-repo')
   })
 
-  test('sanitizes special characters', () => {
-    const path = getRepoTempPath('user/repo.name', '/tmp')
-    expect(path).toBe('/tmp/dust-bucket-user-repo-name')
+  test('preserves org/repo structure', () => {
+    const path = getRepoPath('user/repo', '/tmp')
+    expect(path).toBe('/tmp/user/repo')
+  })
+
+  test('sanitizes special characters but keeps slashes', () => {
+    const path = getRepoPath('user/repo.name', '/tmp')
+    expect(path).toBe('/tmp/user/repo-name')
   })
 })
 
@@ -595,7 +600,7 @@ describe('handleRepositoryList', () => {
     // Wait for clone to be spawned
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    const cloneProc = processes.get('git clone repo1 /tmp/dust-bucket-repo1')
+    const cloneProc = processes.get('git clone repo1 /tmp/repo1')
     cloneProc?.emit('close', 0)
     cloneResolved = true
 
@@ -612,7 +617,7 @@ describe('handleRepositoryList', () => {
 
     manager.repositories.set('old-repo', {
       repository: { name: 'old-repo', gitUrl: 'old-repo' },
-      path: '/tmp/dust-bucket-old-repo',
+      path: '/tmp/old-repo',
       loopPromise: Promise.resolve(),
       stopRequested: false,
       logBuffer: createLogBuffer(),
@@ -628,7 +633,7 @@ describe('handleRepositoryList', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    const rmProc = processes.get('rm -rf /tmp/dust-bucket-old-repo')
+    const rmProc = processes.get('rm -rf /tmp/old-repo')
     rmProc?.emit('close', 0)
 
     await handlePromise
@@ -677,7 +682,7 @@ describe('addRepository', () => {
     const fileSystem = createFileSystemEmulator({
       // biome-ignore lint: tmp is the /tmp directory name, not an abbreviation
       tmp: {
-        'dust-bucket-stale-repo': {
+        'stale-repo': {
           'some-file': 'leftover',
         },
       },
@@ -720,9 +725,7 @@ describe('addRepository', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    const cloneProc = processes.get(
-      'git clone stale-repo /tmp/dust-bucket-stale-repo'
-    )
+    const cloneProc = processes.get('git clone stale-repo /tmp/stale-repo')
     cloneProc?.emit('close', 0)
 
     await addPromise
@@ -750,9 +753,7 @@ describe('addRepository', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    const cloneProc = processes.get(
-      'git clone bad-url /tmp/dust-bucket-fail-repo'
-    )
+    const cloneProc = processes.get('git clone bad-url /tmp/fail-repo')
     const stderr = (cloneProc as EventEmitter & { stderr: EventEmitter }).stderr
     stderr?.emit('data', 'clone error')
     cloneProc?.emit('close', 128)

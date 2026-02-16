@@ -21,7 +21,8 @@ import { spawn as nodeSpawn } from 'node:child_process'
 import { accessSync, statSync } from 'node:fs'
 import { chmod, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { createServer as httpCreateServer } from 'node:http'
-import { homedir, tmpdir } from 'node:os'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import {
   type AuthDependencies,
   authenticate,
@@ -79,7 +80,7 @@ export interface BucketDependencies {
   writeStdout: (data: string) => void
   isTTY: boolean
   sleep: (ms: number) => Promise<void>
-  getTempDir: () => string
+  getReposDir: () => string
   auth: AuthDependencies
 }
 
@@ -244,7 +245,8 @@ export function createDefaultBucketDependencies(): BucketDependencies {
     isTTY: process.stdout.isTTY ?? false,
     /* v8 ignore start - thin wrappers around native functions */
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
-    getTempDir: () => tmpdir(),
+    getReposDir: () =>
+      process.env.DUST_REPOS_DIR || join(homedir(), '.dust', 'repos'),
     /* v8 ignore stop */
     auth: {
       createServer: defaultCreateServer,
@@ -309,7 +311,7 @@ function toRepositoryDependencies(
     run: claudeRun,
     fileSystem,
     sleep: bucketDeps.sleep,
-    getTempDir: bucketDeps.getTempDir,
+    getReposDir: bucketDeps.getReposDir,
   }
 }
 

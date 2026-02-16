@@ -6,8 +6,8 @@
  */
 
 import { spawn as nodeSpawn } from 'node:child_process'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { homedir } from 'node:os'
+import { dirname, join } from 'node:path'
 import type { AgentSessionEvent, EventMessage } from '../agent-events'
 import { formatAgentEvent, rawEventToAgentEvent } from '../agent-events'
 import {
@@ -72,7 +72,7 @@ export interface RepositoryDependencies {
   run: typeof claudeRun
   fileSystem: FileSystem
   sleep: (ms: number) => Promise<void>
-  getTempDir: () => string
+  getReposDir: () => string
 }
 
 /* v8 ignore start - simple wrappers around native functions */
@@ -84,7 +84,8 @@ export function createDefaultRepositoryDependencies(
     run: claudeRun,
     fileSystem,
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
-    getTempDir: () => tmpdir(),
+    getReposDir: () =>
+      process.env.DUST_REPOS_DIR || join(homedir(), '.dust', 'repos'),
   }
 }
 /* v8 ignore stop */
@@ -128,11 +129,11 @@ export function parseRepository(data: unknown): Repository | null {
 }
 
 /**
- * Get the temp directory path for a repository.
+ * Get the directory path for a repository.
  */
-export function getRepoTempPath(repoName: string, tempDir: string): string {
-  const safeName = repoName.replace(/[^a-zA-Z0-9-_]/g, '-')
-  return join(tempDir, `dust-bucket-${safeName}`)
+export function getRepoPath(repoName: string, reposDir: string): string {
+  const safeName = repoName.replace(/[^a-zA-Z0-9-_/]/g, '-')
+  return join(reposDir, safeName)
 }
 
 /**
@@ -356,7 +357,8 @@ export async function addRepository(
     return
   }
 
-  const repoPath = getRepoTempPath(repository.name, repoDeps.getTempDir())
+  const repoPath = getRepoPath(repository.name, repoDeps.getReposDir())
+  await repoDeps.fileSystem.mkdir(dirname(repoPath), { recursive: true })
 
   // Clean up stale directory from a previous unclean shutdown
   if (repoDeps.fileSystem.exists(repoPath)) {
