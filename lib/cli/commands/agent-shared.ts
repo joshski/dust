@@ -39,14 +39,18 @@ export async function loadAgentInstructions(
 export function templateVariables(
   settings: DustSettings,
   hooksInstalled: boolean,
-  env: NodeJS.ProcessEnv = process.env
+  env: NodeJS.ProcessEnv = process.env,
+  options?: { hasIdeaFile?: boolean }
 ) {
   const agent = detectAgent(env)
+  // Default hasIdeaFile to true - only Build Idea tasks have no idea file
+  const hasIdeaFile = options?.hasIdeaFile ?? true
   return {
     bin: settings.dustCommand,
     agentName: agent.name,
     hooksInstalled: hooksInstalled ? 'true' : 'false',
     isClaudeCodeWeb: agent.type === 'claude-code-web' ? 'true' : '',
+    hasIdeaFile: hasIdeaFile ? 'true' : '',
   }
 }
 
@@ -58,7 +62,8 @@ export async function templateVariablesWithInstructions(
   fileSystem: FileSystem,
   settings: DustSettings,
   hooksInstalled: boolean,
-  env: NodeJS.ProcessEnv = process.env
+  env: NodeJS.ProcessEnv = process.env,
+  options?: { hasIdeaFile?: boolean }
 ) {
   const agent = detectAgent(env)
   const agentInstructions = await loadAgentInstructions(
@@ -66,11 +71,14 @@ export async function templateVariablesWithInstructions(
     fileSystem,
     agent.type
   )
+  // Default hasIdeaFile to true - only Build Idea tasks have no idea file
+  const hasIdeaFile = options?.hasIdeaFile ?? true
   return {
     bin: settings.dustCommand,
     agentName: agent.name,
     hooksInstalled: hooksInstalled ? 'true' : 'false',
     isClaudeCodeWeb: agent.type === 'claude-code-web' ? 'true' : '',
+    hasIdeaFile: hasIdeaFile ? 'true' : '',
     agentInstructions,
   }
 }

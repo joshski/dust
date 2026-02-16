@@ -4,7 +4,7 @@ import {
   createFileSystemEmulator,
 } from '../../test/test-utilities'
 import type { CommandDependencies } from '../types'
-import { focus } from './focus'
+import { buildImplementationInstructions, focus } from './focus'
 
 function createDependencies(
   commandArguments: string[] = []
@@ -95,5 +95,31 @@ describe('focus', () => {
     expect(output).toContain('🎯 Focus: my task')
     // With hooks installed, there should be no "check before committing" step
     expect(output).not.toContain('check` before committing')
+  })
+})
+
+describe('buildImplementationInstructions', () => {
+  test('includes idea file deletion instruction for regular tasks', () => {
+    const result = buildImplementationInstructions('dust', false, 'Add login')
+
+    expect(result).toContain('Deletion of the idea file that spawned this task')
+  })
+
+  test('omits idea file deletion instruction for Build Idea tasks', () => {
+    const result = buildImplementationInstructions(
+      'dust',
+      false,
+      'Build Idea: Add login feature'
+    )
+
+    expect(result).not.toContain(
+      'Deletion of the idea file that spawned this task'
+    )
+  })
+
+  test('includes idea file deletion instruction when no task title provided', () => {
+    const result = buildImplementationInstructions('dust', false)
+
+    expect(result).toContain('Deletion of the idea file that spawned this task')
   })
 })

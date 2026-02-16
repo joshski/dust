@@ -78,3 +78,41 @@ describe('todo list instruction', () => {
     expect(result).not.toContain('Use a todo list')
   })
 })
+
+describe('hasIdeaFile conditional', () => {
+  test('agent-implement-task shows idea file deletion when hasIdeaFile is true', () => {
+    const result = loadTemplate('agent-implement-task', {
+      bin: 'dust',
+      hasIdeaFile: 'true',
+    })
+    expect(result).toContain('Deletion of the idea file that spawned this task')
+  })
+
+  test('agent-implement-task hides idea file deletion when hasIdeaFile is false', () => {
+    const result = loadTemplate('agent-implement-task', {
+      bin: 'dust',
+      hasIdeaFile: '',
+    })
+    expect(result).not.toContain(
+      'Deletion of the idea file that spawned this task'
+    )
+  })
+
+  test('agent-new-task shows idea file deletion when hasIdeaFile is true', () => {
+    const result = loadTemplate('agent-new-task', {
+      bin: 'dust',
+      hasIdeaFile: 'true',
+    })
+    expect(result).toContain('Deletion of the idea file that spawned this task')
+  })
+
+  test('agent-new-task hides idea file deletion when hasIdeaFile is false', () => {
+    const result = loadTemplate('agent-new-task', {
+      bin: 'dust',
+      hasIdeaFile: '',
+    })
+    expect(result).not.toContain(
+      'Deletion of the idea file that spawned this task'
+    )
+  })
+})

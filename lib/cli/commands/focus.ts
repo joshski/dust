@@ -7,6 +7,7 @@
  * Usage: dust focus "add login box"
  */
 
+import { BUILD_IDEA_PREFIX } from '../../workflow-tasks'
 import type { CommandDependencies, CommandResult } from '../types'
 import { manageGitHooks, templateVariables } from './agent-shared'
 
@@ -17,6 +18,9 @@ export function buildImplementationInstructions(
 ): string {
   const steps: string[] = []
   let step = 1
+
+  // Build Idea tasks have no associated idea file since the idea content lives inline in the task
+  const hasIdeaFile = !taskTitle?.startsWith(BUILD_IDEA_PREFIX)
 
   steps.push(`Note: Do NOT run \`${bin} agent\`.`, '')
 
@@ -37,12 +41,21 @@ export function buildImplementationInstructions(
     ? `   Use this exact commit message: "${taskTitle}". Do not add any prefix.`
     : '   Use the task title as the commit message. Do not add prefixes like "Complete task:" - use the title directly.'
 
-  steps.push(
-    `${step}. Create a single atomic commit that includes:`,
+  const commitItems = [
     '   - All implementation changes',
     '   - Deletion of the completed task file',
     '   - Updates to any facts that changed',
-    '   - Deletion of the idea file that spawned this task (if remaining scope exists, create new ideas for it)',
+  ]
+
+  if (hasIdeaFile) {
+    commitItems.push(
+      '   - Deletion of the idea file that spawned this task (if remaining scope exists, create new ideas for it)'
+    )
+  }
+
+  steps.push(
+    `${step}. Create a single atomic commit that includes:`,
+    ...commitItems,
     '',
     commitMessageLine,
     ''
