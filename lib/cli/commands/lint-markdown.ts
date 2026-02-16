@@ -26,6 +26,8 @@ const REQUIRED_GOAL_HEADINGS = ['## Parent Goal', '## Sub-Goals']
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.md$/
 
+const EXPECTED_DIRECTORIES = ['goals', 'ideas', 'tasks', 'facts', 'config']
+
 const MAX_OPENING_SENTENCE_LENGTH = 150
 
 export interface Violation {
@@ -719,6 +721,47 @@ export async function validateContentDirectoryFiles(
   return violations
 }
 
+export async function validateDirectoryStructure(
+  dustPath: string,
+  fileSystem: FileSystem,
+  extraDirectories: string[] = []
+): Promise<Violation[]> {
+  const violations: Violation[] = []
+
+  let entries: string[]
+  try {
+    entries = await fileSystem.readdir(dustPath)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return []
+    }
+    throw error
+  }
+
+  const allowedDirectories = new Set([
+    ...EXPECTED_DIRECTORIES,
+    ...extraDirectories,
+  ])
+
+  for (const entry of entries) {
+    const entryPath = `${dustPath}/${entry}`
+
+    if (!fileSystem.isDirectory(entryPath)) {
+      continue
+    }
+
+    if (!allowedDirectories.has(entry)) {
+      const allowedList = [...allowedDirectories].sort().join(', ')
+      violations.push({
+        file: entryPath,
+        message: `Unexpected directory "${entry}" in .dust/. Allowed directories: ${allowedList}. To allow this directory, add it to "extraDirectories" in .dust/config/settings.json`,
+      })
+    }
+  }
+
+  return violations
+}
+
 export async function lintMarkdown(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
@@ -735,6 +778,16 @@ export async function lintMarkdown(
   const dustFiles = dustScan.files
 
   const violations: Violation[] = []
+
+  // Validate directory structure
+  context.stdout('Validating directory structure...')
+  violations.push(
+    ...(await validateDirectoryStructure(
+      dustPath,
+      fileSystem,
+      dependencies.settings.extraDirectories
+    ))
+  )
 
   // Validate all markdown files for links
   context.stdout('Validating links in .dust/...')

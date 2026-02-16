@@ -12,6 +12,7 @@ import {
   titleToFilename,
   validateBidirectionalLinks,
   validateContentDirectoryFiles,
+  validateDirectoryStructure,
   validateFilename,
   validateGoalHierarchyLinks,
   validateGoalHierarchySections,
@@ -29,14 +30,15 @@ import {
 
 function createDependencies(
   context: CommandContext,
-  fileSystem: FileSystemEmulator
+  fileSystem: FileSystemEmulator,
+  settingsOverrides?: Partial<CommandDependencies['settings']>
 ): CommandDependencies {
   return {
     arguments: [],
     context,
     fileSystem,
     globScanner: fileSystem,
-    settings: { dustCommand: 'dust' },
+    settings: { dustCommand: 'dust', ...settingsOverrides },
   }
 }
 
@@ -1730,6 +1732,257 @@ describe('validateContentDirectoryFiles', () => {
     expect(messages.some(m => m.includes('Hidden file'))).toBe(true)
     expect(messages.some(m => m.includes('Non-markdown file'))).toBe(true)
     expect(messages.some(m => m.includes('Subdirectory'))).toBe(true)
+  })
+})
+
+describe('validateDirectoryStructure', () => {
+  test('returns empty array for valid directory structure', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: { 'goal.md': '# Goal' },
+          tasks: { 'task.md': '# Task' },
+          ideas: { 'idea.md': '# Idea' },
+          facts: { 'fact.md': '# Fact' },
+          config: { 'settings.json': '{}' },
+        },
+      },
+    })
+
+    const violations = await validateDirectoryStructure(
+      '/project/.dust',
+      fileSystem
+    )
+
+    expect(violations).toEqual([])
+  })
+
+  test('reports violation for unexpected directory', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: { 'goal.md': '# Goal' },
+          task: { 'task.md': '# Task' }, // typo: "task" instead of "tasks"
+        },
+      },
+    })
+
+    const violations = await validateDirectoryStructure(
+      '/project/.dust',
+      fileSystem
+    )
+
+    expect(violations.length).toBe(1)
+    expect(violations[0].file).toBe('/project/.dust/task')
+    expect(violations[0].message).toContain('Unexpected directory "task"')
+    expect(violations[0].message).toContain('Allowed directories:')
+    expect(violations[0].message).toContain('extraDirectories')
+  })
+
+  test('reports multiple unexpected directories', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goal: { 'goal.md': '# Goal' }, // typo
+          task: { 'task.md': '# Task' }, // typo
+        },
+      },
+    })
+
+    const violations = await validateDirectoryStructure(
+      '/project/.dust',
+      fileSystem
+    )
+
+    expect(violations.length).toBe(2)
+  })
+
+  test('allows directories specified in extraDirectories', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: { 'goal.md': '# Goal' },
+          templates: { 'template.md': '# Template' }, // custom directory
+        },
+      },
+    })
+
+    const violations = await validateDirectoryStructure(
+      '/project/.dust',
+      fileSystem,
+      ['templates']
+    )
+
+    expect(violations).toEqual([])
+  })
+
+  test('ignores non-directory entries', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: { 'goal.md': '# Goal' },
+          'README.md': '# Readme',
+          '.gitkeep': '',
+        },
+      },
+    })
+
+    const violations = await validateDirectoryStructure(
+      '/project/.dust',
+      fileSystem
+    )
+
+    expect(violations).toEqual([])
+  })
+
+  test('returns empty array for non-existent directory', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {},
+    })
+    fileSystem.readdir = async () => {
+      const error = new Error('ENOENT: no such file or directory')
+      ;(error as NodeJS.ErrnoException).code = 'ENOENT'
+      throw error
+    }
+
+    const violations = await validateDirectoryStructure(
+      '/project/.dust',
+      fileSystem
+    )
+
+    expect(violations).toEqual([])
+  })
+
+  test('rethrows non-ENOENT errors', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {},
+      },
+    })
+    fileSystem.readdir = async () => {
+      throw new Error('Permission denied')
+    }
+
+    await expect(
+      validateDirectoryStructure('/project/.dust', fileSystem)
+    ).rejects.toThrow('Permission denied')
+  })
+
+  test('error message lists allowed directories in sorted order', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          unknown: { 'file.md': '# File' },
+        },
+      },
+    })
+
+    const violations = await validateDirectoryStructure(
+      '/project/.dust',
+      fileSystem
+    )
+
+    expect(violations.length).toBe(1)
+    expect(violations[0].message).toContain(
+      'config, facts, goals, ideas, tasks'
+    )
+  })
+})
+
+describe('lintMarkdown directory structure validation', () => {
+  test('reports unexpected directories in .dust/', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+          task: { 'task.md': '# Task' }, // typo: should be "tasks"
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('Unexpected directory')
+    expect(context.stderrLines.join('\n')).toContain('task')
+  })
+
+  test('allows extra directories via settings', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+          templates: { 'template.md': '# Template\n\nThis is a template.' },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(
+      createDependencies(context, fileSystem, {
+        extraDirectories: ['templates'],
+      })
+    )
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain('All validations passed')
+  })
+
+  test('outputs directory structure validation step', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+        },
+      },
+    })
+
+    await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Validating directory structure'
+    )
   })
 })
 
