@@ -45,12 +45,14 @@ test('check command validates markdown files in .dust directory', async () => {
             'valid-goal.md': buildGoal({
               title: 'Valid Goal',
               description: 'A well-formed goal.',
+              parentGoal: '(none)',
+              subGoals: '(none)',
             }),
           },
           tasks: {
             'valid-task.md': buildTask({
               title: 'Valid Task',
-              description: 'A well-formed task.',
+              description: 'Implement a well-formed task.',
             }),
           },
           config: {
