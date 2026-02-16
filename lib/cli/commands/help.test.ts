@@ -25,6 +25,7 @@ function createMockContext(): CommandContext & {
 function createMockFileSystem(): FileSystem {
   return {
     exists: () => false,
+    isDirectory: () => false,
     readFile: async () => '',
     writeFile: async () => {},
     mkdir: async () => {},

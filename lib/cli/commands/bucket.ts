@@ -18,7 +18,7 @@
  */
 
 import { spawn as nodeSpawn } from 'node:child_process'
-import { accessSync } from 'node:fs'
+import { accessSync, statSync } from 'node:fs'
 import { chmod, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { createServer as httpCreateServer } from 'node:http'
 import { homedir, tmpdir } from 'node:os'
@@ -213,6 +213,13 @@ export function createDefaultBucketDependencies(): BucketDependencies {
       try {
         accessSync(path)
         return true
+      } catch {
+        return false
+      }
+    },
+    isDirectory: (path: string) => {
+      try {
+        return statSync(path).isDirectory()
       } catch {
         return false
       }

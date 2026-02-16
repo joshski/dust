@@ -11,6 +11,7 @@ import {
   lintMarkdown,
   titleToFilename,
   validateBidirectionalLinks,
+  validateContentDirectoryFiles,
   validateFilename,
   validateGoalHierarchyLinks,
   validateGoalHierarchySections,
@@ -899,9 +900,9 @@ Implement the task functionality.
     )
   })
 
-  test('skips non-markdown files in glob results', async () => {
+  test('skips non-markdown files outside content directories', async () => {
     const context = createContextEmulator()
-    // Include non-.md files in the file system - they should be skipped during validation
+    // Non-.md files outside content directories (goals, ideas, tasks, facts) should be ignored
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -927,10 +928,13 @@ Implement the task functionality.
 ## Goals
 ## Blocked By
 ## Definition of Done`,
-            README: '',
           },
+          // These are outside content directories, so they should be ignored
           'some-file.txt': '',
           '.gitkeep': '',
+          config: {
+            'settings.json': '{}',
+          },
         },
       },
     })
@@ -1575,6 +1579,258 @@ describe('validateNoCycles', () => {
   })
 })
 
+describe('validateContentDirectoryFiles', () => {
+  test('returns empty array for directory with only markdown files', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: {
+            'task-one.md': '# Task One',
+            'task-two.md': '# Task Two',
+          },
+        },
+      },
+    })
+
+    const violations = await validateContentDirectoryFiles(
+      '/project/.dust/tasks',
+      fileSystem
+    )
+
+    expect(violations).toEqual([])
+  })
+
+  test('reports violation for non-markdown files', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md': '# Task',
+            README: 'some readme',
+          },
+        },
+      },
+    })
+
+    const violations = await validateContentDirectoryFiles(
+      '/project/.dust/tasks',
+      fileSystem
+    )
+
+    expect(violations.length).toBe(1)
+    expect(violations[0].file).toBe('/project/.dust/tasks/README')
+    expect(violations[0].message).toContain('Non-markdown file')
+  })
+
+  test('reports violation for hidden files', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'idea.md': '# Idea',
+            '.DS_Store': '',
+          },
+        },
+      },
+    })
+
+    const violations = await validateContentDirectoryFiles(
+      '/project/.dust/ideas',
+      fileSystem
+    )
+
+    expect(violations.length).toBe(1)
+    expect(violations[0].file).toBe('/project/.dust/ideas/.DS_Store')
+    expect(violations[0].message).toContain('Hidden file')
+  })
+
+  test('reports violation for subdirectories', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': '# Goal',
+            subdir: {
+              'nested.md': '# Nested',
+            },
+          },
+        },
+      },
+    })
+
+    const violations = await validateContentDirectoryFiles(
+      '/project/.dust/goals',
+      fileSystem
+    )
+
+    expect(violations.length).toBe(1)
+    expect(violations[0].file).toBe('/project/.dust/goals/subdir')
+    expect(violations[0].message).toContain('Subdirectory')
+    expect(violations[0].message).toContain('should be flat')
+  })
+
+  test('returns empty array for non-existent directory', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {},
+      },
+    })
+
+    const violations = await validateContentDirectoryFiles(
+      '/project/.dust/nonexistent',
+      fileSystem
+    )
+
+    expect(violations).toEqual([])
+  })
+
+  test('reports multiple violations', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          facts: {
+            'fact.md': '# Fact',
+            '.hidden': '',
+            'backup.txt': '',
+            nested: {
+              'file.md': '# Nested file',
+            },
+          },
+        },
+      },
+    })
+
+    const violations = await validateContentDirectoryFiles(
+      '/project/.dust/facts',
+      fileSystem
+    )
+
+    expect(violations.length).toBe(3)
+    const messages = violations.map(v => v.message)
+    expect(messages.some(m => m.includes('Hidden file'))).toBe(true)
+    expect(messages.some(m => m.includes('Non-markdown file'))).toBe(true)
+    expect(messages.some(m => m.includes('Subdirectory'))).toBe(true)
+  })
+})
+
+describe('lintMarkdown content directory file validation', () => {
+  test('reports violations for non-markdown files in content directories', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+          tasks: {
+            'my-task.md': `# My Task
+
+Implement the task functionality.
+
+## Goals
+## Blocked By
+## Definition of Done`,
+            README: 'some readme content',
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('Non-markdown file')
+    expect(context.stderrLines.join('\n')).toContain('README')
+  })
+
+  test('reports violations for hidden files in content directories', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+          ideas: {
+            '.DS_Store': '',
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('Hidden file')
+    expect(context.stderrLines.join('\n')).toContain('.DS_Store')
+  })
+
+  test('reports violations for subdirectories in content directories', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          goals: {
+            'goal.md': `# Goal
+
+This is a goal.
+
+## Parent Goal
+
+- (none)
+
+## Sub-Goals
+
+- (none)
+`,
+          },
+          tasks: {
+            'my-task.md': `# My Task
+
+Implement the task functionality.
+
+## Goals
+## Blocked By
+## Definition of Done`,
+            archived: {
+              'old-task.md': '# Old Task',
+            },
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('Subdirectory')
+    expect(context.stderrLines.join('\n')).toContain('archived')
+    expect(context.stderrLines.join('\n')).toContain('should be flat')
+  })
+})
+
 describe('lintMarkdown idea open questions validation', () => {
   test('passes with valid idea Open Questions section', async () => {
     const context = createContextEmulator()
@@ -1733,7 +1989,7 @@ Other reasons.
     expect(result.exitCode).toBe(0)
   })
 
-  test('skips non-markdown files in ideas directory', async () => {
+  test('reports non-markdown files in ideas directory as violations', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -1752,8 +2008,9 @@ This is an idea.
 
     const result = await lintMarkdown(createDependencies(context, fileSystem))
 
-    expect(result.exitCode).toBe(0)
-    expect(context.stdoutLines.join('\n')).toContain('All validations passed')
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('Non-markdown file')
+    expect(context.stderrLines.join('\n')).toContain('Hidden file')
   })
 
   test('rethrows non-ENOENT errors when reading idea files during idea validation', async () => {
@@ -2132,7 +2389,7 @@ This is a goal.
     expect(output).toContain('goal file')
   })
 
-  test('skips non-markdown files in goals directory', async () => {
+  test('reports non-markdown files in goals directory as violations', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -2159,8 +2416,9 @@ This is a goal.
 
     const result = await lintMarkdown(createDependencies(context, fileSystem))
 
-    expect(result.exitCode).toBe(0)
-    expect(context.stdoutLines.join('\n')).toContain('All validations passed')
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('Non-markdown file')
+    expect(context.stderrLines.join('\n')).toContain('Hidden file')
   })
 
   test('rethrows non-ENOENT errors when reading files in .dust root', async () => {

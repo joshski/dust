@@ -13,6 +13,7 @@ import type { FileSystem } from './types'
  */
 export interface FileSystemPrimitives {
   existsSync: (path: string) => boolean
+  statSync: (path: string) => { isDirectory: () => boolean }
   readFile: (path: string, encoding: 'utf-8') => Promise<string>
   writeFile: (
     path: string,
@@ -53,6 +54,13 @@ export interface ConsolePrimitives {
 export function createFileSystem(primitives: FileSystemPrimitives): FileSystem {
   return {
     exists: primitives.existsSync,
+    isDirectory: path => {
+      try {
+        return primitives.statSync(path).isDirectory()
+      } catch {
+        return false
+      }
+    },
     readFile: path => primitives.readFile(path, 'utf-8'),
     writeFile: (path, content, options) =>
       primitives.writeFile(path, content, {

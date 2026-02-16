@@ -202,6 +202,7 @@ export function createFileSystemEmulator(
 
   return {
     exists: (path: string) => paths.has(path),
+    isDirectory: (path: string) => paths.has(path) && !files.has(path),
     readFile: async (path: string) => {
       if (!files.has(path)) {
         const error = new Error(
@@ -231,10 +232,21 @@ export function createFileSystemEmulator(
     },
     readdir: async (path: string) => {
       const prefix = `${path}/`
-      return Array.from(files.keys())
-        .filter(f => f.startsWith(prefix))
-        .map(f => f.slice(prefix.length))
-        .filter(f => !f.includes('/'))
+      const entries = new Set<string>()
+      // Add direct file children
+      for (const f of files.keys()) {
+        if (f.startsWith(prefix)) {
+          const relativePath = f.slice(prefix.length)
+          // If it doesn't contain '/', it's a direct child file
+          if (!relativePath.includes('/')) {
+            entries.add(relativePath)
+          } else {
+            // Otherwise, the first segment is a directory
+            entries.add(relativePath.split('/')[0])
+          }
+        }
+      }
+      return Array.from(entries)
     },
     chmod: async (path: string, mode: number) => {
       permissions.set(path, mode)

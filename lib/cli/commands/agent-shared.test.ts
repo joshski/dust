@@ -91,6 +91,7 @@ describe('templateVariables', () => {
 describe('loadAgentInstructions', () => {
   const createFileSystem = (files: Record<string, string>): FileSystem => ({
     exists: (path: string) => path in files,
+    isDirectory: () => false,
     readFile: async (path: string) => {
       if (path in files) return files[path]
       throw new Error('File not found')
@@ -157,6 +158,7 @@ describe('loadAgentInstructions', () => {
   test('returns empty string on read error', async () => {
     const fileSystem: FileSystem = {
       exists: () => true,
+      isDirectory: () => false,
       readFile: async () => {
         throw new Error('Permission denied')
       },
@@ -179,6 +181,7 @@ describe('templateVariablesWithInstructions', () => {
 
   const createFileSystem = (files: Record<string, string>): FileSystem => ({
     exists: (path: string) => path in files,
+    isDirectory: () => false,
     readFile: async (path: string) => {
       if (path in files) return files[path]
       throw new Error('File not found')
@@ -256,6 +259,7 @@ describe('manageGitHooks', () => {
     const written: Record<string, string> = {}
     const fileSystem: FileSystem = {
       exists: (path: string) => path in files,
+      isDirectory: () => false,
       readFile: async (path: string) => {
         if (path in written) return written[path]
         if (path in files) return files[path]

@@ -670,6 +670,55 @@ async function safeScanDir(
   }
 }
 
+export async function validateContentDirectoryFiles(
+  dirPath: string,
+  fileSystem: FileSystem
+): Promise<Violation[]> {
+  const violations: Violation[] = []
+
+  let entries: string[]
+  try {
+    entries = await fileSystem.readdir(dirPath)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return []
+    }
+    throw error
+  }
+
+  for (const entry of entries) {
+    const entryPath = `${dirPath}/${entry}`
+
+    // Check for hidden files
+    if (entry.startsWith('.')) {
+      violations.push({
+        file: entryPath,
+        message: `Hidden file "${entry}" found in content directory`,
+      })
+      continue
+    }
+
+    // Check for subdirectories
+    if (fileSystem.isDirectory(entryPath)) {
+      violations.push({
+        file: entryPath,
+        message: `Subdirectory "${entry}" found in content directory (content directories should be flat)`,
+      })
+      continue
+    }
+
+    // Check for non-markdown files
+    if (!entry.endsWith('.md')) {
+      violations.push({
+        file: entryPath,
+        message: `Non-markdown file "${entry}" found in content directory`,
+      })
+    }
+  }
+
+  return violations
+}
+
 export async function lintMarkdown(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
@@ -708,6 +757,14 @@ export async function lintMarkdown(
   // Validate opening sentences and title-filename matching in all content directories
   const contentDirs = ['goals', 'facts', 'ideas', 'tasks']
   context.stdout('Validating content files...')
+
+  // Validate that content directories only contain markdown files
+  for (const dir of contentDirs) {
+    const dirPath = `${dustPath}/${dir}`
+    violations.push(
+      ...(await validateContentDirectoryFiles(dirPath, fileSystem))
+    )
+  }
 
   for (const dir of contentDirs) {
     const dirPath = `${dustPath}/${dir}`

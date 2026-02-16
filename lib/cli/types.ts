@@ -27,6 +27,7 @@ export interface FileSystem {
   mkdir: (path: string, options?: { recursive?: boolean }) => Promise<void>
   readdir: (path: string) => Promise<string[]>
   chmod: (path: string, mode: number) => Promise<void>
+  isDirectory: (path: string) => boolean
 }
 
 export interface GlobScanner {

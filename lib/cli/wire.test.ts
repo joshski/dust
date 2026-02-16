@@ -15,6 +15,9 @@ function createFsPrimitives(
   const dirs = new Set<string>()
   return {
     existsSync: (path: string) => files.has(path) || dirs.has(path),
+    statSync: (path: string) => ({
+      isDirectory: () => dirs.has(path) || (!files.has(path) && path !== '/'),
+    }),
     readFile: async (path: string) => files.get(path) ?? '',
     writeFile: async () => {},
     mkdir: async (path: string) => {
@@ -39,6 +42,15 @@ describe('createFileSystem', () => {
 
     expect(fileSystem.exists('/test.txt')).toBe(true)
     expect(fileSystem.exists('/missing.txt')).toBe(false)
+  })
+
+  test('isDirectory delegates to statSync', () => {
+    const files = new Map([['/dir/file.txt', 'content']])
+    const primitives = createFsPrimitives(files)
+    const fileSystem = createFileSystem(primitives)
+
+    expect(fileSystem.isDirectory('/dir')).toBe(true)
+    expect(fileSystem.isDirectory('/dir/file.txt')).toBe(false)
   })
 
   test('readFile delegates with utf-8 encoding', async () => {
