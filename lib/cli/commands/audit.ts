@@ -4,55 +4,21 @@
  * Audits are canned tasks that help maintain project health.
  * Sources:
  * 1. User-configured audits in .dust/config/audits/*.md (takes precedence)
- * 2. Stock audits from markdown files under lib/templates/audits/
+ * 2. Stock audits from lib/audits/stock-audits.ts
  *
  * Usage:
  *   dust audit              - List available audits
  *   dust audit <name>       - Create a task from the audit template
  */
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { basename, dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { basename } from 'node:path'
+import { loadStockAudits } from '../../audits/stock-audits'
 import {
   extractOpeningSentence,
   extractTitle,
 } from '../../markdown/markdown-utilities'
 import { getColors } from '../colors'
 import type { CommandDependencies, CommandResult } from '../types'
-
-interface StockAudit {
-  name: string
-  description: string
-  template: string
-}
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-// In dev: __dirname is lib/cli/commands/, audit templates at ../../templates/audits
-// Bundled: __dirname is dist/, audit templates at ../templates (audits copied flat)
-/* v8 ignore start - fallback path only reached in bundled env */
-const stockAuditsDir =
-  [
-    join(__dirname, '../../templates/audits'),
-    join(__dirname, '../templates'),
-  ].find(d => existsSync(d)) ?? join(__dirname, '../../templates/audits')
-/* v8 ignore stop */
-
-/**
- * Loads stock audits from markdown files under lib/templates/audits/.
- */
-export function loadStockAudits(): StockAudit[] {
-  const files = readdirSync(stockAuditsDir)
-    .filter(f => f.endsWith('.md'))
-    .sort()
-
-  return files.map(file => {
-    const template = readFileSync(join(stockAuditsDir, file), 'utf-8')
-    const name = basename(file, '.md')
-    const description = extractOpeningSentence(template)
-    return { name, description: description as string, template }
-  })
-}
 
 interface AuditInfo {
   name: string
