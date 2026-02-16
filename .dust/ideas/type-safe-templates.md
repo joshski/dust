@@ -1,6 +1,6 @@
 # Type safe templates
 
-Replace the current string-based template system with type-safe TypeScript functions that leverage template literals and a `dedent` helper for readable multi-line strings.
+Replace the current string-based template system with type-safe TypeScript functions. Leverage template literals and a `dedent` helper for readable multi-line strings.
 
 ## Current State
 
@@ -79,24 +79,36 @@ export function agentGreeting(vars: TemplateVars): string {
 
 The ideas are nearly identical. The main difference is emphasis: this idea focuses on "type safety" while the existing one focuses on "TypeScript functions." They propose the same solution (`dedent` + function templates) with the same benefits.
 
-**Option A**: Merge into this idea and delete the other
-**Option B**: Keep both and implement together
-**Option C**: Treat this as a duplicate and close it
+#### Merge into this idea and delete the other
+
+#### Keep both and implement together
+
+#### Treat this as a duplicate and close it
 
 ### What should the `dedent` implementation handle?
 
-The simple version strips common leading whitespace. Additional considerations:
+The simple version strips common leading whitespace. Additional considerations: mixed tabs/spaces, preserving intentional indentation relative to the baseline, normalizing line endings.
 
-- Should it handle mixed tabs/spaces?
-- Should it preserve intentional indentation relative to the baseline?
-- Should it normalize line endings?
+#### Simple version (strip common leading whitespace only)
+
+#### Full-featured (handle all edge cases above)
 
 ### Where should template functions live?
 
-**Option A**: Inline in the command files that use them (e.g., `agent.ts` owns its greeting)
-**Option B**: Centralized in `lib/cli/templates.ts` as functions instead of `loadTemplate`
-**Option C**: New file per template domain (e.g., `lib/cli/agent-templates.ts`)
+#### Inline in the command files that use them
+
+E.g., `agent.ts` owns its greeting.
+
+#### Centralized in `lib/cli/templates.ts` as functions instead of `loadTemplate`
+
+#### New file per template domain
+
+E.g., `lib/cli/agent-templates.ts`.
 
 ### Should this obsolete the "Add Template Name Validation" idea?
 
-If templates become functions, string-based template names disappear. The validation idea would no longer be relevant. Should we close it as part of implementing this?
+If templates become functions, string-based template names disappear. The validation idea would no longer be relevant.
+
+#### Yes, close it as part of implementing this
+
+#### No, keep it independent
