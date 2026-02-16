@@ -248,7 +248,7 @@ export async function runOneIteration(
       reason: pullResult.message,
     })
 
-    const prompt = `Note: Skip the \`dust agent\` step - your task has already been specified below.
+    const prompt = `Note: Do NOT run \`dust agent\`.
 
 git pull failed with the following error:
 
@@ -309,14 +309,18 @@ Make sure the repository is in a clean state and synced with remote before finis
     `${dependencies.context.cwd}/${task.path}`
   )
   const { dustCommand, installCommand = 'npm install' } = dependencies.settings
-  const instructions = buildImplementationInstructions(dustCommand, true)
+  const instructions = buildImplementationInstructions(
+    dustCommand,
+    true,
+    task.title ?? undefined
+  )
   const prompt = `Run \`${installCommand}\` to install dependencies, then implement the following task.
-
-## Task: ${task.title}
 
 The following is the contents of the task file \`${task.path}\`:
 
+----------
 ${taskContent}
+----------
 
 When the task is complete, delete the task file \`${task.path}\`.
 

@@ -554,7 +554,6 @@ describe('runOneIteration', () => {
     expect(capturedPrompt).toContain(
       'Run `bun install` to install dependencies'
     )
-    expect(capturedPrompt).toContain('## Task: Task')
     expect(capturedPrompt).toContain('Do the thing.')
     expect(capturedPrompt).toContain('`bunx dust check`')
     expect(capturedPrompt).toContain(
@@ -564,7 +563,7 @@ describe('runOneIteration', () => {
       'delete the task file `.dust/tasks/task.md`'
     )
     // Should include skip guidance but not routing commands
-    expect(capturedPrompt).toContain('Skip the `bunx dust agent` step')
+    expect(capturedPrompt).toContain('Do NOT run `bunx dust agent`')
     expect(capturedPrompt).not.toContain('pick task')
     expect(capturedPrompt).not.toContain('run the matching command')
   })
@@ -589,7 +588,6 @@ describe('runOneIteration', () => {
     expect(capturedPrompt).toContain(
       'Run `npm install` to install dependencies'
     )
-    expect(capturedPrompt).toContain('## Task: Task')
     expect(capturedPrompt).toContain('`dust check`')
   })
 
@@ -809,7 +807,6 @@ describe('runOneIteration', () => {
     expect(startedEvent.prompt).toContain(
       'Run `bun install` to install dependencies'
     )
-    expect(startedEvent.prompt).toContain('## Task: Task')
     expect(startedEvent.prompt).toContain('`bunx dust check`')
     expect(startedEvent.agentType).toBe('claude')
     expect(startedEvent.purpose).toBe('task')

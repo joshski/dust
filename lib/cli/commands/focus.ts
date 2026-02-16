@@ -12,15 +12,13 @@ import { manageGitHooks, templateVariables } from './agent-shared'
 
 export function buildImplementationInstructions(
   bin: string,
-  hooksInstalled: boolean
+  hooksInstalled: boolean,
+  taskTitle?: string
 ): string {
   const steps: string[] = []
   let step = 1
 
-  steps.push(
-    `Note: Skip the \`${bin} agent\` step - your task has already been specified below.`,
-    ''
-  )
+  steps.push(`Note: Do NOT run \`${bin} agent\`.`, '')
 
   steps.push(
     `${step}. Run \`${bin} check\` to verify the project is in a good state`
@@ -35,6 +33,10 @@ export function buildImplementationInstructions(
     step++
   }
 
+  const commitMessageLine = taskTitle
+    ? `   Use this exact commit message: "${taskTitle}". Do not add any prefix.`
+    : '   Use the task title as the commit message. Do not add prefixes like "Complete task:" - use the title directly.'
+
   steps.push(
     `${step}. Create a single atomic commit that includes:`,
     '   - All implementation changes',
@@ -42,12 +44,7 @@ export function buildImplementationInstructions(
     '   - Updates to any facts that changed',
     '   - Deletion of the idea file that spawned this task (if remaining scope exists, create new ideas for it)',
     '',
-    '   Use the task title as the commit message. Task titles are written in imperative form, which is the recommended style for git commit messages. Do not add prefixes like "Complete task:" - use the title directly.',
-    '',
-    '   Example: If the task title is "Add validation for user input", the commit message should be:',
-    '   ```',
-    '   Add validation for user input',
-    '   ```',
+    commitMessageLine,
     ''
   )
   step++
