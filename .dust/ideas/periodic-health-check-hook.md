@@ -53,7 +53,7 @@ Review and maintain dust planning artifacts.
 
 ## Definition of Done
 
-- [ ] Run `dust lint markdown` and fix any issues
+- [ ] Run `dust lint` and fix any issues
 - [ ] Review ideas in `.dust/ideas/` - promote, refine, or delete stale ones
 - [ ] Verify facts in `.dust/facts/` still reflect the codebase
 - [ ] Check goals in `.dust/goals/` are still relevant

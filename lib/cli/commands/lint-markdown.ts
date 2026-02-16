@@ -1,5 +1,5 @@
 /**
- * dust lint markdown - Run lint checks on .dust/ markdown files
+ * dust lint - Run lint checks on .dust/ markdown files
  */
 
 import { dirname, resolve } from 'node:path'

@@ -583,7 +583,7 @@ describe('check with validation', () => {
     const context = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
-      checks: [{ name: 'lint', command: 'npm run lint' }],
+      checks: [{ name: 'biome', command: 'npm run lint' }],
     }
     const fileSystem = createFileSystemEmulator({
       project: { '.dust': {} },
@@ -602,8 +602,8 @@ describe('check with validation', () => {
     expect(result.exitCode).toBe(0)
     expect(bufferedRunner.calls).toHaveLength(1)
     // Validation is now shown as a check result
-    expect(context.stdoutLines).toContain('✓ lint markdown')
     expect(context.stdoutLines).toContain('✓ lint')
+    expect(context.stdoutLines).toContain('✓ biome')
     expect(context.stdoutLines).toContain('✓ 2/2 checks passed')
   })
 
@@ -611,7 +611,7 @@ describe('check with validation', () => {
     const context = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
-      checks: [{ name: 'lint', command: 'npm run lint' }],
+      checks: [{ name: 'biome', command: 'npm run lint' }],
     }
     // Include a task file with invalid filename (uppercase)
     const fileSystem = createFileSystemEmulator({
@@ -634,10 +634,10 @@ describe('check with validation', () => {
     )
 
     expect(result.exitCode).toBe(1)
-    // Checks now run in parallel, so lint still runs
+    // Checks now run in parallel, so biome still runs
     expect(bufferedRunner.calls).toHaveLength(1)
-    expect(context.stdoutLines).toContain('✗ lint markdown')
-    expect(context.stdoutLines).toContain('✓ lint')
+    expect(context.stdoutLines).toContain('✗ lint')
+    expect(context.stdoutLines).toContain('✓ biome')
     expect(context.stdoutLines).toContain('✗ 1/2 checks passed')
   })
 
@@ -645,7 +645,7 @@ describe('check with validation', () => {
     const context = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
-      checks: [{ name: 'lint', command: 'npm run lint' }],
+      checks: [{ name: 'biome', command: 'npm run lint' }],
     }
     const fileSystem = createFileSystemEmulator()
     const bufferedRunner = createMockBufferedRunner({
@@ -660,7 +660,7 @@ describe('check with validation', () => {
     expect(result.exitCode).toBe(0)
     expect(bufferedRunner.calls).toHaveLength(1)
     // No validation check in results when .dust doesn't exist
-    expect(context.stdoutLines).not.toContain('✓ lint markdown')
+    expect(context.stdoutLines).not.toContain('✓ lint')
     expect(context.stdoutLines).toContain('✓ 1/1 checks passed')
   })
 })
@@ -930,11 +930,11 @@ describe('check command --serial flag', () => {
     expect(executionOrder).toEqual(['cmd1', 'cmd2', 'cmd3'])
   })
 
-  test('runs lint markdown first in serial mode when .dust exists', async () => {
+  test('runs lint first in serial mode when .dust exists', async () => {
     const context = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
-      checks: [{ name: 'lint', command: 'npm run lint' }],
+      checks: [{ name: 'biome', command: 'npm run lint' }],
     }
     const fileSystem = createFileSystemEmulator({
       project: { '.dust': {} },
@@ -951,9 +951,9 @@ describe('check command --serial flag', () => {
     )
 
     expect(result.exitCode).toBe(0)
-    // Lint markdown should appear first in results
-    expect(context.stdoutLines[0]).toBe('✓ lint markdown')
-    expect(context.stdoutLines[1]).toBe('✓ lint')
+    // Lint should appear first in results
+    expect(context.stdoutLines[0]).toBe('✓ lint')
+    expect(context.stdoutLines[1]).toBe('✓ biome')
   })
 
   test('output format is consistent between parallel and serial modes', async () => {

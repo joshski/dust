@@ -15,7 +15,7 @@ export function generateHelpText(settings: { dustCommand: string }): string {
 
     Commands:
       init              Initialize a new Dust repository
-      lint markdown     Run lint checks on .dust/ files
+      lint              Run lint checks on .dust/ files
       list              List all items (tasks, ideas, goals, facts)
       tasks             List tasks (actionable work with definitions of done)
       ideas             List ideas (vague proposals, convert to tasks when ready)

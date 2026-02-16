@@ -64,18 +64,18 @@ test('check command validates markdown files in .dust directory', async () => {
     },
     handlers: [
       { pattern: /welcome to dust/, getCommand: () => 'bin/dust check' },
-      { pattern: /lint markdown/, getCommand: () => null },
+      { pattern: /✓ lint/, getCommand: () => null },
     ],
   })
 
-  // The check command runs lint markdown as a built-in check
+  // The check command runs lint as a built-in check
   expect(session).toMatchObject({
     turns: [
       { command: 'bin/dust agent' },
       {
         command: 'bin/dust check',
         result: {
-          stdout: expect.stringContaining('lint markdown'),
+          stdout: expect.stringContaining('✓ lint'),
         },
       },
     ],
@@ -105,7 +105,7 @@ test('check command fails when markdown files have validation errors', async () 
     },
     handlers: [
       { pattern: /welcome to dust/, getCommand: () => 'bin/dust check' },
-      { pattern: /lint markdown/, getCommand: () => null },
+      { pattern: /✗ lint/, getCommand: () => null },
     ],
   })
 
@@ -117,14 +117,14 @@ test('check command fails when markdown files have validation errors', async () 
         command: 'bin/dust check',
         result: {
           exitCode: 1,
-          stdout: expect.stringContaining('lint markdown'),
+          stdout: expect.stringContaining('✗ lint'),
         },
       },
     ],
   })
 })
 
-test('lint markdown command shows validation errors', async () => {
+test('lint command shows validation errors', async () => {
   const session = await runSession({
     fileSystemTree: {
       project: {
@@ -140,7 +140,7 @@ test('lint markdown command shows validation errors', async () => {
     handlers: [
       {
         pattern: /welcome to dust/,
-        getCommand: () => 'bin/dust lint markdown',
+        getCommand: () => 'bin/dust lint',
       },
       { pattern: /Missing required heading/, getCommand: () => null },
     ],
@@ -151,7 +151,7 @@ test('lint markdown command shows validation errors', async () => {
     turns: [
       { command: 'bin/dust agent' },
       {
-        command: 'bin/dust lint markdown',
+        command: 'bin/dust lint',
         result: {
           exitCode: 1,
           stderr: expect.stringContaining('Missing required heading'),
@@ -161,7 +161,7 @@ test('lint markdown command shows validation errors', async () => {
   })
 })
 
-test('lint markdown passes with valid files', async () => {
+test('lint passes with valid files', async () => {
   const session = await runSession({
     fileSystemTree: {
       project: {
@@ -193,7 +193,7 @@ test('lint markdown passes with valid files', async () => {
     handlers: [
       {
         pattern: /welcome to dust/,
-        getCommand: () => 'bin/dust lint markdown',
+        getCommand: () => 'bin/dust lint',
       },
       { pattern: /All validations passed/, getCommand: () => null },
     ],
@@ -203,7 +203,7 @@ test('lint markdown passes with valid files', async () => {
     turns: [
       { command: 'bin/dust agent' },
       {
-        command: 'bin/dust lint markdown',
+        command: 'bin/dust lint',
         result: {
           exitCode: 0,
           stdout: expect.stringContaining('All validations passed'),

@@ -1,7 +1,7 @@
 /**
  * dust check - Execute project-defined quality gate checks
  *
- * Runs `dust lint markdown` and executes checks from settings.json
+ * Runs `dust lint` and executes checks from settings.json
  * in parallel with buffered output.
  */
 
@@ -89,8 +89,8 @@ async function runValidationCheck(
   const durationMs = Date.now() - startTime
 
   return {
-    name: 'lint markdown',
-    command: 'dust lint markdown',
+    name: 'lint',
+    command: 'dust lint',
     exitCode: result.exitCode,
     output: outputLines.join('\n'),
     isBuiltIn: true,

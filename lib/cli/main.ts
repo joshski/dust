@@ -45,7 +45,7 @@ import type {
  */
 export const commandRegistry = {
   init,
-  'lint markdown': lintMarkdown,
+  lint: lintMarkdown,
   list,
   tasks,
   goals,

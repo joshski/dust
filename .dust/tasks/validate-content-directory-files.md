@@ -22,7 +22,7 @@ The content directories (`goals`, `ideas`, `tasks`, `facts`) should contain only
 
 ## Blocked By
 
-- [Rename lint markdown to lint](rename-lint-markdown-to-lint.md)
+(none)
 
 ## Definition of Done
 

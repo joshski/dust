@@ -1,6 +1,6 @@
 # Only run `dust validate markdown` for workflow tasks
 
-When an agent works on a workflow task, run `dust lint markdown` instead of `dust check` and restrict edits to `.dust/` files.
+When an agent works on a workflow task, run `dust lint` instead of `dust check` and restrict edits to `.dust/` files.
 
 ## Background
 
@@ -37,7 +37,7 @@ Workflow tasks only modify files within `.dust/` (ideas, tasks, facts, goals). R
 
 When an agent runs `dust focus "<workflow task name>"`, detect if it's a workflow task and provide different instructions:
 
-- Run `dust lint markdown` instead of `dust check`
+- Run `dust lint` instead of `dust check`
 - Include a note that only `.dust/` files should be modified
 - Possibly suggest a smaller, more focused commit scope
 
@@ -45,7 +45,7 @@ When an agent runs `dust focus "<workflow task name>"`, detect if it's a workflo
 
 In `lib/cli/commands/pre-push.ts`, when the commits being pushed only contain `.dust/` file changes and the task is a workflow task:
 
-- Run `dust lint markdown` instead of the full `check()` command
+- Run `dust lint` instead of the full `check()` command
 - This can leverage the existing `analyzeChangesForTaskOnlyPattern()` function
 
 ### 3. Add workflow task detection helper
@@ -79,7 +79,7 @@ The pre-push hook needs to know if the commit is a workflow task completion to d
 
 #### Option A: Analyze changes for `.dust/`-only pattern (Recommended)
 
-If all committed changes are within `.dust/`, run `dust lint markdown` instead of `dust check`. This leverages the existing `analyzeChangesForTaskOnlyPattern()` function in `pre-push.ts` but extends it to check for `.dust/`-only changes (not just task-only additions).
+If all committed changes are within `.dust/`, run `dust lint` instead of `dust check`. This leverages the existing `analyzeChangesForTaskOnlyPattern()` function in `pre-push.ts` but extends it to check for `.dust/`-only changes (not just task-only additions).
 
 **Pros:** Simple, no extra I/O, works with any `.dust/`-only commit
 **Cons:** May skip full checks for a non-workflow task that only touched `.dust/` files
@@ -103,7 +103,7 @@ Any code changes trigger full validation. This aligns with the "stop the line" g
 
 **Rationale:** Workflow tasks should only touch `.dust/` files. If an agent is modifying both `.dust/` and code, they're either doing multiple tasks or making implementation changes that warrant full validation.
 
-#### Option B: Run lint markdown plus code linting only
+#### Option B: Run lint plus code linting only
 
 Skip tests but still lint any code that was changed. This is a middle ground but complicates the validation logic and may not catch issues that tests would find.
 

@@ -23,7 +23,7 @@ The commit history of an idea file becomes a reasoning trail: each commit repres
 
 ## Open Questions structure
 
-The structure must be validated by `dust lint markdown` so that tooling can reliably parse it:
+The structure must be validated by `dust lint` so that tooling can reliably parse it:
 
 ```markdown
 ## Open Questions

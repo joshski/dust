@@ -23,7 +23,7 @@ function newIdeaInstructions(vars: TemplateVars): string {
     3. Add a title as the first line using an H1 heading (e.g., \`# Improve error messages\`)
     4. Write a brief description of the potential change or improvement
     5. If the idea has open questions, add an \`## Open Questions\` section (see below)
-    6. Run \`${vars.bin} lint markdown\` to catch any issues with the idea file format
+    6. Run \`${vars.bin} lint\` to catch any issues with the idea file format
     7. Create a single atomic commit with a message in the format "Add idea: <title>"
     8. Push your commit to the remote repository
 

@@ -51,7 +51,7 @@ Use a todo list to track your progress through these steps.
 7. Add a \`## Goals\` section with links to relevant goals this task supports (e.g., \`- [Goal Name](../goals/goal-name.md)\`)
 8. Add a \`## Blocked By\` section listing any tasks that must complete first, or \`(none)\` if there are no blockers
 9. Add a \`## Definition of Done\` section with a checklist of completion criteria using \`- [ ]\` for each item
-10. Run \`dust lint markdown\` to catch any issues with the task format
+10. Run \`dust lint\` to catch any issues with the task format
 11. Create a single atomic commit with a message in the format "Add task: <title>" that includes:
     - The new task file
     - Deletion of the idea file that spawned this task (if remaining scope exists, create new ideas for it)

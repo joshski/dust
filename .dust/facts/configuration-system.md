@@ -42,7 +42,7 @@ Each check can optionally include a `hints` array with helpful suggestions shown
 }
 ```
 
-Checks run in parallel with buffered output. The `dust check` command also runs `dust lint markdown` as a built-in check.
+Checks run in parallel with buffered output. The `dust check` command also runs `dust lint` as a built-in check.
 
 ## Implementation
 

@@ -27,7 +27,7 @@ Per the resolved questions in the original idea, validation should be strict and
 
 ## Blocked By
 
-- [Rename lint markdown to lint](rename-lint-markdown-to-lint.md)
+(none)
 
 ## Definition of Done
 

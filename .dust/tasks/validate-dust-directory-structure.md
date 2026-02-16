@@ -23,7 +23,7 @@ Per the resolved questions in the original idea, unexpected directories should b
 
 ## Blocked By
 
-- [Rename lint markdown to lint](rename-lint-markdown-to-lint.md)
+(none)
 
 ## Definition of Done
 

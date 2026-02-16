@@ -69,7 +69,7 @@ function newTaskInstructions(vars: TemplateVars): string {
     '9. Add a `## Definition of Done` section with a checklist of completion criteria using `- [ ]` for each item'
   )
   steps.push(
-    `10. Run \`${vars.bin} lint markdown\` to catch any issues with the task format`
+    `10. Run \`${vars.bin} lint\` to catch any issues with the task format`
   )
   steps.push(
     '11. Create a single atomic commit with a message in the format "Add task: <title>" that includes:'
