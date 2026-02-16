@@ -133,6 +133,8 @@ export interface TerminalUIState {
   logBuffers: Map<string, LogBuffer>
   /** Agent status for each repository, keyed by name */
   agentStatuses: Map<string, 'idle' | 'busy'>
+  /** Repository URLs for each repository, keyed by name */
+  repositoryUrls: Map<string, string>
   /** Current scroll offset (0 = bottom, positive = scrolled up) */
   scrollOffset: number
   /** Whether auto-scroll is enabled (follows new logs) */
@@ -153,6 +155,7 @@ export function createTerminalUIState(): TerminalUIState {
     selectedIndex: -1, // -1 = "All"
     logBuffers: new Map(),
     agentStatuses: new Map(),
+    repositoryUrls: new Map(),
     scrollOffset: 0,
     autoScroll: true,
     width: 80,
@@ -179,7 +182,8 @@ export function updateDimensions(
 export function addRepository(
   state: TerminalUIState,
   name: string,
-  logBuffer: LogBuffer
+  logBuffer: LogBuffer,
+  url?: string
 ): void {
   if (!state.repositories.includes(name)) {
     state.repositories.push(name)
@@ -191,6 +195,9 @@ export function addRepository(
     state.agentStatuses.set(name, 'idle')
   }
   state.logBuffers.set(name, logBuffer)
+  if (url) {
+    state.repositoryUrls.set(name, url)
+  }
 }
 
 /**
@@ -202,6 +209,7 @@ export function removeRepository(state: TerminalUIState, name: string): void {
     state.repositories.splice(index, 1)
     state.logBuffers.delete(name)
     state.agentStatuses.delete(name)
+    state.repositoryUrls.delete(name)
     // Adjust selected index if needed
     if (state.selectedIndex >= state.repositories.length) {
       state.selectedIndex = state.repositories.length - 1
@@ -432,7 +440,7 @@ export function renderTabs(state: TerminalUIState): string[] {
  * Render the help line.
  */
 export function renderHelpLine(): string {
-  return `${ANSI.DIM}[←→] select  [↑↓] scroll  [PgUp/PgDn] page  [g/G] top/bottom  [q] quit${ANSI.RESET}`
+  return `${ANSI.DIM}[←→] select  [↑↓] scroll  [PgUp/PgDn] page  [g/G] top/bottom  [o] open  [q] quit${ANSI.RESET}`
 }
 
 /**
@@ -597,10 +605,22 @@ function parseSGRMouse(key: string): number | null {
 }
 
 /**
+ * Options for handleKeyInput.
+ */
+export interface HandleKeyInputOptions {
+  /** Callback to open a URL in the browser */
+  openBrowser?: (url: string) => void
+}
+
+/**
  * Handle a key input and update state.
  * Returns true if the UI should quit.
  */
-export function handleKeyInput(state: TerminalUIState, key: string): boolean {
+export function handleKeyInput(
+  state: TerminalUIState,
+  key: string,
+  options?: HandleKeyInputOptions
+): boolean {
   // Check for SGR mouse events (scroll wheel)
   const mouseButton = parseSGRMouse(key)
   if (mouseButton !== null) {
@@ -646,6 +666,20 @@ export function handleKeyInput(state: TerminalUIState, key: string): boolean {
     case KEYS.END:
       scrollToBottom(state)
       break
+    case 'o': {
+      // Open the selected repository's URL in the browser
+      if (state.selectedIndex === -1) {
+        // "All" tab - do nothing
+        break
+      }
+      const repoName = state.repositories[state.selectedIndex]
+      if (!repoName) break
+      const url = state.repositoryUrls.get(repoName)
+      if (url && options?.openBrowser) {
+        options.openBrowser(url)
+      }
+      break
+    }
   }
   return false
 }

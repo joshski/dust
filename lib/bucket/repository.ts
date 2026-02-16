@@ -43,6 +43,7 @@ import {
 export interface Repository {
   name: string
   gitUrl: string
+  url?: string
 }
 
 export interface RepositoryState {
@@ -104,12 +105,23 @@ export function parseRepository(data: unknown): Repository | null {
     'name' in data &&
     'gitUrl' in data
   ) {
-    const repositoryData = data as { name: unknown; gitUrl: unknown }
+    const repositoryData = data as {
+      name: unknown
+      gitUrl: unknown
+      url?: unknown
+    }
     if (
       typeof repositoryData.name === 'string' &&
       typeof repositoryData.gitUrl === 'string'
     ) {
-      return { name: repositoryData.name, gitUrl: repositoryData.gitUrl }
+      const repo: Repository = {
+        name: repositoryData.name,
+        gitUrl: repositoryData.gitUrl,
+      }
+      if (typeof repositoryData.url === 'string') {
+        repo.url = repositoryData.url
+      }
+      return repo
     }
   }
   return null

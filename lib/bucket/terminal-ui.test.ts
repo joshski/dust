@@ -214,6 +214,27 @@ describe('addRepository', () => {
     expect(state.repositories.length).toBe(1)
     expect(state.logBuffers.get('repo1')).toBe(buffer2) // Buffer is updated
   })
+
+  it('stores URL when provided', () => {
+    const state = createTerminalUIState()
+    addRepository(
+      state,
+      'repo1',
+      createLogBuffer(),
+      'https://github.com/user/repo1'
+    )
+
+    expect(state.repositoryUrls.get('repo1')).toBe(
+      'https://github.com/user/repo1'
+    )
+  })
+
+  it('does not store URL when not provided', () => {
+    const state = createTerminalUIState()
+    addRepository(state, 'repo1', createLogBuffer())
+
+    expect(state.repositoryUrls.has('repo1')).toBe(false)
+  })
 })
 
 describe('removeRepository', () => {
@@ -238,6 +259,27 @@ describe('removeRepository', () => {
 
     expect(state.agentStatuses.has('repo1')).toBe(false)
     expect(state.agentStatuses.has('repo2')).toBe(true)
+  })
+
+  it('removes URL entry', () => {
+    const state = createTerminalUIState()
+    addRepository(
+      state,
+      'repo1',
+      createLogBuffer(),
+      'https://github.com/user/repo1'
+    )
+    addRepository(
+      state,
+      'repo2',
+      createLogBuffer(),
+      'https://github.com/user/repo2'
+    )
+
+    removeRepository(state, 'repo1')
+
+    expect(state.repositoryUrls.has('repo1')).toBe(false)
+    expect(state.repositoryUrls.has('repo2')).toBe(true)
   })
 
   it('adjusts selected index when removing selected repo', () => {
@@ -736,6 +778,12 @@ describe('renderHelpLine', () => {
     expect(help).toContain('scroll')
     expect(help).toContain('quit')
   })
+
+  it('contains open shortcut', () => {
+    const help = renderHelpLine()
+
+    expect(help).toContain('[o] open')
+  })
 })
 
 describe('renderSeparator', () => {
@@ -846,7 +894,7 @@ describe('formatLogLine', () => {
 describe('renderFrame', () => {
   it('renders complete frame with all components', () => {
     const state = createTerminalUIState()
-    updateDimensions(state, 80, 24)
+    updateDimensions(state, 100, 24) // Wide enough to show full help line
     addRepository(state, 'repo1', createLogBuffer())
     appendLogLine(
       getBuffer(state, 'repo1'),
@@ -1088,5 +1136,95 @@ describe('handleKeyInput', () => {
 
     expect(result).toBe(false)
     expect(state.scrollOffset).toBe(initialScroll)
+  })
+
+  it('opens repository URL when pressing o on a repo with URL', () => {
+    const state = createTerminalUIState()
+    addRepository(
+      state,
+      'repo1',
+      createLogBuffer(),
+      'https://github.com/user/repo1'
+    )
+    state.selectedIndex = 0
+
+    let openedUrl: string | undefined
+    const result = handleKeyInput(state, 'o', {
+      openBrowser: url => {
+        openedUrl = url
+      },
+    })
+
+    expect(result).toBe(false)
+    expect(openedUrl).toBe('https://github.com/user/repo1')
+  })
+
+  it('does nothing when pressing o on the All tab', () => {
+    const state = createTerminalUIState()
+    addRepository(
+      state,
+      'repo1',
+      createLogBuffer(),
+      'https://github.com/user/repo1'
+    )
+    state.selectedIndex = -1 // "All" tab
+
+    let openedUrl: string | undefined
+    const result = handleKeyInput(state, 'o', {
+      openBrowser: url => {
+        openedUrl = url
+      },
+    })
+
+    expect(result).toBe(false)
+    expect(openedUrl).toBeUndefined()
+  })
+
+  it('does nothing when pressing o on a repo without URL', () => {
+    const state = createTerminalUIState()
+    addRepository(state, 'repo1', createLogBuffer()) // No URL
+    state.selectedIndex = 0
+
+    let openedUrl: string | undefined
+    const result = handleKeyInput(state, 'o', {
+      openBrowser: url => {
+        openedUrl = url
+      },
+    })
+
+    expect(result).toBe(false)
+    expect(openedUrl).toBeUndefined()
+  })
+
+  it('does nothing when pressing o without openBrowser callback', () => {
+    const state = createTerminalUIState()
+    addRepository(
+      state,
+      'repo1',
+      createLogBuffer(),
+      'https://github.com/user/repo1'
+    )
+    state.selectedIndex = 0
+
+    // Should not throw
+    const result = handleKeyInput(state, 'o')
+
+    expect(result).toBe(false)
+  })
+
+  it('does nothing when pressing o with selectedIndex out of range', () => {
+    const state = createTerminalUIState()
+    addRepository(state, 'repo1', createLogBuffer())
+    state.selectedIndex = 5 // Out of range
+
+    let openedUrl: string | undefined
+    const result = handleKeyInput(state, 'o', {
+      openBrowser: url => {
+        openedUrl = url
+      },
+    })
+
+    expect(result).toBe(false)
+    expect(openedUrl).toBeUndefined()
   })
 })

@@ -54,6 +54,7 @@ import {
   createTerminalUIState,
   enterAlternateScreen,
   exitAlternateScreen,
+  type HandleKeyInputOptions,
   handleKeyInput,
   removeRepository as removeRepoFromUI,
   renderFrame,
@@ -321,7 +322,10 @@ export function syncUIWithRepoList(state: BucketState, repos: unknown[]): void {
           buffer = createLogBuffer()
           state.logBuffers.set(repo.name, buffer)
         }
-        addRepoToUI(state.ui, repo.name, buffer)
+        addRepoToUI(state.ui, repo.name, buffer, repo.url)
+      } else if (repo.url) {
+        // Update URL if repository already exists but URL changed
+        state.ui.repositoryUrls.set(repo.name, repo.url)
       }
     }
   }
@@ -654,11 +658,12 @@ export function setupTUI(
 export function createKeypressHandler(
   useTUI: boolean,
   state: BucketState,
-  onQuit: () => void
+  onQuit: () => void,
+  options?: HandleKeyInputOptions
 ): (key: string) => void {
   if (useTUI) {
     return (key: string) => {
-      const shouldQuit = handleKeyInput(state.ui, key)
+      const shouldQuit = handleKeyInput(state.ui, key, options)
       if (shouldQuit) onQuit()
     }
   }
@@ -760,9 +765,14 @@ export async function bucket(
       }
 
       // Setup keypress handler
-      const onKey = createKeypressHandler(useTUI, state, () => {
-        doShutdown()
-      })
+      const onKey = createKeypressHandler(
+        useTUI,
+        state,
+        () => {
+          doShutdown()
+        },
+        { openBrowser: bucketDeps.auth.openBrowser }
+      )
       cleanupKeypress = bucketDeps.setupKeypress(onKey)
 
       // Setup signal handlers

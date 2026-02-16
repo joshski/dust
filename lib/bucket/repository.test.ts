@@ -148,6 +148,32 @@ describe('parseRepository', () => {
     expect(parseRepository({ name: 'test' })).toBeNull()
     expect(parseRepository({ gitUrl: 'test' })).toBeNull()
   })
+
+  test('parses object with name, gitUrl, and url', () => {
+    const repo = parseRepository({
+      name: 'my-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+      url: 'https://github.com/user/repo',
+    })
+    expect(repo).toEqual({
+      name: 'my-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+      url: 'https://github.com/user/repo',
+    })
+  })
+
+  test('ignores url field if not a string', () => {
+    const repo = parseRepository({
+      name: 'my-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+      url: 123, // Invalid url
+    })
+    expect(repo).toEqual({
+      name: 'my-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+    })
+    expect(repo?.url).toBeUndefined()
+  })
 })
 
 describe('getRepoTempPath', () => {
