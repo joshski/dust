@@ -19,10 +19,18 @@ import {
   type SendEventFn,
 } from './events'
 import { createLogBuffer, type LogBuffer } from './log-buffer'
-import { cloneRepository, getRepoPath, removeRepository } from './repository-git'
+import {
+  cloneRepository,
+  getRepoPath,
+  removeRepository,
+} from './repository-git'
 import { runRepositoryLoop } from './repository-loop'
 
-export { cloneRepository, getRepoPath, removeRepository } from './repository-git'
+export {
+  cloneRepository,
+  getRepoPath,
+  removeRepository,
+} from './repository-git'
 export { runRepositoryLoop } from './repository-loop'
 
 export interface Repository {
@@ -38,6 +46,7 @@ export interface RepositoryState {
   stopRequested: boolean
   logBuffer: LogBuffer
   agentStatus: 'idle' | 'busy'
+  wakeUp?: () => void
 }
 
 /**
@@ -193,6 +202,7 @@ export async function removeRepositoryFromManager(
   }
 
   repoState.stopRequested = true
+  repoState.wakeUp?.()
 
   if (repoState.loopPromise) {
     await Promise.race([repoState.loopPromise, repoDeps.sleep(5000)])

@@ -496,6 +496,18 @@ export function connectWebSocket(
     logMessage(state, context, useTUI, formatBucketEvent(disconnectEvent))
     state.ws = null
 
+    // Don't reconnect if the server replaced us with a newer connection from
+    // the same user — reconnecting would just cause another replacement loop.
+    if (event.code === 4000) {
+      logMessage(
+        state,
+        context,
+        useTUI,
+        'Another connection replaced this one. Not reconnecting.'
+      )
+      return
+    }
+
     // Schedule reconnection
     if (!state.shuttingDown) {
       logMessage(
@@ -552,7 +564,24 @@ export function connectWebSocket(
         )
         const repoContext = createTUIContext(state, context, useTUI)
         handleRepositoryListFromRepo(repos, state, repoDeps, repoContext)
-          .then(() => syncTUI(state))
+          .then(() => {
+            syncTUI(state)
+            // Wake repos that already have tasks waiting
+            for (const repoData of repos) {
+              if (
+                typeof repoData === 'object' &&
+                repoData !== null &&
+                'name' in repoData &&
+                'hasTask' in repoData &&
+                (repoData as { hasTask: boolean }).hasTask
+              ) {
+                const repoState = state.repositories.get(
+                  (repoData as { name: string }).name
+                )
+                repoState?.wakeUp?.()
+              }
+            }
+          })
           .catch(error => {
             logMessage(
               state,
@@ -562,6 +591,12 @@ export function connectWebSocket(
               'stderr'
             )
           })
+      } else if (message.type === 'task-available') {
+        const repoName = message.repository
+        if (typeof repoName === 'string') {
+          const repoState = state.repositories.get(repoName)
+          repoState?.wakeUp?.()
+        }
       }
     } catch {
       logMessage(
@@ -600,6 +635,7 @@ export async function shutdown(
   // Stop all repository loops
   for (const repoState of state.repositories.values()) {
     repoState.stopRequested = true
+    repoState.wakeUp?.()
   }
 
   // Wait for all loops to finish

@@ -8,7 +8,7 @@
 import type { AgentSessionEvent, EventMessage } from '../agent-events'
 import { formatAgentEvent, rawEventToAgentEvent } from '../agent-events'
 import {
-  run as claudeRun,
+  type run as claudeRun,
   defaultRunnerDependencies,
   type RunnerDependencies,
 } from '../claude/run'
@@ -23,14 +23,10 @@ import {
 import type { CommandDependencies } from '../cli/types'
 import { loadSettings } from '../config/settings'
 import type { SendEventFn } from './events'
-import {
-  appendLogLine,
-  createLogLine,
-  type LogBuffer,
-} from './log-buffer'
+import { appendLogLine, createLogLine } from './log-buffer'
 import type { RepositoryDependencies, RepositoryState } from './repository'
 
-const SLEEP_INTERVAL_MS = 30000
+const FALLBACK_TIMEOUT_MS = 300000
 
 /**
  * Create a no-op glob scanner for CommandDependencies.
@@ -62,7 +58,6 @@ export async function runRepositoryLoop(
     arguments: [],
     context: {
       cwd: repoState.path,
-      /* v8 ignore next 2 - stdout not called by runOneIteration (it uses emit) */
       stdout: (msg: string) =>
         appendLogLine(repoState.logBuffer, createLogLine(msg, 'stdout')),
       stderr: (msg: string) =>
@@ -171,7 +166,19 @@ export async function runRepositoryLoop(
     )
 
     if (result === 'no_tasks') {
-      await sleep(SLEEP_INTERVAL_MS)
+      await new Promise<void>(resolve => {
+        repoState.wakeUp = () => {
+          repoState.wakeUp = undefined
+          resolve()
+        }
+        // Fallback timeout so the loop isn't stuck forever if no signal arrives
+        sleep(FALLBACK_TIMEOUT_MS).then(() => {
+          if (repoState.wakeUp) {
+            repoState.wakeUp = undefined
+            resolve()
+          }
+        })
+      })
     }
   }
 

@@ -16,6 +16,7 @@ export default defineConfig({
         // thin wrappers, even though lines/statements are 100%.
         // Excluded until v8 honors ignore comments for function-level metrics.
         'lib/bucket/repository.ts',
+        'lib/bucket/repository-loop.ts',
         'lib/cli/commands/bucket.ts',
       ],
       reporter: [

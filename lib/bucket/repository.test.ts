@@ -15,6 +15,7 @@ import {
   type Repository,
   type RepositoryDependencies,
   type RepositoryManager,
+  type RepositoryState,
   removeRepository,
   removeRepositoryFromManager,
   runRepositoryLoop,
@@ -96,7 +97,7 @@ function createRepositoryDependencies(
     spawn: createMockSpawn().spawn,
     run: createMockRun(),
     fileSystem,
-    sleep: () => Promise.resolve(),
+    sleep: () => new Promise(() => {}),
     getReposDir: () => '/tmp',
     ...overrides,
   }
@@ -327,11 +328,11 @@ describe('runRepositoryLoop', () => {
     )
   })
 
-  test('sleeps when no tasks available and stops on request', async () => {
+  test('waits for wakeUp signal when no tasks available', async () => {
     const { spawn } = createAutoResolvingSpawn()
     const fileSystem = createFileSystemEmulator()
 
-    const repoState = {
+    const repoState: RepositoryState = {
       repository: { name: 'repo', gitUrl: 'repo' },
       path: '/tmp/repo',
       loopPromise: null,
@@ -340,24 +341,72 @@ describe('runRepositoryLoop', () => {
       agentStatus: 'idle' as const,
     }
 
-    let sleepCount = 0
+    let sleepCalled = false
     const repoDeps = createRepositoryDependencies({
       spawn,
       fileSystem,
       sleep: async () => {
-        sleepCount++
-        if (sleepCount >= 1) {
-          repoState.stopRequested = true
-        }
+        sleepCalled = true
+        // Don't resolve instantly — let the test control timing via wakeUp
+        return new Promise(() => {})
       },
     })
 
-    await runRepositoryLoop(repoState, repoDeps)
+    // Start the loop
+    const loopPromise = runRepositoryLoop(repoState, repoDeps)
 
-    // "No tasks" message is written by onLoopEvent via formatLoopEvent('loop.no_tasks')
+    // Wait for the loop to enter the wait state
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    expect(sleepCalled).toBe(true)
+
+    // Stop on next iteration, then wake up
+    repoState.stopRequested = true
+    repoState.wakeUp?.()
+
+    await loopPromise
+
     const logLines = getLogLines(repoState.logBuffer)
     expect(logLines.some(l => l.text.includes('No tasks'))).toBe(true)
-    expect(sleepCount).toBe(1)
+  })
+
+  test('wakeUp resolves the wait immediately', async () => {
+    const { spawn } = createAutoResolvingSpawn()
+    const fileSystem = createFileSystemEmulator()
+
+    const repoState: RepositoryState = {
+      repository: { name: 'repo', gitUrl: 'repo' },
+      path: '/tmp/repo',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle' as const,
+    }
+
+    const repoDeps = createRepositoryDependencies({
+      spawn,
+      fileSystem,
+      sleep: () => new Promise(() => {}),
+    })
+
+    const loopPromise = runRepositoryLoop(repoState, repoDeps)
+
+    // Wait for the loop to reach the wait state
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    // wakeUp should be set
+    expect(repoState.wakeUp).toBeDefined()
+
+    // Wake up the loop, then stop it on the next iteration
+    repoState.stopRequested = true
+    repoState.wakeUp?.()
+
+    await loopPromise
+
+    const logLines = getLogLines(repoState.logBuffer)
+    expect(logLines.some(l => l.text.includes('Stopped loop for repo'))).toBe(
+      true
+    )
   })
 
   test('sends agent events over WebSocket when tasks are found and claude runs', async () => {
@@ -582,10 +631,10 @@ describe('handleRepositoryList', () => {
     const repoDeps = createRepositoryDependencies({
       spawn: combinedSpawn,
       sleep: async () => {
-        if (cloneResolved) {
-          for (const repoState of manager.repositories.values()) {
-            repoState.stopRequested = true
-          }
+        // Block until clone is resolved, then stop the loop
+        if (!cloneResolved) return new Promise(() => {})
+        for (const repoState of manager.repositories.values()) {
+          repoState.stopRequested = true
         }
       },
     })
@@ -603,6 +652,11 @@ describe('handleRepositoryList', () => {
     const cloneProc = processes.get('git clone repo1 /tmp/repo1')
     cloneProc?.emit('close', 0)
     cloneResolved = true
+
+    // Wake the loop now that clone is done
+    for (const repoState of manager.repositories.values()) {
+      repoState.wakeUp?.()
+    }
 
     await handlePromise
 

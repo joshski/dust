@@ -96,7 +96,7 @@ function createBucketDependencies(
     getTerminalSize: () => ({ width: 80, height: 24 }),
     writeStdout: () => {},
     isTTY: false,
-    sleep: () => Promise.resolve(),
+    sleep: () => new Promise(() => {}),
     getReposDir: () => '/tmp',
     auth: createMockAuthDeps(),
     ...overrides,
@@ -869,6 +869,128 @@ describe('connectWebSocket', () => {
     expect(context.stderrLines.join('\n')).toContain(
       'Failed to handle repository list'
     )
+  })
+
+  test('handles task-available message by calling wakeUp on matching repo', () => {
+    const dependencies = createDependencies()
+    const state = createInitialState()
+
+    const ws = createMockWebSocket()
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => ws,
+    })
+
+    connectWebSocket(
+      'my-token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false
+    )
+
+    // Add a fake repository to state
+    let wokenUp = false
+    const repoState: RepositoryState = {
+      repository: { name: 'owner/repo', gitUrl: 'url' },
+      path: '/tmp/owner/repo',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle',
+      wakeUp: () => {
+        wokenUp = true
+      },
+    }
+    state.repositories.set('owner/repo', repoState)
+
+    ws.onmessage?.({
+      data: JSON.stringify({
+        type: 'task-available',
+        repository: 'owner/repo',
+      }),
+    })
+
+    expect(wokenUp).toBe(true)
+  })
+
+  test('task-available for unknown repo does not throw', () => {
+    const dependencies = createDependencies()
+    const state = createInitialState()
+
+    const ws = createMockWebSocket()
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => ws,
+    })
+
+    connectWebSocket(
+      'my-token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false
+    )
+
+    // Should not throw
+    ws.onmessage?.({
+      data: JSON.stringify({
+        type: 'task-available',
+        repository: 'unknown/repo',
+      }),
+    })
+  })
+
+  test('hasTask in repository-list wakes repos after clone', async () => {
+    const dependencies = createDependencies()
+    const state = createInitialState()
+
+    const ws = createMockWebSocket()
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => ws,
+    })
+
+    connectWebSocket(
+      'my-token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false
+    )
+
+    // Pre-populate a repository in state (simulating it already being cloned)
+    let wokenUp = false
+    const repoState: RepositoryState = {
+      repository: { name: 'owner/repo', gitUrl: 'url' },
+      path: '/tmp/owner/repo',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle',
+      wakeUp: () => {
+        wokenUp = true
+      },
+    }
+    state.repositories.set('owner/repo', repoState)
+
+    ws.onmessage?.({
+      data: JSON.stringify({
+        type: 'repository-list',
+        repositories: [
+          {
+            name: 'owner/repo',
+            gitUrl: 'https://github.com/owner/repo.git',
+            hasTask: true,
+          },
+        ],
+      }),
+    })
+
+    // Wait for the async handleRepositoryList to complete
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    expect(wokenUp).toBe(true)
   })
 })
 
