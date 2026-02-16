@@ -18,11 +18,12 @@ export function dedent(
   const indent = lines
     .filter(line => line.trim())
     .reduce(
-      (min, line) => Math.min(min, line.match(/^\s*/)?.[0].length ?? 0),
+      (min, line) =>
+        Math.min(min, (line.match(/^\s*/) as RegExpMatchArray)[0].length),
       Number.POSITIVE_INFINITY
     )
   return lines
-    .map(line => line.slice(indent === Number.POSITIVE_INFINITY ? 0 : indent))
+    .map(line => line.slice(indent))
     .join('\n')
     .trim()
 }

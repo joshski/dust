@@ -76,11 +76,9 @@ function newTaskInstructions(vars: TemplateVars): string {
   )
   steps.push('    - The new task file')
 
-  if (vars.hasIdeaFile) {
-    steps.push(
-      '    - Deletion of the idea file that spawned this task (if remaining scope exists, create new ideas for it)'
-    )
-  }
+  steps.push(
+    '    - Deletion of the idea file that spawned this task (if remaining scope exists, create new ideas for it)'
+  )
 
   if (vars.isClaudeCodeWeb) {
     steps.push(

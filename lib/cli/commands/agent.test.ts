@@ -72,6 +72,29 @@ describe('agent command', () => {
 
     expect(context.stdoutLines.join('\n')).toContain('bin/dust pick task')
   })
+
+  test('includes agent instructions when config file exists', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {
+            agents: {
+              'unknown.md': 'Custom agent instructions here',
+            },
+          },
+        },
+      },
+    })
+
+    await agent(
+      createDependencies(context, [], defaultSettings, fileSystem),
+      {}
+    )
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('Custom agent instructions here')
+  })
 })
 
 describe('git hooks management', () => {

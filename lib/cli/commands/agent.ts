@@ -66,7 +66,8 @@ export async function agent(
     context.cwd,
     fileSystem,
     settings,
-    hooksInstalled
+    hooksInstalled,
+    env
   )
   context.stdout(agentGreeting(vars))
 
