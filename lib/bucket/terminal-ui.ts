@@ -407,7 +407,7 @@ export function renderTabs(state: TerminalUIState): string[] {
     const width = name.length + 4 // " ● name " (space + dot + space + name + space = 3 + name.length + 1)
     if (i === state.selectedIndex) {
       tabs.push({
-        text: `${ANSI.INVERSE} ${dot}${ANSI.INVERSE}${color} ${name} ${ANSI.RESET}`,
+        text: ` ${dot}${color} ${ANSI.INVERSE}${name}${ANSI.RESET} `,
         width,
       })
     } else {
