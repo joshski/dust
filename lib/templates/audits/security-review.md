@@ -14,7 +14,7 @@ Focus on these areas:
 
 ## Goals
 
-(none)
+- [Make Changes with Confidence](../goals/make-changes-with-confidence.md)
 
 ## Blocked By
 

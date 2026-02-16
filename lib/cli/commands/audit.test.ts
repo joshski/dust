@@ -216,11 +216,17 @@ describe('audit command', () => {
   test('loadStockAudits loads audits from markdown files', () => {
     const audits = loadStockAudits()
     expect(audits).toBeInstanceOf(Array)
-    expect(audits.length).toBe(3)
+    expect(audits.length).toBe(9)
 
     const names = audits.map(a => a.name)
+    expect(names).toContain('agent-developer-experience')
     expect(names).toContain('dead-code')
+    expect(names).toContain('facts-verification')
+    expect(names).toContain('ideas-from-commits')
+    expect(names).toContain('ideas-from-goals')
+    expect(names).toContain('performance-review')
     expect(names).toContain('security-review')
+    expect(names).toContain('stale-ideas')
     expect(names).toContain('test-coverage')
 
     for (const audit of audits) {

@@ -14,7 +14,8 @@ Focus on these areas:
 
 ## Goals
 
-(none)
+- [Context-Optimised Code](../goals/context-optimised-code.md)
+- [Maintainable Codebase](../goals/maintainable-codebase.md)
 
 ## Blocked By
 

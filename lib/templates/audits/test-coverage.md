@@ -14,7 +14,8 @@ Focus on these areas:
 
 ## Goals
 
-(none)
+- [Comprehensive Test Coverage](../goals/comprehensive-test-coverage.md)
+- [Ideal Agent Developer Experience](../goals/ideal-agent-developer-experience.md)
 
 ## Blocked By
 
