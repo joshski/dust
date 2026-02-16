@@ -1,6 +1,6 @@
 # Ideas from Commits
 
-Review recent commit history to identify follow-up improvement ideas.
+Review recent commit history to identify follow-up improvement ideas. Review existing ideas in `./.ideas/` and the recent history of `./.dust/ideas` to understand what has been proposed or considered historically, then create new idea files in `./.ideas/` for any issues or opportunities you identify, avoiding duplication.
 
 ## Scope
 
@@ -10,12 +10,6 @@ Focus on these areas:
 2. **Incomplete work** - Are there TODO comments or partial implementations?
 3. **Pattern opportunities** - Can recent changes be generalized?
 4. **Test gaps** - Do recent changes have adequate test coverage?
-
-## Goals
-
-- [Boy Scout Rule](../goals/boy-scout-rule.md)
-- [Traceable Decisions](../goals/traceable-decisions.md)
-- [Lightweight Planning](../goals/lightweight-planning.md)
 
 ## Blocked By
 
@@ -27,4 +21,4 @@ Focus on these areas:
 - [ ] Identified patterns or shortcuts worth addressing
 - [ ] Listed TODO comments added in recent commits
 - [ ] Noted areas where changes could be generalized
-- [ ] Documented follow-up ideas in `.dust/ideas/`
+- [ ] Proposed follow-up ideas for any issues identified

@@ -1,6 +1,6 @@
 # Agent Developer Experience
 
-Review the codebase to ensure agents have everything they need to operate effectively.
+Review the codebase to ensure agents have everything they need to operate effectively. Review existing ideas in `./.ideas/` and the recent history of `./.dust/ideas` to understand what has been proposed or considered historically, then create new idea files in `./.ideas/` for any issues you identify, avoiding duplication.
 
 ## Scope
 
@@ -12,13 +12,6 @@ Focus on these areas:
 4. **Debugging tools** - Can agents diagnose issues without trial and error?
 5. **Structured logging** - Is system behavior observable through logs?
 
-## Goals
-
-- [Ideal Agent Developer Experience](../goals/ideal-agent-developer-experience.md)
-- [Context-Optimised Code](../goals/context-optimised-code.md)
-- [Fast Feedback Loops](../goals/fast-feedback-loops.md)
-- [Development Traceability](../goals/development-traceability.md)
-
 ## Blocked By
 
 (none)
@@ -29,4 +22,4 @@ Focus on these areas:
 - [ ] Verified test coverage is sufficient for agent verification
 - [ ] Measured feedback loop speed (time from change to check result)
 - [ ] Confirmed debugging tools and structured logging are in place
-- [ ] Created list of improvements prioritized by agent impact
+- [ ] Proposed ideas for any improvements identified

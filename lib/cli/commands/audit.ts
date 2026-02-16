@@ -11,7 +11,7 @@
  *   dust audit <name>       - Create a task from the audit template
  */
 
-import { readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -28,7 +28,12 @@ interface StockAudit {
 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const stockAuditsDir = join(__dirname, '../../templates/audits')
+// In dev: __dirname is lib/cli/commands/, templates at ../../templates/audits
+// Bundled: __dirname is dist/, templates at ../templates/audits
+const stockAuditsDir = [
+  join(__dirname, '../../templates/audits'),
+  join(__dirname, '../templates/audits'),
+].find(d => existsSync(d)) ?? join(__dirname, '../../templates/audits')
 
 /**
  * Loads stock audits from markdown files under lib/templates/audits/.

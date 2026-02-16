@@ -1,6 +1,6 @@
 # Test Coverage
 
-Identify untested code paths and areas that need additional test coverage.
+Identify untested code paths and areas that need additional test coverage. Review existing ideas in `./.ideas/` and the recent history of `./.dust/ideas` to understand what has been proposed or considered historically, then create new idea files in `./.ideas/` for any issues you identify, avoiding duplication.
 
 ## Scope
 
@@ -12,11 +12,6 @@ Focus on these areas:
 4. **User-facing features** - UI components, form validation
 5. **Recent changes** - Code modified in the last few commits
 
-## Goals
-
-- [Comprehensive Test Coverage](../goals/comprehensive-test-coverage.md)
-- [Ideal Agent Developer Experience](../goals/ideal-agent-developer-experience.md)
-
 ## Blocked By
 
 (none)
@@ -26,5 +21,4 @@ Focus on these areas:
 - [ ] Identified modules with low or no test coverage
 - [ ] Listed critical paths that lack tests
 - [ ] Prioritized areas by risk and importance
-- [ ] Created list of specific test cases to add
-- [ ] Estimated effort for improving coverage
+- [ ] Proposed ideas for any test coverage gaps identified

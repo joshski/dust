@@ -1,6 +1,6 @@
 # Performance Review
 
-Review the application for performance issues and optimization opportunities.
+Review the application for performance issues and optimization opportunities. Review existing ideas in `./.ideas/` and the recent history of `./.dust/ideas` to understand what has been proposed or considered historically, then create new idea files in `./.ideas/` for any issues you identify, avoiding duplication.
 
 ## Scope
 
@@ -12,11 +12,6 @@ Focus on these areas:
 4. **Build performance** - How fast is the build process?
 5. **Test speed** - Are tests running efficiently?
 
-## Goals
-
-- [Fast Feedback Loops](../goals/fast-feedback-loops.md)
-- [Fast Feedback](../goals/fast-feedback.md)
-
 ## Blocked By
 
 (none)
@@ -27,4 +22,4 @@ Focus on these areas:
 - [ ] Profiled memory usage during typical operations
 - [ ] Identified slow commands or operations
 - [ ] Listed optimization opportunities by impact
-- [ ] Created tasks for high-impact performance fixes
+- [ ] Proposed ideas for any performance improvements identified

@@ -1,6 +1,6 @@
 # Stale Ideas
 
-Review `.dust/ideas/` to identify ideas that have become stale or irrelevant.
+Review `.dust/ideas/` to identify ideas that have become stale or irrelevant. Review existing ideas in `./.ideas/` and the recent history of `./.dust/ideas` to understand what has been proposed or considered historically, then create new idea files in `./.ideas/` for any issues you identify, avoiding duplication.
 
 ## Scope
 
@@ -10,11 +10,6 @@ Focus on these areas:
 2. **Relevance** - Has the project evolved past the idea?
 3. **Actionability** - Can the idea be converted to a task?
 4. **Duplication** - Are there overlapping or redundant ideas?
-
-## Goals
-
-- [Lightweight Planning](../goals/lightweight-planning.md)
-- [Repository Hygiene](../goals/repository-hygiene.md)
 
 ## Blocked By
 
