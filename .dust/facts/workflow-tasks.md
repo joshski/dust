@@ -7,7 +7,7 @@
 - `createRefineIdeaTask(fileSystem, dustPath, ideaSlug, description?)` - Creates a task to research and refine an idea
 - `decomposeIdea(fileSystem, dustPath, options)` - Creates a task to convert an idea into a concrete task. `options` is a `DecomposeIdeaOptions` object with `ideaSlug`, optional `description`, and optional `openQuestionResponses`
 - `createShelveIdeaTask(fileSystem, dustPath, ideaSlug, description?)` - Creates a task to archive and remove an idea
-- `createCaptureIdeaTask(fileSystem, dustPath, options)` - Creates a task to capture a new idea (no existing idea required). `options` is `{ title: string; description: string }`
+- `createCaptureIdeaTask(fileSystem, dustPath, options)` - Creates a task to capture a new idea (no existing idea required). `options` is `{ title: string; description: string; buildItNow?: boolean }`
 - `findWorkflowTaskForIdea(fileSystem, dustPath, ideaSlug)` - Returns `null` or a `WorkflowTaskMatch` (`{ type, ideaSlug, taskSlug }`) indicating the existing workflow task for an idea
 
 ## Idea Transition Prefixes
