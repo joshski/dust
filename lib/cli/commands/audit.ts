@@ -28,13 +28,13 @@ interface StockAudit {
 }
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-// In dev: __dirname is lib/cli/commands/, templates at ../../templates/audits
-// Bundled: __dirname is dist/, templates at ../templates/audits
+// In dev: __dirname is lib/cli/commands/, audit templates at ../../templates/audits
+// Bundled: __dirname is dist/, audit templates at ../templates (audits copied flat)
 /* v8 ignore start - fallback path only reached in bundled env */
 const stockAuditsDir =
   [
     join(__dirname, '../../templates/audits'),
-    join(__dirname, '../templates/audits'),
+    join(__dirname, '../templates'),
   ].find(d => existsSync(d)) ?? join(__dirname, '../../templates/audits')
 /* v8 ignore stop */
 

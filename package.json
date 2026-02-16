@@ -35,7 +35,7 @@
   "author": "joshski",
   "license": "MIT",
   "scripts": {
-    "build": "bun build lib/cli/run.ts --target node --outfile dist/dust.js && printf '%s\\n%s' '#!/usr/bin/env node' \"$(cat dist/dust.js)\" > dist/dust.js && bun build lib/workflow-tasks.ts --target node --outfile dist/workflow-tasks.js && bunx tsc --project tsconfig.build.json && rm -rf templates && cp -r lib/templates templates",
+    "build": "bun build lib/cli/run.ts --target node --outfile dist/dust.js && printf '%s\\n%s' '#!/usr/bin/env node' \"$(cat dist/dust.js)\" > dist/dust.js && bun build lib/workflow-tasks.ts --target node --outfile dist/workflow-tasks.js && bunx tsc --project tsconfig.build.json && rm -rf templates && cp -r lib/templates/audits templates",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "eval": "bun run ./evals/run.ts"

@@ -324,20 +324,31 @@ describe('main', () => {
   })
 
   test('routes agent command correctly', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: { '.dust': {} },
-    })
+    // Clear DUST_SKIP_AGENT to ensure we get the greeting, not the skip message
+    const originalSkipAgent = process.env.DUST_SKIP_AGENT
+    delete process.env.DUST_SKIP_AGENT
+    try {
+      const context = createContextEmulator()
+      const fileSystem = createFileSystemEmulator({
+        project: { '.dust': {} },
+      })
 
-    const result = await main({
-      commandArguments: ['agent'],
-      context,
-      fileSystem,
-      glob: fileSystem,
-    })
+      const result = await main({
+        commandArguments: ['agent'],
+        context,
+        fileSystem,
+        glob: fileSystem,
+      })
 
-    expect(result.exitCode).toBe(0)
-    expect(context.stdoutLines.join('\n')).toMatch(/Hello .+, welcome to dust/)
+      expect(result.exitCode).toBe(0)
+      expect(context.stdoutLines.join('\n')).toMatch(
+        /Hello .+, welcome to dust/
+      )
+    } finally {
+      if (originalSkipAgent !== undefined) {
+        process.env.DUST_SKIP_AGENT = originalSkipAgent
+      }
+    }
   })
 
   test('passes command args to subcommands', async () => {

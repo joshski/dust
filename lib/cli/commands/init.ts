@@ -9,7 +9,7 @@ import {
   detectTestCommand,
 } from '../../config/settings'
 import { getColors } from '../colors'
-import { loadTemplate } from '../templates'
+import { dedent } from '../dedent'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
 
 const DUST_DIRECTORIES = ['goals', 'ideas', 'tasks', 'facts', 'config']
@@ -34,6 +34,26 @@ const USE_DUST_FACT = `# Use dust for planning
 
 This project uses [dust](https://github.com/joshski/dust) for planning and documentation.
 `
+
+function claudeMdContent(dustCommand: string): string {
+  return dedent`
+    # Claude Code Instructions
+
+    This project uses [dust](https://github.com/joshski/dust) for planning and documentation.
+
+    Always immediately run \`${dustCommand} agent\` when you start working in this repository.
+  `
+}
+
+function agentsMdContent(dustCommand: string): string {
+  return dedent`
+    # Agent Instructions
+
+    This project uses [dust](https://github.com/joshski/dust) for planning and documentation.
+
+    Always immediately run \`${dustCommand} agent\` when you start working in this repository.
+  `
+}
 
 export async function init(
   dependencies: CommandDependencies
@@ -108,8 +128,9 @@ export async function init(
   // Create CLAUDE.md atomically if it doesn't exist
   const claudeMdPath = `${context.cwd}/CLAUDE.md`
   try {
-    const claudeContent = loadTemplate('claude-md', { dustCommand })
-    await fileSystem.writeFile(claudeMdPath, claudeContent, { flag: 'wx' })
+    await fileSystem.writeFile(claudeMdPath, claudeMdContent(dustCommand), {
+      flag: 'wx',
+    })
     context.stdout(
       `${colors.green}📄 Created${colors.reset} ${colors.cyan}CLAUDE.md${colors.reset} with agent instructions`
     )
@@ -126,8 +147,9 @@ export async function init(
   // Create AGENTS.md atomically if it doesn't exist
   const agentsMdPath = `${context.cwd}/AGENTS.md`
   try {
-    const agentsContent = loadTemplate('agents-md', { dustCommand })
-    await fileSystem.writeFile(agentsMdPath, agentsContent, { flag: 'wx' })
+    await fileSystem.writeFile(agentsMdPath, agentsMdContent(dustCommand), {
+      flag: 'wx',
+    })
     context.stdout(
       `${colors.green}📄 Created${colors.reset} ${colors.cyan}AGENTS.md${colors.reset} with agent instructions`
     )

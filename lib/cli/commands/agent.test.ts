@@ -33,7 +33,10 @@ describe('agent command', () => {
   test('outputs greeting with routing instructions', async () => {
     const context = createContextEmulator()
 
-    const result = await agent(createDependencies(context, [], defaultSettings))
+    const result = await agent(
+      createDependencies(context, [], defaultSettings),
+      {}
+    )
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toMatch(/Hello .+, welcome to dust/)
@@ -65,7 +68,7 @@ describe('agent command', () => {
     const context = createContextEmulator()
     const settings: DustSettings = { dustCommand: 'bin/dust' }
 
-    await agent(createDependencies(context, [], settings))
+    await agent(createDependencies(context, [], settings), {})
 
     expect(context.stdoutLines.join('\n')).toContain('bin/dust pick task')
   })
@@ -78,7 +81,10 @@ describe('git hooks management', () => {
       project: { '.git': { hooks: {} } },
     })
 
-    await agent(createDependencies(context, [], defaultSettings, fileSystem))
+    await agent(
+      createDependencies(context, [], defaultSettings, fileSystem),
+      {}
+    )
 
     // Hook file should be created
     expect(fileSystem.writtenFiles.has('/project/.git/hooks/pre-push')).toBe(
@@ -94,7 +100,10 @@ describe('git hooks management', () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator()
 
-    await agent(createDependencies(context, [], defaultSettings, fileSystem))
+    await agent(
+      createDependencies(context, [], defaultSettings, fileSystem),
+      {}
+    )
 
     // No hook file should be created
     expect(fileSystem.writtenFiles.has('/project/.git/hooks/pre-push')).toBe(
@@ -116,7 +125,7 @@ describe('git hooks management', () => {
     })
     const settings: DustSettings = { dustCommand: 'new/path' }
 
-    await agent(createDependencies(context, [], settings, fileSystem))
+    await agent(createDependencies(context, [], settings, fileSystem), {})
 
     // Hook should be updated with new path
     const hookContent = fileSystem.writtenFiles.get(
@@ -139,7 +148,10 @@ describe('git hooks management', () => {
       },
     })
 
-    await agent(createDependencies(context, [], defaultSettings, fileSystem))
+    await agent(
+      createDependencies(context, [], defaultSettings, fileSystem),
+      {}
+    )
 
     // Hook should not be updated (paths match)
     expect(fileSystem.writtenFiles.has('/project/.git/hooks/pre-push')).toBe(

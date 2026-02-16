@@ -35,47 +35,47 @@ describe('templateVariables', () => {
     expect(vars.agentName).toBe('Codex')
   })
 
-  test('isClaudeCodeWeb is "true" when agent is Claude Code Web', () => {
+  test('isClaudeCodeWeb is true when agent is Claude Code Web', () => {
     const vars = templateVariables(defaultSettings, false, {
       CLAUDECODE: '1',
       CLAUDE_CODE_REMOTE: 'true',
     })
-    expect(vars.isClaudeCodeWeb).toBe('true')
+    expect(vars.isClaudeCodeWeb).toBe(true)
   })
 
-  test('isClaudeCodeWeb is empty string when agent is Claude Code', () => {
+  test('isClaudeCodeWeb is false when agent is Claude Code', () => {
     const vars = templateVariables(defaultSettings, false, { CLAUDECODE: '1' })
-    expect(vars.isClaudeCodeWeb).toBe('')
+    expect(vars.isClaudeCodeWeb).toBe(false)
   })
 
-  test('isClaudeCodeWeb is empty string when agent is Codex', () => {
+  test('isClaudeCodeWeb is false when agent is Codex', () => {
     const vars = templateVariables(defaultSettings, false, {
       CODEX_HOME: '/home/user/.codex',
     })
-    expect(vars.isClaudeCodeWeb).toBe('')
+    expect(vars.isClaudeCodeWeb).toBe(false)
   })
 
-  test('isClaudeCodeWeb is empty string when agent is generic Agent', () => {
+  test('isClaudeCodeWeb is false when agent is generic Agent', () => {
     const vars = templateVariables(defaultSettings, false, {})
-    expect(vars.isClaudeCodeWeb).toBe('')
+    expect(vars.isClaudeCodeWeb).toBe(false)
   })
 
-  test('hooksInstalled is "true" when hooks are installed', () => {
+  test('hooksInstalled is true when hooks are installed', () => {
     const vars = templateVariables(defaultSettings, true, {})
-    expect(vars.hooksInstalled).toBe('true')
+    expect(vars.hooksInstalled).toBe(true)
   })
 
-  test('hooksInstalled is "false" when hooks are not installed', () => {
+  test('hooksInstalled is false when hooks are not installed', () => {
     const vars = templateVariables(defaultSettings, false, {})
-    expect(vars.hooksInstalled).toBe('false')
+    expect(vars.hooksInstalled).toBe(false)
   })
 
-  test('hasIdeaFile defaults to "true" when not specified', () => {
+  test('hasIdeaFile defaults to true when not specified', () => {
     const vars = templateVariables(defaultSettings, false, {})
-    expect(vars.hasIdeaFile).toBe('true')
+    expect(vars.hasIdeaFile).toBe(true)
   })
 
-  test('hasIdeaFile is empty string when set to false', () => {
+  test('hasIdeaFile is false when set to false', () => {
     const vars = templateVariables(
       defaultSettings,
       false,
@@ -84,7 +84,7 @@ describe('templateVariables', () => {
         hasIdeaFile: false,
       }
     )
-    expect(vars.hasIdeaFile).toBe('')
+    expect(vars.hasIdeaFile).toBe(false)
   })
 })
 
@@ -227,11 +227,11 @@ describe('templateVariablesWithInstructions', () => {
     )
     expect(vars.bin).toBe('dust')
     expect(vars.agentName).toBe('Claude Code Web')
-    expect(vars.hooksInstalled).toBe('true')
-    expect(vars.isClaudeCodeWeb).toBe('true')
+    expect(vars.hooksInstalled).toBe(true)
+    expect(vars.isClaudeCodeWeb).toBe(true)
   })
 
-  test('hasIdeaFile is empty string when set to false', async () => {
+  test('hasIdeaFile is false when set to false', async () => {
     const fileSystem = createFileSystem({})
     const vars = await templateVariablesWithInstructions(
       '/project',
@@ -241,7 +241,7 @@ describe('templateVariablesWithInstructions', () => {
       {},
       { hasIdeaFile: false }
     )
-    expect(vars.hasIdeaFile).toBe('')
+    expect(vars.hasIdeaFile).toBe(false)
   })
 })
 

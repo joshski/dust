@@ -10,6 +10,22 @@ import { createHooksManager } from '../../git/hooks'
 import type { CommandDependencies, DustSettings, FileSystem } from '../types'
 
 /**
+ * Type-safe template variables for agent commands.
+ * Uses real booleans instead of string-encoded booleans.
+ */
+export interface TemplateVars {
+  bin: string
+  agentName: string
+  hooksInstalled: boolean
+  isClaudeCodeWeb: boolean
+  hasIdeaFile: boolean
+}
+
+export interface TemplateVarsWithInstructions extends TemplateVars {
+  agentInstructions: string
+}
+
+/**
  * Loads agent-specific instructions from .dust/config/agents/{agent-type}.md
  * Returns empty string if file doesn't exist.
  */
@@ -41,16 +57,16 @@ export function templateVariables(
   hooksInstalled: boolean,
   env: NodeJS.ProcessEnv = process.env,
   options?: { hasIdeaFile?: boolean }
-) {
+): TemplateVars {
   const agent = detectAgent(env)
   // Default hasIdeaFile to true - only Build Idea tasks have no idea file
   const hasIdeaFile = options?.hasIdeaFile ?? true
   return {
     bin: settings.dustCommand,
     agentName: agent.name,
-    hooksInstalled: hooksInstalled ? 'true' : 'false',
-    isClaudeCodeWeb: agent.type === 'claude-code-web' ? 'true' : '',
-    hasIdeaFile: hasIdeaFile ? 'true' : '',
+    hooksInstalled,
+    isClaudeCodeWeb: agent.type === 'claude-code-web',
+    hasIdeaFile,
   }
 }
 
@@ -64,7 +80,7 @@ export async function templateVariablesWithInstructions(
   hooksInstalled: boolean,
   env: NodeJS.ProcessEnv = process.env,
   options?: { hasIdeaFile?: boolean }
-) {
+): Promise<TemplateVarsWithInstructions> {
   const agent = detectAgent(env)
   const agentInstructions = await loadAgentInstructions(
     cwd,
@@ -76,9 +92,9 @@ export async function templateVariablesWithInstructions(
   return {
     bin: settings.dustCommand,
     agentName: agent.name,
-    hooksInstalled: hooksInstalled ? 'true' : 'false',
-    isClaudeCodeWeb: agent.type === 'claude-code-web' ? 'true' : '',
-    hasIdeaFile: hasIdeaFile ? 'true' : '',
+    hooksInstalled,
+    isClaudeCodeWeb: agent.type === 'claude-code-web',
+    hasIdeaFile,
     agentInstructions,
   }
 }
