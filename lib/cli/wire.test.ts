@@ -53,6 +53,16 @@ describe('createFileSystem', () => {
     expect(fileSystem.isDirectory('/dir/file.txt')).toBe(false)
   })
 
+  test('isDirectory returns false when statSync throws', () => {
+    const primitives = createFsPrimitives()
+    primitives.statSync = () => {
+      throw new Error('ENOENT')
+    }
+    const fileSystem = createFileSystem(primitives)
+
+    expect(fileSystem.isDirectory('/any-path')).toBe(false)
+  })
+
   test('readFile delegates with utf-8 encoding', async () => {
     const files = new Map([['/test.txt', 'hello world']])
     const primitives = createFsPrimitives(files)

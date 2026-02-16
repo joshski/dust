@@ -1675,6 +1675,11 @@ describe('validateContentDirectoryFiles', () => {
         '.dust': {},
       },
     })
+    fileSystem.readdir = async () => {
+      const error = new Error('ENOENT') as NodeJS.ErrnoException
+      error.code = 'ENOENT'
+      throw error
+    }
 
     const violations = await validateContentDirectoryFiles(
       '/project/.dust/nonexistent',
@@ -1682,6 +1687,21 @@ describe('validateContentDirectoryFiles', () => {
     )
 
     expect(violations).toEqual([])
+  })
+
+  test('rethrows non-ENOENT errors from readdir', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { '.dust': {} },
+    })
+    fileSystem.readdir = async () => {
+      const error = new Error('Permission denied') as NodeJS.ErrnoException
+      error.code = 'EACCES'
+      throw error
+    }
+
+    await expect(
+      validateContentDirectoryFiles('/project/.dust/tasks', fileSystem)
+    ).rejects.toThrow('Permission denied')
   })
 
   test('reports multiple violations', async () => {
