@@ -29,7 +29,7 @@ const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.md$/
 
 const EXPECTED_DIRECTORIES = ['goals', 'ideas', 'tasks', 'facts', 'config']
 
-const MAX_OPENING_SENTENCE_LENGTH = 150
+const MAX_OPENING_SENTENCE_LENGTH = 150 // Enforces concise summaries that fit comfortably in a single line of context
 
 export interface Violation {
   file: string

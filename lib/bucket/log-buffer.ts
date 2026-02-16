@@ -11,8 +11,8 @@ export interface LogLine {
   timestamp: number
 }
 
-const MAX_LINES = 5000
-const TRIM_TO_LINES = 3000
+const MAX_LINES = 5000 // Cap memory usage per repository while retaining enough context for debugging
+const TRIM_TO_LINES = 3000 // Trim to 60% of max to avoid trimming on every append
 
 export interface LogBuffer {
   lines: LogLine[]

@@ -14,7 +14,7 @@ import type {
 } from '../types'
 import { lintMarkdown } from './lint-markdown'
 
-const DEFAULT_CHECK_TIMEOUT_MS = 13000
+const DEFAULT_CHECK_TIMEOUT_MS = 13000 // Long enough for typical lint/test runs, short enough to fail fast on hangs
 
 export interface CheckResult {
   name: string

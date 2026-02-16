@@ -215,8 +215,8 @@ export function createWireEventSender(
   }
 }
 
-const SLEEP_INTERVAL_MS = 30000
-const DEFAULT_MAX_ITERATIONS = 10
+const SLEEP_INTERVAL_MS = 30000 // 30s poll interval balances responsiveness with avoiding excessive git pulls
+const DEFAULT_MAX_ITERATIONS = 10 // Safety cap to prevent runaway loops in unattended mode
 
 export type GitPullResult =
   | { success: true }
