@@ -225,6 +225,7 @@ export function createDefaultBucketDependencies(): BucketDependencies {
         return false
       }
     },
+    getFileCreationTime: (path: string) => statSync(path).birthtimeMs,
     readFile: (path: string) => readFile(path, 'utf8'),
     writeFile: (path: string, content: string) =>
       writeFile(path, content, 'utf8'),

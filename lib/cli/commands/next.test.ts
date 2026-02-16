@@ -212,8 +212,15 @@ describe('next command', () => {
     expect(output).toContain('.dust/tasks/still-exists.md')
   })
 
-  test('lists multiple unblocked tasks sorted alphabetically', async () => {
+  test('getFileCreationTime returns 0 for unknown paths', () => {
+    const fileSystem = createFileSystemEmulator()
+    expect(fileSystem.getFileCreationTime('/nonexistent')).toBe(0)
+  })
+
+  test('lists multiple unblocked tasks sorted by creation time (FIFO)', async () => {
     const context = createContextEmulator()
+    // Files are inserted in this order: zebra, alpha, middle
+    // so they should appear in that order (FIFO), not alphabetically
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -230,15 +237,15 @@ describe('next command', () => {
 
     expect(result.exitCode).toBe(0)
     const output = context.stdoutLines.join('\n')
+    expect(output).toContain('.dust/tasks/zebra-task.md')
     expect(output).toContain('.dust/tasks/alpha-task.md')
     expect(output).toContain('.dust/tasks/middle-task.md')
-    expect(output).toContain('.dust/tasks/zebra-task.md')
 
-    // Verify alphabetical order
+    // Verify FIFO order (creation time order, not alphabetical)
+    const zebraIndex = output.indexOf('.dust/tasks/zebra-task.md')
     const alphaIndex = output.indexOf('.dust/tasks/alpha-task.md')
     const middleIndex = output.indexOf('.dust/tasks/middle-task.md')
-    const zebraIndex = output.indexOf('.dust/tasks/zebra-task.md')
+    expect(zebraIndex).toBeLessThan(alphaIndex)
     expect(alphaIndex).toBeLessThan(middleIndex)
-    expect(middleIndex).toBeLessThan(zebraIndex)
   })
 })

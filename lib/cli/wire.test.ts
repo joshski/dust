@@ -17,6 +17,7 @@ function createFsPrimitives(
     existsSync: (path: string) => files.has(path) || dirs.has(path),
     statSync: (path: string) => ({
       isDirectory: () => dirs.has(path) || (!files.has(path) && path !== '/'),
+      birthtimeMs: 0,
     }),
     readFile: async (path: string) => files.get(path) ?? '',
     writeFile: async () => {},
@@ -152,6 +153,16 @@ describe('createFileSystem', () => {
 
     expect(chmodPath).toBe('/test.sh')
     expect(chmodMode).toBe(0o755)
+  })
+  test('getFileCreationTime delegates to statSync birthtimeMs', () => {
+    const primitives = createFsPrimitives()
+    primitives.statSync = () => ({
+      isDirectory: () => false,
+      birthtimeMs: 1234567890,
+    })
+    const fileSystem = createFileSystem(primitives)
+
+    expect(fileSystem.getFileCreationTime('/test.txt')).toBe(1234567890)
   })
 })
 

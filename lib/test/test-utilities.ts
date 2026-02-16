@@ -199,6 +199,13 @@ export function createFileSystemEmulator(
   const createdDirs: string[] = []
   const writtenFiles = new Map<string, string>()
   const permissions = new Map<string, number>()
+  const creationTimes = new Map<string, number>()
+  let nextCreationTime = 1000
+
+  // Assign creation times in insertion order (Map iteration order)
+  for (const path of files.keys()) {
+    creationTimes.set(path, nextCreationTime++)
+  }
 
   return {
     exists: (path: string) => paths.has(path),
@@ -226,6 +233,9 @@ export function createFileSystemEmulator(
       writtenFiles.set(path, content)
       paths.add(path)
       files.set(path, content)
+      if (!creationTimes.has(path)) {
+        creationTimes.set(path, nextCreationTime++)
+      }
     },
     mkdir: async (path: string) => {
       createdDirs.push(path)
@@ -250,6 +260,9 @@ export function createFileSystemEmulator(
     },
     chmod: async (path: string, mode: number) => {
       permissions.set(path, mode)
+    },
+    getFileCreationTime: (path: string) => {
+      return creationTimes.get(path) ?? 0
     },
     scan: async function* (dir: string) {
       // Check if directory exists (it's in paths if it was created or is a parent of any file)

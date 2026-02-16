@@ -28,6 +28,7 @@ export interface FileSystem {
   readdir: (path: string) => Promise<string[]>
   chmod: (path: string, mode: number) => Promise<void>
   isDirectory: (path: string) => boolean
+  getFileCreationTime: (path: string) => number
 }
 
 export interface GlobScanner {

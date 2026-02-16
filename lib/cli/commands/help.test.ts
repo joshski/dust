@@ -26,6 +26,7 @@ function createMockFileSystem(): FileSystem {
   return {
     exists: () => false,
     isDirectory: () => false,
+    getFileCreationTime: () => 0,
     readFile: async () => '',
     writeFile: async () => {},
     mkdir: async () => {},

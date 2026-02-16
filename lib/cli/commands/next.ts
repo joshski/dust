@@ -73,7 +73,13 @@ export async function findUnblockedTasks(
   }
 
   const files = await fileSystem.readdir(tasksPath)
-  const mdFiles = files.filter(f => f.endsWith('.md')).sort()
+  const mdFiles = files
+    .filter(f => f.endsWith('.md'))
+    .sort((a, b) => {
+      const aTime = fileSystem.getFileCreationTime(`${tasksPath}/${a}`)
+      const bTime = fileSystem.getFileCreationTime(`${tasksPath}/${b}`)
+      return aTime - bTime
+    })
 
   if (mdFiles.length === 0) {
     return { tasks: [] }

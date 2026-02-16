@@ -13,7 +13,10 @@ import type { FileSystem } from './types'
  */
 export interface FileSystemPrimitives {
   existsSync: (path: string) => boolean
-  statSync: (path: string) => { isDirectory: () => boolean }
+  statSync: (path: string) => {
+    isDirectory: () => boolean
+    birthtimeMs: number
+  }
   readFile: (path: string, encoding: 'utf-8') => Promise<string>
   writeFile: (
     path: string,
@@ -70,6 +73,7 @@ export function createFileSystem(primitives: FileSystemPrimitives): FileSystem {
     mkdir: async (path, options) => {
       await primitives.mkdir(path, options)
     },
+    getFileCreationTime: path => primitives.statSync(path).birthtimeMs,
     readdir: path => primitives.readdir(path),
     chmod: (path, mode) => primitives.chmod(path, mode),
   }
