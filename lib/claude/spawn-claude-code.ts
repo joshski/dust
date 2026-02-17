@@ -66,6 +66,15 @@ export async function* spawnClaudeCode(
     throw new Error('Failed to get stdout from claude process')
   }
 
+  // Capture stderr eagerly to prevent pipe buffer from filling up and
+  // deadlocking the child process (classic pipe deadlock: if nobody reads
+  // stderr, the OS buffer fills, the process blocks on write, stdout never
+  // closes, and our for-await on stdout hangs forever).
+  let stderrOutput = ''
+  proc.stderr?.on('data', (data: Buffer) => {
+    stderrOutput += data.toString()
+  })
+
   const rl = dependencies.createInterface({ input: proc.stdout })
 
   for await (const line of rl) {
@@ -77,12 +86,6 @@ export async function* spawnClaudeCode(
       // Skip malformed JSON lines
     }
   }
-
-  // Capture stderr for error reporting
-  let stderrOutput = ''
-  proc.stderr?.on('data', (data: Buffer) => {
-    stderrOutput += data.toString()
-  })
 
   await new Promise<void>((resolve, reject) => {
     proc.on('close', code => {
