@@ -5,6 +5,8 @@ import {
   createFileSystemEmulator,
   type FileSystemEmulator,
 } from '../../test/test-utilities'
+import type { CommandContext, CommandDependencies } from '../types'
+import { audit, transformAuditContent } from './audit'
 import {
   type Violation,
   validateFilename,
@@ -15,8 +17,6 @@ import {
   validateTaskHeadings,
   validateTitleFilenameMatch,
 } from './lint-markdown'
-import type { CommandContext, CommandDependencies } from '../types'
-import { audit, transformAuditContent } from './audit'
 
 function createDependencies(
   context: CommandContext,
