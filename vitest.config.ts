@@ -18,6 +18,7 @@ export default defineConfig({
         'lib/bucket/repository.ts',
         'lib/bucket/repository-loop.ts',
         'lib/cli/commands/bucket.ts',
+        'lib/test/**',
       ],
       reporter: [
         [resolve(import.meta.dirname, 'lib/istanbul/minimal-reporter.cjs')],

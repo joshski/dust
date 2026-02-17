@@ -4,19 +4,10 @@ import {
   createContextEmulator,
   createFileSystemEmulator,
   type FileSystemEmulator,
+  lintTaskFile,
 } from '../../test/test-utilities'
 import type { CommandContext, CommandDependencies } from '../types'
 import { audit, transformAuditContent } from './audit'
-import {
-  type Violation,
-  validateFilename,
-  validateImperativeOpeningSentence,
-  validateOpeningSentence,
-  validateOpeningSentenceLength,
-  validateSemanticLinks,
-  validateTaskHeadings,
-  validateTitleFilenameMatch,
-} from './lint-markdown'
 
 function createDependencies(
   context: CommandContext,
@@ -409,23 +400,6 @@ describe('audit add command', () => {
 })
 
 describe('generated stock audit tasks pass lint rules', () => {
-  function lintTaskFile(filePath: string, content: string): Violation[] {
-    const violations: Violation[] = []
-    const v1 = validateFilename(filePath)
-    if (v1) violations.push(v1)
-    const v2 = validateTitleFilenameMatch(filePath, content)
-    if (v2) violations.push(v2)
-    const v3 = validateOpeningSentence(filePath, content)
-    if (v3) violations.push(v3)
-    const v4 = validateOpeningSentenceLength(filePath, content)
-    if (v4) violations.push(v4)
-    const v5 = validateImperativeOpeningSentence(filePath, content)
-    if (v5) violations.push(v5)
-    violations.push(...validateTaskHeadings(filePath, content))
-    violations.push(...validateSemanticLinks(filePath, content))
-    return violations
-  }
-
   for (const stockAudit of loadStockAudits()) {
     test(`${stockAudit.name} produces a valid task file`, async () => {
       const context = createContextEmulator()

@@ -7,6 +7,16 @@
  */
 
 import type { AgentSessionEvent } from '../agent-events'
+import {
+  type Violation,
+  validateFilename,
+  validateImperativeOpeningSentence,
+  validateOpeningSentence,
+  validateOpeningSentenceLength,
+  validateSemanticLinks,
+  validateTaskHeadings,
+  validateTitleFilenameMatch,
+} from '../cli/commands/lint-markdown'
 import type {
   CommandContext,
   CommandDependencies,
@@ -332,6 +342,26 @@ export function createFileSystemEmulator(
  * Default settings for command tests
  */
 export const defaultTestSettings: DustSettings = { dustCommand: 'dust' }
+
+/**
+ * Lints a task file by running all validators and collecting violations.
+ */
+export function lintTaskFile(filePath: string, content: string): Violation[] {
+  const violations: Violation[] = []
+  const v1 = validateFilename(filePath)
+  if (v1) violations.push(v1)
+  const v2 = validateTitleFilenameMatch(filePath, content)
+  if (v2) violations.push(v2)
+  const v3 = validateOpeningSentence(filePath, content)
+  if (v3) violations.push(v3)
+  const v4 = validateOpeningSentenceLength(filePath, content)
+  if (v4) violations.push(v4)
+  const v5 = validateImperativeOpeningSentence(filePath, content)
+  if (v5) violations.push(v5)
+  violations.push(...validateTaskHeadings(filePath, content))
+  violations.push(...validateSemanticLinks(filePath, content))
+  return violations
+}
 
 /**
  * Strips ANSI escape codes from a string for cleaner test assertions.
