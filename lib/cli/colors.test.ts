@@ -5,6 +5,14 @@ import { getColors, shouldDisableColors } from './colors'
 describe('colors', () => {
   const originalIsTTY = process.stdout.isTTY
 
+  function withColorFriendlyEnv<T>(
+    callback: () => T | Promise<T>
+  ): T | Promise<T> {
+    return stubEnv('NO_COLOR', undefined, () =>
+      stubEnv('TERM', 'xterm-256color', callback)
+    )
+  }
+
   beforeEach(() => {
     ;(process.stdout as unknown as { isTTY: boolean }).isTTY = true
   })
@@ -17,7 +25,9 @@ describe('colors', () => {
 
   describe('shouldDisableColors', () => {
     it('returns false when in a TTY without special environment variables', () => {
-      expect(shouldDisableColors()).toBe(false)
+      withColorFriendlyEnv(() => {
+        expect(shouldDisableColors()).toBe(false)
+      })
     })
 
     it('returns true when NO_COLOR is set', () => {
@@ -31,28 +41,36 @@ describe('colors', () => {
     })
 
     it('returns true when TERM is dumb', () => {
-      stubEnv('TERM', 'dumb')
-      expect(shouldDisableColors()).toBe(true)
+      withColorFriendlyEnv(() => {
+        stubEnv('TERM', 'dumb')
+        expect(shouldDisableColors()).toBe(true)
+      })
     })
 
     it('returns true when stdout is not a TTY', () => {
-      ;(process.stdout as unknown as { isTTY: boolean }).isTTY = false
-      expect(shouldDisableColors()).toBe(true)
+      withColorFriendlyEnv(() => {
+        ;(process.stdout as unknown as { isTTY: boolean }).isTTY = false
+        expect(shouldDisableColors()).toBe(true)
+      })
     })
 
     it('returns true when stdout.isTTY is undefined', () => {
-      ;(process.stdout as unknown as { isTTY: undefined }).isTTY = undefined
-      expect(shouldDisableColors()).toBe(true)
+      withColorFriendlyEnv(() => {
+        ;(process.stdout as unknown as { isTTY: undefined }).isTTY = undefined
+        expect(shouldDisableColors()).toBe(true)
+      })
     })
   })
 
   describe('getColors', () => {
     it('returns ANSI colors when in a TTY', () => {
-      const colors = getColors()
-      expect(colors.reset).toBe('\x1b[0m')
-      expect(colors.bold).toBe('\x1b[1m')
-      expect(colors.dim).toBe('\x1b[2m')
-      expect(colors.cyan).toBe('\x1b[36m')
+      withColorFriendlyEnv(() => {
+        const colors = getColors()
+        expect(colors.reset).toBe('\x1b[0m')
+        expect(colors.bold).toBe('\x1b[1m')
+        expect(colors.dim).toBe('\x1b[2m')
+        expect(colors.cyan).toBe('\x1b[36m')
+      })
     })
 
     it('returns empty strings when NO_COLOR is set', () => {
@@ -65,21 +83,25 @@ describe('colors', () => {
     })
 
     it('returns empty strings when TERM is dumb', () => {
-      stubEnv('TERM', 'dumb')
-      const colors = getColors()
-      expect(colors.reset).toBe('')
-      expect(colors.bold).toBe('')
-      expect(colors.dim).toBe('')
-      expect(colors.cyan).toBe('')
+      withColorFriendlyEnv(() => {
+        stubEnv('TERM', 'dumb')
+        const colors = getColors()
+        expect(colors.reset).toBe('')
+        expect(colors.bold).toBe('')
+        expect(colors.dim).toBe('')
+        expect(colors.cyan).toBe('')
+      })
     })
 
     it('returns empty strings when stdout is not a TTY', () => {
-      ;(process.stdout as unknown as { isTTY: boolean }).isTTY = false
-      const colors = getColors()
-      expect(colors.reset).toBe('')
-      expect(colors.bold).toBe('')
-      expect(colors.dim).toBe('')
-      expect(colors.cyan).toBe('')
+      withColorFriendlyEnv(() => {
+        ;(process.stdout as unknown as { isTTY: boolean }).isTTY = false
+        const colors = getColors()
+        expect(colors.reset).toBe('')
+        expect(colors.bold).toBe('')
+        expect(colors.dim).toBe('')
+        expect(colors.cyan).toBe('')
+      })
     })
   })
 })

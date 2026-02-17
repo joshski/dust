@@ -109,12 +109,53 @@ const originalEnvValues = new Map<string, string | undefined>()
 /**
  * Stub an environment variable with a temporary value.
  * Call restoreEnv() to restore original values.
+ *
+ * When a callback is provided, the env var is scoped to that callback and
+ * restored automatically (works with sync and async callbacks).
  */
-export function stubEnv(name: string, value: string): void {
+export function stubEnv(name: string, value: string | undefined): void
+export function stubEnv<T>(
+  name: string,
+  value: string | undefined,
+  callback: () => T | Promise<T>
+): T | Promise<T>
+export function stubEnv<T>(
+  name: string,
+  value: string | undefined,
+  callback?: () => T | Promise<T>
+): undefined | T | Promise<T> {
+  const setEnvValue = (nextValue: string | undefined): void => {
+    if (nextValue === undefined) {
+      delete process.env[name]
+    } else {
+      process.env[name] = nextValue
+    }
+  }
+
+  if (callback) {
+    const originalValue = process.env[name]
+    setEnvValue(value)
+    try {
+      const result = callback()
+      if (
+        result !== null &&
+        result !== undefined &&
+        typeof (result as PromiseLike<T>).then === 'function'
+      ) {
+        return Promise.resolve(result).finally(() => setEnvValue(originalValue))
+      }
+      setEnvValue(originalValue)
+      return result
+    } catch (error) {
+      setEnvValue(originalValue)
+      throw error
+    }
+  }
+
   if (!originalEnvValues.has(name)) {
     originalEnvValues.set(name, process.env[name])
   }
-  process.env[name] = value
+  setEnvValue(value)
 }
 
 /**

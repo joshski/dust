@@ -519,6 +519,47 @@ describe('stubEnv and restoreEnv', () => {
     // Clean up
     delete process.env[uniqueVarName]
   })
+
+  test('scopes env var to callback and restores after sync callback', () => {
+    const uniqueVarName = 'DUST_TEST_SCOPED_VAR_12345'
+    process.env[uniqueVarName] = 'original-value'
+
+    stubEnv(uniqueVarName, 'scoped-value', () => {
+      expect(process.env[uniqueVarName]).toBe('scoped-value')
+    })
+
+    expect(process.env[uniqueVarName]).toBe('original-value')
+    delete process.env[uniqueVarName]
+  })
+
+  test('scopes env var to callback and restores after async callback', async () => {
+    const uniqueVarName = 'DUST_TEST_SCOPED_ASYNC_VAR_12345'
+    process.env[uniqueVarName] = 'original-value'
+
+    await stubEnv(uniqueVarName, 'scoped-value', async () => {
+      expect(process.env[uniqueVarName]).toBe('scoped-value')
+      await Promise.resolve()
+      expect(process.env[uniqueVarName]).toBe('scoped-value')
+    })
+
+    expect(process.env[uniqueVarName]).toBe('original-value')
+    delete process.env[uniqueVarName]
+  })
+
+  test('restores env var when scoped callback throws', () => {
+    const uniqueVarName = 'DUST_TEST_SCOPED_THROW_VAR_12345'
+    process.env[uniqueVarName] = 'original-value'
+
+    expect(() =>
+      stubEnv(uniqueVarName, 'scoped-value', () => {
+        expect(process.env[uniqueVarName]).toBe('scoped-value')
+        throw new Error('boom')
+      })
+    ).toThrow('boom')
+
+    expect(process.env[uniqueVarName]).toBe('original-value')
+    delete process.env[uniqueVarName]
+  })
 })
 
 describe('validateSettingsJson', () => {
