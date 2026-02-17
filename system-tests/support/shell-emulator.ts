@@ -12,6 +12,7 @@ import {
   createFileSystemEmulator,
   type FileSystemEmulator,
   type FileSystemTree,
+  stubEnv,
 } from '../../lib/test/test-utilities'
 
 export interface CommandResult {
@@ -74,18 +75,21 @@ export async function createShellEmulator(
     // Create fresh context for each command to capture output
     const context = createContextEmulator(cwd)
 
-    const result = await main({
-      commandArguments,
-      context,
-      fileSystem,
-      glob: fileSystem,
-    })
+    // System tests should exercise normal CLI behavior regardless of parent process env.
+    return await stubEnv('DUST_SKIP_AGENT', undefined, async () => {
+      const result = await main({
+        commandArguments,
+        context,
+        fileSystem,
+        glob: fileSystem,
+      })
 
-    return {
-      stdout: context.stdoutLines.join('\n'),
-      stderr: context.stderrLines.join('\n'),
-      exitCode: result.exitCode,
-    }
+      return {
+        stdout: context.stdoutLines.join('\n'),
+        stderr: context.stderrLines.join('\n'),
+        exitCode: result.exitCode,
+      }
+    })
   }
 
   return {
