@@ -1,6 +1,6 @@
 # Build Idea: Navigate to first goal if there is one
 
-Research this idea thoroughly, review `.dust/goals/` and `.dust/facts/` for relevant context, then create one or more narrowly-scoped task files in `.dust/tasks/`. Each task should deliver a thin but complete vertical slice of working software.
+Research this idea thoroughly, review `.dust/goals/` and `.dust/facts/` for relevant context. Then create one or more narrowly-scoped task files in `.dust/tasks/`. Each task should deliver a thin but complete vertical slice of working software.
 
 ## Idea Description
 
