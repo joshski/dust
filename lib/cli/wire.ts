@@ -4,9 +4,8 @@
  * This module extracts the dependency construction and wiring logic
  * so it can be tested independently of the real Node.js APIs.
  */
-import type { GlobScanner } from './commands/lint-markdown'
 import { main } from './main'
-import type { FileSystem } from './types'
+import type { FileSystem, GlobScanner } from './types'
 
 /**
  * Node.js primitives required to construct the FileSystem

@@ -4,15 +4,15 @@
 
 import { basename } from 'node:path'
 import {
+  extractGoalRelationships,
+  type GoalRelationships,
+} from '../../lint/validators/goal-hierarchy'
+import {
   extractOpeningSentence,
   extractTitle,
 } from '../../markdown/markdown-utilities'
 import { getColors } from '../colors'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
-import {
-  extractGoalRelationships,
-  type GoalRelationships,
-} from './lint-markdown'
 
 const VALID_TYPES = ['tasks', 'ideas', 'goals', 'facts'] as const
 type ListType = (typeof VALID_TYPES)[number]

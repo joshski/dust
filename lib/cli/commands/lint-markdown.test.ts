@@ -1,32 +1,41 @@
 import { describe, expect, test } from 'vitest'
 import {
+  validateImperativeOpeningSentence,
+  validateOpeningSentence,
+  validateOpeningSentenceLength,
+  validateTaskHeadings,
+} from '../../lint/validators/content-validator'
+import {
+  validateContentDirectoryFiles,
+  validateDirectoryStructure,
+} from '../../lint/validators/directory-validator'
+import {
+  validateFilename,
+  validateTitleFilenameMatch,
+} from '../../lint/validators/filename-validator'
+import {
+  extractGoalRelationships,
+  validateBidirectionalLinks,
+  validateGoalHierarchySections,
+  validateNoCycles,
+} from '../../lint/validators/goal-hierarchy'
+import {
+  validateIdeaOpenQuestions,
+  validateIdeaTransitionTitle,
+} from '../../lint/validators/idea-validator'
+import {
+  validateGoalHierarchyLinks,
+  validateLinks,
+  validateSemanticLinks,
+} from '../../lint/validators/link-validator'
+import {
   createContextEmulator,
   createFileSystemEmulator,
   type FileSystemEmulator,
 } from '../../test/test-utilities'
+import { IDEA_TRANSITION_PREFIXES, titleToFilename } from '../../workflow-tasks'
 import type { CommandContext, CommandDependencies } from '../types'
-import {
-  extractGoalRelationships,
-  IDEA_TRANSITION_PREFIXES,
-  lintMarkdown,
-  titleToFilename,
-  validateBidirectionalLinks,
-  validateContentDirectoryFiles,
-  validateDirectoryStructure,
-  validateFilename,
-  validateGoalHierarchyLinks,
-  validateGoalHierarchySections,
-  validateIdeaOpenQuestions,
-  validateIdeaTransitionTitle,
-  validateImperativeOpeningSentence,
-  validateLinks,
-  validateNoCycles,
-  validateOpeningSentence,
-  validateOpeningSentenceLength,
-  validateSemanticLinks,
-  validateTaskHeadings,
-  validateTitleFilenameMatch,
-} from './lint-markdown'
+import { lintMarkdown } from './lint-markdown'
 
 function createDependencies(
   context: CommandContext,

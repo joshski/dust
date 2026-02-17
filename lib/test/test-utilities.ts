@@ -7,16 +7,6 @@
  */
 
 import type { AgentSessionEvent } from '../agent-events'
-import {
-  type Violation,
-  validateFilename,
-  validateImperativeOpeningSentence,
-  validateOpeningSentence,
-  validateOpeningSentenceLength,
-  validateSemanticLinks,
-  validateTaskHeadings,
-  validateTitleFilenameMatch,
-} from '../cli/commands/lint-markdown'
 import type {
   CommandContext,
   CommandDependencies,
@@ -25,6 +15,18 @@ import type {
   GlobScanner,
   WriteOptions,
 } from '../cli/types'
+import {
+  validateImperativeOpeningSentence,
+  validateOpeningSentence,
+  validateOpeningSentenceLength,
+  validateTaskHeadings,
+} from '../lint/validators/content-validator'
+import {
+  validateFilename,
+  validateTitleFilenameMatch,
+} from '../lint/validators/filename-validator'
+import { validateSemanticLinks } from '../lint/validators/link-validator'
+import type { Violation } from '../lint/validators/types'
 
 /**
  * Default environment context values for tests
