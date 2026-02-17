@@ -290,7 +290,7 @@ export async function createCaptureIdeaTask(
 
     const content = `# ${taskTitle}
 
-Research this idea thoroughly, review \`.dust/goals/\` and \`.dust/facts/\` for relevant context, then create one or more narrowly-scoped task files in \`.dust/tasks/\`. Each task should deliver a thin but complete vertical slice of working software.
+Research this idea thoroughly, then create one or more narrowly-scoped task files in \`.dust/tasks/\`. Review \`.dust/goals/\` and \`.dust/facts/\` for relevant context. Each task should deliver a thin but complete vertical slice of working software.
 
 ## Idea Description
 

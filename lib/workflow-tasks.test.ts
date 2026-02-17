@@ -295,7 +295,7 @@ describe('createCaptureIdeaTask', () => {
     expect(content).toContain(
       'create one or more narrowly-scoped task files in `.dust/tasks/`'
     )
-    expect(content).toContain('review `.dust/goals/` and `.dust/facts/`')
+    expect(content).toContain('Review `.dust/goals/` and `.dust/facts/`')
     expect(content).toContain(
       '- [ ] One or more new tasks are created in `.dust/tasks/`'
     )
@@ -467,6 +467,17 @@ describe('generated tasks pass lint rules', () => {
     const result = await createCaptureIdeaTask(fileSystem, '/project/.dust', {
       title: 'Progress Broadcasting',
       description: 'Allow agents to broadcast progress via WebSocket.',
+    })
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(lintTaskFile(result.filePath, content)).toEqual([])
+  })
+
+  test('createCaptureIdeaTask with buildItNow produces a valid task file', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'Allow agents to broadcast progress via WebSocket.',
+      buildItNow: true,
     })
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(lintTaskFile(result.filePath, content)).toEqual([])
