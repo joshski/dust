@@ -30,6 +30,11 @@ function agentDeveloperExperience(): string {
     4. **Debugging tools** - Can agents diagnose issues without trial and error?
     5. **Structured logging** - Is system behavior observable through logs?
 
+    ## Goals
+
+    - [Lint Everything](../goals/lint-everything.md)
+    - [Stop the Line](../goals/stop-the-line.md)
+
     ## Blocked By
 
     (none)
@@ -59,6 +64,11 @@ function deadCode(): string {
     3. **Orphaned files** - Files that are not imported anywhere
     4. **Unused dependencies** - Packages in package.json not used in code
     5. **Commented-out code** - Old code left in comments
+
+    ## Goals
+
+    - [Lint Everything](../goals/lint-everything.md)
+    - [Stop the Line](../goals/stop-the-line.md)
 
     ## Blocked By
 
@@ -91,6 +101,11 @@ function factsVerification(): string {
     3. **Staleness** - Have facts become outdated due to recent changes?
     4. **Relevance** - Are all facts still useful for understanding the project?
 
+    ## Goals
+
+    - [Lint Everything](../goals/lint-everything.md)
+    - [Stop the Line](../goals/stop-the-line.md)
+
     ## Blocked By
 
     (none)
@@ -121,6 +136,11 @@ function ideasFromCommits(): string {
     3. **Pattern opportunities** - Can recent changes be generalized?
     4. **Test gaps** - Do recent changes have adequate test coverage?
 
+    ## Goals
+
+    - [Lint Everything](../goals/lint-everything.md)
+    - [Stop the Line](../goals/stop-the-line.md)
+
     ## Blocked By
 
     (none)
@@ -149,6 +169,11 @@ function ideasFromGoals(): string {
     2. **Gap analysis** - Where does the codebase fall short of goals?
     3. **New opportunities** - What work would better achieve each goal?
     4. **Goal alignment** - Are current tasks aligned with stated goals?
+
+    ## Goals
+
+    - [Lint Everything](../goals/lint-everything.md)
+    - [Stop the Line](../goals/stop-the-line.md)
 
     ## Blocked By
 
@@ -179,6 +204,11 @@ function performanceReview(): string {
     4. **Build performance** - How fast is the build process?
     5. **Test speed** - Are tests running efficiently?
 
+    ## Goals
+
+    - [Lint Everything](../goals/lint-everything.md)
+    - [Stop the Line](../goals/stop-the-line.md)
+
     ## Blocked By
 
     (none)
@@ -208,6 +238,11 @@ function securityReview(): string {
     3. **Authentication issues** - Weak password handling, missing auth checks
     4. **Sensitive data exposure** - Logging sensitive data, insecure storage
     5. **Dependency vulnerabilities** - Known CVEs in dependencies
+
+    ## Goals
+
+    - [Lint Everything](../goals/lint-everything.md)
+    - [Stop the Line](../goals/stop-the-line.md)
 
     ## Blocked By
 
@@ -240,6 +275,11 @@ function staleIdeas(): string {
     3. **Actionability** - Can the idea be converted to a task?
     4. **Duplication** - Are there overlapping or redundant ideas?
 
+    ## Goals
+
+    - [Lint Everything](../goals/lint-everything.md)
+    - [Stop the Line](../goals/stop-the-line.md)
+
     ## Blocked By
 
     (none)
@@ -269,6 +309,11 @@ function testCoverage(): string {
     3. **Integration points** - API endpoints, database operations
     4. **User-facing features** - UI components, form validation
     5. **Recent changes** - Code modified in the last few commits
+
+    ## Goals
+
+    - [Lint Everything](../goals/lint-everything.md)
+    - [Stop the Line](../goals/stop-the-line.md)
 
     ## Blocked By
 

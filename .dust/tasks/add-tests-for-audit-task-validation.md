@@ -11,7 +11,7 @@ Similar to the tests in `lib/workflow-tasks.test.ts` under the `generated tasks 
 
 ## Blocked By
 
-- [Fix Stock Audit Templates Missing Goals Section](fix-stock-audit-templates-missing-goals-section.md)
+(none)
 
 ## Definition of Done
 
