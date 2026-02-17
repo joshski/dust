@@ -551,11 +551,17 @@ export function connectWebSocket(
       const message = JSON.parse(event.data)
       if (message.type === 'repository-list') {
         const repos = message.repositories ?? []
+        const repoNames = repos
+          .map((r: { name?: string; hasTask?: boolean }) => {
+            const name = r?.name ?? '?'
+            return r?.hasTask ? `${name} (has task)` : name
+          })
+          .join(', ')
         logMessage(
           state,
           context,
           useTUI,
-          `Received repository list (${repos.length} repositories)`
+          `Received repository list: ${repoNames || '(empty)'}`
         )
         // Eagerly add repos to UI so tabs appear before cloning finishes
         syncUIWithRepoList(state, repos)
@@ -601,6 +607,12 @@ export function connectWebSocket(
       } else if (message.type === 'task-available') {
         const repoName = message.repository
         if (typeof repoName === 'string') {
+          logMessage(
+            state,
+            context,
+            useTUI,
+            `Received task-available for ${repoName}`
+          )
           const repoState = state.repositories.get(repoName)
           if (repoState) {
             if (repoState.wakeUp) {
@@ -608,6 +620,14 @@ export function connectWebSocket(
             } else {
               repoState.taskAvailablePending = true
             }
+          } else {
+            logMessage(
+              state,
+              context,
+              useTUI,
+              `No repository state found for ${repoName}`,
+              'stderr'
+            )
           }
         }
       }

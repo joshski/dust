@@ -889,6 +889,37 @@ describe('formatLogLine', () => {
     expect(formatted).toContain('repo1')
     expect(formatted).not.toContain('text that will not fit')
   })
+
+  it('prepends HH:MM:SS timestamp for system log lines', () => {
+    const ts = new Date(2025, 0, 1, 14, 5, 9).getTime()
+    const line = {
+      text: 'Connected to dustbucket',
+      stream: 'stdout' as const,
+      timestamp: ts,
+      repository: 'system',
+      color: ANSI.DIM,
+    }
+
+    const formatted = formatLogLine(line, 0, 80)
+
+    expect(formatted).toContain('14:05:09')
+    expect(formatted).toContain('Connected to dustbucket')
+  })
+
+  it('does not add timestamp for non-system log lines', () => {
+    const line = {
+      text: 'some output',
+      stream: 'stdout' as const,
+      timestamp: Date.now(),
+      repository: 'owner/repo',
+      color: ANSI.FG_CYAN,
+    }
+
+    const formatted = formatLogLine(line, 0, 80)
+
+    // Should not contain a time pattern
+    expect(formatted).toBe('some output')
+  })
 })
 
 describe('renderFrame', () => {

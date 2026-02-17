@@ -467,6 +467,18 @@ export function formatLogLine(
     prefixWidth = prefixAlign + 3 // "paddedName | "
   }
 
+  // Show timestamps on system log lines
+  let timePrefix = ''
+  let timePrefixWidth = 0
+  if (line.repository === 'system') {
+    const d = new Date(line.timestamp)
+    const hh = String(d.getHours()).padStart(2, '0')
+    const mm = String(d.getMinutes()).padStart(2, '0')
+    const ss = String(d.getSeconds()).padStart(2, '0')
+    timePrefix = `${ANSI.DIM}${hh}:${mm}:${ss}${ANSI.RESET} `
+    timePrefixWidth = 9 // "HH:MM:SS "
+  }
+
   const textColor = line.stream === 'stderr' ? ANSI.FG_RED : ''
   const textReset = line.stream === 'stderr' ? ANSI.RESET : ''
   // Strip newlines to guarantee single-line output (some event formatters
@@ -474,10 +486,10 @@ export function formatLogLine(
   const sanitizedText = line.text.replace(/[\r\n]+/g, '')
   const text = `${textColor}${sanitizedText}${textReset}`
 
-  const availableWidth = maxWidth - prefixWidth
-  if (availableWidth <= 0) return prefix
+  const availableWidth = maxWidth - prefixWidth - timePrefixWidth
+  if (availableWidth <= 0) return prefix + timePrefix
 
-  return prefix + truncateLine(text, availableWidth)
+  return prefix + timePrefix + truncateLine(text, availableWidth)
 }
 
 /**

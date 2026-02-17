@@ -664,7 +664,7 @@ describe('connectWebSocket', () => {
     })
 
     expect(context.stdoutLines.join('\n')).toContain(
-      'Received repository list (3 repositories)'
+      'Received repository list: ?, ?, ?'
     )
   })
 
@@ -771,7 +771,7 @@ describe('connectWebSocket', () => {
     })
 
     expect(context.stdoutLines.join('\n')).toContain(
-      'Received repository list (0 repositories)'
+      'Received repository list: (empty)'
     )
   })
 
