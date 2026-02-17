@@ -12,6 +12,7 @@ import {
   defaultRunnerDependencies,
   type RunnerDependencies,
 } from '../claude/run'
+import { manageGitHooks } from '../cli/commands/agent-shared'
 import {
   formatLoopEvent,
   type LoopDependencies,
@@ -21,7 +22,6 @@ import {
   type SendAgentEventFn,
 } from '../cli/commands/loop'
 import type { CommandDependencies } from '../cli/types'
-import { manageGitHooks } from '../cli/commands/agent-shared'
 import { loadSettings } from '../config/settings'
 import type { SendEventFn } from './events'
 import { appendLogLine, createLogLine } from './log-buffer'
