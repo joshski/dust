@@ -171,6 +171,12 @@ export async function runRepositoryLoop(
     )
 
     if (result === 'no_tasks') {
+      // Check if a task-available signal arrived while we were busy
+      if (repoState.taskAvailablePending) {
+        repoState.taskAvailablePending = false
+        continue
+      }
+
       await new Promise<void>(resolve => {
         repoState.wakeUp = () => {
           repoState.wakeUp = undefined

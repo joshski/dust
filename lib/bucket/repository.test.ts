@@ -370,6 +370,47 @@ describe('runRepositoryLoop', () => {
     expect(logLines.some(l => l.text.includes('No tasks'))).toBe(true)
   })
 
+  test('skips wait when taskAvailablePending is set', async () => {
+    const { spawn } = createAutoResolvingSpawn()
+    const fileSystem = createFileSystemEmulator()
+
+    const repoState: RepositoryState = {
+      repository: { name: 'repo', gitUrl: 'repo' },
+      path: '/tmp/repo',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle' as const,
+      taskAvailablePending: true,
+    }
+
+    let sleepCalled = false
+    const repoDeps = createRepositoryDependencies({
+      spawn,
+      fileSystem,
+      sleep: async () => {
+        sleepCalled = true
+        return new Promise(() => {})
+      },
+    })
+
+    const loopPromise = runRepositoryLoop(repoState, repoDeps)
+
+    // Wait for the loop to process two iterations (pending flag cleared, then no_tasks)
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    // The flag should have been cleared and the loop should have retried
+    expect(repoState.taskAvailablePending).toBeFalsy()
+
+    // Eventually it should reach the wait state (no tasks on second iteration)
+    expect(sleepCalled).toBe(true)
+
+    // Clean up
+    repoState.stopRequested = true
+    repoState.wakeUp?.()
+    await loopPromise
+  })
+
   test('wakeUp resolves the wait immediately', async () => {
     const { spawn } = createAutoResolvingSpawn()
     const fileSystem = createFileSystemEmulator()

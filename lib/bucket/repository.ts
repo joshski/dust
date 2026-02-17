@@ -47,6 +47,7 @@ export interface RepositoryState {
   logBuffer: LogBuffer
   agentStatus: 'idle' | 'busy'
   wakeUp?: () => void
+  taskAvailablePending?: boolean
 }
 
 /**

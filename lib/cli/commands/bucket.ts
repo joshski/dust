@@ -579,7 +579,13 @@ export function connectWebSocket(
                 const repoState = state.repositories.get(
                   (repoData as { name: string }).name
                 )
-                repoState?.wakeUp?.()
+                if (repoState) {
+                  if (repoState.wakeUp) {
+                    repoState.wakeUp()
+                  } else {
+                    repoState.taskAvailablePending = true
+                  }
+                }
               }
             }
           })
@@ -596,7 +602,13 @@ export function connectWebSocket(
         const repoName = message.repository
         if (typeof repoName === 'string') {
           const repoState = state.repositories.get(repoName)
-          repoState?.wakeUp?.()
+          if (repoState) {
+            if (repoState.wakeUp) {
+              repoState.wakeUp()
+            } else {
+              repoState.taskAvailablePending = true
+            }
+          }
         }
       }
     } catch {
