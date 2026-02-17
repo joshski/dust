@@ -78,6 +78,7 @@ export interface LoopWarningEvent {
 export interface LoopStartedEvent {
   type: 'loop.started'
   maxIterations: number
+  agentType?: string
 }
 
 export interface LoopSyncingEvent {
@@ -131,8 +132,10 @@ export function formatLoopEvent(event: LoopEvent): string | null {
   switch (event.type) {
     case 'loop.warning':
       return '⚠️  WARNING: This command skips all permission checks. Only use in a sandbox environment!'
-    case 'loop.started':
-      return `🔄 Starting dust loop claude (max ${event.maxIterations} iterations)...`
+    case 'loop.started': {
+      const agent = event.agentType ?? 'claude'
+      return `🔄 Starting dust loop ${agent} (max ${event.maxIterations} iterations)...`
+    }
     case 'loop.syncing':
       return '🌍 Syncing with remote'
     case 'loop.sync_skipped':
@@ -157,6 +160,7 @@ export interface LoopDependencies {
   run: typeof claudeRun
   sleep: (ms: number) => Promise<void>
   postEvent: PostEventFn
+  agentType?: string
 }
 
 /* v8 ignore start - thin wrapper around fetch, tested via integration */
@@ -278,6 +282,7 @@ export async function runOneIteration(
 ): Promise<IterationResult> {
   const { context } = dependencies
   const { spawn, run } = loopDependencies
+  const agentName = loopDependencies.agentType === 'codex' ? 'Codex' : 'Claude'
 
   const { onRawEvent } = options
 
@@ -307,7 +312,7 @@ Make sure the repository is in a clean state and synced with remote before finis
       type: 'agent-session-started',
       title: 'Resolving git conflict',
       prompt,
-      agentType: 'claude',
+      agentType: loopDependencies.agentType ?? 'claude',
       purpose: 'git-conflict',
       ...getEnvironmentContext(context.cwd),
     })
@@ -326,7 +331,7 @@ Make sure the repository is in a clean state and synced with remote before finis
       const errorMessage =
         error instanceof Error ? error.message : String(error)
       context.stderr(
-        `Claude failed to resolve git pull conflict: ${errorMessage}`
+        `${agentName} failed to resolve git pull conflict: ${errorMessage}`
       )
       onAgentEvent?.({
         type: 'agent-session-ended',
@@ -375,7 +380,7 @@ ${instructions}`
     type: 'agent-session-started',
     title: task.title ?? task.path,
     prompt,
-    agentType: 'claude',
+    agentType: loopDependencies.agentType ?? 'claude',
     purpose: 'task',
     ...getEnvironmentContext(context.cwd),
   })
@@ -392,7 +397,7 @@ ${instructions}`
     return 'ran_claude'
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    context.stderr(`Claude exited with error: ${errorMessage}`)
+    context.stderr(`${agentName} exited with error: ${errorMessage}`)
     onAgentEvent?.({
       type: 'agent-session-ended',
       success: false,
@@ -452,7 +457,11 @@ export async function loopClaude(
   }
 
   onLoopEvent({ type: 'loop.warning' })
-  onLoopEvent({ type: 'loop.started', maxIterations })
+  onLoopEvent({
+    type: 'loop.started',
+    maxIterations,
+    agentType: loopDependencies.agentType,
+  })
   context.stdout('   Press Ctrl+C to stop')
   context.stdout('')
 

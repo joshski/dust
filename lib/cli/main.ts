@@ -20,6 +20,7 @@ import { init } from './commands/init'
 import { lintMarkdown } from './commands/lint-markdown'
 import { list } from './commands/list'
 import { loopClaude } from './commands/loop'
+import { loopCodex } from './commands/loop-codex'
 import { newGoal } from './commands/new-goal'
 import { newIdea } from './commands/new-idea'
 import { newTask } from './commands/new-task'
@@ -63,6 +64,7 @@ export const commandRegistry = {
   'implement task': implementTask,
   'pick task': pickTask,
   'loop claude': loopClaude,
+  'loop codex': loopCodex,
   'pre push': prePush,
   help,
 }

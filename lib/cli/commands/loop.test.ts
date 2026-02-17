@@ -1093,7 +1093,7 @@ describe('loopClaude', () => {
     await loopClaude(dependencies, loopDeps)
 
     expect(context.stdoutLines.join('\n')).toContain(
-      '🤖 Claude session ended (error: Claude crashed)'
+      '🤖 Agent session ended (error: Claude crashed)'
     )
   })
 

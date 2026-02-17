@@ -51,14 +51,21 @@ export function rawEventToAgentEvent(
  * Format an AgentSessionEvent for console output.
  * Returns null for events that should not be displayed.
  */
+function agentDisplayName(agentType?: string): string {
+  if (agentType === 'codex') return 'Codex'
+  return 'Claude'
+}
+
 export function formatAgentEvent(event: AgentSessionEvent): string | null {
   switch (event.type) {
-    case 'agent-session-started':
-      return `🤖 Starting Claude: ${event.title}`
+    case 'agent-session-started': {
+      const name = agentDisplayName(event.agentType)
+      return `🤖 Starting ${name}: ${event.title}`
+    }
     case 'agent-session-ended':
       return event.success
-        ? '🤖 Claude session ended (success)'
-        : `🤖 Claude session ended (error: ${event.error})`
+        ? '🤖 Agent session ended (success)'
+        : `🤖 Agent session ended (error: ${event.error})`
     case 'agent-session-activity':
     case 'claude-event':
       return null
