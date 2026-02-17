@@ -5,6 +5,16 @@ import {
   createFileSystemEmulator,
   type FileSystemEmulator,
 } from '../../test/test-utilities'
+import {
+  type Violation,
+  validateFilename,
+  validateImperativeOpeningSentence,
+  validateOpeningSentence,
+  validateOpeningSentenceLength,
+  validateSemanticLinks,
+  validateTaskHeadings,
+  validateTitleFilenameMatch,
+} from './lint-markdown'
 import type { CommandContext, CommandDependencies } from '../types'
 import { audit, transformAuditContent } from './audit'
 
@@ -396,6 +406,49 @@ describe('audit add command', () => {
     expect(writtenContent).toContain('# Audit: Security Review')
     expect(writtenContent).toContain('Review the codebase for common security')
   })
+})
+
+describe('generated stock audit tasks pass lint rules', () => {
+  function lintTaskFile(filePath: string, content: string): Violation[] {
+    const violations: Violation[] = []
+    const v1 = validateFilename(filePath)
+    if (v1) violations.push(v1)
+    const v2 = validateTitleFilenameMatch(filePath, content)
+    if (v2) violations.push(v2)
+    const v3 = validateOpeningSentence(filePath, content)
+    if (v3) violations.push(v3)
+    const v4 = validateOpeningSentenceLength(filePath, content)
+    if (v4) violations.push(v4)
+    const v5 = validateImperativeOpeningSentence(filePath, content)
+    if (v5) violations.push(v5)
+    violations.push(...validateTaskHeadings(filePath, content))
+    violations.push(...validateSemanticLinks(filePath, content))
+    return violations
+  }
+
+  for (const stockAudit of loadStockAudits()) {
+    test(`${stockAudit.name} produces a valid task file`, async () => {
+      const context = createContextEmulator()
+      const fileSystem = createFileSystemEmulator({
+        project: {
+          '.dust': {
+            config: {},
+            tasks: {},
+          },
+        },
+      })
+
+      const result = await audit({
+        ...createDependencies(context, fileSystem),
+        arguments: [stockAudit.name],
+      })
+
+      expect(result.exitCode).toBe(0)
+      const filePath = `/project/.dust/tasks/audit-${stockAudit.name}.md`
+      const content = fileSystem.writtenFiles.get(filePath) as string
+      expect(lintTaskFile(filePath, content)).toEqual([])
+    })
+  }
 })
 
 describe('transformAuditContent', () => {
