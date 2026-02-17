@@ -21,6 +21,7 @@ import {
   type SendAgentEventFn,
 } from '../cli/commands/loop'
 import type { CommandDependencies } from '../cli/types'
+import { manageGitHooks } from '../cli/commands/agent-shared'
 import { loadSettings } from '../config/settings'
 import type { SendEventFn } from './events'
 import { appendLogLine, createLogLine } from './log-buffer'
@@ -151,6 +152,9 @@ export async function runRepositoryLoop(
     }
   }
 
+  // Install git hooks before starting iterations
+  const hooksInstalled = await manageGitHooks(commandDeps)
+
   while (!repoState.stopRequested) {
     agentSessionId = crypto.randomUUID()
     const result = await runOneIteration(
@@ -159,6 +163,7 @@ export async function runRepositoryLoop(
       onLoopEvent,
       onAgentEvent,
       {
+        hooksInstalled,
         onRawEvent: (rawEvent: Record<string, unknown>) => {
           onAgentEvent(rawEventToAgentEvent(rawEvent))
         },

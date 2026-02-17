@@ -29,6 +29,7 @@ import {
 } from '../../agent-events'
 import { run as claudeRun } from '../../claude/run'
 import type { CommandDependencies, CommandResult } from '../types'
+import { manageGitHooks } from './agent-shared'
 import { buildImplementationInstructions } from './focus'
 import { findUnblockedTasks, type UnblockedTask } from './next'
 
@@ -271,6 +272,7 @@ export type IterationResult =
 
 export interface IterationOptions {
   onRawEvent?: (rawEvent: Record<string, unknown>) => void
+  hooksInstalled?: boolean
 }
 
 export async function runOneIteration(
@@ -284,7 +286,7 @@ export async function runOneIteration(
   const { spawn, run } = loopDependencies
   const agentName = loopDependencies.agentType === 'codex' ? 'Codex' : 'Claude'
 
-  const { onRawEvent } = options
+  const { onRawEvent, hooksInstalled = false } = options
 
   // Step 1: Sync with remote
   onLoopEvent({ type: 'loop.syncing' })
@@ -359,7 +361,7 @@ Make sure the repository is in a clean state and synced with remote before finis
   const { dustCommand, installCommand = 'npm install' } = dependencies.settings
   const instructions = buildImplementationInstructions(
     dustCommand,
-    true,
+    hooksInstalled,
     task.title ?? undefined
   )
   const prompt = `Run \`${installCommand}\` to install dependencies, then implement the following task.
@@ -456,6 +458,9 @@ export async function loopClaude(
     sendWireEvent(event)
   }
 
+  // Install git hooks before starting iterations
+  const hooksInstalled = await manageGitHooks(dependencies)
+
   onLoopEvent({ type: 'loop.warning' })
   onLoopEvent({
     type: 'loop.started',
@@ -467,7 +472,7 @@ export async function loopClaude(
 
   let completedIterations = 0
   // Build iteration options
-  const iterationOptions: IterationOptions = {}
+  const iterationOptions: IterationOptions = { hooksInstalled }
   if (eventsUrl) {
     iterationOptions.onRawEvent = (rawEvent: Record<string, unknown>) => {
       onAgentEvent(rawEventToAgentEvent(rawEvent))
