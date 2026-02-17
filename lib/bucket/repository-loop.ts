@@ -155,28 +155,45 @@ export async function runRepositoryLoop(
   // Install git hooks before starting iterations
   const hooksInstalled = await manageGitHooks(commandDeps)
 
+  const log = (msg: string) =>
+    appendLogLine(repoState.logBuffer, createLogLine(msg, 'stdout'))
+
   while (!repoState.stopRequested) {
     agentSessionId = crypto.randomUUID()
-    const result = await runOneIteration(
-      commandDeps,
-      loopDeps,
-      onLoopEvent,
-      onAgentEvent,
-      {
-        hooksInstalled,
-        onRawEvent: (rawEvent: Record<string, unknown>) => {
-          onAgentEvent(rawEventToAgentEvent(rawEvent))
-        },
-      }
-    )
+    let result: Awaited<ReturnType<typeof runOneIteration>>
+    try {
+      result = await runOneIteration(
+        commandDeps,
+        loopDeps,
+        onLoopEvent,
+        onAgentEvent,
+        {
+          hooksInstalled,
+          onRawEvent: (rawEvent: Record<string, unknown>) => {
+            onAgentEvent(rawEventToAgentEvent(rawEvent))
+          },
+        }
+      )
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
+      appendLogLine(
+        repoState.logBuffer,
+        createLogLine(`Loop error: ${msg}`, 'stderr')
+      )
+      // Wait before retrying to avoid tight error loops
+      await sleep(10000)
+      continue
+    }
 
     if (result === 'no_tasks') {
       // Check if a task-available signal arrived while we were busy
       if (repoState.taskAvailablePending) {
         repoState.taskAvailablePending = false
+        log('Task signal received during iteration, rechecking...')
         continue
       }
 
+      log('Waiting for tasks...')
       await new Promise<void>(resolve => {
         repoState.wakeUp = () => {
           repoState.wakeUp = undefined
