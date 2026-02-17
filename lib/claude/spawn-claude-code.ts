@@ -26,6 +26,7 @@ export async function* spawnClaudeCode(
     sessionId,
     dangerouslySkipPermissions,
     env,
+    signal,
   } = options
 
   const claudeArguments = [
@@ -75,19 +76,7 @@ export async function* spawnClaudeCode(
     stderrOutput += data.toString()
   })
 
-  const rl = dependencies.createInterface({ input: proc.stdout })
-
-  for await (const line of rl) {
-    if (!line.trim()) continue
-
-    try {
-      yield JSON.parse(line) as RawEvent
-    } catch {
-      // Skip malformed JSON lines
-    }
-  }
-
-  await new Promise<void>((resolve, reject) => {
+  const closePromise = new Promise<void>((resolve, reject) => {
     proc.on('close', code => {
       if (code === 0 || code === null) resolve()
       else {
@@ -99,4 +88,34 @@ export async function* spawnClaudeCode(
     })
     proc.on('error', reject)
   })
+
+  const abortHandler = () => {
+    if (!proc.killed) {
+      proc.kill()
+    }
+  }
+
+  if (signal?.aborted) {
+    abortHandler()
+  } else if (signal) {
+    signal.addEventListener('abort', abortHandler, { once: true })
+  }
+
+  const rl = dependencies.createInterface({ input: proc.stdout })
+
+  try {
+    for await (const line of rl) {
+      if (!line.trim()) continue
+
+      try {
+        yield JSON.parse(line) as RawEvent
+      } catch {
+        // Skip malformed JSON lines
+      }
+    }
+    await closePromise
+  } finally {
+    signal?.removeEventListener('abort', abortHandler)
+    ;(rl as { close?: () => void }).close?.()
+  }
 }

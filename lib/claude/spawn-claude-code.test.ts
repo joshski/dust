@@ -262,4 +262,132 @@ describe('spawnClaudeCode', () => {
       'Failed to get stdout from claude process'
     )
   })
+
+  test('kills process immediately when signal is already aborted', async () => {
+    let killCalled = false
+    const controller = new AbortController()
+    controller.abort()
+
+    const dependencies: EventSourceDependencies = {
+      spawn: (() => {
+        return {
+          killed: false,
+          kill() {
+            killCalled = true
+            ;(this as { killed: boolean }).killed = true
+            return true
+          },
+          stdout: {},
+          stderr: { on: () => {} },
+          on(event: string, listener: EventListener) {
+            if (event === 'close') setTimeout(() => listener(0), 0)
+            return this
+          },
+        }
+      }) as unknown as typeof spawn,
+      createInterface: (() => ({
+        close: () => {},
+        async *[Symbol.asyncIterator]() {
+          // no lines
+        },
+      })) as unknown as typeof createInterface,
+    }
+
+    for await (const _ of spawnClaudeCode(
+      'test',
+      { signal: controller.signal },
+      dependencies
+    )) {
+      // consume
+    }
+
+    expect(killCalled).toBe(true)
+  })
+
+  test('registers abort handler and kills process when signal aborts', async () => {
+    let killCalled = false
+    const closeListeners: EventListener[] = []
+    const controller = new AbortController()
+
+    const dependencies: EventSourceDependencies = {
+      spawn: (() => {
+        return {
+          killed: false,
+          kill() {
+            killCalled = true
+            ;(this as { killed: boolean }).killed = true
+            for (const listener of closeListeners) listener(0)
+            return true
+          },
+          stdout: {},
+          stderr: { on: () => {} },
+          on(event: string, listener: EventListener) {
+            if (event === 'close') {
+              closeListeners.push(listener)
+            }
+            return this
+          },
+        }
+      }) as unknown as typeof spawn,
+      createInterface: (() => ({
+        close: () => {},
+        async *[Symbol.asyncIterator]() {
+          await new Promise(resolve => setTimeout(resolve, 0))
+        },
+      })) as unknown as typeof createInterface,
+    }
+
+    const consume = (async () => {
+      for await (const _ of spawnClaudeCode(
+        'test',
+        { signal: controller.signal },
+        dependencies
+      )) {
+        // consume
+      }
+    })()
+
+    controller.abort()
+    await consume
+    expect(killCalled).toBe(true)
+  })
+
+  test('does not call kill when signal aborts an already-killed process', async () => {
+    let killCallCount = 0
+    const controller = new AbortController()
+    controller.abort()
+
+    const dependencies: EventSourceDependencies = {
+      spawn: (() => {
+        return {
+          killed: true,
+          kill() {
+            killCallCount++
+            return true
+          },
+          stdout: {},
+          stderr: { on: () => {} },
+          on(event: string, listener: EventListener) {
+            if (event === 'close') setTimeout(() => listener(0), 0)
+            return this
+          },
+        }
+      }) as unknown as typeof spawn,
+      createInterface: (() => ({
+        close: () => {},
+        async *[Symbol.asyncIterator]() {
+          // no lines
+        },
+      })) as unknown as typeof createInterface,
+    }
+
+    for await (const _ of spawnClaudeCode(
+      'test',
+      { signal: controller.signal },
+      dependencies
+    )) {
+      // consume
+    }
+    expect(killCallCount).toBe(0)
+  })
 })

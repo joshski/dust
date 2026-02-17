@@ -273,6 +273,7 @@ export type IterationResult =
 export interface IterationOptions {
   onRawEvent?: (rawEvent: Record<string, unknown>) => void
   hooksInstalled?: boolean
+  signal?: AbortSignal
 }
 
 export async function runOneIteration(
@@ -286,7 +287,7 @@ export async function runOneIteration(
   const { spawn, run } = loopDependencies
   const agentName = loopDependencies.agentType === 'codex' ? 'Codex' : 'Claude'
 
-  const { onRawEvent, hooksInstalled = false } = options
+  const { onRawEvent, hooksInstalled = false, signal } = options
 
   // Step 1: Sync with remote
   onLoopEvent({ type: 'loop.syncing' })
@@ -324,6 +325,7 @@ Make sure the repository is in a clean state and synced with remote before finis
           cwd: context.cwd,
           dangerouslySkipPermissions: true,
           env: { DUST_UNATTENDED: '1', DUST_SKIP_AGENT: '1' },
+          signal,
         },
         onRawEvent,
       })
@@ -392,6 +394,7 @@ ${instructions}`
         cwd: context.cwd,
         dangerouslySkipPermissions: true,
         env: { DUST_UNATTENDED: '1', DUST_SKIP_AGENT: '1' },
+        signal,
       },
       onRawEvent,
     })

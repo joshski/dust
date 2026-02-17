@@ -53,6 +53,7 @@ export interface RepositoryState {
   agentStatus: 'idle' | 'busy'
   wakeUp?: () => void
   taskAvailablePending?: boolean
+  cancelCurrentIteration?: () => void
 }
 
 /**
@@ -102,6 +103,7 @@ export function startRepositoryLoop(
       repoState.loopPromise = null
       repoState.agentStatus = 'idle'
       repoState.wakeUp = undefined
+      repoState.cancelCurrentIteration = undefined
     })
 }
 
@@ -233,6 +235,7 @@ export async function removeRepositoryFromManager(
   }
 
   repoState.stopRequested = true
+  repoState.cancelCurrentIteration?.()
   repoState.wakeUp?.()
 
   if (repoState.loopPromise) {

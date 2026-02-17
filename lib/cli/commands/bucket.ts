@@ -707,6 +707,7 @@ export async function shutdown(
   // Stop all repository loops
   for (const repoState of state.repositories.values()) {
     repoState.stopRequested = true
+    repoState.cancelCurrentIteration?.()
     repoState.wakeUp?.()
   }
 

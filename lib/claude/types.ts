@@ -57,6 +57,7 @@ export interface SpawnOptions {
   sessionId?: string
   dangerouslySkipPermissions?: boolean
   env?: Record<string, string>
+  signal?: AbortSignal
 }
 
 export type RawEventCallback = (event: RawEvent) => void

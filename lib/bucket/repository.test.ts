@@ -451,6 +451,74 @@ describe('runRepositoryLoop', () => {
     )
   })
 
+  test('cancelCurrentIteration aborts an in-flight agent run', async () => {
+    const { spawn } = createAutoResolvingSpawn()
+    const fileSystem = createFileSystemEmulator({
+      // biome-ignore lint: tmp is the /tmp directory name, not an abbreviation
+      tmp: {
+        repo: {
+          '.dust': {
+            tasks: {
+              'my-task.md': '# My Task\n\nDo something',
+            },
+          },
+        },
+      },
+    })
+
+    const repoState: RepositoryState = {
+      repository: { name: 'repo', gitUrl: 'repo' },
+      path: '/tmp/repo',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle' as const,
+    }
+
+    let signalWasAborted = false
+    let runStartedResolve: (() => void) | undefined
+    const runStarted = new Promise<void>(resolve => {
+      runStartedResolve = resolve
+    })
+
+    const repoDeps = createRepositoryDependencies({
+      spawn,
+      fileSystem,
+      run: async (_prompt, options) => {
+        const signal = (options as { spawnOptions?: { signal?: AbortSignal } })
+          .spawnOptions?.signal
+        runStartedResolve?.()
+        await new Promise<void>(resolve => {
+          if (!signal) return resolve()
+          if (signal.aborted) {
+            signalWasAborted = true
+            return resolve()
+          }
+          signal.addEventListener(
+            'abort',
+            () => {
+              signalWasAborted = true
+              resolve()
+            },
+            { once: true }
+          )
+        })
+        fileSystem.files.delete('/tmp/repo/.dust/tasks/my-task.md')
+      },
+      sleep: async () => {},
+    })
+
+    const loopPromise = runRepositoryLoop(repoState, repoDeps)
+    await runStarted
+
+    repoState.stopRequested = true
+    repoState.cancelCurrentIteration?.()
+    await loopPromise
+
+    expect(signalWasAborted).toBe(true)
+    expect(repoState.cancelCurrentIteration).toBeUndefined()
+  })
+
   test('stale fallback timeout does not clear a newer wait wakeUp handler', async () => {
     const { spawn } = createAutoResolvingSpawn()
     const fileSystem = createFileSystemEmulator()

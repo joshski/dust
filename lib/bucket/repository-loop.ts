@@ -160,6 +160,11 @@ export async function runRepositoryLoop(
 
   while (!repoState.stopRequested) {
     agentSessionId = crypto.randomUUID()
+    const abortController = new AbortController()
+    const cancelCurrentIteration = () => {
+      abortController.abort()
+    }
+    repoState.cancelCurrentIteration = cancelCurrentIteration
     let result: Awaited<ReturnType<typeof runOneIteration>>
     try {
       result = await runOneIteration(
@@ -169,6 +174,7 @@ export async function runRepositoryLoop(
         onAgentEvent,
         {
           hooksInstalled,
+          signal: abortController.signal,
           onRawEvent: (rawEvent: Record<string, unknown>) => {
             onAgentEvent(rawEventToAgentEvent(rawEvent))
           },
@@ -183,6 +189,10 @@ export async function runRepositoryLoop(
       // Wait before retrying to avoid tight error loops
       await sleep(10000)
       continue
+    } finally {
+      if (repoState.cancelCurrentIteration === cancelCurrentIteration) {
+        repoState.cancelCurrentIteration = undefined
+      }
     }
 
     if (result === 'no_tasks') {
