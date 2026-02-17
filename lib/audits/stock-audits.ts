@@ -32,8 +32,7 @@ function agentDeveloperExperience(): string {
 
     ## Goals
 
-    - [Lint Everything](../goals/lint-everything.md)
-    - [Stop the Line](../goals/stop-the-line.md)
+    (none)
 
     ## Blocked By
 
@@ -67,8 +66,7 @@ function deadCode(): string {
 
     ## Goals
 
-    - [Lint Everything](../goals/lint-everything.md)
-    - [Stop the Line](../goals/stop-the-line.md)
+    (none)
 
     ## Blocked By
 
@@ -103,8 +101,7 @@ function factsVerification(): string {
 
     ## Goals
 
-    - [Lint Everything](../goals/lint-everything.md)
-    - [Stop the Line](../goals/stop-the-line.md)
+    (none)
 
     ## Blocked By
 
@@ -138,8 +135,7 @@ function ideasFromCommits(): string {
 
     ## Goals
 
-    - [Lint Everything](../goals/lint-everything.md)
-    - [Stop the Line](../goals/stop-the-line.md)
+    (none)
 
     ## Blocked By
 
@@ -172,8 +168,7 @@ function ideasFromGoals(): string {
 
     ## Goals
 
-    - [Lint Everything](../goals/lint-everything.md)
-    - [Stop the Line](../goals/stop-the-line.md)
+    (none)
 
     ## Blocked By
 
@@ -206,8 +201,7 @@ function performanceReview(): string {
 
     ## Goals
 
-    - [Lint Everything](../goals/lint-everything.md)
-    - [Stop the Line](../goals/stop-the-line.md)
+    (none)
 
     ## Blocked By
 
@@ -241,8 +235,7 @@ function securityReview(): string {
 
     ## Goals
 
-    - [Lint Everything](../goals/lint-everything.md)
-    - [Stop the Line](../goals/stop-the-line.md)
+    (none)
 
     ## Blocked By
 
@@ -277,8 +270,7 @@ function staleIdeas(): string {
 
     ## Goals
 
-    - [Lint Everything](../goals/lint-everything.md)
-    - [Stop the Line](../goals/stop-the-line.md)
+    (none)
 
     ## Blocked By
 
@@ -312,8 +304,7 @@ function testCoverage(): string {
 
     ## Goals
 
-    - [Lint Everything](../goals/lint-everything.md)
-    - [Stop the Line](../goals/stop-the-line.md)
+    (none)
 
     ## Blocked By
 

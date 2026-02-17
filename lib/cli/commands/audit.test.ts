@@ -237,6 +237,20 @@ describe('audit command', () => {
       expect(audit.template).toContain('# ')
     }
   })
+
+  test('stock audits have no goals because they are designed for downstream projects', () => {
+    const audits = loadStockAudits()
+    for (const audit of audits) {
+      const goalsMatch = audit.template.match(
+        /## Goals\n\n([\s\S]*?)(?=\n## |\n*$)/
+      )
+      expect(
+        goalsMatch,
+        `${audit.name} should have a Goals section`
+      ).not.toBeNull()
+      expect(goalsMatch?.[1].trim()).toBe('(none)')
+    }
+  })
 })
 
 describe('audit add command', () => {
