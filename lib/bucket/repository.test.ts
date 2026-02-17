@@ -19,6 +19,7 @@ import {
   removeRepository,
   removeRepositoryFromManager,
   runRepositoryLoop,
+  startRepositoryLoop,
 } from './repository'
 
 interface SpawnCall {
@@ -644,6 +645,38 @@ describe('runRepositoryLoop', () => {
 
     expect(statusDuringRun).toBe('busy')
     expect(repoState.agentStatus).toBe('idle')
+  })
+})
+
+describe('startRepositoryLoop', () => {
+  test('clears loopPromise after loop exits', async () => {
+    const { spawn } = createAutoResolvingSpawn()
+    const fileSystem = createFileSystemEmulator()
+
+    const repoState: RepositoryState = {
+      repository: { name: 'repo', gitUrl: 'repo' },
+      path: '/tmp/repo',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle',
+    }
+
+    const repoDeps = createRepositoryDependencies({
+      spawn,
+      fileSystem,
+      sleep: async () => {
+        repoState.stopRequested = true
+      },
+    })
+
+    startRepositoryLoop(repoState, repoDeps)
+    expect(repoState.loopPromise).not.toBeNull()
+
+    const firstPromise = repoState.loopPromise as Promise<void>
+    await firstPromise
+
+    expect(repoState.loopPromise).toBeNull()
   })
 })
 

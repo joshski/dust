@@ -914,6 +914,63 @@ describe('connectWebSocket', () => {
     expect(wokenUp).toBe(true)
   })
 
+  test('task-available restarts repository loop when it is not running', async () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const state = createInitialState()
+
+    const ws = createMockWebSocket()
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => ws,
+      spawn: (() => {
+        const proc = new EventEmitter() as EventEmitter & {
+          stdout: EventEmitter | null
+          stderr: EventEmitter | null
+        }
+        proc.stdout = new EventEmitter()
+        proc.stderr = new EventEmitter()
+        process.nextTick(() => proc.emit('close', 0))
+        return proc
+      }) as unknown as BucketDependencies['spawn'],
+      sleep: () => new Promise(() => {}),
+    })
+
+    connectWebSocket(
+      'my-token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false
+    )
+
+    const repoState: RepositoryState = {
+      repository: { name: 'owner/repo', gitUrl: 'url' },
+      path: '/tmp/owner/repo',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle',
+    }
+    state.repositories.set('owner/repo', repoState)
+
+    ws.onmessage?.({
+      data: JSON.stringify({
+        type: 'task-available',
+        repository: 'owner/repo',
+      }),
+    })
+
+    await new Promise(resolve => setTimeout(resolve, 30))
+
+    expect(repoState.loopPromise).not.toBeNull()
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Repository loop not running for owner/repo; restarting'
+    )
+  })
+
   test('task-available for unknown repo does not throw', () => {
     const dependencies = createDependencies()
     const state = createInitialState()

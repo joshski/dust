@@ -18,7 +18,12 @@ import {
   formatBucketEvent,
   type SendEventFn,
 } from './events'
-import { createLogBuffer, type LogBuffer } from './log-buffer'
+import {
+  appendLogLine,
+  createLogBuffer,
+  createLogLine,
+  type LogBuffer,
+} from './log-buffer'
 import {
   cloneRepository,
   getRepoPath,
@@ -68,6 +73,36 @@ export interface RepositoryDependencies {
   fileSystem: FileSystem
   sleep: (ms: number) => Promise<void>
   getReposDir: () => string
+}
+
+/**
+ * Start (or restart) the per-repository loop and keep loopPromise state accurate.
+ */
+export function startRepositoryLoop(
+  repoState: RepositoryState,
+  repoDeps: RepositoryDependencies,
+  sendEvent?: SendEventFn,
+  sessionId?: string
+): void {
+  repoState.stopRequested = false
+  repoState.loopPromise = runRepositoryLoop(
+    repoState,
+    repoDeps,
+    sendEvent,
+    sessionId
+  )
+    .catch(error => {
+      const message = error instanceof Error ? error.message : String(error)
+      appendLogLine(
+        repoState.logBuffer,
+        createLogLine(`Repository loop crashed: ${message}`, 'stderr')
+      )
+    })
+    .finally(() => {
+      repoState.loopPromise = null
+      repoState.agentStatus = 'idle'
+      repoState.wakeUp = undefined
+    })
 }
 
 /* v8 ignore start - simple wrappers around native functions */
@@ -180,12 +215,7 @@ export async function addRepository(
   manager.emit(addedEvent)
   context.stdout(formatBucketEvent(addedEvent))
 
-  repoState.loopPromise = runRepositoryLoop(
-    repoState,
-    repoDeps,
-    manager.sendEvent,
-    manager.sessionId
-  )
+  startRepositoryLoop(repoState, repoDeps, manager.sendEvent, manager.sessionId)
 }
 
 /**

@@ -50,6 +50,7 @@ import {
   type RepositoryDependencies,
   type RepositoryState,
   removeRepository,
+  startRepositoryLoop,
 } from '../../bucket/repository'
 import {
   addRepository as addRepoToUI,
@@ -313,6 +314,42 @@ function toRepositoryDependencies(
     fileSystem,
     sleep: bucketDeps.sleep,
     getReposDir: bucketDeps.getReposDir,
+  }
+}
+
+function ensureRepositoryLoopRunning(
+  repoState: RepositoryState,
+  state: BucketState,
+  repoDeps: RepositoryDependencies,
+  context: CommandDependencies['context'],
+  useTUI: boolean
+): void {
+  // If wakeUp is set, the loop is already alive and waiting for tasks.
+  if (repoState.loopPromise || repoState.wakeUp || repoState.stopRequested) {
+    return
+  }
+
+  logMessage(
+    state,
+    context,
+    useTUI,
+    `Repository loop not running for ${repoState.repository.name}; restarting`
+  )
+  startRepositoryLoop(repoState, repoDeps, state.sendEvent, state.sessionId)
+}
+
+function signalTaskAvailable(
+  repoState: RepositoryState,
+  state: BucketState,
+  repoDeps: RepositoryDependencies,
+  context: CommandDependencies['context'],
+  useTUI: boolean
+): void {
+  ensureRepositoryLoopRunning(repoState, state, repoDeps, context, useTUI)
+  if (repoState.wakeUp) {
+    repoState.wakeUp()
+  } else {
+    repoState.taskAvailablePending = true
   }
 }
 
@@ -586,11 +623,13 @@ export function connectWebSocket(
                   (repoData as { name: string }).name
                 )
                 if (repoState) {
-                  if (repoState.wakeUp) {
-                    repoState.wakeUp()
-                  } else {
-                    repoState.taskAvailablePending = true
-                  }
+                  signalTaskAvailable(
+                    repoState,
+                    state,
+                    repoDeps,
+                    context,
+                    useTUI
+                  )
                 }
               }
             }
@@ -607,6 +646,10 @@ export function connectWebSocket(
       } else if (message.type === 'task-available') {
         const repoName = message.repository
         if (typeof repoName === 'string') {
+          const repoDeps = toRepositoryDependencies(
+            bucketDependencies,
+            fileSystem
+          )
           logMessage(
             state,
             context,
@@ -615,11 +658,7 @@ export function connectWebSocket(
           )
           const repoState = state.repositories.get(repoName)
           if (repoState) {
-            if (repoState.wakeUp) {
-              repoState.wakeUp()
-            } else {
-              repoState.taskAvailablePending = true
-            }
+            signalTaskAvailable(repoState, state, repoDeps, context, useTUI)
           } else {
             logMessage(
               state,
