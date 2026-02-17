@@ -152,7 +152,7 @@ describe('spawnCodex', () => {
     expect(capturedArguments).toContain('exec')
     expect(capturedArguments).toContain('my prompt')
     expect(capturedArguments).toContain('--json')
-    expect(capturedArguments).toContain('--full-auto')
+    expect(capturedArguments).toContain('--yolo')
     expect(capturedArguments).toContain('--cd')
     expect(capturedArguments).toContain('/some/path')
   })

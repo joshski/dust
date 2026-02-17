@@ -19,7 +19,7 @@ export async function* spawnCodex(
 ): AsyncGenerator<RawEvent> {
   const { cwd, env } = options
 
-  const codexArguments = ['exec', prompt, '--json', '--full-auto']
+  const codexArguments = ['exec', prompt, '--json', '--yolo']
 
   if (cwd) {
     codexArguments.push('--cd', cwd)
