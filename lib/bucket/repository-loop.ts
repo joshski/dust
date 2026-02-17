@@ -195,13 +195,19 @@ export async function runRepositoryLoop(
 
       log('Waiting for tasks...')
       await new Promise<void>(resolve => {
-        repoState.wakeUp = () => {
+        const wakeUpForThisWait = () => {
+          if (repoState.wakeUp !== wakeUpForThisWait) {
+            return
+          }
           repoState.wakeUp = undefined
           resolve()
         }
+        repoState.wakeUp = wakeUpForThisWait
         // Fallback timeout so the loop isn't stuck forever if no signal arrives
         sleep(FALLBACK_TIMEOUT_MS).then(() => {
-          if (repoState.wakeUp) {
+          // Only resolve if this exact wait is still active. Older timeout
+          // callbacks must not clobber a newer wait's wakeUp handler.
+          if (repoState.wakeUp === wakeUpForThisWait) {
             repoState.wakeUp = undefined
             resolve()
           }

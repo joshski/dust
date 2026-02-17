@@ -451,6 +451,56 @@ describe('runRepositoryLoop', () => {
     )
   })
 
+  test('stale fallback timeout does not clear a newer wait wakeUp handler', async () => {
+    const { spawn } = createAutoResolvingSpawn()
+    const fileSystem = createFileSystemEmulator()
+
+    const repoState: RepositoryState = {
+      repository: { name: 'repo', gitUrl: 'repo' },
+      path: '/tmp/repo',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle' as const,
+    }
+
+    const sleepResolvers: Array<() => void> = []
+    const repoDeps = createRepositoryDependencies({
+      spawn,
+      fileSystem,
+      sleep: () =>
+        new Promise<void>(resolve => {
+          sleepResolvers.push(resolve)
+        }),
+    })
+
+    const loopPromise = runRepositoryLoop(repoState, repoDeps)
+
+    // First wait state
+    await new Promise(resolve => setTimeout(resolve, 50))
+    const firstWakeUp = repoState.wakeUp
+    expect(firstWakeUp).toBeDefined()
+    expect(sleepResolvers.length).toBeGreaterThanOrEqual(1)
+
+    // Move into second wait state
+    firstWakeUp?.()
+    await new Promise(resolve => setTimeout(resolve, 50))
+    const secondWakeUp = repoState.wakeUp
+    expect(secondWakeUp).toBeDefined()
+    expect(sleepResolvers.length).toBeGreaterThanOrEqual(2)
+
+    // Resolve the first wait's timeout after second wait is active.
+    // This previously cleared the second wakeUp and deadlocked the loop.
+    sleepResolvers[0]?.()
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(repoState.wakeUp).toBe(secondWakeUp)
+
+    repoState.stopRequested = true
+    repoState.wakeUp?.()
+    await loopPromise
+  })
+
   test('sends agent events over WebSocket when tasks are found and claude runs', async () => {
     const { spawn } = createAutoResolvingSpawn()
 
