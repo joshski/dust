@@ -413,34 +413,34 @@ describe('createShellRunner', () => {
     const promise = runner.run('cmd', '/')
     mockProc.stdout.emit('data', Buffer.from('stdout output\n'))
     mockProc.stderr.emit('data', Buffer.from('stderr output\n'))
-    mockProc.emit('exit', 0)
+    mockProc.emit('close', 0)
 
     const result = await promise
     expect(result.exitCode).toBe(0)
     expect(result.output).toBe('stdout output\nstderr output\n')
   })
 
-  test('resolves with exit code from exit event', async () => {
+  test('resolves with exit code from close event', async () => {
     const mockProc = createMockChildProcess()
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
 
     const promise = runner.run('cmd', '/')
-    mockProc.emit('exit', 42)
+    mockProc.emit('close', 42)
 
     const result = await promise
     expect(result.exitCode).toBe(42)
   })
 
-  test('resolves with 1 when exit event has null code', async () => {
+  test('resolves with 1 when close event has null code', async () => {
     const mockProc = createMockChildProcess()
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
 
     const promise = runner.run('cmd', '/')
-    mockProc.emit('exit', null)
+    mockProc.emit('close', null)
 
     const result = await promise
     expect(result.exitCode).toBe(1)
@@ -520,7 +520,7 @@ describe('createShellRunner', () => {
 
     const promise = runner.run('cmd', '/', 5000)
     mockProc.stdout.emit('data', Buffer.from('output\n'))
-    mockProc.emit('exit', 0)
+    mockProc.emit('close', 0)
 
     const result = await promise
     expect(result.exitCode).toBe(0)
@@ -540,7 +540,7 @@ describe('createShellRunner', () => {
     const runner = createShellRunner(mockSpawn)
 
     const promise = runner.run('cmd', '/')
-    mockProc.emit('exit', 0)
+    mockProc.emit('close', 0)
 
     const result = await promise
     expect(result.exitCode).toBe(0)
