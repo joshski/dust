@@ -1,110 +1,99 @@
 # Automatically enable agent when running `dust bucket` from repo clone
 
-When `dust bucket` clones a repository, automatically configure that repository so agents receive proper context when working in it.
+When `dust bucket` connects to the dustbucket WebSocket server, it should send a handshake message with environment details. The server can use this to automatically configure the agent's repository assignments.
 
 ## Current State
 
-When `dust bucket` runs, it clones repositories to `~/.dust/repos/{safe-repo-name}` and starts repository loops that invoke Claude Code with `DUST_SKIP_AGENT: '1'`. This environment variable causes `dust agent` to skip its greeting and discovery behavior (see `lib/cli/commands/agent.ts:35-40`).
+When `dust bucket` establishes a WebSocket connection (`lib/cli/commands/bucket.ts:477-531`), the client sends no initial message. The server sends a `repository-list` message to which the client responds by cloning and managing those repositories. There is no mechanism for the client to tell the server about its own environment.
 
-The agent is invoked via `dust loop claude` which spawns Claude Code as a subprocess. The subprocess receives task instructions via `buildImplementationInstructions()` in `lib/cli/commands/focus.ts`, which includes steps like running `dust check` and implementing the task.
+The `ws.onopen` handler (line 522) currently only updates local state and logs "Connected to dustbucket" — no data is sent to the server.
 
-However, the cloned repositories don't have:
-- Any special AGENTS.md or CLAUDE.md files indicating dust is available (unless the source repo already has them)
-- Configured git hooks for pre-commit/pre-push validation
-- Any indication that they're running in bucket context vs. interactive context
+## Proposed Change
 
-The `manageGitHooks()` function (used by `dust agent`) installs git hooks when an agent session starts, but this doesn't happen for bucket-cloned repos since `DUST_SKIP_AGENT` bypasses the agent greeting flow.
+On `ws.onopen`, send a message to the server with:
+
+```typescript
+{
+  type: 'agent-connect'
+  platform: string   // e.g. "darwin 24.6.0"
+  gitRemote?: string // e.g. "git@github.com:joshski/dust.git"
+}
+```
+
+The `platform` is already computed by `getEnvironmentContext()` in `lib/cli/commands/loop.ts` as `${os.platform()} ${os.release()}`.
+
+The `gitRemote` is the URL of the `origin` remote in the current working directory (from `git remote get-url origin`). If no git remote is configured, the field is omitted.
 
 ## Motivation
 
-- **Agent context**: When the original repository has AGENTS.md/CLAUDE.md with dust instructions, the cloned repo inherits these. But if the original repo doesn't have dust configured, agents working in bucket context don't know dust is available.
+When a developer runs `dust bucket` from within a git repository clone, the server can infer which repository to assign to this agent without requiring manual configuration. By knowing the git remote URL and OS, the server can:
 
-- **Git hooks**: The pre-commit and pre-push hooks that prevent broken commits don't get installed in bucket-cloned repos. While the loop infrastructure handles some validation, git hooks provide an additional safety layer.
-
-- **Bucket-specific behavior**: Agents might benefit from knowing they're running in unattended bucket context vs. interactive context. This could affect how they handle errors, format output, or request clarification.
-
-## Related Code
-
-- `lib/bucket/repository.ts:56-69` - `addRepository()` clones repos and starts repository loops
-- `lib/bucket/repository.ts:26-29` - `getRepoPath()` constructs the clone path
-- `lib/cli/commands/agent.ts:35-40` - `DUST_SKIP_AGENT` check
-- `lib/cli/commands/loop.ts:326,394` - Environment variables passed to Claude subprocess
-- `lib/hooks/git-hooks.ts` - `manageGitHooks()` installs git hooks
+- Match the agent to the correct repository
+- Tailor behavior to the client's operating system
 
 ## Related Goals
 
 - [Agent Autonomy](../goals/agent-autonomy.md) - Enabling agents to work effectively without human intervention
 - [Easy Adoption](../goals/easy-adoption.md) - Reducing friction when starting with dust
-- [Ideal Agent Developer Experience](../goals/ideal-agent-developer-experience.md) - The agent's development environment should be excellent
 
 ## Open Questions
 
-### What exactly should "enable agent" mean in bucket context?
+### How should git remote be detected?
 
-#### Install git hooks in cloned repositories
+#### Use `git remote get-url origin`
 
-When a repository is cloned for bucket, run `manageGitHooks()` to install pre-commit and pre-push hooks. This adds a safety layer for commits made by the agent.
+Run `git remote get-url origin` (or `git remote get-url --all origin`) in the current working directory. If this fails (no git repo, no origin remote), omit `gitRemote` from the message.
 
-#### Add AGENTS.md/CLAUDE.md if missing
+#### Parse `.git/config` directly
 
-If the cloned repository doesn't have dust instruction files, create them with the standard instruction to run `npx dust agent`. However, this modifies the working tree, which could interfere with clean git operations.
+Read `.git/config` to extract the remote URL without spawning a subprocess. More portable but requires manual parsing.
 
-#### Set environment variables indicating bucket context
+#### Support multiple remotes
 
-Pass additional environment variables to the Claude subprocess (e.g., `DUST_BUCKET_CONTEXT=1`) so agents can detect they're running in bucket mode and adjust behavior accordingly.
+Send all configured remote URLs, not just `origin`. The server could match on any of them.
 
-#### Do nothing beyond current behavior
+### When should the `agent-connect` message be sent?
 
-The current approach already works: agents receive task instructions, run commands, and implement changes. Explicit "enablement" may be unnecessary complexity.
+#### On initial `onopen` only
 
-### Should git hooks be installed, and if so, when?
+Send once when the connection first opens. On reconnection, send again (since the server may have restarted and lost state).
 
-#### Install hooks at clone time
+#### On every reconnection
 
-When `addRepository()` clones a repo, immediately run `manageGitHooks()`. This ensures hooks are present before any agent work begins.
+Always send on `onopen`, whether initial connection or reconnect. This is simpler and ensures server state is always refreshed.
 
-#### Install hooks before first agent invocation
+### What if the current directory is not a git repository?
 
-Delay hook installation until just before spawning the first Claude subprocess for a repository. This is similar to when `dust agent` installs hooks in interactive mode.
+#### Omit `gitRemote`
 
-#### Don't install hooks for bucket repos
+Send the message without `gitRemote`. The server proceeds with manual repository configuration.
 
-The loop infrastructure already handles validation. Adding git hooks may slow down commits without providing much benefit in unattended context.
+#### Omit the field entirely
 
-### How should bucket context be communicated to agents?
+Same as above but explicitly: the field is optional in the message type.
 
-#### Dedicated environment variable (e.g., `DUST_BUCKET_CONTEXT=1`)
+### Should the message type be `agent-connect` or something else?
 
-Agents can check this variable and adjust behavior. For example, they might be more conservative about requesting human input or more aggressive about error recovery.
+The name should reflect that this is an initial greeting from the client, not a repository event.
 
-#### Agent-specific config file in cloned repo
+#### Use `agent-connect`
 
-Create a `.dust/config/agents/bucket.md` file in cloned repos with bucket-specific instructions. This would be read by agents as part of their normal context loading.
+Clear and descriptive. Matches the pattern of other typed messages in the protocol.
 
-#### No explicit signaling
+#### Use `client-hello`
 
-Agents don't need to know they're in bucket context. The `DUST_UNATTENDED: '1'` environment variable already indicates they shouldn't expect human interaction.
+Follows common WebSocket handshake conventions.
 
-### Should changes be made to the cloned repo's working tree?
+#### Use `connect`
 
-#### Yes, it's acceptable to modify working tree
+Short and simple, though less specific about who is connecting.
 
-Creating files like AGENTS.md or `.dust/config/` is fine since these are git-ignored or the changes are expected to be committed.
+### Where in bucket.ts should the send occur?
 
-#### No, keep working tree clean
+#### In `connectWebSocket()` `ws.onopen` handler
 
-Modifications to the working tree could cause unexpected behavior with git operations or confuse agents about repo state. Only modify the git config (hooks) or environment.
+Send after emitting `bucket.connected` (line 523). This is the natural place since it's where the connection is acknowledged.
 
-### Should this behavior apply to all bucket clones or be configurable?
+#### In a new `sendHandshake()` function
 
-#### Apply to all bucket clones
-
-Simpler implementation and consistent behavior across all repositories managed by bucket.
-
-#### Make it configurable per-repository
-
-The server could send repository metadata indicating whether to enable agent features. This allows different behavior for different repositories.
-
-#### Make it a global bucket configuration
-
-Add a setting like `DUST_BUCKET_ENABLE_AGENT_SETUP=1` that applies to all repositories when set.
+Extract into a named function for clarity and testability.
