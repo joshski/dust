@@ -1,6 +1,10 @@
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import { stubEnv } from '../test/test-utilities'
 import { _reset, createLogger, isEnabled } from './index'
+
+beforeEach(() => {
+  _reset()
+})
 
 afterEach(() => {
   _reset()
