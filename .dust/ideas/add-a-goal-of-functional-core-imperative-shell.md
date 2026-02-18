@@ -1,6 +1,6 @@
 # Add a goal of "Functional Core, Imperative Shell"
 
-Introduce a goal that explicitly names the [Functional Core, Imperative Shell](https://www.destroyallsoftware.com/screencasts/catalog/functional-core-imperative-shell) pattern as a design target for the codebase. The pattern separates code into a pure, testable "functional core" (values in, values out, no side effects) and a thin "imperative shell" that handles I/O and wires things together.
+Explicitly name the Functional Core, Imperative Shell pattern as a design target for the codebase. The [pattern](https://www.destroyallsoftware.com/screencasts/catalog/functional-core-imperative-shell) separates code into a pure, testable "functional core" (values in, values out, no side effects) and a thin "imperative shell" that handles I/O and wires things together.
 
 ## Codebase Context
 
@@ -39,14 +39,50 @@ The new goal would give a name to the overarching pattern that unifies these exi
 
 It could be a sub-goal of [Decoupled Code](../goals/decoupled-code.md), a sibling alongside it under [Make Changes with Confidence](../goals/make-changes-with-confidence.md), or a parent of Decoupled Code and Dependency Injection. Its positioning affects how existing goals relate to it.
 
+#### Sub-goal of Decoupled Code
+
+Positions it as a specific technique for achieving decoupling, nested under the broader goal.
+
+#### Sibling under Make Changes with Confidence
+
+Treats it as a peer to Decoupled Code, giving it equal prominence in the goal hierarchy.
+
+#### Parent of Decoupled Code and Dependency Injection
+
+Makes it the overarching pattern that unifies the existing goals as specific instances.
+
 ### Should this be a goal or a principle applied to existing goals?
 
 The constituent ideas (dependency injection, pure functions, thin shells) are already goals. Adding an explicit goal risks redundancy. Alternatively, this could be documented as a named pattern referenced by existing goals rather than a new node in the goal tree.
 
+#### Add as a new goal in the hierarchy
+
+Creates a dedicated goal node, making the pattern explicitly trackable and discoverable.
+
+#### Document as a named pattern referenced by existing goals
+
+Avoids redundancy by referencing the pattern from existing goals without adding a new node.
+
 ### How strictly should "functional core" be interpreted?
 
-Strict interpretation means all business logic returns values and never performs I/O. Pragmatic interpretation allows injected dependencies (like `FileSystem`) in core logic. The codebase currently uses the pragmatic approach — is that sufficient, or should we push further towards pure return values?
+Strict interpretation means all business logic returns values and never performs I/O. Pragmatic interpretation allows injected dependencies (like `FileSystem`) in core logic. The codebase currently uses the pragmatic approach.
+
+#### Strict: all business logic returns values, never performs I/O
+
+Maximises testability and composability but may require significant refactoring of current code.
+
+#### Pragmatic: allow injected dependencies in core logic
+
+Matches the current approach. Easier to adopt incrementally but the boundary between core and shell is less clear.
 
 ### What is the boundary between core and shell for commands?
 
-Currently each command function receives `CommandDependencies` and interleaves decisions with I/O. Should commands be refactored to return descriptions of actions (like a command pattern) that the shell then executes? This would be a significant architectural shift.
+Currently each command function receives `CommandDependencies` and interleaves decisions with I/O. Should commands be refactored to return descriptions of actions (like a command pattern) that the shell then executes?
+
+#### Keep current approach: commands receive injected dependencies
+
+No architectural change needed. Dependencies are already injected, providing reasonable testability.
+
+#### Refactor to return action descriptions that the shell executes
+
+A significant shift towards pure functions, but increases complexity and indirection.

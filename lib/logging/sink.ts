@@ -14,7 +14,7 @@ export type WriteFn = (line: string) => void
 /* v8 ignore start - thin wrapper around fs, tested via integration */
 let logPath: string | undefined
 let ready = false
-let scope = 'debug'
+let scope = process.env.DEBUG_LOG_SCOPE || 'debug'
 
 function ensureLogFile(): string | undefined {
   if (ready) return logPath
@@ -38,6 +38,7 @@ function ensureLogFile(): string | undefined {
  */
 export function setLogScope(name: string): void {
   scope = name
+  process.env.DEBUG_LOG_SCOPE = name
   // Reset so the next write picks up the new filename
   logPath = undefined
   ready = false
@@ -64,5 +65,6 @@ export function _resetSink(): void {
   logPath = undefined
   ready = false
   scope = 'debug'
+  delete process.env.DEBUG_LOG_SCOPE
 }
 /* v8 ignore stop */
