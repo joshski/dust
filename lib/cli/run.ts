@@ -10,6 +10,12 @@ import { wireEntry } from './wire'
 
 await wireEntry(
   { existsSync, statSync, readFile, writeFile, mkdir, readdir, chmod },
-  { argv: process.argv, cwd: () => process.cwd(), exit: process.exit },
+  {
+    argv: process.argv,
+    cwd: () => process.cwd(),
+    exit: (code: number) => {
+      process.exitCode = code
+    },
+  },
   { log: console.log, error: console.error }
 )

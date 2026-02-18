@@ -78,6 +78,9 @@ function runBufferedProcess(
       timer = setTimeout(() => {
         resolved = true
         proc.kill()
+        proc.stdout?.destroy()
+        proc.stderr?.destroy()
+        proc.unref()
         resolve({
           exitCode: 1,
           output: chunks.join(''),

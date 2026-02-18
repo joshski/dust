@@ -1,5 +1,6 @@
 import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
+import { PassThrough } from 'node:stream'
 import { describe, expect, test, vi } from 'vitest'
 import {
   createContextEmulator,
@@ -386,14 +387,23 @@ describe('check command when no checks configured', () => {
   })
 })
 
+function createMockChildProcess(options?: { kill?: () => void }) {
+  const proc = new EventEmitter() as EventEmitter & {
+    stdout: PassThrough
+    stderr: PassThrough
+    kill: () => void
+    unref: () => void
+  }
+  proc.stdout = new PassThrough()
+  proc.stderr = new PassThrough()
+  proc.kill = options?.kill ?? (() => {})
+  proc.unref = () => {}
+  return proc
+}
+
 describe('createShellRunner', () => {
   test('captures stdout and stderr', async () => {
-    const mockProc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter
-      stderr: EventEmitter
-    }
-    mockProc.stdout = new EventEmitter()
-    mockProc.stderr = new EventEmitter()
+    const mockProc = createMockChildProcess()
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
@@ -409,12 +419,7 @@ describe('createShellRunner', () => {
   })
 
   test('resolves with exit code from close event', async () => {
-    const mockProc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter
-      stderr: EventEmitter
-    }
-    mockProc.stdout = new EventEmitter()
-    mockProc.stderr = new EventEmitter()
+    const mockProc = createMockChildProcess()
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
@@ -427,12 +432,7 @@ describe('createShellRunner', () => {
   })
 
   test('resolves with 1 when close event has null code', async () => {
-    const mockProc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter
-      stderr: EventEmitter
-    }
-    mockProc.stdout = new EventEmitter()
-    mockProc.stderr = new EventEmitter()
+    const mockProc = createMockChildProcess()
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
@@ -445,12 +445,7 @@ describe('createShellRunner', () => {
   })
 
   test('resolves with 1 on error', async () => {
-    const mockProc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter
-      stderr: EventEmitter
-    }
-    mockProc.stdout = new EventEmitter()
-    mockProc.stderr = new EventEmitter()
+    const mockProc = createMockChildProcess()
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
@@ -464,17 +459,12 @@ describe('createShellRunner', () => {
   })
 
   test('kills process and resolves with timedOut when timeout elapses', async () => {
-    const mockProc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter
-      stderr: EventEmitter
-      kill: () => void
-    }
-    mockProc.stdout = new EventEmitter()
-    mockProc.stderr = new EventEmitter()
     let killed = false
-    mockProc.kill = () => {
-      killed = true
-    }
+    const mockProc = createMockChildProcess({
+      kill: () => {
+        killed = true
+      },
+    })
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
@@ -490,14 +480,7 @@ describe('createShellRunner', () => {
   })
 
   test('ignores close event after timeout has already resolved', async () => {
-    const mockProc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter
-      stderr: EventEmitter
-      kill: () => void
-    }
-    mockProc.stdout = new EventEmitter()
-    mockProc.stderr = new EventEmitter()
-    mockProc.kill = () => {}
+    const mockProc = createMockChildProcess()
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
@@ -514,14 +497,7 @@ describe('createShellRunner', () => {
   })
 
   test('ignores error event after timeout has already resolved', async () => {
-    const mockProc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter
-      stderr: EventEmitter
-      kill: () => void
-    }
-    mockProc.stdout = new EventEmitter()
-    mockProc.stderr = new EventEmitter()
-    mockProc.kill = () => {}
+    const mockProc = createMockChildProcess()
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
@@ -536,14 +512,7 @@ describe('createShellRunner', () => {
   })
 
   test('clears timeout timer on normal completion', async () => {
-    const mockProc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter
-      stderr: EventEmitter
-      kill: () => void
-    }
-    mockProc.stdout = new EventEmitter()
-    mockProc.stderr = new EventEmitter()
-    mockProc.kill = () => {}
+    const mockProc = createMockChildProcess()
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
