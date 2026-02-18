@@ -19,7 +19,7 @@ export type AgentType = Agent['type']
  * Detection priority:
  * 1. CLAUDECODE + CLAUDE_CODE_REMOTE → Claude Code Web
  * 2. CLAUDECODE alone → Claude Code
- * 3. CODEX_HOME → Codex
+ * 3. CODEX_HOME or CODEX_CI → Codex
  * 4. Fallback → unknown Agent
  */
 export function detectAgent(env: NodeJS.ProcessEnv = process.env): Agent {
@@ -29,7 +29,7 @@ export function detectAgent(env: NodeJS.ProcessEnv = process.env): Agent {
     }
     return { type: 'claude-code', name: 'Claude Code' }
   }
-  if (env.CODEX_HOME) {
+  if (env.CODEX_HOME || env.CODEX_CI) {
     return { type: 'codex', name: 'Codex' }
   }
   return { type: 'unknown', name: 'Agent' }

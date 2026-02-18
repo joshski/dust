@@ -23,6 +23,11 @@ describe('detectAgent', () => {
     expect(detectAgent(env)).toEqual({ type: 'codex', name: 'Codex' })
   })
 
+  test('detects Codex when CODEX_CI is set', () => {
+    const env = { CODEX_CI: '1' }
+    expect(detectAgent(env)).toEqual({ type: 'codex', name: 'Codex' })
+  })
+
   test('falls back to unknown Agent when no environment variables are set', () => {
     const env = {}
     expect(detectAgent(env)).toEqual({ type: 'unknown', name: 'Agent' })
@@ -30,6 +35,14 @@ describe('detectAgent', () => {
 
   test('prioritizes Claude Code over Codex when both are set', () => {
     const env = { CLAUDECODE: '1', CODEX_HOME: '/home/user/.codex' }
+    expect(detectAgent(env)).toEqual({
+      type: 'claude-code',
+      name: 'Claude Code',
+    })
+  })
+
+  test('prioritizes Claude Code over Codex when CLAUDECODE and CODEX_CI are set', () => {
+    const env = { CLAUDECODE: '1', CODEX_CI: '1' }
     expect(detectAgent(env)).toEqual({
       type: 'claude-code',
       name: 'Claude Code',

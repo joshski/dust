@@ -35,6 +35,13 @@ describe('templateVariables', () => {
     expect(vars.agentName).toBe('Codex')
   })
 
+  test('includes detected agent name for Codex when CODEX_CI is set', () => {
+    const vars = templateVariables(defaultSettings, false, {
+      CODEX_CI: '1',
+    })
+    expect(vars.agentName).toBe('Codex')
+  })
+
   test('isClaudeCodeWeb is true when agent is Claude Code Web', () => {
     const vars = templateVariables(defaultSettings, false, {
       CLAUDECODE: '1',
@@ -51,6 +58,13 @@ describe('templateVariables', () => {
   test('isClaudeCodeWeb is false when agent is Codex', () => {
     const vars = templateVariables(defaultSettings, false, {
       CODEX_HOME: '/home/user/.codex',
+    })
+    expect(vars.isClaudeCodeWeb).toBe(false)
+  })
+
+  test('isClaudeCodeWeb is false when agent is Codex via CODEX_CI', () => {
+    const vars = templateVariables(defaultSettings, false, {
+      CODEX_CI: '1',
     })
     expect(vars.isClaudeCodeWeb).toBe(false)
   })
