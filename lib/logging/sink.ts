@@ -1,7 +1,9 @@
 /**
  * File-based log sink — the imperative shell for debug logging.
  *
- * Lazily creates `<cwd>/log/dust/debug.log` and appends lines to it.
+ * Lazily creates `<cwd>/log/dust/<scope>.log` and appends lines to it.
+ * The scope defaults to "debug" but can be changed via setLogScope()
+ * so that different commands write to separate log files.
  */
 
 import { appendFileSync, mkdirSync } from 'node:fs'
@@ -12,19 +14,33 @@ export type WriteFn = (line: string) => void
 /* v8 ignore start - thin wrapper around fs, tested via integration */
 let logPath: string | undefined
 let ready = false
+let scope = 'debug'
 
 function ensureLogFile(): string | undefined {
   if (ready) return logPath
   ready = true
 
   const dir = join(process.cwd(), 'log', 'dust')
-  logPath = join(dir, 'debug.log')
+  logPath = join(dir, `${scope}.log`)
   try {
     mkdirSync(dir, { recursive: true })
   } catch {
     logPath = undefined
   }
   return logPath
+}
+
+/**
+ * Set the log scope, which determines the output filename.
+ * Must be called before any logger writes (i.e. at command startup).
+ *
+ * For example, `setLogScope('loop')` writes to `log/dust/loop.log`.
+ */
+export function setLogScope(name: string): void {
+  scope = name
+  // Reset so the next write picks up the new filename
+  logPath = undefined
+  ready = false
 }
 
 /**
@@ -47,5 +63,6 @@ export const writeToFile: WriteFn = (line: string) => {
 export function _resetSink(): void {
   logPath = undefined
   ready = false
+  scope = 'debug'
 }
 /* v8 ignore stop */

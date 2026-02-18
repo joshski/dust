@@ -2,7 +2,11 @@
  * Minimal debug logging framework.
  *
  * When the DEBUG environment variable is set, matching loggers write
- * timestamped lines to `<cwd>/log/dust/debug.log`.
+ * timestamped lines to `<cwd>/log/dust/<scope>.log`.
+ *
+ * The scope defaults to "debug" but can be changed via setLogScope()
+ * so that different commands (e.g. `loop`, `check`, `bucket`) write
+ * to separate log files.
  *
  * DEBUG is a comma-separated list of match expressions. Each expression
  * can contain `*` as a wildcard (matches any sequence of characters).
@@ -23,6 +27,8 @@
 import { formatLine, matchesAny, parsePatterns } from './match'
 import { type WriteFn, writeToFile } from './sink'
 
+export { setLogScope } from './sink'
+
 export type LogFn = (...messages: unknown[]) => void
 
 let patterns: RegExp[] | null = null
@@ -37,7 +43,7 @@ function init(): void {
 
 /**
  * Create a named logger function. The returned function writes to
- * `log/dust/debug.log` when the logger name matches the DEBUG patterns.
+ * `log/dust/<scope>.log` when the logger name matches the DEBUG patterns.
  *
  * @param name - Logger name, e.g. `dust.bucket.loop`
  * @param write - Override the default file writer (for testing)
