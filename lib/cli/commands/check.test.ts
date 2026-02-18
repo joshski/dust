@@ -387,16 +387,18 @@ describe('check command when no checks configured', () => {
   })
 })
 
-function createMockChildProcess(options?: { kill?: () => void }) {
+function createMockChildProcess(options?: { pid?: number }) {
   const proc = new EventEmitter() as EventEmitter & {
+    pid: number | undefined
     stdout: PassThrough
     stderr: PassThrough
     kill: () => void
     unref: () => void
   }
+  proc.pid = options?.pid
   proc.stdout = new PassThrough()
   proc.stderr = new PassThrough()
-  proc.kill = options?.kill ?? (() => {})
+  proc.kill = () => {}
   proc.unref = () => {}
   return proc
 }
@@ -411,34 +413,34 @@ describe('createShellRunner', () => {
     const promise = runner.run('cmd', '/')
     mockProc.stdout.emit('data', Buffer.from('stdout output\n'))
     mockProc.stderr.emit('data', Buffer.from('stderr output\n'))
-    mockProc.emit('close', 0)
+    mockProc.emit('exit', 0)
 
     const result = await promise
     expect(result.exitCode).toBe(0)
     expect(result.output).toBe('stdout output\nstderr output\n')
   })
 
-  test('resolves with exit code from close event', async () => {
+  test('resolves with exit code from exit event', async () => {
     const mockProc = createMockChildProcess()
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
 
     const promise = runner.run('cmd', '/')
-    mockProc.emit('close', 42)
+    mockProc.emit('exit', 42)
 
     const result = await promise
     expect(result.exitCode).toBe(42)
   })
 
-  test('resolves with 1 when close event has null code', async () => {
+  test('resolves with 1 when exit event has null code', async () => {
     const mockProc = createMockChildProcess()
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
 
     const promise = runner.run('cmd', '/')
-    mockProc.emit('close', null)
+    mockProc.emit('exit', null)
 
     const result = await promise
     expect(result.exitCode).toBe(1)
@@ -460,11 +462,10 @@ describe('createShellRunner', () => {
 
   test('kills process and resolves with timedOut when timeout elapses', async () => {
     let killed = false
-    const mockProc = createMockChildProcess({
-      kill: () => {
-        killed = true
-      },
-    })
+    const mockProc = createMockChildProcess()
+    mockProc.kill = () => {
+      killed = true
+    }
 
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
@@ -519,7 +520,7 @@ describe('createShellRunner', () => {
 
     const promise = runner.run('cmd', '/', 5000)
     mockProc.stdout.emit('data', Buffer.from('output\n'))
-    mockProc.emit('close', 0)
+    mockProc.emit('exit', 0)
 
     const result = await promise
     expect(result.exitCode).toBe(0)
@@ -539,7 +540,7 @@ describe('createShellRunner', () => {
     const runner = createShellRunner(mockSpawn)
 
     const promise = runner.run('cmd', '/')
-    mockProc.emit('close', 0)
+    mockProc.emit('exit', 0)
 
     const result = await promise
     expect(result.exitCode).toBe(0)
