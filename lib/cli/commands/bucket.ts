@@ -65,7 +65,10 @@ import {
   updateDimensions,
 } from '../../bucket/terminal-ui'
 import { run as claudeRun } from '../../claude/run'
+import { createLogger } from '../../logging'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
+
+const log = createLogger('dust.cli.commands.bucket')
 
 const DEFAULT_DUSTBUCKET_WS_URL = 'wss://dustbucket.com/agent/connect'
 const INITIAL_RECONNECT_DELAY_MS = 1000
@@ -326,6 +329,7 @@ function ensureRepositoryLoopRunning(
 ): void {
   // If wakeUp is set, the loop is already alive and waiting for tasks.
   if (repoState.loopPromise || repoState.wakeUp || repoState.stopRequested) {
+    log(`loop already running/waiting for ${repoState.repository.name}`)
     return
   }
 
@@ -345,10 +349,13 @@ function signalTaskAvailable(
   context: CommandDependencies['context'],
   useTUI: boolean
 ): void {
+  log(`task-available signal for ${repoState.repository.name}`)
   ensureRepositoryLoopRunning(repoState, state, repoDeps, context, useTUI)
   if (repoState.wakeUp) {
+    log(`waking loop for ${repoState.repository.name}`)
     repoState.wakeUp()
   } else {
+    log(`marking task pending for ${repoState.repository.name} (loop busy)`)
     repoState.taskAvailablePending = true
   }
 }
@@ -586,6 +593,7 @@ export function connectWebSocket(
   ws.onmessage = event => {
     try {
       const message = JSON.parse(event.data)
+      log(`ws message: ${message.type}`)
       if (message.type === 'repository-list') {
         const repos = message.repositories ?? []
         const repoNames = repos
@@ -690,6 +698,7 @@ export async function shutdown(
   if (state.shuttingDown) return
   state.shuttingDown = true
 
+  log('shutdown initiated')
   context.stdout('Shutting down...')
 
   // Clear reconnect timer

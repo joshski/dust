@@ -10,6 +10,7 @@ import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { run as claudeRun } from '../claude/run'
 import type { CommandDependencies, FileSystem } from '../cli/types'
+import { createLogger } from '../logging'
 import {
   type BucketEmitFn,
   type BucketErrorEvent,
@@ -37,6 +38,8 @@ export {
   removeRepository,
 } from './repository-git'
 export { runRepositoryLoop } from './repository-loop'
+
+const log = createLogger('dust.bucket.repository')
 
 export interface Repository {
   name: string
@@ -85,6 +88,7 @@ export function startRepositoryLoop(
   sendEvent?: SendEventFn,
   sessionId?: string
 ): void {
+  log(`starting loop for ${repoState.repository.name}`)
   repoState.stopRequested = false
   repoState.loopPromise = runRepositoryLoop(
     repoState,
@@ -94,12 +98,14 @@ export function startRepositoryLoop(
   )
     .catch(error => {
       const message = error instanceof Error ? error.message : String(error)
+      log(`loop crashed for ${repoState.repository.name}: ${message}`)
       appendLogLine(
         repoState.logBuffer,
         createLogLine(`Repository loop crashed: ${message}`, 'stderr')
       )
     })
     .finally(() => {
+      log(`loop finished for ${repoState.repository.name}`)
       repoState.loopPromise = null
       repoState.agentStatus = 'idle'
       repoState.wakeUp = undefined
@@ -168,9 +174,11 @@ export async function addRepository(
   context: CommandDependencies['context']
 ): Promise<void> {
   if (manager.repositories.has(repository.name)) {
+    log(`repository ${repository.name} already exists, skipping add`)
     return
   }
 
+  log(`adding repository ${repository.name}`)
   const repoPath = getRepoPath(repository.name, repoDeps.getReposDir())
   await repoDeps.fileSystem.mkdir(dirname(repoPath), { recursive: true })
 
@@ -234,6 +242,7 @@ export async function removeRepositoryFromManager(
     return
   }
 
+  log(`removing repository ${repoName}`)
   repoState.stopRequested = true
   repoState.cancelCurrentIteration?.()
   repoState.wakeUp?.()

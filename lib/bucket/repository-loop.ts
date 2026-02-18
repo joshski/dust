@@ -23,9 +23,12 @@ import {
 } from '../cli/commands/loop'
 import type { CommandDependencies } from '../cli/types'
 import { loadSettings } from '../config/settings'
+import { createLogger } from '../logging'
 import type { SendEventFn } from './events'
 import { appendLogLine, createLogLine } from './log-buffer'
 import type { RepositoryDependencies, RepositoryState } from './repository'
+
+const log = createLogger('dust.bucket.repository-loop')
 
 const FALLBACK_TIMEOUT_MS = 300000
 
@@ -155,8 +158,10 @@ export async function runRepositoryLoop(
   // Install git hooks before starting iterations
   const hooksInstalled = await manageGitHooks(commandDeps)
 
-  const log = (msg: string) =>
+  const logLine = (msg: string) =>
     appendLogLine(repoState.logBuffer, createLogLine(msg, 'stdout'))
+
+  log(`loop started for ${repoName} at ${repoState.path}`)
 
   while (!repoState.stopRequested) {
     agentSessionId = crypto.randomUUID()
@@ -182,6 +187,7 @@ export async function runRepositoryLoop(
       )
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
+      log(`iteration error for ${repoName}: ${msg}`)
       appendLogLine(
         repoState.logBuffer,
         createLogLine(`Loop error: ${msg}`, 'stderr')
@@ -199,11 +205,13 @@ export async function runRepositoryLoop(
       // Check if a task-available signal arrived while we were busy
       if (repoState.taskAvailablePending) {
         repoState.taskAvailablePending = false
-        log('Task signal received during iteration, rechecking...')
+        log(`${repoName}: task signal received during iteration, rechecking`)
+        logLine('Task signal received during iteration, rechecking...')
         continue
       }
 
-      log('Waiting for tasks...')
+      log(`${repoName}: no tasks available, waiting`)
+      logLine('Waiting for tasks...')
       await new Promise<void>(resolve => {
         const wakeUpForThisWait = () => {
           if (repoState.wakeUp !== wakeUpForThisWait) {
@@ -226,6 +234,7 @@ export async function runRepositoryLoop(
     }
   }
 
+  log(`loop stopped for ${repoName}`)
   appendLogLine(
     repoState.logBuffer,
     createLogLine(`Stopped loop for ${repoName}`, 'stdout')

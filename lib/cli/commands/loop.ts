@@ -28,6 +28,7 @@ import {
   rawEventToAgentEvent,
 } from '../../agent-events'
 import { run as claudeRun } from '../../claude/run'
+import { createLogger } from '../../logging'
 import type { CommandDependencies, CommandResult } from '../types'
 import { manageGitHooks } from './agent-shared'
 import { buildImplementationInstructions } from './focus'
@@ -220,6 +221,8 @@ export function createWireEventSender(
   }
 }
 
+const log = createLogger('dust.cli.commands.loop')
+
 const SLEEP_INTERVAL_MS = 30000 // 30s poll interval balances responsiveness with avoiding excessive git pulls
 const DEFAULT_MAX_ITERATIONS = 10 // Safety cap to prevent runaway loops in unattended mode
 
@@ -290,9 +293,11 @@ export async function runOneIteration(
   const { onRawEvent, hooksInstalled = false, signal } = options
 
   // Step 1: Sync with remote
+  log('syncing with remote')
   onLoopEvent({ type: 'loop.syncing' })
   const pullResult = await gitPull(context.cwd, spawn)
   if (!pullResult.success) {
+    log(`git pull failed: ${pullResult.message}`)
     onLoopEvent({
       type: 'loop.sync_skipped',
       reason: pullResult.message,
@@ -350,12 +355,14 @@ Make sure the repository is in a clean state and synced with remote before finis
   const tasks = await findAvailableTasks(dependencies)
 
   if (tasks.length === 0) {
+    log('no tasks available')
     onLoopEvent({ type: 'loop.no_tasks' })
     return 'no_tasks'
   }
 
   // Step 3: Invoke Claude Code with the first available task
   const task = tasks[0]
+  log(`found ${tasks.length} task(s), picking: ${task.title ?? task.path}`)
   onLoopEvent({ type: 'loop.tasks_found' })
   const taskContent = await dependencies.fileSystem.readFile(
     `${dependencies.context.cwd}/${task.path}`
@@ -398,10 +405,16 @@ ${instructions}`
       },
       onRawEvent,
     })
+    log(`${agentName} completed task: ${task.title ?? task.path}`)
     onAgentEvent?.({ type: 'agent-session-ended', success: true })
     return 'ran_claude'
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
+    /* v8 ignore start - log is a no-op in test (no DEBUG) */
+    log(
+      `${agentName} error on task ${task.title ?? task.path}: ${errorMessage}`
+    )
+    /* v8 ignore stop */
     context.stderr(`${agentName} exited with error: ${errorMessage}`)
     onAgentEvent?.({
       type: 'agent-session-ended',
@@ -464,6 +477,7 @@ export async function loopClaude(
   // Install git hooks before starting iterations
   const hooksInstalled = await manageGitHooks(dependencies)
 
+  log(`starting loop, maxIterations=${maxIterations}, sessionId=${sessionId}`)
   onLoopEvent({ type: 'loop.warning' })
   onLoopEvent({
     type: 'loop.started',
@@ -493,10 +507,14 @@ export async function loopClaude(
     )
 
     if (result === 'no_tasks') {
+      log('sleeping, no tasks')
       await loopDependencies.sleep(SLEEP_INTERVAL_MS)
     } else {
       // Count iterations where Claude actually ran (ran_claude, claude_error, resolved_pull_conflict)
       completedIterations++
+      log(
+        `iteration ${completedIterations}/${maxIterations} complete, result=${result}`
+      )
       onLoopEvent({
         type: 'loop.iteration_complete',
         iteration: completedIterations,
@@ -505,6 +523,7 @@ export async function loopClaude(
     }
   }
 
+  log(`loop ended after ${completedIterations} iterations`)
   onLoopEvent({ type: 'loop.ended', maxIterations })
   return { exitCode: 0 }
 }
