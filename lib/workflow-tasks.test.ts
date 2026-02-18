@@ -64,6 +64,9 @@ describe('createRefineIdeaTask', () => {
     expect(content).toContain(
       'Thoroughly research this idea and refine it into a well-defined proposal. Read the idea file, explore the codebase for relevant context, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. Review `.dust/goals/` for alignment and `.dust/facts/` for relevant design decisions. See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
     )
+    expect(content).toContain(
+      'If you add open questions, use `## Open Questions` with `### Question?` headings and `#### Option` headings, and only add questions that are meaningful decisions worth asking.'
+    )
     expect(content).toContain('## Goals\n\n(none)')
     expect(content).toContain('## Blocked By\n\n(none)')
     expect(content).toContain(
@@ -71,6 +74,9 @@ describe('createRefineIdeaTask', () => {
     )
     expect(content).toContain(
       '- [ ] Open questions are added for any ambiguous or underspecified aspects'
+    )
+    expect(content).toContain(
+      '- [ ] Open questions follow the required heading format and focus on high-value decisions'
     )
     expect(content).toContain('- [ ] Idea file is updated with findings')
   })
@@ -86,7 +92,7 @@ describe('createRefineIdeaTask', () => {
 
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain(
-      'Review `.dust/goals/` for alignment and `.dust/facts/` for relevant design decisions. See [Progress Broadcasting](../ideas/progress-broadcasting.md).\n\nFocus on the WebSocket approach.\n\n## Goals'
+      'Review `.dust/goals/` for alignment and `.dust/facts/` for relevant design decisions. See [Progress Broadcasting](../ideas/progress-broadcasting.md). If you add open questions, use `## Open Questions` with `### Question?` headings and `#### Option` headings, and only add questions that are meaningful decisions worth asking.\n\nFocus on the WebSocket approach.\n\n## Goals'
     )
   })
 })
@@ -223,6 +229,9 @@ describe('createCaptureIdeaTask', () => {
     expect(content).toContain(
       'Review `.dust/goals/` and `.dust/facts/` for relevant context.'
     )
+    expect(content).toContain(
+      'If you add open questions, use `## Open Questions` with `### Question?` headings and `#### Option` headings, and only add questions that are meaningful decisions worth asking.'
+    )
     // Description should be under its own heading, not inline in opening sentence
     expect(content).toContain('## Idea Description')
     expect(content).toContain(
@@ -236,6 +245,9 @@ describe('createCaptureIdeaTask', () => {
     )
     expect(content).toContain(
       '- [ ] Open questions are added for any ambiguous or underspecified aspects'
+    )
+    expect(content).toContain(
+      '- [ ] Open questions follow the required heading format and focus on high-value decisions'
     )
   })
 
