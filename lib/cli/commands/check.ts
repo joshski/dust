@@ -5,7 +5,7 @@
  * in parallel with buffered output.
  */
 
-import { setLogScope } from '../../logging'
+import { createLogger, setLogScope } from '../../logging'
 import { defaultShellRunner, type ShellRunner } from '../process-runner'
 import type {
   CheckConfig,
@@ -14,6 +14,8 @@ import type {
   CommandResult,
 } from '../types'
 import { lintMarkdown } from './lint-markdown'
+
+const log = createLogger('dust.cli.commands.check')
 
 const DEFAULT_CHECK_TIMEOUT_MS = 13000 // Long enough for typical lint/test runs, short enough to fail fast on hangs
 
@@ -35,9 +37,16 @@ async function runSingleCheck(
   runner: ShellRunner
 ): Promise<CheckResult> {
   const timeoutMs = check.timeoutMilliseconds ?? DEFAULT_CHECK_TIMEOUT_MS
+  log(`running check ${check.name}: ${check.command}`)
   const startTime = Date.now()
   const result = await runner.run(check.command, cwd, timeoutMs)
   const durationMs = Date.now() - startTime
+  const status = result.timedOut
+    ? 'timed out'
+    : result.exitCode === 0
+      ? 'passed'
+      : 'failed'
+  log(`check ${check.name} ${status} (${durationMs}ms)`)
   return {
     name: check.name,
     command: check.command,
@@ -81,6 +90,7 @@ async function runValidationCheck(
     stderr: (msg: string) => outputLines.push(msg),
   }
 
+  log('running built-in check: dust lint')
   const startTime = Date.now()
   const result = await lintMarkdown({
     ...dependencies,
@@ -88,6 +98,8 @@ async function runValidationCheck(
     arguments: [],
   })
   const durationMs = Date.now() - startTime
+  const lintStatus = result.exitCode === 0 ? 'passed' : 'failed'
+  log(`built-in check dust lint ${lintStatus} (${durationMs}ms)`)
 
   return {
     name: 'lint',
