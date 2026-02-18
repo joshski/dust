@@ -957,7 +957,7 @@ describe('loopClaude', () => {
     expect(sleepMs).toBe(1000)
   })
 
-  test('prints dots while sleeping and starts next loop output on a new line', async () => {
+  test('prints sleep dots on a single line and starts next loop output on a new line', async () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
@@ -998,15 +998,62 @@ describe('loopClaude', () => {
     expect(sleepCalls.length).toBeGreaterThan(0)
     expect(sleepCalls.every(ms => ms === 1000)).toBe(true)
 
-    const dotIndices = context.stdoutLines
-      .map((line, index) => (line === '.' ? index : -1))
-      .filter(index => index !== -1)
+    const dotsLine = '.'.repeat(sleepCalls.length)
+    const dotsLineIndex = context.stdoutLines.indexOf(dotsLine)
+    expect(dotsLineIndex).toBeGreaterThanOrEqual(0)
+    expect(context.stdoutLines).not.toContain('.')
+    expect(context.stdoutLines[dotsLineIndex + 1]).toBe('')
+    expect(context.stdoutLines[dotsLineIndex + 2]).toBe(
+      '🌍 Syncing with remote'
+    )
+  })
 
-    expect(dotIndices).toHaveLength(sleepCalls.length)
+  test('falls back to line output when stdoutInline is unavailable', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {},
+        },
+      },
+    })
+    const fileSystem = dependencies.fileSystem as ReturnType<
+      typeof createFileSystemEmulator
+    >
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
 
-    const lastDotIndex = dotIndices[dotIndices.length - 1]
-    expect(context.stdoutLines[lastDotIndex + 1]).toBe('')
-    expect(context.stdoutLines[lastDotIndex + 2]).toBe('🌍 Syncing with remote')
+    dependencies.context = {
+      cwd: context.cwd,
+      stdout: context.stdout,
+      stderr: context.stderr,
+    }
+    dependencies.arguments = ['1']
+
+    const sleepCalls: number[] = []
+    let runCount = 0
+
+    const loopDeps = createLoopDeps({
+      run: async () => {
+        runCount++
+      },
+      sleep: async ms => {
+        sleepCalls.push(ms)
+        if (sleepCalls.length === 1) {
+          fileSystem.files.set(
+            '/project/.dust/tasks/task.md',
+            '# Task\n\n## Blocked By\n\n(none)'
+          )
+        }
+      },
+    })
+
+    const result = await loopClaude(dependencies, loopDeps)
+
+    expect(result.exitCode).toBe(0)
+    expect(runCount).toBe(1)
+    expect(sleepCalls.length).toBeGreaterThan(0)
+    expect(context.stdoutLines).toContain('.')
   })
 
   test('does not sleep when tasks are available', async () => {

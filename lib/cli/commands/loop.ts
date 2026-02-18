@@ -230,16 +230,17 @@ const DEFAULT_MAX_ITERATIONS = 10 // Safety cap to prevent runaway loops in unat
 async function sleepWithProgress(
   sleep: (ms: number) => Promise<void>,
   totalMs: number,
-  writeOutput: (message: string) => void
+  writeInline: (message: string) => void,
+  writeLine: (message: string) => void
 ): Promise<void> {
   let remainingMs = totalMs
   while (remainingMs > 0) {
     const stepMs = Math.min(SLEEP_STEP_MS, remainingMs)
     await sleep(stepMs)
-    writeOutput('.')
+    writeInline('.')
     remainingMs -= stepMs
   }
-  writeOutput('')
+  writeLine('')
 }
 
 export type GitPullResult =
@@ -524,9 +525,11 @@ export async function loopClaude(
 
     if (result === 'no_tasks') {
       log('sleeping, no tasks')
+      const writeInline = context.stdoutInline ?? context.stdout
       await sleepWithProgress(
         loopDependencies.sleep,
         SLEEP_INTERVAL_MS,
+        writeInline,
         context.stdout
       )
     } else {

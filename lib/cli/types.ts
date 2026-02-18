@@ -5,6 +5,7 @@
 export interface CommandContext {
   cwd: string
   stdout: (message: string) => void
+  stdoutInline?: (message: string) => void
   stderr: (message: string) => void
 }
 

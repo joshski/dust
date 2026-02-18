@@ -198,9 +198,19 @@ export interface ContextEmulator extends CommandContext {
 export function createContextEmulator(cwd = '/project'): ContextEmulator {
   const stdoutLines: string[] = []
   const stderrLines: string[] = []
+  let stdoutInlineBuffer = ''
   return {
     cwd,
-    stdout: (msg: string) => stdoutLines.push(msg),
+    stdout: (msg: string) => {
+      if (stdoutInlineBuffer.length > 0) {
+        stdoutLines.push(stdoutInlineBuffer)
+        stdoutInlineBuffer = ''
+      }
+      stdoutLines.push(msg)
+    },
+    stdoutInline: (msg: string) => {
+      stdoutInlineBuffer += msg
+    },
     stderr: (msg: string) => stderrLines.push(msg),
     stdoutLines,
     stderrLines,

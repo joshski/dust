@@ -17,5 +17,11 @@ await wireEntry(
       process.exitCode = code
     },
   },
-  { log: console.log, error: console.error }
+  {
+    log: console.log,
+    write: (message: string) => {
+      process.stdout.write(message)
+    },
+    error: console.error,
+  }
 )

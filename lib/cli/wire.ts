@@ -47,6 +47,7 @@ export interface ProcessPrimitives {
  */
 export interface ConsolePrimitives {
   log: (message: string) => void
+  write?: (message: string) => void
   error: (message: string) => void
 }
 
@@ -110,6 +111,7 @@ export async function wireEntry(
     context: {
       cwd: processPrimitives.cwd(),
       stdout: consolePrimitives.log,
+      stdoutInline: consolePrimitives.write,
       stderr: consolePrimitives.error,
     },
     fileSystem,
