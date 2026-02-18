@@ -13,20 +13,18 @@ export function validateIdeaOpenQuestions(
 ): Violation[] {
   const violations: Violation[] = []
   const lines = content.split('\n')
+  const topLevelStructureMessage =
+    'Open Questions must use `### Question?` headings and `#### Option` headings at the top level. Put supporting markdown (including lists and code blocks) under an option heading. Run `dust new idea` to see the expected format.'
 
   let inOpenQuestions = false
   let currentQuestionLine: number | null = null
+  let inOption = false
   let inCodeBlock = false
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]
-
-    // Track fenced code blocks
-    if (line.startsWith('```')) {
-      inCodeBlock = !inCodeBlock
-      continue
-    }
-    if (inCodeBlock) continue
+    const trimmedLine = line.trimEnd()
+    const nonWhitespaceLine = line.trim()
 
     // h2 heading: enters or exits the Open Questions section
     if (line.startsWith('## ')) {
@@ -50,24 +48,30 @@ export function validateIdeaOpenQuestions(
       }
       inOpenQuestions = line === '## Open Questions'
       currentQuestionLine = null
+      inOption = false
+      inCodeBlock = false
       continue
     }
 
     if (!inOpenQuestions) continue
 
-    // bullet-point lines are not allowed in Open Questions
-    if (/^[-*] /.test(line.trimStart())) {
-      violations.push({
-        file: filePath,
-        message:
-          'Open Questions must use ### headings for questions and #### headings for options, not bullet points. Run `dust new idea` to see the expected format.',
-        line: i + 1,
-      })
+    // Track fenced code blocks only while inside Open Questions.
+    if (line.startsWith('```')) {
+      if (!inOption && !inCodeBlock) {
+        violations.push({
+          file: filePath,
+          message: topLevelStructureMessage,
+          line: i + 1,
+        })
+      }
+      inCodeBlock = !inCodeBlock
       continue
     }
+    if (inCodeBlock) continue
 
     // h3 heading: a question (must end with ?)
     if (line.startsWith('### ')) {
+      inOption = false
       if (currentQuestionLine !== null) {
         violations.push({
           file: filePath,
@@ -76,7 +80,7 @@ export function validateIdeaOpenQuestions(
         })
       }
 
-      if (!line.trimEnd().endsWith('?')) {
+      if (!trimmedLine.endsWith('?')) {
         violations.push({
           file: filePath,
           message:
@@ -93,6 +97,17 @@ export function validateIdeaOpenQuestions(
     // h4 heading: an option (satisfies the current question)
     if (line.startsWith('#### ')) {
       currentQuestionLine = null
+      inOption = true
+      continue
+    }
+
+    // Reject any top-level non-empty content that is not part of the heading structure.
+    if (nonWhitespaceLine && !inOption) {
+      violations.push({
+        file: filePath,
+        message: topLevelStructureMessage,
+        line: i + 1,
+      })
     }
   }
 

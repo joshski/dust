@@ -74,11 +74,9 @@ Same as above but explicitly: the field is optional in the message type.
 
 ### Should the message type be `agent-connect` or something else?
 
-The name should reflect that this is an initial greeting from the client, not a repository event.
-
 #### Use `agent-connect`
 
-Clear and descriptive. Matches the pattern of other typed messages in the protocol.
+The name should reflect that this is an initial greeting from the client, not a repository event. `agent-connect` is clear and descriptive, and matches the pattern of other typed messages in the protocol.
 
 #### Use `client-hello`
 

@@ -46,16 +46,72 @@ The bucket service (`dustbucket.com`) already provides a WebSocket-based event s
 
 ## Open Questions
 
-1. **HTTP POST vs WebSocket for `dust loop`**: The bucket service currently receives events via WebSocket (used by `dust bucket`). Should `dust loop` also open a WebSocket, or should the bucket service expose a REST endpoint for HTTP POST? A long-lived WebSocket would require connection management in the loop; HTTP POST is simpler but may require a different server endpoint.
+### Should `dust loop` send events via HTTP POST or WebSocket?
 
-2. **Bucket service event endpoint**: Does `dustbucket.com` already expose an authenticated HTTP POST endpoint for events, or does this need to be added server-side? The current `defaultPostEvent` posts to an arbitrary URL; the new target URL format is not yet defined.
+#### Use HTTP POST
 
-3. **Menu UX when stdin is not a TTY** (e.g. running in CI or as a background job): Should the loop skip the prompt and proceed without sending events, or treat a missing token as an error? The `CODEX_CI` / `DUST_UNATTENDED` env vars may be relevant.
+HTTP POST keeps delivery logic simple and aligns with the existing `defaultPostEvent` shape, but requires a defined bucket API endpoint.
 
-4. **`dust loop codex` parity**: The description mentions both `claude` and `codex`. The `loopClaude` function handles both via `agentType`. The bucket integration should apply to both, but is there any codex-specific consideration?
+#### Use WebSocket
 
-5. **Token refresh / expiry**: The existing `authenticate()` flow issues a token but there is no refresh mechanism. Should `dust loop` silently re-authenticate on 401 responses, or surface an error and stop sending events?
+WebSocket reuses the bucket transport model but adds connection lifecycle management to `dust loop`.
 
-6. **Migration path for existing `eventsUrl` users**: Removing `DUST_EVENTS_URL` is a breaking change for anyone already using it. Should there be a deprecation notice or a migration period, or is the audience small enough that a clean cut is fine?
+### Does `dustbucket.com` already expose an authenticated HTTP endpoint for events?
 
-7. **Event endpoint path on bucket host**: What is the HTTP path? Candidates: `/events`, `/api/events`, `/agent/events`. This needs to be agreed with the bucket service API.
+#### Endpoint already exists
+
+If the endpoint already exists, confirm the exact URL and auth contract and wire `dust loop` directly to it.
+
+#### Endpoint must be added server-side
+
+If no endpoint exists today, add one and define the target URL format before changing `dust loop`.
+
+### How should `dust loop` behave when stdin is not a TTY?
+
+#### Skip prompt and continue without event sending
+
+For CI/background runs, skip the menu and run normally without event forwarding when token setup cannot be prompted.
+
+#### Treat missing token as an error
+
+Fail fast when event sending is configured but auth cannot be completed interactively.
+
+### Should `dust loop codex` and `dust loop claude` share the same bucket behavior?
+
+#### Keep one shared implementation
+
+`loopClaude` already handles both via `agentType`, so the bucket integration can stay agent-agnostic unless a concrete divergence appears.
+
+#### Add codex-specific behavior
+
+Introduce codex-specific handling only if protocol/runtime differences force it.
+
+### How should token expiry be handled for event delivery?
+
+#### Re-authenticate automatically on 401
+
+Attempt silent re-authentication and retry sending to avoid dropping telemetry during long-running loops.
+
+#### Surface an error and stop sending events
+
+Keep behavior explicit: log auth failures and disable event delivery until the user re-authenticates.
+
+### What migration path should we use for existing `eventsUrl` users?
+
+#### Add a deprecation period
+
+Warn on `eventsUrl`/`DUST_EVENTS_URL` usage for one or more releases before removal.
+
+#### Remove the setting immediately
+
+Do a clean cut if current usage is low and migration complexity outweighs backward compatibility.
+
+### What HTTP path should the bucket host use for events?
+
+#### Use `/events`
+
+Short and direct endpoint that matches the single-purpose event ingest use case.
+
+#### Use `/api/events` or `/agent/events`
+
+More explicit namespacing that may fit existing server route conventions.

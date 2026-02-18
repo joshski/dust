@@ -450,7 +450,7 @@ Some analysis.
 `
     const violations = validateIdeaOpenQuestions('idea.md', content)
     expect(violations).toHaveLength(2)
-    expect(violations[0].message).toContain('not bullet points')
+    expect(violations[0].message).toContain('top level')
     expect(violations[0].line).toBe(5)
     expect(violations[1].line).toBe(6)
   })
@@ -464,7 +464,7 @@ Some analysis.
 `
     const violations = validateIdeaOpenQuestions('idea.md', content)
     expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('not bullet points')
+    expect(violations[0].message).toContain('top level')
   })
 
   test('rejects mixed bullet-points and headings in Open Questions', () => {
@@ -474,16 +474,63 @@ Some analysis.
 
 ### Should we do X?
 
+- But also this bullet point
+
 #### Option A
 
 Some analysis.
-
-- But also this bullet point
 `
     const violations = validateIdeaOpenQuestions('idea.md', content)
     expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('not bullet points')
-    expect(violations[0].line).toBe(11)
+    expect(violations[0].message).toContain('top level')
+    expect(violations[0].line).toBe(7)
+  })
+
+  test('rejects ordered-list lines at the top level in Open Questions', () => {
+    const content = `# My Idea
+
+## Open Questions
+
+1. Should we do X?
+2. Should we do Y?
+`
+    const violations = validateIdeaOpenQuestions('idea.md', content)
+    expect(violations).toHaveLength(2)
+    expect(violations[0].message).toContain('top level')
+    expect(violations[0].line).toBe(5)
+    expect(violations[1].line).toBe(6)
+  })
+
+  test('rejects top-level stray text in Open Questions', () => {
+    const content = `# My Idea
+
+## Open Questions
+
+This is stray top-level text.
+
+### Should we do X?
+
+#### Option A
+`
+    const violations = validateIdeaOpenQuestions('idea.md', content)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('top level')
+    expect(violations[0].line).toBe(5)
+  })
+
+  test('rejects fenced code blocks at top level in Open Questions', () => {
+    const content = `# My Idea
+
+## Open Questions
+
+\`\`\`markdown
+### Not a real question heading
+\`\`\`
+`
+    const violations = validateIdeaOpenQuestions('idea.md', content)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('top level')
+    expect(violations[0].line).toBe(5)
   })
 
   test('ignores bullet points inside fenced code blocks in Open Questions', () => {
@@ -503,6 +550,26 @@ Example:
 \`\`\`
 
 Some analysis.
+`
+    expect(validateIdeaOpenQuestions('idea.md', content)).toHaveLength(0)
+  })
+
+  test('allows markdown lists inside Open Questions option descriptions', () => {
+    const content = `# My Idea
+
+## Open Questions
+
+### Should we do X?
+
+#### Option A
+
+Pros:
+
+1. Cheaper
+2. Faster
+
+- Fewer dependencies
+- Easier setup
 `
     expect(validateIdeaOpenQuestions('idea.md', content)).toHaveLength(0)
   })

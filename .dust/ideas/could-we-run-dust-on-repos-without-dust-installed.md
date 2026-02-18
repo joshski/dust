@@ -70,11 +70,9 @@ Installing dependencies changes the repository in ways that might surprise users
 
 ### What happens when CLAUDE.md references `bin/dust` commands?
 
-Many repositories (including dust itself) have `CLAUDE.md` files that instruct agents to run `bin/dust` commands. If dust isn't installed:
-
 #### Claude should handle the error gracefully
 
-When `bin/dust` fails because dust isn't installed, Claude can report this and potentially offer to install it.
+Many repositories (including dust itself) have `CLAUDE.md` files that instruct agents to run `bin/dust` commands. When `bin/dust` fails because dust isn't installed, Claude can report this and potentially offer to install it.
 
 #### Provide dust commands via environment
 

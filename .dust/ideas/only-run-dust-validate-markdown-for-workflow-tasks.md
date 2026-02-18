@@ -75,11 +75,9 @@ If the detection will be used in many places across different layers (CLI comman
 
 ### How should the pre-push hook determine the task type?
 
-The pre-push hook needs to know if the commit is a workflow task completion to decide whether to run the full check or just markdown validation.
-
 #### Option A: Analyze changes for `.dust/`-only pattern (Recommended)
 
-If all committed changes are within `.dust/`, run `dust lint` instead of `dust check`. This leverages the existing `analyzeChangesForTaskOnlyPattern()` function in `pre-push.ts` but extends it to check for `.dust/`-only changes (not just task-only additions).
+The pre-push hook needs to know if the commit is a workflow task completion to decide whether to run the full check or just markdown validation. If all committed changes are within `.dust/`, run `dust lint` instead of `dust check`. This leverages the existing `analyzeChangesForTaskOnlyPattern()` function in `pre-push.ts` but extends it to check for `.dust/`-only changes (not just task-only additions).
 
 **Pros:** Simple, no extra I/O, works with any `.dust/`-only commit
 **Cons:** May skip full checks for a non-workflow task that only touched `.dust/` files
