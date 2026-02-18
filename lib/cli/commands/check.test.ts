@@ -13,7 +13,7 @@ import type {
   CommandDependencies,
   DustSettings,
 } from '../types'
-import { check } from './check'
+import { check, truncateOutput } from './check'
 
 function createMockBufferedRunner(
   results: Record<
@@ -1014,5 +1014,47 @@ describe('check command --serial flag', () => {
     expect(new Set(commands)).toEqual(
       new Set(['npm run lint', 'npm test', 'npm run build'])
     )
+  })
+})
+
+describe('truncateOutput', () => {
+  test('does not truncate output shorter than 500 lines', () => {
+    const lines = Array.from({ length: 100 }, (_, i) => `line ${i + 1}`)
+    const output = lines.join('\n')
+    expect(truncateOutput(output)).toBe(output)
+  })
+
+  test('does not truncate output exactly 500 lines', () => {
+    const lines = Array.from({ length: 500 }, (_, i) => `line ${i + 1}`)
+    const output = lines.join('\n')
+    expect(truncateOutput(output)).toBe(output)
+  })
+
+  test('truncates output of 501 lines with 1 line snipped', () => {
+    const lines = Array.from({ length: 501 }, (_, i) => `line ${i + 1}`)
+    const output = lines.join('\n')
+    const result = truncateOutput(output)
+
+    const resultLines = result.split('\n')
+    expect(resultLines).toHaveLength(501) // 250 + 1 snip marker + 250
+    expect(resultLines[0]).toBe('line 1')
+    expect(resultLines[249]).toBe('line 250')
+    expect(resultLines[250]).toBe('[...snip 1 lines...]')
+    expect(resultLines[251]).toBe('line 252')
+    expect(resultLines[500]).toBe('line 501')
+  })
+
+  test('truncates output of 1000 lines with marker', () => {
+    const lines = Array.from({ length: 1000 }, (_, i) => `line ${i + 1}`)
+    const output = lines.join('\n')
+    const result = truncateOutput(output)
+
+    const resultLines = result.split('\n')
+    expect(resultLines).toHaveLength(501) // 250 + 1 snip marker + 250
+    expect(resultLines[0]).toBe('line 1')
+    expect(resultLines[249]).toBe('line 250')
+    expect(resultLines[250]).toBe('[...snip 500 lines...]')
+    expect(resultLines[251]).toBe('line 751')
+    expect(resultLines[500]).toBe('line 1000')
   })
 })

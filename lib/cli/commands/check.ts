@@ -18,6 +18,23 @@ import { lintMarkdown } from './lint-markdown'
 const log = createLogger('dust.cli.commands.check')
 
 const DEFAULT_CHECK_TIMEOUT_MS = 13000 // Long enough for typical lint/test runs, short enough to fail fast on hangs
+const MAX_OUTPUT_LINES = 500
+const KEEP_LINES = 250
+
+export function truncateOutput(output: string): string {
+  const lines = output.split('\n')
+  if (lines.length <= MAX_OUTPUT_LINES) {
+    return output
+  }
+  const snippedCount = lines.length - KEEP_LINES * 2
+  const firstLines = lines.slice(0, KEEP_LINES)
+  const lastLines = lines.slice(-KEEP_LINES)
+  return [
+    ...firstLines,
+    `[...snip ${snippedCount} lines...]`,
+    ...lastLines,
+  ].join('\n')
+}
 
 export interface CheckResult {
   name: string
@@ -147,7 +164,7 @@ function displayResults(
       )
     }
     if (result.output.trim()) {
-      context.stdout(result.output.trimEnd())
+      context.stdout(truncateOutput(result.output).trimEnd())
     }
     if (result.hints && result.hints.length > 0) {
       context.stdout('')
