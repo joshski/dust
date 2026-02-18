@@ -145,7 +145,7 @@ export function formatLoopEvent(event: LoopEvent): string | null {
     case 'loop.checking_tasks':
       return null
     case 'loop.no_tasks':
-      return '😴 No tasks available. Sleeping...\n'
+      return '😴 No tasks available. Sleeping...'
     case 'loop.tasks_found':
       return '✨ Found a task. Going to work!\n'
     case 'loop.iteration_complete':

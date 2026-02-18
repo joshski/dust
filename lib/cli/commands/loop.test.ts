@@ -887,9 +887,9 @@ describe('formatLoopEvent', () => {
     )
   })
 
-  test('returns no_tasks message with trailing newline', () => {
+  test('returns no_tasks message without trailing newline', () => {
     const result = formatLoopEvent({ type: 'loop.no_tasks' })
-    expect(result).toBe('😴 No tasks available. Sleeping...\n')
+    expect(result).toBe('😴 No tasks available. Sleeping...')
   })
 })
 
