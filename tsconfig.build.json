@@ -15,6 +15,7 @@
     "lib/workflow-tasks.ts",
     "lib/cli/types.ts",
     "lib/types.ts",
-    "lib/logging/index.ts"
+    "lib/logging/index.ts",
+    "lib/agents/detection.ts"
   ]
 }
