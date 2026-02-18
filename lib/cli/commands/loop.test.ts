@@ -938,9 +938,11 @@ describe('loopClaude', () => {
   test('sleeps when no tasks available', async () => {
     const dependencies = createDependencies()
     let sleepCalled = false
+    let sleepMs: number | null = null
     const loopDeps = createLoopDeps({
-      sleep: async () => {
+      sleep: async ms => {
         sleepCalled = true
+        sleepMs = ms
         throw new LoopBreaker()
       },
     })
@@ -952,6 +954,59 @@ describe('loopClaude', () => {
     }
 
     expect(sleepCalled).toBe(true)
+    expect(sleepMs).toBe(1000)
+  })
+
+  test('prints dots while sleeping and starts next loop output on a new line', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {},
+        },
+      },
+    })
+    const fileSystem = dependencies.fileSystem as ReturnType<
+      typeof createFileSystemEmulator
+    >
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    dependencies.arguments = ['1']
+
+    const sleepCalls: number[] = []
+    let runCount = 0
+
+    const loopDeps = createLoopDeps({
+      run: async () => {
+        runCount++
+      },
+      sleep: async ms => {
+        sleepCalls.push(ms)
+        if (sleepCalls.length === 1) {
+          fileSystem.files.set(
+            '/project/.dust/tasks/task.md',
+            '# Task\n\n## Blocked By\n\n(none)'
+          )
+        }
+      },
+    })
+
+    const result = await loopClaude(dependencies, loopDeps)
+
+    expect(result.exitCode).toBe(0)
+    expect(runCount).toBe(1)
+    expect(sleepCalls.length).toBeGreaterThan(0)
+    expect(sleepCalls.every(ms => ms === 1000)).toBe(true)
+
+    const dotIndices = context.stdoutLines
+      .map((line, index) => (line === '.' ? index : -1))
+      .filter(index => index !== -1)
+
+    expect(dotIndices).toHaveLength(sleepCalls.length)
+
+    const lastDotIndex = dotIndices[dotIndices.length - 1]
+    expect(context.stdoutLines[lastDotIndex + 1]).toBe('')
+    expect(context.stdoutLines[lastDotIndex + 2]).toBe('🌍 Syncing with remote')
   })
 
   test('does not sleep when tasks are available', async () => {

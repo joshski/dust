@@ -22,7 +22,7 @@ The loop:
 2. Checks for available tasks (`dust next`)
 3. If a task exists, runs the agent to implement it
 4. Increments the iteration counter
-5. Sleeps for 30 seconds, then repeats
+5. Sleeps for 30 seconds (printing one `.` per second for visible idle progress), then repeats
 
 The loop exits when max iterations are reached or you interrupt it (Ctrl+C).
 

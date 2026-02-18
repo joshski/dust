@@ -224,7 +224,23 @@ export function createWireEventSender(
 const log = createLogger('dust.cli.commands.loop')
 
 const SLEEP_INTERVAL_MS = 30000 // 30s poll interval balances responsiveness with avoiding excessive git pulls
+const SLEEP_STEP_MS = 1000
 const DEFAULT_MAX_ITERATIONS = 10 // Safety cap to prevent runaway loops in unattended mode
+
+async function sleepWithProgress(
+  sleep: (ms: number) => Promise<void>,
+  totalMs: number,
+  writeOutput: (message: string) => void
+): Promise<void> {
+  let remainingMs = totalMs
+  while (remainingMs > 0) {
+    const stepMs = Math.min(SLEEP_STEP_MS, remainingMs)
+    await sleep(stepMs)
+    writeOutput('.')
+    remainingMs -= stepMs
+  }
+  writeOutput('')
+}
 
 export type GitPullResult =
   | { success: true }
@@ -508,7 +524,11 @@ export async function loopClaude(
 
     if (result === 'no_tasks') {
       log('sleeping, no tasks')
-      await loopDependencies.sleep(SLEEP_INTERVAL_MS)
+      await sleepWithProgress(
+        loopDependencies.sleep,
+        SLEEP_INTERVAL_MS,
+        context.stdout
+      )
     } else {
       // Count iterations where Claude actually ran (ran_claude, claude_error, resolved_pull_conflict)
       completedIterations++
