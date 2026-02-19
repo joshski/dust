@@ -79,9 +79,6 @@ export const COMMANDS = Object.keys(commandRegistry).filter(
 // Re-export for backward compatibility
 export { generateHelpText }
 
-// Default help text for backward compatibility in tests
-export const HELP_TEXT = generateHelpText({ dustCommand: 'dust' })
-
 export interface MainOptions {
   commandArguments: string[]
   context: CommandContext

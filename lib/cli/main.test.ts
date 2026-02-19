@@ -9,7 +9,6 @@ import {
 import {
   COMMANDS,
   generateHelpText,
-  HELP_TEXT,
   isHelpRequest,
   isValidCommand,
   main,
@@ -469,19 +468,21 @@ describe('multi-word command routing', () => {
   })
 })
 
-describe('HELP_TEXT', () => {
+describe('generateHelpText with default dustCommand', () => {
   test('contains usage information', () => {
-    expect(HELP_TEXT).toContain('Usage: dust <command>')
+    const helpText = generateHelpText({ dustCommand: 'dust' })
+    expect(helpText).toContain('Usage: dust <command>')
   })
 
   test('documents all commands', () => {
-    expect(HELP_TEXT).toContain('init')
-    expect(HELP_TEXT).toContain('lint')
-    expect(HELP_TEXT).toContain('list')
-    expect(HELP_TEXT).toContain('next')
-    expect(HELP_TEXT).toContain('check')
-    expect(HELP_TEXT).toContain('agent')
-    expect(HELP_TEXT).toContain('help')
+    const helpText = generateHelpText({ dustCommand: 'dust' })
+    expect(helpText).toContain('init')
+    expect(helpText).toContain('lint')
+    expect(helpText).toContain('list')
+    expect(helpText).toContain('next')
+    expect(helpText).toContain('check')
+    expect(helpText).toContain('agent')
+    expect(helpText).toContain('help')
   })
 })
 
