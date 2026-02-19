@@ -6,7 +6,7 @@ With today's AI coding assistants, the human is stuck in a tight loop with agent
 
 For this to work, the agent's development environment must be excellent. The agent reads the code, writes changes, runs the checks, and iterates until the task is done. Everything about the codebase and its tooling either helps or hinders that process. Comprehensive tests are the agent's only way to verify correctness. Fast feedback loops are the agent's iteration speed. Structured logs are the agent's eyes into runtime behaviour. Small, well-organised files are what fit in the agent's context window. Exploratory and debugging tools are how the agent navigates and diagnoses without trial and error.
 
-Each sub-goal represents a different aspect of the ideal agent developer setup. The better these are, the less the human needs to be in the loop.
+Each sub-principle represents a different aspect of the ideal agent developer setup. The better these are, the less the human needs to be in the loop.
 
 ## Parent Principle
 

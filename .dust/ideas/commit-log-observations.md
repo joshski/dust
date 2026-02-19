@@ -12,7 +12,7 @@ This complements the "Executive Decision Logging" idea but focuses on the read s
 
 1. Agents log surprises and decisions in commits
 2. A scanning tool identifies patterns across many commits
-3. Patterns inform new facts, goals, or process improvements
+3. Patterns inform new facts, principles, or process improvements
 
 ## Possible Commands
 

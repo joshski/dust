@@ -36,7 +36,7 @@ The comprehensive form:
 
 ## How to evaluate
 
-Work supports this goal when tests use assertions that capture the complete expected result, allowing failures to reveal the actual state alongside the expected state.
+Work supports this principle when tests use assertions that capture the complete expected result, allowing failures to reveal the actual state alongside the expected state.
 
 ## Parent Principle
 

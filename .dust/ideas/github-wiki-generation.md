@@ -23,7 +23,7 @@ The command would:
 1. Clone the wiki repository to a temporary directory
 2. Transform `.dust/` content into wiki-friendly format:
    - Generate `Home.md` as an index/table of contents
-   - Convert goals, facts, ideas, and tasks into linked wiki pages
+   - Convert principles, facts, ideas, and tasks into linked wiki pages
    - Preserve or generate meaningful sidebar navigation (`_Sidebar.md`)
 3. Commit and push changes to the wiki repo
 

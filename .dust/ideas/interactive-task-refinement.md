@@ -7,7 +7,7 @@ A guided workflow that helps transform vague ideas into well-structured tasks th
 When a human has a rough idea but isn't sure how to structure it as an actionable task, they could run `bin/dust refine idea` to start a conversation that:
 
 1. Asks clarifying questions about scope and intent
-2. Identifies which goals the work aligns with
+2. Identifies which principles the work aligns with
 3. Helps define clear completion criteria
 4. Suggests potential dependencies or blockers
 5. Produces a well-formed task file

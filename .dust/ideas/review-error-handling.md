@@ -74,7 +74,7 @@ Audit the codebase for error handling issues. Look for silently swallowed errors
 - Add error logging in the WebSocket message handler
 - Consider retry logic for event posting failures
 
-## Related Goals
+## Related Principles
 
 - [Actionable Errors](../principles/actionable-errors.md) - error messages should tell you what to do next
 - [Debugging Tooling](../principles/debugging-tooling.md) - agents need readable, structured error output
@@ -105,7 +105,7 @@ Failed operations are logged even if the overall command continues. Provides vis
 
 #### Fail fast on first error
 
-Stop the operation immediately when any error occurs. Aligns with "Stop the Line" goal.
+Stop the operation immediately when any error occurs. Aligns with "Stop the Line" principle.
 
 ### Fix spawn-codex.ts independently or as part of consolidation?
 

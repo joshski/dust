@@ -43,7 +43,7 @@ Instead of picking up a new task, create .dust/tasks/dust-review.md with:
 
 Review and maintain dust planning artifacts.
 
-## Goals
+## Principles
 
 - [Repository Hygiene](../principles/repository-hygiene.md)
 
@@ -56,7 +56,7 @@ Review and maintain dust planning artifacts.
 - [ ] Run `dust lint` and fix any issues
 - [ ] Review ideas in `.dust/ideas/` - promote, refine, or delete stale ones
 - [ ] Verify facts in `.dust/facts/` still reflect the codebase
-- [ ] Check goals in `.dust/goals/` are still relevant
+- [ ] Check principles in `.dust/principles/` are still relevant
 EOF
 fi
 ```

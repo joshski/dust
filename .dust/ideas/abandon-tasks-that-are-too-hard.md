@@ -2,7 +2,7 @@
 
 When a task is too hard, an agent should abandon it and add a blocking task that tackles one hard part in isolation.
 
-This directly applies the [Make the Change Easy](../principles/make-the-change-easy.md) goal to agent workflow. Currently, when an agent encounters a task that exceeds its capacity — whether due to scope, complexity, or missing prerequisites — it has no structured way to respond. The agent either pushes through (producing poor results or burning context window) or silently fails. A better outcome is for the agent to recognize difficulty early, stop, and decompose the problem by creating a smaller blocking task that addresses the hardest part.
+This directly applies the [Make the Change Easy](../principles/make-the-change-easy.md) principle to agent workflow. Currently, when an agent encounters a task that exceeds its capacity — whether due to scope, complexity, or missing prerequisites — it has no structured way to respond. The agent either pushes through (producing poor results or burning context window) or silently fails. A better outcome is for the agent to recognize difficulty early, stop, and decompose the problem by creating a smaller blocking task that addresses the hardest part.
 
 The existing [Blocked By](../principles/small-units.md) mechanism already supports this pattern. An agent could create a new task that isolates one difficult aspect, add it as a blocker on the original task, and commit that change instead of the implementation. The original task remains in the backlog, now blocked, and a future agent iteration picks up the smaller prerequisite task. Each iteration peels off one hard layer until the original task becomes straightforward.
 

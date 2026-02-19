@@ -329,7 +329,7 @@ describe('list command', () => {
           principles: {
             'parent-principle.md': `# Parent Principle
 
-This is a top-level goal.
+This is a top-level principle.
 
 ## Parent Principle
 
@@ -341,7 +341,7 @@ This is a top-level goal.
 `,
             'child-principle.md': `# Child Principle
 
-This is a child goal.
+This is a child principle.
 
 ## Parent Principle
 
@@ -353,7 +353,7 @@ This is a child goal.
 `,
             'grandchild-principle.md': `# Grandchild Principle
 
-This is a grandchild goal.
+This is a grandchild principle.
 
 ## Parent Principle
 
@@ -434,7 +434,7 @@ Second root.
           principles: {
             'parent-principle.md': `# Parent Principle
 
-This is a parent goal.
+This is a parent principle.
 
 ## Parent Principle
 
@@ -466,7 +466,7 @@ This is a parent goal.
           principles: {
             'orphan-principle.md': `# Orphan Principle
 
-This goal has a parent that does not exist.
+This principle has a parent that does not exist.
 
 ## Parent Principle
 

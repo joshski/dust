@@ -20,7 +20,7 @@ This separation provides:
 
 #### AI agent review only
 
-A separate agent instance (with a fresh context) reviews the branch and decides whether to merge. This preserves full autonomy and keeps the loop running without human intervention. The risk is that two AI agents may share the same blind spots — the reviewer might approve changes that a human would catch as misguided or subtly wrong. This works well for mechanical correctness (tests pass, style is clean) but may miss higher-level concerns like whether the change actually serves the goal.
+A separate agent instance (with a fresh context) reviews the branch and decides whether to merge. This preserves full autonomy and keeps the loop running without human intervention. The risk is that two AI agents may share the same blind spots — the reviewer might approve changes that a human would catch as misguided or subtly wrong. This works well for mechanical correctness (tests pass, style is clean) but may miss higher-level concerns like whether the change actually serves the principle.
 
 #### Human review only
 

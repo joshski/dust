@@ -39,7 +39,7 @@ describe('next command', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'goal.md': '# My Goal' },
+          principles: { 'principle.md': '# My Principle' },
         },
       },
     })

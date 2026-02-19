@@ -15,7 +15,7 @@ Currently, `createCaptureIdeaTask` in `lib/workflow-tasks.ts` creates a task fil
 2. Read the codebase for relevant context
 3. Flesh out the description
 4. Identify ambiguity and add open questions
-5. Review `.dust/goals/` and `.dust/facts/` for context
+5. Review `.dust/principles/` and `.dust/facts/` for context
 
 This is a fixed level of analysis depth. The task description always says "Research this idea thoroughly" regardless of whether the idea needs deep research or is already well-understood.
 
@@ -51,7 +51,7 @@ Possible values for `analysisDepth`:
 
 - **minimal** - Create the idea file directly with the provided description, minimal or no codebase research
 - **standard** - Current behavior: research thoroughly, explore codebase, identify ambiguities, add open questions
-- **deep** - Extended research: explore related ideas, goals, and facts; consider architectural implications; identify dependencies
+- **deep** - Extended research: explore related ideas, principles, and facts; consider architectural implications; identify dependencies
 
 ## Open Questions
 

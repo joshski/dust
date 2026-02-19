@@ -4,9 +4,9 @@ Provide built-in lints for codebase aspects that affect agent developer experien
 
 ## Background
 
-The [Context-Optimised Code](../principles/context-optimised-code.md) goal states that "dust should help projects identify files that are too large, modules that are too tangled, and patterns that make agent comprehension harder than it needs to be." Currently, dust only lints its own `.dust/` markdown files via `dust lint`. To check code quality metrics, users must configure external tools (FTA, ESLint complexity rules, etc.) in their `settings.json` checks.
+The [Context-Optimised Code](../principles/context-optimised-code.md) principle states that "dust should help projects identify files that are too large, modules that are too tangled, and patterns that make agent comprehension harder than it needs to be." Currently, dust only lints its own `.dust/` markdown files via `dust lint`. To check code quality metrics, users must configure external tools (FTA, ESLint complexity rules, etc.) in their `settings.json` checks.
 
-This creates friction for new adopters. The [Easy Adoption](../principles/easy-adoption.md) goal emphasizes that "a developer should be able to bootstrap Dust in their repository with a single command, without needing to install dependencies, configure build tools, or understand the internals."
+This creates friction for new adopters. The [Easy Adoption](../principles/easy-adoption.md) principle emphasizes that "a developer should be able to bootstrap Dust in their repository with a single command, without needing to install dependencies, configure build tools, or understand the internals."
 
 ## Proposed Solution
 
@@ -33,7 +33,7 @@ The [Integrate FTA](integrate-fta.md) idea proposes using FTA (Fast TypeScript A
 
 These ideas are complementary. Built-in lints provide baseline checks that work everywhere, while FTA (or similar tools) provide deeper analysis for specific languages.
 
-## Goal Alignment
+## Principle Alignment
 
 - [Lint Everything](../principles/lint-everything.md) - Extends static analysis to source code structure
 - [Context-Optimised Code](../principles/context-optimised-code.md) - Directly supports identifying files that don't fit agent context

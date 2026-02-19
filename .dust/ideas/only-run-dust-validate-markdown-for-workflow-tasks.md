@@ -25,7 +25,7 @@ export const CAPTURE_IDEA_PREFIX = 'Add Idea: '
 
 ## Motivation
 
-Workflow tasks only modify files within `.dust/` (ideas, tasks, facts, goals). Running the full `dust check` command for these tasks:
+Workflow tasks only modify files within `.dust/` (ideas, tasks, facts, principles). Running the full `dust check` command for these tasks:
 
 1. Wastes time running code linters, type checkers, and tests that won't catch any issues
 2. May fail on unrelated code issues, blocking workflow task completion
@@ -97,7 +97,7 @@ Require both conditions: changes are `.dust/`-only AND a deleted task file has a
 
 #### Option A: Run full check for any non-`.dust/` changes (Recommended)
 
-Any code changes trigger full validation. This aligns with the "stop the line" goal and keeps validation behavior predictable. Agents would naturally separate workflow and code changes into different commits.
+Any code changes trigger full validation. This aligns with the "stop the line" principle and keeps validation behavior predictable. Agents would naturally separate workflow and code changes into different commits.
 
 **Rationale:** Workflow tasks should only touch `.dust/` files. If an agent is modifying both `.dust/` and code, they're either doing multiple tasks or making implementation changes that warrant full validation.
 
@@ -109,7 +109,7 @@ Skip tests but still lint any code that was changed. This is a middle ground but
 
 Warn the agent that they should separate workflow and code changes into different commits. This enforces cleaner commit boundaries but may be too strict for cases where updating a fact about code is legitimate.
 
-## Goal Alignment
+## Principle Alignment
 
 This idea supports:
 

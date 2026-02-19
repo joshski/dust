@@ -20,7 +20,7 @@ This creates a failure mode where:
 
 This relates to [Kill inactive process in dust loop claude](kill-inactive-process-in-dust-loop-claude.md) but addresses a different failure mode. That idea handles Claude processes that become completely unresponsive. This idea handles loops where Claude runs to completion but fails to make meaningful progress.
 
-The [Stop the Line](../principles/stop-the-line.md) goal applies here: detecting a problem early and halting rather than continuing to waste resources.
+The [Stop the Line](../principles/stop-the-line.md) principle applies here: detecting a problem early and halting rather than continuing to waste resources.
 
 ## Implementation Considerations
 

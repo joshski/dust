@@ -22,7 +22,7 @@ The codebase uses `/* v8 ignore start */` / `/* v8 ignore stop */` comments to e
 ## Observations
 
 1. **Three entire files are excluded from coverage in `vitest.config.ts`** (`repository.ts`, `repository-loop.ts`, `bucket.ts`) specifically because v8 doesn't properly handle ignore comments for function/branch metrics. If v8 fixes this upstream, these file-level exclusions could be removed and the inline ignores would suffice.
-2. **Most blocks are dependency-injection seams** — factory functions that return real implementations. These are a deliberate pattern (consistent with the `dependency-injection` and `functional-core-imperative-shell` goals). The ignores are appropriate.
+2. **Most blocks are dependency-injection seams** — factory functions that return real implementations. These are a deliberate pattern (consistent with the `dependency-injection` and `functional-core-imperative-shell` principles). The ignores are appropriate.
 3. **Two blocks guard genuinely unreachable defensive code** in `terminal-ui.ts`. These could be removed if TypeScript's type system could prove unreachability, but at runtime they're safety nets.
 
 ## Open Questions
@@ -30,7 +30,7 @@ The codebase uses `/* v8 ignore start */` / `/* v8 ignore stop */` comments to e
 ### Should the `getDustVersion` function be refactored to use injected dependencies so it can be tested?
 
 #### Option: Refactor to inject file reading
-Add a file-reading dependency to make the function testable, removing the ignore block. Aligns with the dependency-injection goal.
+Add a file-reading dependency to make the function testable, removing the ignore block. Aligns with the dependency-injection principle.
 
 #### Option: Keep as-is
 The function is simple, stable, and unlikely to break. The cost of adding a dependency-injection seam outweighs the coverage benefit.

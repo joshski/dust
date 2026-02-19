@@ -759,7 +759,7 @@ Line 2
 })
 
 describe('validateSemanticLinks', () => {
-  test('returns no violations when Goals link points to principles directory', () => {
+  test('returns no violations when Principles link points to principles directory', () => {
     const content = `# Task
 ## Principles
 [Principle](../principles/my-principle.md)
@@ -773,7 +773,7 @@ describe('validateSemanticLinks', () => {
     expect(violations).toHaveLength(0)
   })
 
-  test('returns violation when Goals link points to tasks directory', () => {
+  test('returns violation when Principles link points to tasks directory', () => {
     const content = `# Task
 ## Principles
 [Task](../tasks/other-task.md)
@@ -980,7 +980,7 @@ Implement the task functionality.
 
   test('skips non-markdown files outside content directories', async () => {
     const context = createContextEmulator()
-    // Non-.md files outside content directories (goals, ideas, tasks, facts) should be ignored
+    // Non-.md files outside content directories (principles, ideas, tasks, facts) should be ignored
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -1129,7 +1129,7 @@ This is a principle.
     expect(context.stdoutLines.join('\n')).not.toContain('.dust/tasks/')
   })
 
-  test('reports semantic link violations for wrong link type in Goals section', async () => {
+  test('reports semantic link violations for wrong link type in Principles section', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -1227,7 +1227,7 @@ This is a principle.
     expect(violations).toHaveLength(0)
   })
 
-  test('reports missing Parent Goal section', () => {
+  test('reports missing Parent Principle section', () => {
     const content = `# Principle
 
 This is a principle.
@@ -1244,7 +1244,7 @@ This is a principle.
     expect(violations[0].message).toContain('## Parent Principle')
   })
 
-  test('reports missing Sub-Goals section', () => {
+  test('reports missing Sub-Principles section', () => {
     const content = `# Principle
 
 This is a principle.
@@ -1459,7 +1459,7 @@ describe('extractPrincipleRelationships', () => {
     expect(rel.subPrinciples).toEqual([])
   })
 
-  test('ignores non-goal links', () => {
+  test('ignores non-principle links', () => {
     const content = `# Principle
 
 ## Parent Principle
@@ -1540,7 +1540,7 @@ describe('validateBidirectionalLinks', () => {
       {
         filePath: '/project/.dust/principles/parent.md',
         parentPrinciples: [],
-        subPrinciples: [], // Parent doesn't list child as sub-goal
+        subPrinciples: [], // Parent doesn't list child as sub-principle
       },
       {
         filePath: '/project/.dust/principles/child.md',
@@ -2575,7 +2575,7 @@ Refine this idea.
 })
 
 describe('lintMarkdown principle hierarchy validation', () => {
-  test('passes with valid goal hierarchy', async () => {
+  test('passes with valid principle hierarchy', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -2681,7 +2681,7 @@ This is the child principle.
     expect(output).toContain('does not list this principle as a sub-principle')
   })
 
-  test('reports cycle in goal hierarchy', async () => {
+  test('reports cycle in principle hierarchy', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -2689,11 +2689,11 @@ This is the child principle.
           principles: {
             'a.md': `# Principle A
 
-This is goal A.
+This is principle A.
 
 ## Parent Principle
 
-- [Goal B](b.md)
+- [Principle B](b.md)
 
 ## Sub-Principles
 
@@ -2701,11 +2701,11 @@ This is goal A.
 `,
             'b.md': `# Principle B
 
-This is goal B.
+This is principle B.
 
 ## Parent Principle
 
-- [Goal A](a.md)
+- [Principle A](a.md)
 
 ## Sub-Principles
 
@@ -2901,7 +2901,7 @@ This is a principle.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {},
+          principles: {},
         },
       },
     })

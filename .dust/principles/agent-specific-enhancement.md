@@ -8,7 +8,7 @@ While Dust has [Agent-Agnostic Design](agent-agnostic-design.md) and works with 
 - **Enhancement** - Once detected, Dust can tailor its output format, prompts, or context to leverage that agent's specific strengths
 - **Graceful fallback** - When no specific agent is detected, Dust provides a generic experience that works with any agent
 
-This goal complements Agent-Agnostic Design: the core functionality never requires a specific agent, but the experience improves when one is recognized.
+This principle complements Agent-Agnostic Design: the core functionality never requires a specific agent, but the experience improves when one is recognized.
 
 ## Parent Principle
 

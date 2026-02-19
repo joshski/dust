@@ -2,7 +2,7 @@
 
 The dust codebase should be easy to understand, modify, and extend.
 
-This goal governs how we develop and maintain dust itself, separate from the goals that describe what dust offers its users. A well-maintained codebase enables rapid iteration, reduces bugs, and makes contributions easier.
+This principle governs how we develop and maintain dust itself, separate from the principles that describe what dust offers its users. A well-maintained codebase enables rapid iteration, reduces bugs, and makes contributions easier.
 
 ## Parent Principle
 

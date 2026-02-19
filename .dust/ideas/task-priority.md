@@ -6,7 +6,7 @@ Currently, `bin/dust pick task` displays all unblocked tasks in alphabetical ord
 
 ## How it could work
 
-A new required heading `## Priority` would be added to the task file format, alongside the existing `## Goals`, `## Blocked By`, and `## Definition of Done` sections. The section body would contain exactly one of: `high`, `medium`, or `low`.
+A new required heading `## Priority` would be added to the task file format, alongside the existing `## Principles`, `## Blocked By`, and `## Definition of Done` sections. The section body would contain exactly one of: `high`, `medium`, or `low`.
 
 Example:
 
@@ -49,15 +49,15 @@ All unblocked tasks are still shown, but sorted by priority. The agent sees high
 
 Show the top N tasks by priority (e.g., 5). This combines prioritization with a bounded list, preventing the agent from being overwhelmed by a large backlog. The risk is that important-but-low-priority tasks become invisible until higher-priority work is cleared.
 
-### Should priority be inheritable from goals?
+### Should priority be inheritable from principles?
 
 #### No, priority is per-task only
 
-Each task has its own priority, independent of its goals. This is simple to implement and reason about. The downside is that when a goal becomes urgent, every associated task must be manually re-prioritized.
+Each task has its own priority, independent of its principles. This is simple to implement and reason about. The downside is that when a principle becomes urgent, every associated task must be manually re-prioritized.
 
-#### Yes, tasks inherit priority from their highest-priority goal
+#### Yes, tasks inherit priority from their highest-priority principle
 
-If a task links to a goal that has a priority, the task's effective priority is the maximum of its own priority and its goals' priorities. This requires adding priority to goal files too, which increases scope. The benefit is that promoting a goal automatically promotes all its tasks.
+If a task links to a principle that has a priority, the task's effective priority is the maximum of its own priority and its principles' priorities. This requires adding priority to principle files too, which increases scope. The benefit is that promoting a principle automatically promotes all its tasks.
 
 ### Should the `## Priority` section be required or optional?
 

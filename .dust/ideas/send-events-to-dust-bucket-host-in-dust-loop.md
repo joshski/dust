@@ -37,7 +37,7 @@ The bucket service (`dustbucket.com`) already provides a WebSocket-based event s
 - `lib/cli/commands/bucket.ts` — `resolveToken()` — the token resolution pattern to reuse
 - `lib/bucket/terminal-ui.ts` — existing hand-rolled ANSI terminal UI (tabs, key input, status dots); a simpler menu component would follow the same pattern (no external library)
 
-### Goals alignment
+### Principles alignment
 
 - [Easy Adoption](../principles/easy-adoption.md) — removing the `eventsUrl` escape hatch reduces configuration surface; the prompt-on-first-run model is friendlier
 - [Unsurprising UX](../principles/unsurprising-ux.md) — users running `dust loop` shouldn't need to know about `DUST_EVENTS_URL` to get events into the bucket

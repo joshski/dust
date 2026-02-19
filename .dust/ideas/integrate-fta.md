@@ -28,4 +28,4 @@ Top offenders:
 
 ## Related
 
-- Supports goal: [Decoupled Code](../principles/decoupled-code.md)
+- Supports principle: [Decoupled Code](../principles/decoupled-code.md)

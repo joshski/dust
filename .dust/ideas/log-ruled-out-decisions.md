@@ -13,7 +13,7 @@ When an agent (or human) decides NOT to do something, no action is taken, so:
 
 - "We considered adding caching but decided the complexity wasn't worth it"
 - "We evaluated library X but rejected it due to licensing concerns"
-- "We won't support feature Y because it conflicts with goal Z"
+- "We won't support feature Y because it conflicts with principle Z"
 - "We ruled out approach A in favor of approach B" (where B was implemented, but the reasoning against A is valuable)
 
 ## Possible Solutions

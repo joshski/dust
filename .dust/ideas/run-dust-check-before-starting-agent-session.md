@@ -21,7 +21,7 @@ This approach has problems:
 
 A "stop the line" approach would run `dust check` in the loop/bucket infrastructure before spawning an agent. If checks fail, instead of assigning a normal task, spawn an agent with a special "fix the checks" mission. The agent gets clear context about what's broken and can focus on fixing it.
 
-This aligns with the [Stop the Line](../principles/stop-the-line.md) goal: detect problems at their source rather than letting them propagate downstream.
+This aligns with the [Stop the Line](../principles/stop-the-line.md) principle: detect problems at their source rather than letting them propagate downstream.
 
 ## Related Code
 

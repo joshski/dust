@@ -30,9 +30,9 @@ For repositories that have never used dust, `dust bucket` could potentially boot
 
 Claude runs with `dangerouslySkipPermissions: true` and has full subprocess access via `spawn()`, so it could theoretically run `bun add @joshski/dust` or similar if needed.
 
-## Relation to Goals
+## Relation to Principles
 
-This capability aligns with the [Easy Adoption](../principles/easy-adoption.md) goal: "Dust should be trivially easy to adopt in any repository. Getting started with Dust should require minimal friction."
+This capability aligns with the [Easy Adoption](../principles/easy-adoption.md) principle: "Dust should be trivially easy to adopt in any repository. Getting started with Dust should require minimal friction."
 
 It also relates to [Agent-Agnostic Design](../principles/agent-agnostic-design.md) since the architecture separates the orchestration (dust bucket) from the agent runtime (Claude).
 

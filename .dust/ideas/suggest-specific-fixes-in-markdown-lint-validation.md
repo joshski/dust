@@ -2,9 +2,9 @@
 
 Enhance lint violation messages to include specific fix suggestions, so users (and AI agents) can resolve issues without consulting documentation.
 
-Currently, most validation errors describe what's wrong but not how to fix it. For example, `Missing required heading: "## Goals"` tells you what's missing but not where to put it or what format the section should have. The one exception is the Open Questions bullet-point violation, which already suggests running `dust new idea` to see the expected format.
+Currently, most validation errors describe what's wrong but not how to fix it. For example, `Missing required heading: "## Principles"` tells you what's missing but not where to put it or what format the section should have. The one exception is the Open Questions bullet-point violation, which already suggests running `dust new idea` to see the expected format.
 
-This idea aligns with the [Actionable Errors](../principles/actionable-errors.md) goal: error messages should provide specific guidance on how to fix the problem.
+This idea aligns with the [Actionable Errors](../principles/actionable-errors.md) principle: error messages should provide specific guidance on how to fix the problem.
 
 ## Candidates for Fix Suggestions
 
@@ -14,7 +14,7 @@ This idea aligns with the [Actionable Errors](../principles/actionable-errors.md
 - **`validateOpeningSentence`** — Could explain what a valid opening sentence looks like (plain text, ends with `.`/`?`/`!`, appears after the H1).
 - **`validateImperativeOpeningSentence`** — Already includes an example (`"Add X" not "This adds X"`), but could suggest a rewrite based on the actual first word found.
 - **`validateTaskHeadings`** — Could show a minimal valid task file skeleton with the missing heading(s).
-- **`validateGoalHierarchySections`** — Could show a minimal valid goal file skeleton.
+- **`validateGoalHierarchySections`** — Could show a minimal valid principle file skeleton.
 - **`validateLinks`** (broken links) — Could list similar filenames in the target directory as "did you mean?" suggestions.
 - **`validateSemanticLinks`** — Could explain the expected link format (e.g., relative path to a file in the correct directory).
 - **`validateBidirectionalLinks`** — Could show the exact line to add in the other file.

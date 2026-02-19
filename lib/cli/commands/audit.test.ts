@@ -239,7 +239,7 @@ describe('audit command', () => {
     }
   })
 
-  test('stock audits have no goals because they are designed for downstream projects', () => {
+  test('stock audits have no principles because they are designed for downstream projects', () => {
     const audits = loadStockAudits()
     for (const audit of audits) {
       const goalsMatch = audit.template.match(
@@ -263,7 +263,7 @@ describe('audit add command', () => {
           config: {
             audits: {
               'my-audit.md':
-                '# My Custom Audit\n\nCheck for custom issues.\n\n## Principles\n\n- [Example Goal](../principles/example.md)',
+                '# My Custom Audit\n\nCheck for custom issues.\n\n## Principles\n\n- [Example Principle](../principles/example.md)',
             },
           },
           tasks: {},

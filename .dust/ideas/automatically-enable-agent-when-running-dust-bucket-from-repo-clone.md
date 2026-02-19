@@ -31,7 +31,7 @@ When a developer runs `dust bucket` from within a git repository clone, the serv
 - Match the agent to the correct repository
 - Tailor behavior to the client's operating system
 
-## Related Goals
+## Related Principles
 
 - [Agent Autonomy](../principles/agent-autonomy.md) - Enabling agents to work effectively without human intervention
 - [Easy Adoption](../principles/easy-adoption.md) - Reducing friction when starting with dust

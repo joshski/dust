@@ -13,7 +13,7 @@ Prefer literal structures that visually match the domain:
 ```javascript
 // Avoid: flat paths that obscure hierarchy
 const fs = createFileSystemEmulator({
-  files: new Map([['/project/.dust/goals/my-goal.md', '# My Goal']]),
+  files: new Map([['/project/.dust/principles/my-goal.md', '# My Goal']]),
   existingPaths: new Set(['/project/.dust/ideas']),
 })
 
@@ -21,7 +21,7 @@ const fs = createFileSystemEmulator({
 const fs = createFileSystemEmulator({
   project: {
     '.dust': {
-      goals: {
+      principles: {
         'my-goal.md': '# My Goal'
       },
       ideas: {}
@@ -37,7 +37,7 @@ The nested form:
 
 ## How to evaluate
 
-Work supports this goal when test setup data uses structures that visually resemble what they represent, reducing cognitive load for readers.
+Work supports this principle when test setup data uses structures that visually resemble what they represent, reducing cognitive load for readers.
 
 ## Parent Principle
 

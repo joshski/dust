@@ -1,6 +1,6 @@
 # Extract shared markdown scanning utilities
 
-The original duplication between `list.ts` and `next.ts` has been resolved — shared utilities now live in `lib/markdown/markdown-utilities.ts`. A few inline regex instances remain in `workflow-tasks.ts` (3) and `audit.ts` (1) but may not warrant extraction per the Reasonably DRY goal.
+The original duplication between `list.ts` and `next.ts` has been resolved — shared utilities now live in `lib/markdown/markdown-utilities.ts`. A few inline regex instances remain in `workflow-tasks.ts` (3) and `audit.ts` (1) but may not warrant extraction per the Reasonably DRY principle.
 
 ## Findings
 
@@ -19,7 +19,7 @@ Consistency across the codebase and single source of truth for the title extract
 
 #### No, leave as-is
 
-The duplication is minor (a single regex) and refactoring would add a dependency from `workflow-tasks.ts` on `markdown-utilities.ts` that doesn't currently exist. Per the Reasonably DRY goal, the coupling may not be justified.
+The duplication is minor (a single regex) and refactoring would add a dependency from `workflow-tasks.ts` on `markdown-utilities.ts` that doesn't currently exist. Per the Reasonably DRY principle, the coupling may not be justified.
 
 ### Should the audit.ts inline regex be replaced?
 

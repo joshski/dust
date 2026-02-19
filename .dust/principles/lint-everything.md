@@ -8,7 +8,7 @@ This project lints:
 - TypeScript (type checking and style)
 - Markdown (broken links, required sections)
 - Task files (structure validation)
-- Goal hierarchy (parent/child consistency)
+- Principle hierarchy (parent/child consistency)
 
 ## Parent Principle
 

@@ -2,7 +2,7 @@
 
 Dust should help assess the "agent developer experience" of a given repository and generate tasks to improve it.
 
-When dust is adopted in a new repository, or periodically in an existing one, it should be able to evaluate how well the repository supports autonomous agent work. The assessment examines the repository through the lens of dust's goals — things like whether tasks are small enough for single iterations, whether context is efficiently structured, whether feedback loops are fast, and whether an agent can orient itself without human help.
+When dust is adopted in a new repository, or periodically in an existing one, it should be able to evaluate how well the repository supports autonomous agent work. The assessment examines the repository through the lens of dust's principles — things like whether tasks are small enough for single iterations, whether context is efficiently structured, whether feedback loops are fast, and whether an agent can orient itself without human help.
 
 The output is a set of dust tasks, each targeting a specific dimension of the agent DX. For example:
 
@@ -43,16 +43,16 @@ The assessment outputs a markdown report summarizing findings. The user can then
 
 The report includes proposed task definitions inline (as fenced code blocks or a structured section). The user reviews the report and runs a follow-up command to accept specific proposals. This balances visibility with actionability.
 
-### Should the assessment be goal-aware?
+### Should the assessment be principle-aware?
 
-#### Yes, assess against the repository's own goals
+#### Yes, assess against the repository's own principles
 
-The assessment reads `.dust/goals/` and evaluates how well the repository supports each goal. This produces highly relevant findings but requires goals to already exist. It also means the assessment is only as good as the goals — vague goals produce vague assessments.
+The assessment reads `.dust/principles/` and evaluates how well the repository supports each principle. This produces highly relevant findings but requires principles to already exist. It also means the assessment is only as good as the principles — vague principles produce vague assessments.
 
 #### No, use a fixed set of agent DX dimensions
 
-The assessment uses a built-in rubric (like the dimensions listed above) regardless of what goals exist. This works even in repositories with no goals defined and provides a consistent baseline. The downside is that it may flag things the team doesn't care about.
+The assessment uses a built-in rubric (like the dimensions listed above) regardless of what principles exist. This works even in repositories with no principles defined and provides a consistent baseline. The downside is that it may flag things the team doesn't care about.
 
-#### Both, with goals as an overlay
+#### Both, with principles as an overlay
 
-Start with the fixed rubric, then layer on goal-specific analysis if goals exist. This provides a useful baseline for any repository while also respecting the team's stated priorities. The downside is complexity — two passes may produce overlapping or contradictory findings.
+Start with the fixed rubric, then layer on principle-specific analysis if principles exist. This provides a useful baseline for any repository while also respecting the team's stated priorities. The downside is complexity — two passes may produce overlapping or contradictory findings.
