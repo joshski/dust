@@ -15,8 +15,6 @@
 
 For read-only operations, use `buildReadOnlyArtifactsRepository(fileSystem, dustPath)` which provides `parseIdea`, `listIdeas`, `findWorkflowTaskForIdea`, and `parseCaptureIdeaTask`.
 
-The legacy function exports from `lib/workflow-tasks.ts` and `lib/ideas.ts` remain available for backwards compatibility.
-
 ## Idea Transition Prefixes
 
 Tasks that transition existing ideas use title prefixes defined in `IDEA_TRANSITION_PREFIXES`:
