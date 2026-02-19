@@ -6,7 +6,7 @@ Research this idea thoroughly, then create one or more narrowly-scoped task file
 
 .dust/facts/signals.md has not stuck. We call them "artifacts". Update accordingly
 
-## Goals
+## Principles
 
 (none)
 
