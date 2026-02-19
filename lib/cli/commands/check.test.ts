@@ -559,7 +559,7 @@ describe('check with validation', () => {
       project: { '.dust': {} },
     })
     fileSystem.readFile = async () =>
-      '# Test\n## Goals\n## Blocked By\n## Definition of Done'
+      '# Test\n## Principles\n## Blocked By\n## Definition of Done'
     const bufferedRunner = createMockBufferedRunner({
       'npm run lint': { exitCode: 0, output: '' },
     })
@@ -589,7 +589,7 @@ describe('check with validation', () => {
         '.dust': {
           tasks: {
             'InvalidName.md':
-              '# Test\n## Goals\n## Blocked By\n## Definition of Done',
+              '# Test\n## Principles\n## Blocked By\n## Definition of Done',
           },
         },
       },
@@ -910,7 +910,7 @@ describe('check command --serial flag', () => {
       project: { '.dust': {} },
     })
     fileSystem.readFile = async () =>
-      '# Test\n## Goals\n## Blocked By\n## Definition of Done'
+      '# Test\n## Principles\n## Blocked By\n## Definition of Done'
     const bufferedRunner = createMockBufferedRunner({
       'npm run lint': { exitCode: 0, output: '' },
     })

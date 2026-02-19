@@ -8,7 +8,7 @@ Simple tasks can be performed by simple (cheap, fast) models/agents.
 
 By capturing a complexity estimate in tasks (a new section) we can allow downstream systems to choose a model/agent according to the estimated complexity.
 
-## Goals
+## Principles
 
 (none)
 

@@ -60,7 +60,7 @@ function newTaskInstructions(vars: TemplateVars): string {
     '6. Write a comprehensive description starting with an imperative opening sentence (e.g., "Add caching to the API layer." not "This task adds caching."). Include technical details and references to relevant files.'
   )
   steps.push(
-    '7. Add a `## Goals` section with links to relevant goals this task supports (e.g., `- [Goal Name](../goals/goal-name.md)`)'
+    '7. Add a `## Principles` section with links to relevant principles this task supports (e.g., `- [Principle Name](../principles/principle-name.md)`)'
   )
   steps.push(
     '8. Add a `## Blocked By` section listing any tasks that must complete first, or `(none)` if there are no blockers'

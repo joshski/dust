@@ -48,7 +48,7 @@ Use a todo list to track your progress through these steps.
 4. Create a new markdown file in \`.dust/tasks/\` with a descriptive kebab-case name (e.g., \`add-user-authentication.md\`)
 5. Add a title as the first line using an H1 heading (e.g., \`# Add user authentication\`)
 6. Write a comprehensive description starting with an imperative opening sentence (e.g., "Add caching to the API layer." not "This task adds caching."). Include technical details and references to relevant files.
-7. Add a \`## Goals\` section with links to relevant goals this task supports (e.g., \`- [Goal Name](../goals/goal-name.md)\`)
+7. Add a \`## Principles\` section with links to relevant principles this task supports (e.g., \`- [Principle Name](../principles/principle-name.md)\`)
 8. Add a \`## Blocked By\` section listing any tasks that must complete first, or \`(none)\` if there are no blockers
 9. Add a \`## Definition of Done\` section with a checklist of completion criteria using \`- [ ]\` for each item
 10. Run \`dust lint\` to catch any issues with the task format

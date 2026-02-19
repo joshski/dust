@@ -1,6 +1,6 @@
 # Signals
 
-Dust refers to its primary artifacts (goals, facts, ideas and tasks) as "signals".
+Dust refers to its primary artifacts (principles, facts, ideas and tasks) as "signals".
 
 One way to think of these is as a progression from stable/abstract to volatile/concrete:
 
@@ -8,7 +8,7 @@ One way to think of these is as a progression from stable/abstract to volatile/c
  Stable                                     Abstract
    ▲                                            ▲
    │                                            │
-   │   Goals ←── Pages should load quickly      │
+   │   Principles ←── Pages should load quickly  │
    │                    ↑                       │
    │   Facts ←── Read queries are optimised     │
    │                    ↑                       │
