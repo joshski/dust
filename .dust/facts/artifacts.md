@@ -1,6 +1,6 @@
-# Signals
+# Artifacts
 
-Dust refers to its primary artifacts (principles, facts, ideas and tasks) as "signals".
+Dust refers to its primary artifacts (principles, facts, ideas and tasks) as "artifacts".
 
 One way to think of these is as a progression from stable/abstract to volatile/concrete:
 
