@@ -72,7 +72,7 @@ function newTaskInstructions(vars: TemplateVars): string {
     `10. Run \`${vars.bin} lint\` to catch any issues with the task format`
   )
   steps.push(
-    '11. Create a single atomic commit with a message in the format "Add task: <title>" that includes:'
+    '11. Create a single atomic commit with a message in the format "Create task: Add task: <title>" that includes:'
   )
   steps.push('    - The new task file')
 

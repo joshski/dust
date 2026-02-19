@@ -31,7 +31,7 @@ function newPrincipleInstructions(vars: TemplateVars): string {
        - Why it matters for the project
        - How to evaluate whether work supports this principle
     5. Run \`${vars.bin} lint\` to catch any formatting issues
-    6. Create a single atomic commit with a message in the format "Add principle: <title>"
+    6. Create a single atomic commit with a message in the format "Create task: Add principle: <title>"
     7. Push your commit to the remote repository
 
     Principles should be:

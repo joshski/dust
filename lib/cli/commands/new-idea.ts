@@ -24,7 +24,7 @@ function newIdeaInstructions(vars: TemplateVars): string {
     4. Write a brief description of the potential change or improvement
     5. If the idea has open questions, add an \`## Open Questions\` section (see below)
     6. Run \`${vars.bin} lint\` to catch any issues with the idea file format
-    7. Create a single atomic commit with a message in the format "Add idea: <title>"
+    7. Create a single atomic commit with a message in the format "Create task: Add idea: <title>"
     8. Push your commit to the remote repository
 
     ### Open Questions section
