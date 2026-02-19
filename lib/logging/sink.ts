@@ -1,13 +1,13 @@
 /**
  * File-based log sink — the imperative shell for debug logging.
  *
- * Lazily creates `~/.dust/logs/<scope>.log` and appends lines to it.
- * The scope is set at construction time via enableFileLogs() in index.ts.
+ * Writes log lines to an arbitrary file path, creating the directory lazily
+ * on first write. The path is determined by the caller (enableFileLogs in
+ * index.ts) rather than this class.
  */
 
 import { appendFileSync, mkdirSync } from 'node:fs'
-import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname } from 'node:path'
 
 export interface LogSink {
   write(line: string): void
@@ -17,32 +17,30 @@ type AppendFileSyncFn = (path: string, data: string) => void
 type MkdirSyncFn = (path: string, options: { recursive: boolean }) => void
 
 export class FileSink implements LogSink {
-  private logPath: string | undefined
+  private resolvedPath: string | undefined
   private ready = false
 
   constructor(
-    private readonly scope: string,
-    private readonly homeDir: string = homedir(),
+    private readonly logPath: string,
     private readonly _appendFileSync: AppendFileSyncFn = appendFileSync,
     private readonly _mkdirSync: MkdirSyncFn = mkdirSync
   ) {}
 
   private ensureLogFile(): string | undefined {
-    if (this.ready) return this.logPath
+    if (this.ready) return this.resolvedPath
     this.ready = true
 
-    const dir = join(this.homeDir, '.dust', 'logs')
-    this.logPath = join(dir, `${this.scope}.log`)
+    this.resolvedPath = this.logPath
     try {
-      this._mkdirSync(dir, { recursive: true })
+      this._mkdirSync(dirname(this.logPath), { recursive: true })
     } catch {
-      this.logPath = undefined
+      this.resolvedPath = undefined
     }
-    return this.logPath
+    return this.resolvedPath
   }
 
   /**
-   * Write a line to the debug log file.
+   * Write a line to the log file.
    * Silently no-ops if the file cannot be opened.
    */
   write(line: string): void {

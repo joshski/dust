@@ -4,7 +4,15 @@
  * Two independent output channels:
  *
  * - **File logging** — activated by `enableFileLogs(scope)` at command startup.
- *   Writes all logs unfiltered to `~/.dust/logs/<scope>.log`. Not affected by DEBUG.
+ *   Writes all logs to `~/.dust/logs/<scope>.log`. The destination is controlled
+ *   by the DUST_LOG_FILE env var so that parent processes (e.g. `dust check`)
+ *   can redirect all child-process logs to a single file.
+ *
+ *   Routing rules for enableFileLogs(scope):
+ *   1. If DUST_LOG_FILE is already set (inherited from a parent process), use
+ *      that path — all scopes land in the same file.
+ *   2. Otherwise compute `~/.dust/logs/<scope>.log`, set DUST_LOG_FILE so child
+ *      processes inherit it, then write there.
  *
  * - **Stdout logging** — activated by `DEBUG=pattern`. Writes matching logs to
  *   stdout. Works in any command, regardless of whether file logging is enabled.
@@ -25,14 +33,19 @@
  * No external dependencies.
  */
 
+import { homedir } from 'node:os'
+import { join } from 'node:path'
 import { formatLine, matchesAny, parsePatterns } from './match'
 import { FileSink, type LogSink } from './sink'
 
 export type LogFn = (...messages: unknown[]) => void
 
+const DUST_LOG_FILE = 'DUST_LOG_FILE'
+
 let patterns: RegExp[] | null = null
 let initialized = false
 let activeFileSink: LogSink | null = null
+let ownedDustLogFile = false // true if we set DUST_LOG_FILE (vs inherited it)
 
 function init(): void {
   if (initialized) return
@@ -42,13 +55,24 @@ function init(): void {
 }
 
 /**
- * Activate file logging for long-running commands. All log lines are written
- * to `~/.dust/logs/<scope>.log` unfiltered (ignoring DEBUG).
+ * Activate file logging for this command. Determines the log path as follows:
+ * - If DUST_LOG_FILE is already set (inherited from a parent process such as
+ *   `dust check`), use that path — all scopes land in the same file.
+ * - Otherwise compute `~/.dust/logs/<scope>.log`, set DUST_LOG_FILE so that
+ *   any child processes inherit the same destination, then write there.
  *
  * Pass a LogSink as the second argument to override for testing.
  */
 export function enableFileLogs(scope: string, _sinkForTesting?: LogSink): void {
-  activeFileSink = _sinkForTesting ?? new FileSink(scope)
+  const existing = process.env[DUST_LOG_FILE]
+  const path = existing ?? join(homedir(), '.dust', 'logs', `${scope}.log`)
+
+  if (!existing) {
+    process.env[DUST_LOG_FILE] = path
+    ownedDustLogFile = true
+  }
+
+  activeFileSink = _sinkForTesting ?? new FileSink(path)
 }
 
 /**
@@ -83,9 +107,14 @@ export function isEnabled(name: string): boolean {
 
 /**
  * Reset internal state (for testing only).
+ * Clears DUST_LOG_FILE only if this module set it (not if it was inherited).
  */
 export function _reset(): void {
   initialized = false
   patterns = null
   activeFileSink = null
+  if (ownedDustLogFile) {
+    delete process.env[DUST_LOG_FILE]
+    ownedDustLogFile = false
+  }
 }

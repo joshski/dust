@@ -232,6 +232,38 @@ describe('enableFileLogs', () => {
       expect(stdoutLines[0]).toContain('[dust.foo]')
     })
   })
+
+  test('sets DUST_LOG_FILE to scope path when not already set', () => {
+    return stubEnv('DUST_LOG_FILE', undefined, () => {
+      enableFileLogs('loop', fakeSink([]))
+      expect(process.env.DUST_LOG_FILE).toContain('loop.log')
+      expect(process.env.DUST_LOG_FILE).toContain('.dust/logs')
+    })
+  })
+
+  test('does not override DUST_LOG_FILE when already set (subprocess routing)', () => {
+    return stubEnv('DUST_LOG_FILE', '/inherited/check.log', () => {
+      enableFileLogs('loop', fakeSink([]))
+      expect(process.env.DUST_LOG_FILE).toBe('/inherited/check.log')
+    })
+  })
+
+  test('_reset clears DUST_LOG_FILE when this module set it', () => {
+    return stubEnv('DUST_LOG_FILE', undefined, () => {
+      enableFileLogs('loop', fakeSink([]))
+      expect(process.env.DUST_LOG_FILE).toBeDefined()
+      _reset()
+      expect(process.env.DUST_LOG_FILE).toBeUndefined()
+    })
+  })
+
+  test('_reset does not clear DUST_LOG_FILE when inherited', () => {
+    return stubEnv('DUST_LOG_FILE', '/inherited/check.log', () => {
+      enableFileLogs('loop', fakeSink([]))
+      _reset()
+      expect(process.env.DUST_LOG_FILE).toBe('/inherited/check.log')
+    })
+  })
 })
 
 describe('isEnabled', () => {

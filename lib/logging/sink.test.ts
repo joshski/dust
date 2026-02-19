@@ -1,50 +1,59 @@
 import { describe, expect, test } from 'vitest'
 import { FileSink } from './sink'
 
-function makeFakes(fakeHome = '/fake/home') {
+function makeFakes() {
   const appended: [string, string][] = []
   const mkdirPaths: string[] = []
   const appendFileSync = (path: string, data: string) =>
     appended.push([path, data])
   const mkdirSync = (path: string, _opts: { recursive: boolean }) =>
     mkdirPaths.push(path)
-  return { appended, mkdirPaths, appendFileSync, mkdirSync, fakeHome }
+  return { appended, mkdirPaths, appendFileSync, mkdirSync }
 }
 
 describe('FileSink', () => {
   test('creates the log directory on first write', () => {
-    const { mkdirPaths, appendFileSync, mkdirSync, fakeHome } = makeFakes()
-    const sink = new FileSink('debug', fakeHome, appendFileSync, mkdirSync)
+    const { mkdirPaths, appendFileSync, mkdirSync } = makeFakes()
+    const sink = new FileSink(
+      '/home/user/.dust/logs/debug.log',
+      appendFileSync,
+      mkdirSync
+    )
     sink.write('hello\n')
     expect(mkdirPaths).toHaveLength(1)
-    expect(mkdirPaths[0]).toContain('.dust/logs')
+    expect(mkdirPaths[0]).toBe('/home/user/.dust/logs')
   })
 
   test('appends the line to the log file on write', () => {
-    const { appended, appendFileSync, mkdirSync, fakeHome } = makeFakes()
-    const sink = new FileSink('debug', fakeHome, appendFileSync, mkdirSync)
+    const { appended, appendFileSync, mkdirSync } = makeFakes()
+    const sink = new FileSink(
+      '/home/user/.dust/logs/debug.log',
+      appendFileSync,
+      mkdirSync
+    )
     sink.write('hello\n')
     expect(appended).toHaveLength(1)
     expect(appended[0][1]).toBe('hello\n')
   })
 
-  test('uses the scope as the log filename', () => {
-    const { appended, appendFileSync, mkdirSync, fakeHome } = makeFakes()
-    const sink = new FileSink('debug', fakeHome, appendFileSync, mkdirSync)
+  test('writes to the given path', () => {
+    const { appended, appendFileSync, mkdirSync } = makeFakes()
+    const sink = new FileSink(
+      '/home/user/.dust/logs/loop.log',
+      appendFileSync,
+      mkdirSync
+    )
     sink.write('msg\n')
-    expect(appended[0][0]).toContain('debug.log')
-  })
-
-  test('writes to ~/.dust/logs/<scope>.log', () => {
-    const { appended, appendFileSync, mkdirSync } = makeFakes('/home/user')
-    const sink = new FileSink('loop', '/home/user', appendFileSync, mkdirSync)
-    sink.write('msg\n')
-    expect(appended[0][0]).toContain('/home/user/.dust/logs/loop.log')
+    expect(appended[0][0]).toBe('/home/user/.dust/logs/loop.log')
   })
 
   test('only calls mkdirSync once across multiple writes', () => {
-    const { mkdirPaths, appendFileSync, mkdirSync, fakeHome } = makeFakes()
-    const sink = new FileSink('debug', fakeHome, appendFileSync, mkdirSync)
+    const { mkdirPaths, appendFileSync, mkdirSync } = makeFakes()
+    const sink = new FileSink(
+      '/home/user/.dust/logs/debug.log',
+      appendFileSync,
+      mkdirSync
+    )
     sink.write('first\n')
     sink.write('second\n')
     sink.write('third\n')
@@ -58,7 +67,11 @@ describe('FileSink', () => {
     const mkdirSync = () => {
       throw new Error('permission denied')
     }
-    const sink = new FileSink('debug', '/fake/home', appendFileSync, mkdirSync)
+    const sink = new FileSink(
+      '/home/user/.dust/logs/debug.log',
+      appendFileSync,
+      mkdirSync
+    )
     expect(() => sink.write('msg\n')).not.toThrow()
     expect(appended).toHaveLength(0)
   })
@@ -68,7 +81,11 @@ describe('FileSink', () => {
     const appendFileSync = () => {
       throw new Error('disk full')
     }
-    const sink = new FileSink('debug', '/fake/home', appendFileSync, mkdirSync)
+    const sink = new FileSink(
+      '/home/user/.dust/logs/debug.log',
+      appendFileSync,
+      mkdirSync
+    )
     expect(() => sink.write('msg\n')).not.toThrow()
   })
 })
