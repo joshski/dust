@@ -25,7 +25,7 @@
  */
 
 import { formatLine, matchesAny, parsePatterns } from './match'
-import { type WriteFn, writeToFile } from './sink'
+import { type LogSink, defaultSink } from './sink'
 
 export { setLogScope } from './sink'
 
@@ -46,16 +46,16 @@ function init(): void {
  * `log/dust/<scope>.log` when the logger name matches the DEBUG patterns.
  *
  * @param name - Logger name, e.g. `dust.bucket.loop`
- * @param write - Override the default file writer (for testing)
+ * @param sink - Override the default log sink (for testing)
  */
 export function createLogger(
   name: string,
-  write: WriteFn = writeToFile
+  sink: LogSink = defaultSink
 ): LogFn {
   return (...messages: unknown[]) => {
     init()
     if (!patterns || !matchesAny(name, patterns)) return
-    write(formatLine(name, messages))
+    sink.write(formatLine(name, messages))
   }
 }
 

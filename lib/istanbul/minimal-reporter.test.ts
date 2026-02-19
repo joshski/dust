@@ -56,14 +56,14 @@ describe('IncompleteCoverageReporter', () => {
     FileWriter.resetOutput()
   })
 
-  it('outputs nothing when all files have 100% coverage', () => {
+  it('outputs success message when all files have 100% coverage', () => {
     const coverageMap = createCoverageMap()
     coverageMap.addFileCoverage(fullCoverageFile('/src/a.ts'))
     coverageMap.addFileCoverage(fullCoverageFile('/src/b.ts'))
 
     executeReporter(coverageMap)
 
-    expect(FileWriter.getOutput()).toBe('')
+    expect(FileWriter.getOutput()).toContain('✔ 100% coverage!')
   })
 
   it('shows only files with less than 100% coverage', () => {
@@ -115,6 +115,58 @@ describe('IncompleteCoverageReporter', () => {
     executeReporter(coverageMap)
 
     expect(FileWriter.getOutput()).toContain('- Line 2')
+  })
+
+  it('shows lines with uncovered branches', () => {
+    const coverageMap = createCoverageMap()
+    coverageMap.addFileCoverage({
+      path: '/src/branch.ts',
+      statementMap: {
+        '0': { start: { line: 1, column: 0 }, end: { line: 1, column: 10 } },
+      },
+      fnMap: {},
+      branchMap: {
+        '0': {
+          loc: { start: { line: 3, column: 0 }, end: { line: 3, column: 20 } },
+          type: 'if',
+          locations: [],
+        },
+      },
+      s: { '0': 1 },
+      f: {},
+      b: { '0': [1, 0] },
+    })
+
+    executeReporter(coverageMap)
+
+    expect(FileWriter.getOutput()).toContain('- Line 3')
+  })
+
+  it('deduplicates a line that is both uncovered and has a branch gap', () => {
+    const coverageMap = createCoverageMap()
+    coverageMap.addFileCoverage({
+      path: '/src/both.ts',
+      statementMap: {
+        '0': { start: { line: 1, column: 0 }, end: { line: 1, column: 10 } },
+        '1': { start: { line: 2, column: 0 }, end: { line: 2, column: 10 } },
+      },
+      fnMap: {},
+      branchMap: {
+        '0': {
+          loc: { start: { line: 2, column: 0 }, end: { line: 2, column: 20 } },
+          type: 'if',
+          locations: [],
+        },
+      },
+      s: { '0': 1, '1': 0 },
+      f: {},
+      b: { '0': [0, 0] },
+    })
+
+    executeReporter(coverageMap)
+
+    const output = FileWriter.getOutput()
+    expect(output.match(/Line 2/g)?.length).toBe(1)
   })
 
   it('shows uncovered line ranges', () => {
