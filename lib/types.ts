@@ -9,7 +9,7 @@
 export type { AgentSessionEvent, EventMessage } from './agent-events'
 
 // Ideas
-export type { Idea, IdeaOpenQuestion, IdeaOption } from './ideas'
+export type { Idea, IdeaOpenQuestion, IdeaOption } from './artifacts/ideas'
 
 // Workflow tasks
 export type {
@@ -20,4 +20,4 @@ export type {
   ParsedCaptureIdeaTask,
   WorkflowTaskMatch,
   WorkflowTaskType,
-} from './workflow-tasks'
+} from './artifacts/workflow-tasks'

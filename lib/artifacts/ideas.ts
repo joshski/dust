@@ -1,8 +1,8 @@
-import type { ReadableFileSystem } from './cli/types'
+import type { ReadableFileSystem } from '../cli/types'
 import {
   extractOpeningSentence,
   extractTitle,
-} from './markdown/markdown-utilities'
+} from '../markdown/markdown-utilities'
 
 export interface IdeaOption {
   name: string

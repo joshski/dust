@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'vitest'
 import {
+  IDEA_TRANSITION_PREFIXES,
+  titleToFilename,
+} from '../../artifacts/workflow-tasks'
+import {
   validateImperativeOpeningSentence,
   validateOpeningSentence,
   validateOpeningSentenceLength,
@@ -33,7 +37,6 @@ import {
   createFileSystemEmulator,
   type FileSystemEmulator,
 } from '../../test/test-utilities'
-import { IDEA_TRANSITION_PREFIXES, titleToFilename } from '../../workflow-tasks'
 import type { CommandContext, CommandDependencies } from '../types'
 import { lintMarkdown } from './lint-markdown'
 

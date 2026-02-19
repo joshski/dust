@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
+import { createFileSystemEmulator } from '../test/test-utilities'
 import { parseIdea, parseOpenQuestions } from './ideas'
-import { createFileSystemEmulator } from './test/test-utilities'
 
 describe('parseOpenQuestions', () => {
   test('returns empty array when there is no Open Questions section', () => {

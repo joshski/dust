@@ -7,7 +7,7 @@
  * Usage: dust focus "add login box"
  */
 
-import { BUILD_IDEA_PREFIX } from '../../workflow-tasks'
+import { BUILD_IDEA_PREFIX } from '../../artifacts/workflow-tasks'
 import type { CommandDependencies, CommandResult } from '../types'
 import { manageGitHooks, templateVariables } from './agent-shared'
 

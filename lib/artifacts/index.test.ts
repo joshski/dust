@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'vitest'
+import { createFileSystemEmulator } from '../test/test-utilities'
 import {
   buildArtifactsRepository,
   buildReadOnlyArtifactsRepository,
-} from './artifacts'
-import { createFileSystemEmulator } from './test/test-utilities'
+} from './index'
 
 function createFileSystem() {
   return createFileSystemEmulator({

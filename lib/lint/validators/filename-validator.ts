@@ -2,8 +2,8 @@
  * Filename validation for .dust markdown files
  */
 
+import { titleToFilename } from '../../artifacts/workflow-tasks'
 import { extractTitle } from '../../markdown/markdown-utilities'
-import { titleToFilename } from '../../workflow-tasks'
 import type { Violation } from './types'
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.md$/

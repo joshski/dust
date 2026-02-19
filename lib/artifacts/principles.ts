@@ -1,8 +1,8 @@
-import type { ReadableFileSystem } from './cli/types'
+import type { ReadableFileSystem } from '../cli/types'
 import {
   extractTitle,
   MARKDOWN_LINK_PATTERN,
-} from './markdown/markdown-utilities'
+} from '../markdown/markdown-utilities'
 
 export interface Principle {
   slug: string

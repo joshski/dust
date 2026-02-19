@@ -1,5 +1,5 @@
-import type { ReadableFileSystem } from './cli/types'
-import { extractTitle } from './markdown/markdown-utilities'
+import type { ReadableFileSystem } from '../cli/types'
+import { extractTitle } from '../markdown/markdown-utilities'
 
 export interface Fact {
   slug: string
