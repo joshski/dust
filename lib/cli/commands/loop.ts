@@ -221,7 +221,7 @@ export function createWireEventSender(
   }
 }
 
-const log = createLogger('dust.cli.commands.loop')
+const log = createLogger('dust:cli:commands:loop')
 
 const SLEEP_INTERVAL_MS = 30000 // 30s poll interval balances responsiveness with avoiding excessive git pulls
 const SLEEP_STEP_MS = 1000

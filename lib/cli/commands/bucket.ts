@@ -68,7 +68,7 @@ import { run as claudeRun } from '../../claude/run'
 import { createLogger, enableFileLogs } from '../../logging'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
 
-const log = createLogger('dust.cli.commands.bucket')
+const log = createLogger('dust:cli:commands:bucket')
 
 const DEFAULT_DUSTBUCKET_WS_URL = 'wss://dustbucket.com/agent/connect'
 const INITIAL_RECONNECT_DELAY_MS = 1000

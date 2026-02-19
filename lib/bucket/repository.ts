@@ -39,7 +39,7 @@ export {
 } from './repository-git'
 export { runRepositoryLoop } from './repository-loop'
 
-const log = createLogger('dust.bucket.repository')
+const log = createLogger('dust:bucket:repository')
 
 export interface Repository {
   name: string

@@ -28,7 +28,7 @@ import type { SendEventFn } from './events'
 import { appendLogLine, createLogLine } from './log-buffer'
 import type { RepositoryDependencies, RepositoryState } from './repository'
 
-const log = createLogger('dust.bucket.repository-loop')
+const log = createLogger('dust:bucket:repository-loop')
 
 const FALLBACK_TIMEOUT_MS = 300000
 

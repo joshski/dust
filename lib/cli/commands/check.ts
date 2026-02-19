@@ -15,7 +15,7 @@ import type {
 } from '../types'
 import { lintMarkdown } from './lint-markdown'
 
-const log = createLogger('dust.cli.commands.check')
+const log = createLogger('dust:cli:commands:check')
 
 const DEFAULT_CHECK_TIMEOUT_MS = 13000 // Long enough for typical lint/test runs, short enough to fail fast on hangs
 const MAX_OUTPUT_LINES = 500
