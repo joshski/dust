@@ -28,7 +28,7 @@ import {
   rawEventToAgentEvent,
 } from '../../agent-events'
 import { run as claudeRun } from '../../claude/run'
-import { createLogger } from '../../logging'
+import { createLogger, enableFileLogs } from '../../logging'
 import type { CommandDependencies, CommandResult } from '../types'
 import { manageGitHooks } from './agent-shared'
 import { buildImplementationInstructions } from './focus'
@@ -457,6 +457,7 @@ export async function loopClaude(
   dependencies: CommandDependencies,
   loopDependencies: LoopDependencies = createDefaultDependencies()
 ): Promise<CommandResult> {
+  enableFileLogs('loop')
   const { context, settings } = dependencies
   const { postEvent } = loopDependencies
   const maxIterations = parseMaxIterations(dependencies.arguments)

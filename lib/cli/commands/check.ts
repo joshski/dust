@@ -5,7 +5,7 @@
  * in parallel with buffered output.
  */
 
-import { createLogger, setLogScope } from '../../logging'
+import { createLogger, enableFileLogs } from '../../logging'
 import { defaultShellRunner, type ShellRunner } from '../process-runner'
 import type {
   CheckConfig,
@@ -196,7 +196,7 @@ export async function check(
     settings,
   } = dependencies
   const serial = commandArguments.includes('--serial')
-  setLogScope('check')
+  enableFileLogs('check')
 
   if (!settings.checks || settings.checks.length === 0) {
     context.stderr('Error: No checks configured in .dust/config/settings.json')

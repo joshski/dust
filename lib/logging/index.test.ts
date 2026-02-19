@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { stubEnv } from '../test/test-utilities'
-import { _reset, createLogger, isEnabled } from './index'
+import { _reset, createLogger, enableFileLogs, isEnabled } from './index'
 
 beforeEach(() => {
   _reset()
@@ -8,26 +8,33 @@ beforeEach(() => {
 
 afterEach(() => {
   _reset()
+  vi.restoreAllMocks()
 })
 
 function fakeSink(lines: string[]) {
   return { write: (line: string) => lines.push(line) }
 }
 
-describe('createLogger', () => {
-  test('does not write when DEBUG is not set', () => {
+describe('createLogger — stdout (DEBUG)', () => {
+  test('does not write to stdout when DEBUG is not set', () => {
     return stubEnv('DEBUG', undefined, () => {
-      const lines: string[] = []
-      const log = createLogger('dust.test', fakeSink(lines))
+      const spy = vi
+        .spyOn(process.stdout, 'write')
+        .mockImplementation(() => true)
+      const log = createLogger('dust.test')
       log('hello')
-      expect(lines).toHaveLength(0)
+      expect(spy).not.toHaveBeenCalled()
     })
   })
 
-  test('writes when DEBUG=*', () => {
+  test('writes to stdout when DEBUG=*', () => {
     return stubEnv('DEBUG', '*', () => {
       const lines: string[] = []
-      const log = createLogger('dust.test', fakeSink(lines))
+      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
+        lines.push(String(line))
+        return true
+      })
+      const log = createLogger('dust.test')
       log('hello world')
       expect(lines).toHaveLength(1)
       expect(lines[0]).toContain('[dust.test]')
@@ -35,10 +42,14 @@ describe('createLogger', () => {
     })
   })
 
-  test('includes ISO timestamp', () => {
+  test('includes ISO timestamp in stdout output', () => {
     return stubEnv('DEBUG', '*', () => {
       const lines: string[] = []
-      const log = createLogger('dust.foo', fakeSink(lines))
+      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
+        lines.push(String(line))
+        return true
+      })
+      const log = createLogger('dust.foo')
       log('msg')
       expect(lines[0]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
     })
@@ -47,8 +58,12 @@ describe('createLogger', () => {
   test('matches exact logger name', () => {
     return stubEnv('DEBUG', 'dust.foo', () => {
       const lines: string[] = []
-      const fooLog = createLogger('dust.foo', fakeSink(lines))
-      const barLog = createLogger('dust.bar', fakeSink(lines))
+      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
+        lines.push(String(line))
+        return true
+      })
+      const fooLog = createLogger('dust.foo')
+      const barLog = createLogger('dust.bar')
       fooLog('yes')
       barLog('no')
       expect(lines).toHaveLength(1)
@@ -59,10 +74,13 @@ describe('createLogger', () => {
   test('matches multiple comma-separated names', () => {
     return stubEnv('DEBUG', 'dust.foo,dust.bar', () => {
       const lines: string[] = []
-      const sink = fakeSink(lines)
-      createLogger('dust.foo', sink)('f')
-      createLogger('dust.bar', sink)('b')
-      createLogger('dust.baz', sink)('z')
+      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
+        lines.push(String(line))
+        return true
+      })
+      createLogger('dust.foo')('f')
+      createLogger('dust.bar')('b')
+      createLogger('dust.baz')('z')
       expect(lines).toHaveLength(2)
       expect(lines[0]).toContain('[dust.foo]')
       expect(lines[1]).toContain('[dust.bar]')
@@ -72,10 +90,13 @@ describe('createLogger', () => {
   test('supports wildcard at end', () => {
     return stubEnv('DEBUG', 'dust.bucket.*', () => {
       const lines: string[] = []
-      const sink = fakeSink(lines)
-      createLogger('dust.bucket.repository-loop', sink)('bl')
-      createLogger('dust.bucket.repository', sink)('br')
-      createLogger('dust.cli.commands.loop', sink)('l')
+      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
+        lines.push(String(line))
+        return true
+      })
+      createLogger('dust.bucket.repository-loop')('bl')
+      createLogger('dust.bucket.repository')('br')
+      createLogger('dust.cli.commands.loop')('l')
       expect(lines).toHaveLength(2)
       expect(lines[0]).toContain('[dust.bucket.repository-loop]')
       expect(lines[1]).toContain('[dust.bucket.repository]')
@@ -85,10 +106,13 @@ describe('createLogger', () => {
   test('supports wildcard at beginning', () => {
     return stubEnv('DEBUG', '*loop', () => {
       const lines: string[] = []
-      const sink = fakeSink(lines)
-      createLogger('dust.bucket.repository-loop', sink)('bl')
-      createLogger('dust.cli.commands.loop', sink)('l')
-      createLogger('dust.cli.commands.bucket', sink)('b')
+      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
+        lines.push(String(line))
+        return true
+      })
+      createLogger('dust.bucket.repository-loop')('bl')
+      createLogger('dust.cli.commands.loop')('l')
+      createLogger('dust.cli.commands.bucket')('b')
       expect(lines).toHaveLength(2)
       expect(lines[0]).toContain('[dust.bucket.repository-loop]')
       expect(lines[1]).toContain('[dust.cli.commands.loop]')
@@ -98,10 +122,13 @@ describe('createLogger', () => {
   test('mixed patterns: exact and wildcard', () => {
     return stubEnv('DEBUG', 'dust.foo,*bar', () => {
       const lines: string[] = []
-      const sink = fakeSink(lines)
-      createLogger('dust.foo', sink)('f')
-      createLogger('dust.foo.bar', sink)('fb')
-      createLogger('dust.baz', sink)('z')
+      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
+        lines.push(String(line))
+        return true
+      })
+      createLogger('dust.foo')('f')
+      createLogger('dust.foo.bar')('fb')
+      createLogger('dust.baz')('z')
       expect(lines).toHaveLength(2)
       expect(lines[0]).toContain('[dust.foo]')
       expect(lines[1]).toContain('[dust.foo.bar]')
@@ -111,7 +138,11 @@ describe('createLogger', () => {
   test('serializes non-string arguments as JSON', () => {
     return stubEnv('DEBUG', '*', () => {
       const lines: string[] = []
-      const log = createLogger('dust.test', fakeSink(lines))
+      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
+        lines.push(String(line))
+        return true
+      })
+      const log = createLogger('dust.test')
       log('data:', { count: 42 })
       expect(lines[0]).toContain('data: {"count":42}')
     })
@@ -120,12 +151,85 @@ describe('createLogger', () => {
   test('writes each call on its own line', () => {
     return stubEnv('DEBUG', '*', () => {
       const lines: string[] = []
-      const log = createLogger('dust.test', fakeSink(lines))
+      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
+        lines.push(String(line))
+        return true
+      })
+      const log = createLogger('dust.test')
       log('first')
       log('second')
       expect(lines).toHaveLength(2)
       expect(lines[0]).toContain('first')
       expect(lines[1]).toContain('second')
+    })
+  })
+})
+
+describe('enableFileLogs', () => {
+  test('writes to file sink when enableFileLogs is called', () => {
+    return stubEnv('DEBUG', undefined, () => {
+      const lines: string[] = []
+      enableFileLogs('test', fakeSink(lines))
+      const log = createLogger('dust.test')
+      log('hello')
+      expect(lines).toHaveLength(1)
+      expect(lines[0]).toContain('[dust.test]')
+      expect(lines[0]).toContain('hello')
+    })
+  })
+
+  test('does not write to file sink when enableFileLogs is not called', () => {
+    return stubEnv('DEBUG', undefined, () => {
+      const lines: string[] = []
+      const log = createLogger('dust.test')
+      log('hello')
+      expect(lines).toHaveLength(0)
+    })
+  })
+
+  test('file logging is not filtered by DEBUG pattern', () => {
+    return stubEnv('DEBUG', 'dust.other', () => {
+      const lines: string[] = []
+      enableFileLogs('test', fakeSink(lines))
+      const log = createLogger('dust.test')
+      log('message')
+      // File sink gets it even though DEBUG does not match 'dust.test'
+      expect(lines).toHaveLength(1)
+    })
+  })
+
+  test('file logging and stdout logging work simultaneously', () => {
+    return stubEnv('DEBUG', '*', () => {
+      const fileLines: string[] = []
+      const stdoutLines: string[] = []
+      enableFileLogs('test', fakeSink(fileLines))
+      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
+        stdoutLines.push(String(line))
+        return true
+      })
+      const log = createLogger('dust.test')
+      log('both')
+      expect(fileLines).toHaveLength(1)
+      expect(stdoutLines).toHaveLength(1)
+      expect(fileLines[0]).toContain('both')
+      expect(stdoutLines[0]).toContain('both')
+    })
+  })
+
+  test('stdout only gets matching loggers when file gets all', () => {
+    return stubEnv('DEBUG', 'dust.foo', () => {
+      const fileLines: string[] = []
+      const stdoutLines: string[] = []
+      enableFileLogs('test', fakeSink(fileLines))
+      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
+        stdoutLines.push(String(line))
+        return true
+      })
+      createLogger('dust.foo')('matches')
+      createLogger('dust.bar')('no-match')
+      expect(fileLines).toHaveLength(2)
+      expect(stdoutLines).toHaveLength(1)
+      expect(stdoutLines[0]).toContain('[dust.foo]')
     })
   })
 })

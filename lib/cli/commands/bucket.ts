@@ -65,7 +65,7 @@ import {
   updateDimensions,
 } from '../../bucket/terminal-ui'
 import { run as claudeRun } from '../../claude/run'
-import { createLogger } from '../../logging'
+import { createLogger, enableFileLogs } from '../../logging'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
 
 const log = createLogger('dust.cli.commands.bucket')
@@ -836,6 +836,7 @@ export async function bucket(
   dependencies: CommandDependencies,
   bucketDeps: BucketDependencies = createDefaultBucketDependencies()
 ): Promise<CommandResult> {
+  enableFileLogs('bucket')
   const { context, fileSystem } = dependencies
 
   const token = await resolveToken(bucketDeps.auth, context)
