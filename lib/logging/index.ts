@@ -62,113 +62,103 @@ export interface LoggerOptions {
   file?: string | false
 }
 
+export interface LoggingService {
+  enableFileLogs(scope: string, sinkForTesting?: LogSink): void
+  createLogger(name: string, options?: LoggerOptions): LogFn
+  isEnabled(name: string): boolean
+}
+
 const DUST_LOG_FILE = 'DUST_LOG_FILE'
 
-let patterns: RegExp[] | null = null
-let initialized = false
-let activeFileSink: LogSink | null = null
-let ownedDustLogFile = false // true if we set DUST_LOG_FILE (vs inherited it)
-
-/** Cache of file sinks by path, so multiple loggers targeting the same file share one instance. */
-const fileSinkCache = new Map<string, LogSink>()
-
-function init(): void {
-  if (initialized) return
-  initialized = true
-  const parsed = parsePatterns(process.env.DEBUG)
-  patterns = parsed.length > 0 ? parsed : null
-}
-
-function getOrCreateFileSink(path: string): LogSink {
-  let sink = fileSinkCache.get(path)
-  if (!sink) {
-    sink = new FileSink(path)
-    fileSinkCache.set(path, sink)
-  }
-  return sink
-}
-
 /**
- * Activate file logging for this command. Determines the log path as follows:
- * - If DUST_LOG_FILE is already set (inherited from a parent process such as
- *   `dust check`), use that path — all scopes land in the same file.
- * - Otherwise compute the path using DUST_LOG_DIR (if set) or `<cwd>/log`, set
- *   DUST_LOG_FILE so that any child processes inherit the same destination, then write there.
- *
- * Pass a LogSink as the second argument to override for testing.
+ * Create an isolated logging service instance. All mutable state is
+ * encapsulated inside the returned object.
  */
-export function enableFileLogs(scope: string, _sinkForTesting?: LogSink): void {
-  const existing = process.env[DUST_LOG_FILE]
-  const logDir = process.env.DUST_LOG_DIR ?? join(process.cwd(), 'log')
-  const path = existing ?? join(logDir, `${scope}.log`)
+export function createLoggingService(): LoggingService {
+  let patterns: RegExp[] | null = null
+  let initialized = false
+  let activeFileSink: LogSink | null = null
+  const fileSinkCache = new Map<string, LogSink>()
 
-  if (!existing) {
-    process.env[DUST_LOG_FILE] = path
-    ownedDustLogFile = true
+  function init(): void {
+    if (initialized) return
+    initialized = true
+    const parsed = parsePatterns(process.env.DEBUG)
+    patterns = parsed.length > 0 ? parsed : null
   }
 
-  activeFileSink = _sinkForTesting ?? new FileSink(path)
-}
-
-/**
- * Create a named logger function. The returned function writes to:
- * - The per-logger file sink (if `options.file` is a path), or
- * - The active global file sink (if `enableFileLogs` was called and `options.file` is not `false`), or
- * - No file sink otherwise.
- * - `process.stdout` if DEBUG is set and `name` matches the pattern.
- *
- * @param name - Logger name, e.g. `dust.bucket.loop`
- * @param options - Optional per-logger configuration
- */
-export function createLogger(name: string, options?: LoggerOptions): LogFn {
-  // Resolve per-logger file sink eagerly if a path is provided
-  let perLoggerSink: LogSink | null | undefined
-  if (options?.file === false) {
-    perLoggerSink = null // explicitly disabled
-  } else if (typeof options?.file === 'string') {
-    perLoggerSink = getOrCreateFileSink(options.file)
+  function getOrCreateFileSink(path: string): LogSink {
+    let sink = fileSinkCache.get(path)
+    if (!sink) {
+      sink = new FileSink(path)
+      fileSinkCache.set(path, sink)
+    }
+    return sink
   }
-  // undefined means "use global sink"
 
-  return (...messages: unknown[]) => {
-    init()
-    const line = formatLine(name, messages)
+  return {
+    enableFileLogs(scope: string, sinkForTesting?: LogSink): void {
+      const existing = process.env[DUST_LOG_FILE]
+      const logDir = process.env.DUST_LOG_DIR ?? join(process.cwd(), 'log')
+      const path = existing ?? join(logDir, `${scope}.log`)
 
-    // Sink precedence: per-logger → global → none
-    if (perLoggerSink !== undefined) {
-      if (perLoggerSink !== null) {
-        perLoggerSink.write(line)
+      if (!existing) {
+        process.env[DUST_LOG_FILE] = path
       }
-      // file: false → skip file output
-    } else if (activeFileSink) {
-      activeFileSink.write(line)
-    }
 
-    if (patterns && matchesAny(name, patterns)) {
-      process.stdout.write(line)
-    }
+      activeFileSink = sinkForTesting ?? new FileSink(path)
+    },
+
+    createLogger(name: string, options?: LoggerOptions): LogFn {
+      let perLoggerSink: LogSink | null | undefined
+      if (options?.file === false) {
+        perLoggerSink = null
+      } else if (typeof options?.file === 'string') {
+        perLoggerSink = getOrCreateFileSink(options.file)
+      }
+
+      return (...messages: unknown[]) => {
+        init()
+        const line = formatLine(name, messages)
+
+        if (perLoggerSink !== undefined) {
+          if (perLoggerSink !== null) {
+            perLoggerSink.write(line)
+          }
+        } else if (activeFileSink) {
+          activeFileSink.write(line)
+        }
+
+        if (patterns && matchesAny(name, patterns)) {
+          process.stdout.write(line)
+        }
+      }
+    },
+
+    isEnabled(name: string): boolean {
+      init()
+      return patterns !== null && matchesAny(name, patterns)
+    },
   }
 }
+
+/** Default service instance used by the module-level convenience exports. */
+const defaultService = createLoggingService()
+
+/**
+ * Activate file logging for this command. See {@link LoggingService.enableFileLogs}.
+ */
+export const enableFileLogs: LoggingService['enableFileLogs'] =
+  defaultService.enableFileLogs.bind(defaultService)
+
+/**
+ * Create a named logger function. See {@link LoggingService.createLogger}.
+ */
+export const createLogger: LoggingService['createLogger'] =
+  defaultService.createLogger.bind(defaultService)
 
 /**
  * Check whether a logger name would produce stdout output under the current DEBUG value.
  */
-export function isEnabled(name: string): boolean {
-  init()
-  return patterns !== null && matchesAny(name, patterns)
-}
-
-/**
- * Reset internal state (for testing only).
- * Clears DUST_LOG_FILE only if this module set it (not if it was inherited).
- */
-export function _reset(): void {
-  initialized = false
-  patterns = null
-  activeFileSink = null
-  fileSinkCache.clear()
-  if (ownedDustLogFile) {
-    delete process.env[DUST_LOG_FILE]
-    ownedDustLogFile = false
-  }
-}
+export const isEnabled: LoggingService['isEnabled'] =
+  defaultService.isEnabled.bind(defaultService)

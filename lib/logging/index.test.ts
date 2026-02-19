@@ -1,13 +1,8 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import { stubEnv } from '../test/test-utilities'
-import { _reset, createLogger, enableFileLogs, isEnabled } from './index'
-
-beforeEach(() => {
-  _reset()
-})
+import { createLoggingService } from './index'
 
 afterEach(() => {
-  _reset()
   vi.restoreAllMocks()
 })
 
@@ -21,7 +16,8 @@ describe('createLogger — stdout (DEBUG)', () => {
       const spy = vi
         .spyOn(process.stdout, 'write')
         .mockImplementation(() => true)
-      const log = createLogger('dust:test')
+      const service = createLoggingService()
+      const log = service.createLogger('dust:test')
       log('hello')
       expect(spy).not.toHaveBeenCalled()
     })
@@ -34,7 +30,8 @@ describe('createLogger — stdout (DEBUG)', () => {
         lines.push(String(line))
         return true
       })
-      const log = createLogger('dust:test')
+      const service = createLoggingService()
+      const log = service.createLogger('dust:test')
       log('hello world')
       expect(lines).toHaveLength(1)
       expect(lines[0]).toContain('[dust:test]')
@@ -49,7 +46,8 @@ describe('createLogger — stdout (DEBUG)', () => {
         lines.push(String(line))
         return true
       })
-      const log = createLogger('dust:foo')
+      const service = createLoggingService()
+      const log = service.createLogger('dust:foo')
       log('msg')
       expect(lines[0]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
     })
@@ -62,8 +60,9 @@ describe('createLogger — stdout (DEBUG)', () => {
         lines.push(String(line))
         return true
       })
-      const fooLog = createLogger('dust:foo')
-      const barLog = createLogger('dust:bar')
+      const service = createLoggingService()
+      const fooLog = service.createLogger('dust:foo')
+      const barLog = service.createLogger('dust:bar')
       fooLog('yes')
       barLog('no')
       expect(lines).toHaveLength(1)
@@ -78,9 +77,10 @@ describe('createLogger — stdout (DEBUG)', () => {
         lines.push(String(line))
         return true
       })
-      createLogger('dust:foo')('f')
-      createLogger('dust:bar')('b')
-      createLogger('dust:baz')('z')
+      const service = createLoggingService()
+      service.createLogger('dust:foo')('f')
+      service.createLogger('dust:bar')('b')
+      service.createLogger('dust:baz')('z')
       expect(lines).toHaveLength(2)
       expect(lines[0]).toContain('[dust:foo]')
       expect(lines[1]).toContain('[dust:bar]')
@@ -94,9 +94,10 @@ describe('createLogger — stdout (DEBUG)', () => {
         lines.push(String(line))
         return true
       })
-      createLogger('dust:bucket:repository-loop')('bl')
-      createLogger('dust:bucket:repository')('br')
-      createLogger('dust:cli:commands:loop')('l')
+      const service = createLoggingService()
+      service.createLogger('dust:bucket:repository-loop')('bl')
+      service.createLogger('dust:bucket:repository')('br')
+      service.createLogger('dust:cli:commands:loop')('l')
       expect(lines).toHaveLength(2)
       expect(lines[0]).toContain('[dust:bucket:repository-loop]')
       expect(lines[1]).toContain('[dust:bucket:repository]')
@@ -110,9 +111,10 @@ describe('createLogger — stdout (DEBUG)', () => {
         lines.push(String(line))
         return true
       })
-      createLogger('dust:bucket:repository-loop')('bl')
-      createLogger('dust:cli:commands:loop')('l')
-      createLogger('dust:cli:commands:bucket')('b')
+      const service = createLoggingService()
+      service.createLogger('dust:bucket:repository-loop')('bl')
+      service.createLogger('dust:cli:commands:loop')('l')
+      service.createLogger('dust:cli:commands:bucket')('b')
       expect(lines).toHaveLength(2)
       expect(lines[0]).toContain('[dust:bucket:repository-loop]')
       expect(lines[1]).toContain('[dust:cli:commands:loop]')
@@ -126,9 +128,10 @@ describe('createLogger — stdout (DEBUG)', () => {
         lines.push(String(line))
         return true
       })
-      createLogger('dust:foo')('f')
-      createLogger('dust:foo:bar')('fb')
-      createLogger('dust:baz')('z')
+      const service = createLoggingService()
+      service.createLogger('dust:foo')('f')
+      service.createLogger('dust:foo:bar')('fb')
+      service.createLogger('dust:baz')('z')
       expect(lines).toHaveLength(2)
       expect(lines[0]).toContain('[dust:foo]')
       expect(lines[1]).toContain('[dust:foo:bar]')
@@ -142,7 +145,8 @@ describe('createLogger — stdout (DEBUG)', () => {
         lines.push(String(line))
         return true
       })
-      const log = createLogger('dust:test')
+      const service = createLoggingService()
+      const log = service.createLogger('dust:test')
       log('data:', { count: 42 })
       expect(lines[0]).toContain('data: {"count":42}')
     })
@@ -155,7 +159,8 @@ describe('createLogger — stdout (DEBUG)', () => {
         lines.push(String(line))
         return true
       })
-      const log = createLogger('dust:test')
+      const service = createLoggingService()
+      const log = service.createLogger('dust:test')
       log('first')
       log('second')
       expect(lines).toHaveLength(2)
@@ -169,8 +174,9 @@ describe('enableFileLogs', () => {
   test('writes to file sink when enableFileLogs is called', () => {
     return stubEnv('DEBUG', undefined, () => {
       const lines: string[] = []
-      enableFileLogs('test', fakeSink(lines))
-      const log = createLogger('dust:test')
+      const service = createLoggingService()
+      service.enableFileLogs('test', fakeSink(lines))
+      const log = service.createLogger('dust:test')
       log('hello')
       expect(lines).toHaveLength(1)
       expect(lines[0]).toContain('[dust:test]')
@@ -181,7 +187,8 @@ describe('enableFileLogs', () => {
   test('does not write to file sink when enableFileLogs is not called', () => {
     return stubEnv('DEBUG', undefined, () => {
       const lines: string[] = []
-      const log = createLogger('dust:test')
+      const service = createLoggingService()
+      const log = service.createLogger('dust:test')
       log('hello')
       expect(lines).toHaveLength(0)
     })
@@ -190,8 +197,9 @@ describe('enableFileLogs', () => {
   test('file logging is not filtered by DEBUG pattern', () => {
     return stubEnv('DEBUG', 'dust:other', () => {
       const lines: string[] = []
-      enableFileLogs('test', fakeSink(lines))
-      const log = createLogger('dust:test')
+      const service = createLoggingService()
+      service.enableFileLogs('test', fakeSink(lines))
+      const log = service.createLogger('dust:test')
       log('message')
       // File sink gets it even though DEBUG does not match 'dust:test'
       expect(lines).toHaveLength(1)
@@ -202,12 +210,13 @@ describe('enableFileLogs', () => {
     return stubEnv('DEBUG', '*', () => {
       const fileLines: string[] = []
       const stdoutLines: string[] = []
-      enableFileLogs('test', fakeSink(fileLines))
+      const service = createLoggingService()
+      service.enableFileLogs('test', fakeSink(fileLines))
       vi.spyOn(process.stdout, 'write').mockImplementation(line => {
         stdoutLines.push(String(line))
         return true
       })
-      const log = createLogger('dust:test')
+      const log = service.createLogger('dust:test')
       log('both')
       expect(fileLines).toHaveLength(1)
       expect(stdoutLines).toHaveLength(1)
@@ -220,13 +229,14 @@ describe('enableFileLogs', () => {
     return stubEnv('DEBUG', 'dust:foo', () => {
       const fileLines: string[] = []
       const stdoutLines: string[] = []
-      enableFileLogs('test', fakeSink(fileLines))
+      const service = createLoggingService()
+      service.enableFileLogs('test', fakeSink(fileLines))
       vi.spyOn(process.stdout, 'write').mockImplementation(line => {
         stdoutLines.push(String(line))
         return true
       })
-      createLogger('dust:foo')('matches')
-      createLogger('dust:bar')('no-match')
+      service.createLogger('dust:foo')('matches')
+      service.createLogger('dust:bar')('no-match')
       expect(fileLines).toHaveLength(2)
       expect(stdoutLines).toHaveLength(1)
       expect(stdoutLines[0]).toContain('[dust:foo]')
@@ -235,41 +245,29 @@ describe('enableFileLogs', () => {
 
   test('sets DUST_LOG_FILE to scope path when not already set', () => {
     return stubEnv('DUST_LOG_FILE', undefined, () => {
-      enableFileLogs('loop', fakeSink([]))
+      const service = createLoggingService()
+      service.enableFileLogs('loop', fakeSink([]))
       expect(process.env.DUST_LOG_FILE).toContain('loop.log')
       expect(process.env.DUST_LOG_FILE).toContain('/log/')
+      delete process.env.DUST_LOG_FILE
     })
   })
 
   test('uses DUST_LOG_DIR as base directory when set', () => {
     return stubEnv('DUST_LOG_FILE', undefined, () => {
       return stubEnv('DUST_LOG_DIR', '/custom/logs', () => {
-        enableFileLogs('loop', fakeSink([]))
+        const service = createLoggingService()
+        service.enableFileLogs('loop', fakeSink([]))
         expect(process.env.DUST_LOG_FILE).toBe('/custom/logs/loop.log')
+        delete process.env.DUST_LOG_FILE
       })
     })
   })
 
   test('does not override DUST_LOG_FILE when already set (subprocess routing)', () => {
     return stubEnv('DUST_LOG_FILE', '/inherited/check.log', () => {
-      enableFileLogs('loop', fakeSink([]))
-      expect(process.env.DUST_LOG_FILE).toBe('/inherited/check.log')
-    })
-  })
-
-  test('_reset clears DUST_LOG_FILE when this module set it', () => {
-    return stubEnv('DUST_LOG_FILE', undefined, () => {
-      enableFileLogs('loop', fakeSink([]))
-      expect(process.env.DUST_LOG_FILE).toBeDefined()
-      _reset()
-      expect(process.env.DUST_LOG_FILE).toBeUndefined()
-    })
-  })
-
-  test('_reset does not clear DUST_LOG_FILE when inherited', () => {
-    return stubEnv('DUST_LOG_FILE', '/inherited/check.log', () => {
-      enableFileLogs('loop', fakeSink([]))
-      _reset()
+      const service = createLoggingService()
+      service.enableFileLogs('loop', fakeSink([]))
       expect(process.env.DUST_LOG_FILE).toBe('/inherited/check.log')
     })
   })
@@ -279,20 +277,13 @@ describe('createLogger — per-logger file routing', () => {
   test('custom file option routes only that logger to the custom sink', () => {
     return stubEnv('DEBUG', undefined, () => {
       const globalLines: string[] = []
-      const customLines: string[] = []
-      enableFileLogs('test', fakeSink(globalLines))
-      const customLog = createLogger('dust:custom', { file: '/tmp/custom.log' })
-      const normalLog = createLogger('dust:normal')
-      // Inject a fake sink into the cache for testing
-      _reset()
-      enableFileLogs('test', fakeSink(globalLines))
+      const service = createLoggingService()
+      service.enableFileLogs('test', fakeSink(globalLines))
 
-      // Use a fresh approach: create loggers with file option pointing to same path
-      const customLines2: string[] = []
-      const customSink = fakeSink(customLines2)
-      // We need to test via the actual API — use a real path and check sink caching
-      const log1 = createLogger('dust:a', { file: '/tmp/test-custom.log' })
-      const log2 = createLogger('dust:b')
+      const log1 = service.createLogger('dust:a', {
+        file: '/tmp/test-custom.log',
+      })
+      const log2 = service.createLogger('dust:b')
       log1('custom-msg')
       log2('global-msg')
       // log1 writes to per-logger sink (not global), log2 writes to global
@@ -305,13 +296,14 @@ describe('createLogger — per-logger file routing', () => {
     return stubEnv('DEBUG', '*', () => {
       const globalLines: string[] = []
       const stdoutLines: string[] = []
-      enableFileLogs('test', fakeSink(globalLines))
+      const service = createLoggingService()
+      service.enableFileLogs('test', fakeSink(globalLines))
       vi.spyOn(process.stdout, 'write').mockImplementation(line => {
         stdoutLines.push(String(line))
         return true
       })
-      const silentLog = createLogger('dust:silent', { file: false })
-      const normalLog = createLogger('dust:normal')
+      const silentLog = service.createLogger('dust:silent', { file: false })
+      const normalLog = service.createLogger('dust:normal')
       silentLog('no-file')
       normalLog('yes-file')
       // file: false logger should not write to global sink
@@ -327,8 +319,9 @@ describe('createLogger — per-logger file routing', () => {
   test('default behavior unchanged when no per-logger options are passed', () => {
     return stubEnv('DEBUG', undefined, () => {
       const globalLines: string[] = []
-      enableFileLogs('test', fakeSink(globalLines))
-      const log = createLogger('dust:test')
+      const service = createLoggingService()
+      service.enableFileLogs('test', fakeSink(globalLines))
+      const log = service.createLogger('dust:test')
       log('hello')
       expect(globalLines).toHaveLength(1)
       expect(globalLines[0]).toContain('hello')
@@ -337,8 +330,9 @@ describe('createLogger — per-logger file routing', () => {
 
   test('multiple loggers with same file path share one sink instance', () => {
     return stubEnv('DEBUG', undefined, () => {
-      const log1 = createLogger('dust:a', { file: '/tmp/shared.log' })
-      const log2 = createLogger('dust:b', { file: '/tmp/shared.log' })
+      const service = createLoggingService()
+      const log1 = service.createLogger('dust:a', { file: '/tmp/shared.log' })
+      const log2 = service.createLogger('dust:b', { file: '/tmp/shared.log' })
       // Both should work without error — sink caching is internal,
       // but we can verify they don't throw and produce output
       log1('msg1')
@@ -353,12 +347,13 @@ describe('createLogger — per-logger file routing', () => {
         stdoutLines.push(String(line))
         return true
       })
-      createLogger('dust:visible', { file: '/tmp/x.log' })('a')
-      createLogger('dust:visible', { file: false })('b')
-      createLogger('dust:visible')('c')
-      createLogger('dust:hidden', { file: '/tmp/x.log' })('d')
-      createLogger('dust:hidden', { file: false })('e')
-      createLogger('dust:hidden')('f')
+      const service = createLoggingService()
+      service.createLogger('dust:visible', { file: '/tmp/x.log' })('a')
+      service.createLogger('dust:visible', { file: false })('b')
+      service.createLogger('dust:visible')('c')
+      service.createLogger('dust:hidden', { file: '/tmp/x.log' })('d')
+      service.createLogger('dust:hidden', { file: false })('e')
+      service.createLogger('dust:hidden')('f')
       expect(stdoutLines).toHaveLength(3)
       expect(stdoutLines[0]).toContain('[dust:visible]')
       expect(stdoutLines[1]).toContain('[dust:visible]')
@@ -370,21 +365,24 @@ describe('createLogger — per-logger file routing', () => {
 describe('isEnabled', () => {
   test('returns false when DEBUG is not set', () => {
     return stubEnv('DEBUG', undefined, () => {
-      expect(isEnabled('anything')).toBe(false)
+      const service = createLoggingService()
+      expect(service.isEnabled('anything')).toBe(false)
     })
   })
 
   test('returns true for matching pattern', () => {
     return stubEnv('DEBUG', 'dust:foo,dust:bar', () => {
-      expect(isEnabled('dust:foo')).toBe(true)
-      expect(isEnabled('dust:bar')).toBe(true)
-      expect(isEnabled('dust:baz')).toBe(false)
+      const service = createLoggingService()
+      expect(service.isEnabled('dust:foo')).toBe(true)
+      expect(service.isEnabled('dust:bar')).toBe(true)
+      expect(service.isEnabled('dust:baz')).toBe(false)
     })
   })
 
   test('returns true for wildcard match', () => {
     return stubEnv('DEBUG', '*', () => {
-      expect(isEnabled('anything')).toBe(true)
+      const service = createLoggingService()
+      expect(service.isEnabled('anything')).toBe(true)
     })
   })
 })
