@@ -23,7 +23,7 @@ export class FileSink implements LogSink {
 
   constructor(
     private readonly _appendFileSync: AppendFileSyncFn,
-    private readonly _mkdirSync: MkdirSyncFn,
+    private readonly _mkdirSync: MkdirSyncFn
   ) {
     this.scope = process.env.DEBUG_LOG_SCOPE || 'debug'
   }

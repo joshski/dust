@@ -25,7 +25,7 @@
  */
 
 import { formatLine, matchesAny, parsePatterns } from './match'
-import { type LogSink, defaultSink } from './sink'
+import { defaultSink, type LogSink } from './sink'
 
 export { setLogScope } from './sink'
 
@@ -48,10 +48,7 @@ function init(): void {
  * @param name - Logger name, e.g. `dust.bucket.loop`
  * @param sink - Override the default log sink (for testing)
  */
-export function createLogger(
-  name: string,
-  sink: LogSink = defaultSink
-): LogFn {
+export function createLogger(name: string, sink: LogSink = defaultSink): LogFn {
   return (...messages: unknown[]) => {
     init()
     if (!patterns || !matchesAny(name, patterns)) return

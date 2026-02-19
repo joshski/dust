@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import { FileSink } from './sink'
 
 function makeFakes() {
@@ -97,7 +97,7 @@ describe('FileSink', () => {
   })
 
   test('silently no-ops when appendFileSync throws', () => {
-    const mkdirSync = vi.fn()
+    const mkdirSync = () => {}
     const appendFileSync = () => {
       throw new Error('disk full')
     }
