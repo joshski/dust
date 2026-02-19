@@ -13,13 +13,16 @@ import {
 } from './principles'
 import { parseTask as parseTaskImpl, type Task } from './tasks'
 import {
+  CAPTURE_IDEA_PREFIX,
   type CreateIdeaTransitionTaskResult,
   createCaptureIdeaTask as createCaptureIdeaTaskImpl,
   createRefineIdeaTask as createRefineIdeaTaskImpl,
   createShelveIdeaTask as createShelveIdeaTaskImpl,
   type DecomposeIdeaOptions,
   decomposeIdea as decomposeIdeaImpl,
+  findAllCaptureIdeaTasks,
   findWorkflowTaskForIdea as findWorkflowTaskForIdeaImpl,
+  type IdeaInProgress,
   type OpenQuestionResponse,
   type ParsedCaptureIdeaTask,
   parseCaptureIdeaTask as parseCaptureIdeaTaskImpl,
@@ -41,8 +44,9 @@ export type {
   WorkflowTaskMatch,
 }
 
-// Re-export parsing utilities that don't need file system
-export { parseOpenQuestions }
+// Re-export constants and standalone functions
+export { CAPTURE_IDEA_PREFIX, findAllCaptureIdeaTasks, parseOpenQuestions }
+export type { IdeaInProgress }
 
 export interface ArtifactsRepository {
   parseIdea(options: { slug: string }): Promise<Idea>
