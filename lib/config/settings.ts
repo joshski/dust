@@ -5,7 +5,11 @@
  */
 
 import { join } from 'node:path'
-import type { CheckConfig, DustSettings, FileSystem } from '../cli/types'
+import type {
+  CheckConfig,
+  DustSettings,
+  ReadableFileSystem,
+} from '../cli/types'
 
 // Re-export for backwards compatibility
 export type { CheckConfig, DustSettings }
@@ -206,7 +210,10 @@ const DEFAULT_SETTINGS: DustSettings = {
  * 4. No lockfile + BUN_INSTALL env var set → bunx dust
  * 5. Default → npx dust
  */
-export function detectDustCommand(cwd: string, fileSystem: FileSystem): string {
+export function detectDustCommand(
+  cwd: string,
+  fileSystem: ReadableFileSystem
+): string {
   if (fileSystem.exists(join(cwd, 'bun.lockb'))) {
     return 'bunx dust'
   }
@@ -233,7 +240,7 @@ export function detectDustCommand(cwd: string, fileSystem: FileSystem): string {
  */
 export function detectInstallCommand(
   cwd: string,
-  fileSystem: FileSystem
+  fileSystem: ReadableFileSystem
 ): string {
   if (fileSystem.exists(join(cwd, 'bun.lockb'))) {
     return 'bun install'
@@ -263,7 +270,7 @@ export function detectInstallCommand(
  */
 export function detectTestCommand(
   cwd: string,
-  fileSystem: FileSystem
+  fileSystem: ReadableFileSystem
 ): string | null {
   if (
     fileSystem.exists(join(cwd, 'bun.lockb')) ||
@@ -298,7 +305,7 @@ function normalizeCheckEntry(entry: string | CheckConfig): CheckConfig {
 
 export async function loadSettings(
   cwd: string,
-  fileSystem: FileSystem
+  fileSystem: ReadableFileSystem
 ): Promise<DustSettings> {
   const settingsPath = join(cwd, '.dust', 'config', 'settings.json')
 

@@ -2,7 +2,7 @@
  * Idea file validation for .dust markdown files
  */
 
-import type { FileSystem } from '../../cli/types'
+import type { ReadableFileSystem } from '../../cli/types'
 import { extractTitle } from '../../markdown/markdown-utilities'
 import { IDEA_TRANSITION_PREFIXES, titleToFilename } from '../../workflow-tasks'
 import type { Violation } from './types'
@@ -127,7 +127,7 @@ export function validateIdeaTransitionTitle(
   filePath: string,
   content: string,
   ideasPath: string,
-  fileSystem: FileSystem
+  fileSystem: ReadableFileSystem
 ): Violation | null {
   const title = extractTitle(content)
   if (!title) {

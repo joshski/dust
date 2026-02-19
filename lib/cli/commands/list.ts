@@ -12,7 +12,11 @@ import {
   extractTitle,
 } from '../../markdown/markdown-utilities'
 import { getColors } from '../colors'
-import type { CommandDependencies, CommandResult, FileSystem } from '../types'
+import type {
+  CommandDependencies,
+  CommandResult,
+  ReadableFileSystem,
+} from '../types'
 
 const VALID_TYPES = ['tasks', 'ideas', 'principles', 'facts'] as const
 type ListType = (typeof VALID_TYPES)[number]
@@ -43,7 +47,7 @@ interface PrincipleNode {
 
 async function buildPrincipleHierarchy(
   principlesPath: string,
-  fileSystem: FileSystem
+  fileSystem: ReadableFileSystem
 ): Promise<PrincipleNode[]> {
   const files = await fileSystem.readdir(principlesPath)
   const mdFiles = files.filter(f => f.endsWith('.md'))

@@ -1,4 +1,4 @@
-import type { FileSystem } from './cli/types'
+import type { FileSystem, ReadableFileSystem } from './cli/types'
 
 export const IDEA_TRANSITION_PREFIXES = [
   'Refine Idea: ',
@@ -21,7 +21,7 @@ export interface ParsedCaptureIdeaTask {
 }
 
 export async function findAllCaptureIdeaTasks(
-  fileSystem: FileSystem,
+  fileSystem: ReadableFileSystem,
   dustPath: string
 ): Promise<IdeaInProgress[]> {
   const tasksPath = `${dustPath}/tasks`
@@ -86,7 +86,7 @@ const WORKFLOW_TASK_TYPES: { type: WorkflowTaskType; prefix: string }[] = [
 ]
 
 export async function findWorkflowTaskForIdea(
-  fileSystem: FileSystem,
+  fileSystem: ReadableFileSystem,
   dustPath: string,
   ideaSlug: string
 ): Promise<WorkflowTaskMatch | null> {
@@ -120,7 +120,7 @@ export interface DecomposeIdeaOptions {
 }
 
 async function readIdeaTitle(
-  fileSystem: FileSystem,
+  fileSystem: ReadableFileSystem,
   dustPath: string,
   ideaSlug: string
 ): Promise<string> {
@@ -350,7 +350,7 @@ ${description}
 }
 
 export async function parseCaptureIdeaTask(
-  fileSystem: FileSystem,
+  fileSystem: ReadableFileSystem,
   dustPath: string,
   taskSlug: string
 ): Promise<ParsedCaptureIdeaTask | null> {

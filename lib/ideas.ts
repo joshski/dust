@@ -1,4 +1,4 @@
-import type { FileSystem } from './cli/types'
+import type { ReadableFileSystem } from './cli/types'
 import {
   extractOpeningSentence,
   extractTitle,
@@ -102,7 +102,7 @@ export function parseOpenQuestions(content: string): IdeaOpenQuestion[] {
  * Parses an idea markdown file into a structured Idea object.
  */
 export async function parseIdea(
-  fileSystem: FileSystem,
+  fileSystem: ReadableFileSystem,
   dustPath: string,
   slug: string
 ): Promise<Idea> {

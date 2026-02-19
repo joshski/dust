@@ -3,7 +3,7 @@
  */
 
 import { dirname, resolve } from 'node:path'
-import type { FileSystem } from '../../cli/types'
+import type { ReadableFileSystem } from '../../cli/types'
 import { MARKDOWN_LINK_PATTERN } from '../../markdown/markdown-utilities'
 import type { Violation } from './types'
 
@@ -29,7 +29,7 @@ const SEMANTIC_RULES: SemanticRule[] = [
 export function validateLinks(
   filePath: string,
   content: string,
-  fileSystem: FileSystem
+  fileSystem: ReadableFileSystem
 ): Violation[] {
   const violations: Violation[] = []
   const lines = content.split('\n')

@@ -17,18 +17,21 @@ export interface WriteOptions {
   flag?: 'w' | 'wx' // 'w' = overwrite (default), 'wx' = exclusive create (fail if exists)
 }
 
-export interface FileSystem {
+export interface ReadableFileSystem {
   exists: (path: string) => boolean
   readFile: (path: string) => Promise<string>
+  readdir: (path: string) => Promise<string[]>
+  isDirectory: (path: string) => boolean
+}
+
+export interface FileSystem extends ReadableFileSystem {
   writeFile: (
     path: string,
     content: string,
     options?: WriteOptions
   ) => Promise<void>
   mkdir: (path: string, options?: { recursive?: boolean }) => Promise<void>
-  readdir: (path: string) => Promise<string[]>
   chmod: (path: string, mode: number) => Promise<void>
-  isDirectory: (path: string) => boolean
   getFileCreationTime: (path: string) => number
   rename: (oldPath: string, newPath: string) => Promise<void>
 }

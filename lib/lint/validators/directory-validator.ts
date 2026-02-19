@@ -2,14 +2,14 @@
  * Directory structure validation for .dust
  */
 
-import type { FileSystem } from '../../cli/types'
+import type { ReadableFileSystem } from '../../cli/types'
 import type { Violation } from './types'
 
 const EXPECTED_DIRECTORIES = ['principles', 'ideas', 'tasks', 'facts', 'config']
 
 export async function validateContentDirectoryFiles(
   dirPath: string,
-  fileSystem: FileSystem
+  fileSystem: ReadableFileSystem
 ): Promise<Violation[]> {
   const violations: Violation[] = []
 
@@ -58,7 +58,7 @@ export async function validateContentDirectoryFiles(
 
 export async function validateDirectoryStructure(
   dustPath: string,
-  fileSystem: FileSystem,
+  fileSystem: ReadableFileSystem,
   extraDirectories: string[] = []
 ): Promise<Violation[]> {
   const violations: Violation[] = []

@@ -7,7 +7,11 @@
 import { join } from 'node:path'
 import { type AgentType, detectAgent } from '../../agents/detection'
 import { createHooksManager } from '../../git/hooks'
-import type { CommandDependencies, DustSettings, FileSystem } from '../types'
+import type {
+  CommandDependencies,
+  DustSettings,
+  ReadableFileSystem,
+} from '../types'
 
 /**
  * Type-safe template variables for agent commands.
@@ -31,7 +35,7 @@ export interface TemplateVarsWithInstructions extends TemplateVars {
  */
 export async function loadAgentInstructions(
   cwd: string,
-  fileSystem: FileSystem,
+  fileSystem: ReadableFileSystem,
   agentType: AgentType
 ): Promise<string> {
   const instructionsPath = join(
@@ -75,7 +79,7 @@ export function templateVariables(
  */
 export async function templateVariablesWithInstructions(
   cwd: string,
-  fileSystem: FileSystem,
+  fileSystem: ReadableFileSystem,
   settings: DustSettings,
   hooksInstalled: boolean,
   env: NodeJS.ProcessEnv = process.env,
