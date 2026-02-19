@@ -4,15 +4,13 @@
  * Two independent output channels:
  *
  * - **File logging** — activated by `enableFileLogs(scope)` at command startup.
- *   Writes all logs to `~/.dust/logs/<scope>.log`. The destination is controlled
- *   by the DUST_LOG_FILE env var so that parent processes (e.g. `dust check`)
- *   can redirect all child-process logs to a single file.
+ *   Writes all logs to `./log/<scope>.log` by default. Two env vars control routing:
  *
  *   Routing rules for enableFileLogs(scope):
- *   1. If DUST_LOG_FILE is already set (inherited from a parent process), use
- *      that path — all scopes land in the same file.
- *   2. Otherwise compute `~/.dust/logs/<scope>.log`, set DUST_LOG_FILE so child
- *      processes inherit it, then write there.
+ *   1. If DUST_LOG_FILE is already set (inherited from a parent process such as
+ *      `dust check`), use that path — all scopes land in the same file.
+ *   2. Otherwise compute the path from DUST_LOG_DIR (if set) or `<cwd>/log`, set
+ *      DUST_LOG_FILE so child processes inherit the same destination, then write there.
  *
  * - **Stdout logging** — activated by `DEBUG=pattern`. Writes matching logs to
  *   stdout. Works in any command, regardless of whether file logging is enabled.
@@ -33,7 +31,6 @@
  * No external dependencies.
  */
 
-import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { formatLine, matchesAny, parsePatterns } from './match'
 import { FileSink, type LogSink } from './sink'
@@ -58,14 +55,15 @@ function init(): void {
  * Activate file logging for this command. Determines the log path as follows:
  * - If DUST_LOG_FILE is already set (inherited from a parent process such as
  *   `dust check`), use that path — all scopes land in the same file.
- * - Otherwise compute `~/.dust/logs/<scope>.log`, set DUST_LOG_FILE so that
- *   any child processes inherit the same destination, then write there.
+ * - Otherwise compute the path using DUST_LOG_DIR (if set) or `<cwd>/log`, set
+ *   DUST_LOG_FILE so that any child processes inherit the same destination, then write there.
  *
  * Pass a LogSink as the second argument to override for testing.
  */
 export function enableFileLogs(scope: string, _sinkForTesting?: LogSink): void {
   const existing = process.env[DUST_LOG_FILE]
-  const path = existing ?? join(homedir(), '.dust', 'logs', `${scope}.log`)
+  const logDir = process.env.DUST_LOG_DIR ?? join(process.cwd(), 'log')
+  const path = existing ?? join(logDir, `${scope}.log`)
 
   if (!existing) {
     process.env[DUST_LOG_FILE] = path

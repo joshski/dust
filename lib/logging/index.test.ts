@@ -237,7 +237,16 @@ describe('enableFileLogs', () => {
     return stubEnv('DUST_LOG_FILE', undefined, () => {
       enableFileLogs('loop', fakeSink([]))
       expect(process.env.DUST_LOG_FILE).toContain('loop.log')
-      expect(process.env.DUST_LOG_FILE).toContain('.dust/logs')
+      expect(process.env.DUST_LOG_FILE).toContain('/log/')
+    })
+  })
+
+  test('uses DUST_LOG_DIR as base directory when set', () => {
+    return stubEnv('DUST_LOG_FILE', undefined, () => {
+      return stubEnv('DUST_LOG_DIR', '/custom/logs', () => {
+        enableFileLogs('loop', fakeSink([]))
+        expect(process.env.DUST_LOG_FILE).toBe('/custom/logs/loop.log')
+      })
     })
   })
 
