@@ -18,6 +18,7 @@
     "lib/logging/index.ts",
     "lib/agents/detection.ts",
     "lib/ideas.ts",
-    "lib/markdown/markdown-utilities.ts"
+    "lib/markdown/markdown-utilities.ts",
+    "lib/artifacts/index.ts"
   ]
 }

@@ -1,6 +1,6 @@
 {
   "name": "@joshski/dust",
-  "version": "0.1.60",
+  "version": "0.1.61",
   "description": "Flow state for AI coding agents",
   "type": "module",
   "bin": {
@@ -20,7 +20,7 @@
     },
     "./artifacts": {
       "import": "./dist/artifacts.js",
-      "types": "./dist/artifacts.d.ts"
+      "types": "./dist/artifacts/index.d.ts"
     },
     "./istanbul/minimal-reporter": "./lib/istanbul/minimal-reporter.cjs"
   },
