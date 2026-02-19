@@ -22,6 +22,10 @@
       "import": "./dist/agents.js",
       "types": "./dist/agents/detection.d.ts"
     },
+    "./ideas": {
+      "import": "./dist/ideas.js",
+      "types": "./dist/ideas.d.ts"
+    },
     "./istanbul/minimal-reporter": "./lib/istanbul/minimal-reporter.cjs"
   },
   "files": [
@@ -42,7 +46,7 @@
   "author": "joshski",
   "license": "MIT",
   "scripts": {
-    "build": "bun build lib/cli/run.ts --target node --outfile dist/dust.js && printf '%s\\n%s' '#!/usr/bin/env node' \"$(cat dist/dust.js)\" > dist/dust.js && bun build lib/workflow-tasks.ts --target node --outfile dist/workflow-tasks.js && bun build lib/logging/index.ts --target node --outfile dist/logging.js && bun build lib/agents/detection.ts --target node --outfile dist/agents.js && bunx tsc --project tsconfig.build.json",
+    "build": "bun build lib/cli/run.ts --target node --outfile dist/dust.js && printf '%s\\n%s' '#!/usr/bin/env node' \"$(cat dist/dust.js)\" > dist/dust.js && bun build lib/workflow-tasks.ts --target node --outfile dist/workflow-tasks.js && bun build lib/logging/index.ts --target node --outfile dist/logging.js && bun build lib/agents/detection.ts --target node --outfile dist/agents.js && bun build lib/ideas.ts --target node --outfile dist/ideas.js && bunx tsc --project tsconfig.build.json",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "eval": "bun run ./evals/run.ts"

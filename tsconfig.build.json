@@ -16,6 +16,8 @@
     "lib/cli/types.ts",
     "lib/types.ts",
     "lib/logging/index.ts",
-    "lib/agents/detection.ts"
+    "lib/agents/detection.ts",
+    "lib/ideas.ts",
+    "lib/markdown/markdown-utilities.ts"
   ]
 }

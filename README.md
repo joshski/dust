@@ -31,6 +31,17 @@ npx dust loop claude
 
 This runs Claude Code in a [ralph loop](https://ghuntley.com/loop/), picking up tasks until they are all done.
 
+## Package Exports
+
+The `@joshski/dust` package exposes several subpath exports for downstream use:
+
+```ts
+import { parseOpenQuestions } from '@joshski/dust/ideas'
+import type { Idea, IdeaOpenQuestion, IdeaOption } from '@joshski/dust/ideas'
+```
+
+Other available subpaths: `@joshski/dust/types`, `@joshski/dust/workflow-tasks`, `@joshski/dust/logging`, `@joshski/dust/agents`.
+
 ## Learn More
 
 Details live in the [.dust/facts](./.dust/facts) directory:
