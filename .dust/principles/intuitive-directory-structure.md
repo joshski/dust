@@ -10,4 +10,4 @@ When files that serve similar purposes are grouped together, the codebase become
 
 ## Sub-Principles
 
-- (none)
+- [Co-located Tests](co-located-tests.md)
