@@ -5,7 +5,7 @@ import {
   type FileSystemEmulator,
 } from '../../test/test-utilities'
 import type { CommandContext, CommandDependencies } from '../types'
-import { next } from './next'
+import { findUnblockedTasks, next } from './next'
 
 function createDependencies(
   context: CommandContext,
@@ -215,6 +215,35 @@ describe('next command', () => {
   test('getFileCreationTime returns 0 for unknown paths', () => {
     const fileSystem = createFileSystemEmulator()
     expect(fileSystem.getFileCreationTime('/nonexistent')).toBe(0)
+  })
+
+  test('uses custom directoryFileSorter when provided', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: {
+            'a-task.md': '# A Task',
+            'b-task.md': '# B Task',
+            'c-task.md': '# C Task',
+          },
+        },
+      },
+    })
+
+    const reverseSorter = async (_dir: string, files: string[]) =>
+      [...files].reverse()
+
+    const result = await findUnblockedTasks(
+      '/project',
+      fileSystem,
+      reverseSorter
+    )
+
+    expect(result.tasks.map(t => t.title)).toEqual([
+      'C Task',
+      'B Task',
+      'A Task',
+    ])
   })
 
   test('lists multiple unblocked tasks sorted by creation time (FIFO)', async () => {

@@ -32,6 +32,7 @@ import type {
   CommandContext,
   CommandDependencies,
   CommandResult,
+  DirectoryFileSorter,
   FileSystem,
   GlobScanner,
 } from './types'
@@ -84,6 +85,7 @@ export interface MainOptions {
   context: CommandContext
   fileSystem: FileSystem
   glob: GlobScanner
+  directoryFileSorter?: DirectoryFileSorter
 }
 
 export function isHelpRequest(command: string | undefined): boolean {
@@ -127,7 +129,8 @@ function resolveCommand(commandArguments: string[]): {
 }
 
 export async function main(options: MainOptions): Promise<CommandResult> {
-  const { commandArguments, context, fileSystem, glob } = options
+  const { commandArguments, context, fileSystem, glob, directoryFileSorter } =
+    options
 
   const settings = await loadSettings(context.cwd, fileSystem)
   const helpText = generateHelpText(settings)
@@ -151,6 +154,7 @@ export async function main(options: MainOptions): Promise<CommandResult> {
     fileSystem,
     globScanner: glob,
     settings,
+    directoryFileSorter,
   }
 
   return runCommand(command, dependencies)

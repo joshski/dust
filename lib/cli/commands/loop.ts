@@ -279,8 +279,12 @@ export async function gitPull(
 export async function findAvailableTasks(
   dependencies: CommandDependencies
 ): Promise<UnblockedTask[]> {
-  const { context, fileSystem } = dependencies
-  const result = await findUnblockedTasks(context.cwd, fileSystem)
+  const { context, fileSystem, directoryFileSorter } = dependencies
+  const result = await findUnblockedTasks(
+    context.cwd,
+    fileSystem,
+    directoryFileSorter
+  )
   return result.tasks
 }
 

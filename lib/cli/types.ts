@@ -51,6 +51,11 @@ export interface DustSettings {
   extraDirectories?: string[]
 }
 
+export type DirectoryFileSorter = (
+  dir: string,
+  files: string[]
+) => Promise<string[]>
+
 /**
  * Dependencies passed to all CLI commands
  */
@@ -60,4 +65,5 @@ export interface CommandDependencies {
   fileSystem: FileSystem
   globScanner: GlobScanner
   settings: DustSettings
+  directoryFileSorter?: DirectoryFileSorter
 }

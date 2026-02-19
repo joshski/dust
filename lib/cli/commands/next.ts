@@ -14,6 +14,7 @@ import type {
   CommandContext,
   CommandDependencies,
   CommandResult,
+  DirectoryFileSorter,
   FileSystem,
 } from '../types'
 
@@ -58,7 +59,8 @@ export interface UnblockedTask {
  */
 export async function findUnblockedTasks(
   cwd: string,
-  fileSystem: FileSystem
+  fileSystem: FileSystem,
+  directoryFileSorter?: DirectoryFileSorter
 ): Promise<{ error?: string; tasks: UnblockedTask[] }> {
   const dustPath = `${cwd}/.dust`
 
@@ -73,13 +75,17 @@ export async function findUnblockedTasks(
   }
 
   const files = await fileSystem.readdir(tasksPath)
-  const mdFiles = files
-    .filter(f => f.endsWith('.md'))
-    .sort((a, b) => {
+  let mdFiles = files.filter(f => f.endsWith('.md'))
+
+  if (directoryFileSorter) {
+    mdFiles = await directoryFileSorter(tasksPath, mdFiles)
+  } else {
+    mdFiles.sort((a, b) => {
       const aTime = fileSystem.getFileCreationTime(`${tasksPath}/${a}`)
       const bTime = fileSystem.getFileCreationTime(`${tasksPath}/${b}`)
       return aTime - bTime
     })
+  }
 
   if (mdFiles.length === 0) {
     return { tasks: [] }
@@ -140,9 +146,13 @@ export function printTaskList(
 export async function next(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
-  const { context, fileSystem } = dependencies
+  const { context, fileSystem, directoryFileSorter } = dependencies
 
-  const result = await findUnblockedTasks(context.cwd, fileSystem)
+  const result = await findUnblockedTasks(
+    context.cwd,
+    fileSystem,
+    directoryFileSorter
+  )
 
   if (result.error) {
     context.stderr(`Error: ${result.error}`)

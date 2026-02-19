@@ -16,7 +16,11 @@ export async function pickTask(
 
   await manageGitHooks(dependencies)
 
-  const result = await findUnblockedTasks(context.cwd, fileSystem)
+  const result = await findUnblockedTasks(
+    context.cwd,
+    fileSystem,
+    dependencies.directoryFileSorter
+  )
 
   if (result.error) {
     context.stderr(`Error: ${result.error}`)

@@ -4,7 +4,9 @@
  * This module extracts the dependency construction and wiring logic
  * so it can be tested independently of the real Node.js APIs.
  */
+import { createGitDirectoryFileSorter } from '../git/file-sorter'
 import { main } from './main'
+import { defaultGitRunner } from './process-runner'
 import type { FileSystem, GlobScanner } from './types'
 
 /**
@@ -105,6 +107,7 @@ export async function wireEntry(
 ): Promise<void> {
   const fileSystem = createFileSystem(fsPrimitives)
   const glob = createGlobScanner(fsPrimitives.readdir)
+  const directoryFileSorter = createGitDirectoryFileSorter(defaultGitRunner)
 
   const result = await main({
     commandArguments: processPrimitives.argv.slice(2),
@@ -116,6 +119,7 @@ export async function wireEntry(
     },
     fileSystem,
     glob,
+    directoryFileSorter,
   })
 
   processPrimitives.exit(result.exitCode)
