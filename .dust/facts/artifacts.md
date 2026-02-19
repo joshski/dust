@@ -5,16 +5,16 @@ Dust refers to its primary artifacts (principles, facts, ideas and tasks) as "ar
 One way to think of these is as a progression from stable/abstract to volatile/concrete:
 
 ```
- Stable                                     Abstract
+ Stable                                      Abstract
    ▲                                            ▲
    │                                            │
-   │   Principles ←── Pages should load quickly  │
+   │   Principles ←── Pages should load quickly │
    │                    ↑                       │
-   │   Facts ←── Read queries are optimised     │
+   │   Facts ←── Read queries are optimised    │
    │                    ↑                       │
-   │   Ideas ←── Fine-tune user/orders queries  │
+   │   Ideas ←── Fine-tune user/orders queries │
    │                    ↑                       │
-   │   Tasks ←── Add index on orders.user_id    │
+   │   Tasks ←── Add index on orders.user_id   │
    │                                            │
    ▼                                            ▼
 Volatile                                     Concrete
