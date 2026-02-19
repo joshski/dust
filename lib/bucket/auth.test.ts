@@ -152,6 +152,7 @@ describe('authenticate', () => {
   }
 
   test('opens browser with auth URL containing port', async () => {
+    stubEnv('DUST_BUCKET_HOST', undefined)
     let openedUrl: string | undefined
     const authDependencies = createMockDependencies({
       openBrowser: url => {
