@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { buildGoal, buildTask } from './support/content-builders'
+import { buildPrinciple, buildTask } from './support/content-builders'
 import { runSession } from './support/run-session'
 
 test('agent discovers available work through dust agent flow', async () => {
@@ -7,8 +7,8 @@ test('agent discovers available work through dust agent flow', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {
-            'fast-feedback.md': buildGoal({
+          principles: {
+            'fast-feedback.md': buildPrinciple({
               title: 'Fast Feedback',
               description: 'Tests should run quickly.',
             }),
@@ -17,8 +17,11 @@ test('agent discovers available work through dust agent flow', async () => {
             'implement-caching.md': buildTask({
               title: 'Implement Caching',
               description: 'Add caching to improve performance.',
-              goals: [
-                { name: 'Fast Feedback', path: '../goals/fast-feedback.md' },
+              principles: [
+                {
+                  name: 'Fast Feedback',
+                  path: '../principles/fast-feedback.md',
+                },
               ],
               definitionOfDone: ['Cache is implemented', 'Tests pass'],
             }),

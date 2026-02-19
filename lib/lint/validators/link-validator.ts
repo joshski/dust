@@ -15,9 +15,9 @@ interface SemanticRule {
 
 const SEMANTIC_RULES: SemanticRule[] = [
   {
-    section: '## Goals',
-    requiredPath: '/.dust/goals/',
-    description: 'goal',
+    section: '## Principles',
+    requiredPath: '/.dust/principles/',
+    description: 'principle',
   },
   {
     section: '## Blocked By',
@@ -139,7 +139,7 @@ export function validateSemanticLinks(
   return violations
 }
 
-export function validateGoalHierarchyLinks(
+export function validatePrincipleHierarchyLinks(
   filePath: string,
   content: string
 ): Violation[] {
@@ -158,8 +158,8 @@ export function validateGoalHierarchyLinks(
     }
 
     if (
-      currentSection !== '## Parent Goal' &&
-      currentSection !== '## Sub-Goals'
+      currentSection !== '## Parent Principle' &&
+      currentSection !== '## Sub-Principles'
     ) {
       continue
     }
@@ -173,7 +173,7 @@ export function validateGoalHierarchyLinks(
       if (linkTarget.startsWith('#')) {
         violations.push({
           file: filePath,
-          message: `Link in "${currentSection}" must point to a goal file, not an anchor: "${linkTarget}"`,
+          message: `Link in "${currentSection}" must point to a principle file, not an anchor: "${linkTarget}"`,
           line: i + 1,
         })
         match = linkPattern.exec(line)
@@ -186,7 +186,7 @@ export function validateGoalHierarchyLinks(
       ) {
         violations.push({
           file: filePath,
-          message: `Link in "${currentSection}" must point to a goal file, not an external URL: "${linkTarget}"`,
+          message: `Link in "${currentSection}" must point to a principle file, not an external URL: "${linkTarget}"`,
           line: i + 1,
         })
         match = linkPattern.exec(line)
@@ -196,10 +196,10 @@ export function validateGoalHierarchyLinks(
       const targetPath = linkTarget.split('#')[0]
       const resolvedPath = resolve(fileDir, targetPath)
 
-      if (!resolvedPath.includes('/.dust/goals/')) {
+      if (!resolvedPath.includes('/.dust/principles/')) {
         violations.push({
           file: filePath,
-          message: `Link in "${currentSection}" must point to a goal file: "${linkTarget}"`,
+          message: `Link in "${currentSection}" must point to a principle file: "${linkTarget}"`,
           line: i + 1,
         })
       }

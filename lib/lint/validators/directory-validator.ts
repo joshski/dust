@@ -5,7 +5,7 @@
 import type { FileSystem } from '../../cli/types'
 import type { Violation } from './types'
 
-const EXPECTED_DIRECTORIES = ['goals', 'ideas', 'tasks', 'facts', 'config']
+const EXPECTED_DIRECTORIES = ['principles', 'ideas', 'tasks', 'facts', 'config']
 
 export async function validateContentDirectoryFiles(
   dirPath: string,

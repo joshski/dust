@@ -33,8 +33,8 @@ function agentGreeting(vars: TemplateVarsWithInstructions): string {
     3. **Capture a new task** → \`${vars.bin} new task\`
        User has concrete work to add. Keywords: "task: ..." or "add a task ..."
 
-    4. **Capture a new goal** → \`${vars.bin} new goal\`
-       User has a higher-level objective to add. Keywords: "goal: ..." or "add a goal ..."
+    4. **Capture a new principle** → \`${vars.bin} new principle\`
+       User has a guiding value to add. Keywords: "principle: ..." or "add a principle ..."
 
     5. **Capture a vague idea** → \`${vars.bin} new idea\`
        User has a rough idea that might become work later. Keywords: "idea: ..." or "add an idea ..."

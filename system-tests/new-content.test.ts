@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { buildGoal, buildIdea } from './support/content-builders'
+import { buildIdea, buildPrinciple } from './support/content-builders'
 import { runSession } from './support/run-session'
 
 test('agent gets instructions for creating a new task', async () => {
@@ -35,7 +35,7 @@ test('agent gets instructions for creating a new task', async () => {
   })
 })
 
-test('agent gets instructions for creating a new goal', async () => {
+test('agent gets instructions for creating a new principle', async () => {
   const session = await runSession({
     fileSystemTree: {
       project: {
@@ -44,10 +44,10 @@ test('agent gets instructions for creating a new goal', async () => {
     },
     handlers: [
       {
-        pattern: /Capture a new goal.*new goal/s,
-        getCommand: () => 'bin/dust new goal',
+        pattern: /Capture a new principle.*new principle/s,
+        getCommand: () => 'bin/dust new principle',
       },
-      { pattern: /Adding a New Goal/, getCommand: () => null },
+      { pattern: /Adding a New Principle/, getCommand: () => null },
     ],
   })
 
@@ -55,12 +55,12 @@ test('agent gets instructions for creating a new goal', async () => {
     turns: [
       { command: 'bin/dust agent', result: { exitCode: 0 } },
       {
-        command: 'bin/dust new goal',
+        command: 'bin/dust new principle',
         result: {
           exitCode: 0,
           // Verify the instructions include key guidance
           stdout: expect.stringMatching(
-            /Adding a New Goal.*\.dust\/goals\/.*Stable/s
+            /Adding a New Principle.*\.dust\/principles\/.*Stable/s
           ),
         },
       },
@@ -127,13 +127,13 @@ test('new task instructions include checking existing ideas', async () => {
   expect(output).toContain('dust ideas')
 })
 
-test('new goal instructions include checking existing goals', async () => {
+test('new principle instructions include checking existing principles', async () => {
   const session = await runSession({
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {
-            'maintainability.md': buildGoal({
+          principles: {
+            'maintainability.md': buildPrinciple({
               title: 'Maintainability',
               description: 'Code should be easy to change.',
             }),
@@ -143,14 +143,14 @@ test('new goal instructions include checking existing goals', async () => {
     },
     handlers: [
       {
-        pattern: /Capture a new goal.*new goal/s,
-        getCommand: () => 'bin/dust new goal',
+        pattern: /Capture a new principle.*new principle/s,
+        getCommand: () => 'bin/dust new principle',
       },
-      { pattern: /dust goals/, getCommand: () => null },
+      { pattern: /dust principles/, getCommand: () => null },
     ],
   })
 
-  // Instructions should mention checking existing goals
+  // Instructions should mention checking existing principles
   const output = session.turns[1].result.stdout
-  expect(output).toContain('dust goals')
+  expect(output).toContain('dust principles')
 })

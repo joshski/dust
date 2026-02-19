@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { buildGoal, buildTask } from './support/content-builders'
+import { buildPrinciple, buildTask } from './support/content-builders'
 import { runSession } from './support/run-session'
 import { createShellEmulator } from './support/shell-emulator'
 
@@ -8,8 +8,8 @@ test('empty backlog shows no tasks available', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {
-            'maintainability.md': buildGoal({
+          principles: {
+            'maintainability.md': buildPrinciple({
               title: 'Maintainability',
               description: 'Code should be easy to change.',
             }),
@@ -33,24 +33,27 @@ test('empty backlog shows no tasks available', async () => {
   expect(session.turns[1].result.stdout.trim()).toBe('')
 })
 
-test('no goals defined shows empty goals list', async () => {
+test('no principles defined shows empty principles list', async () => {
   const session = await runSession({
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {},
+          principles: {},
         },
       },
     },
     handlers: [
-      { pattern: /welcome to dust/, getCommand: () => 'bin/dust goals' },
-      // Empty goals directory shows "No goals found" message
-      { pattern: /No goals found/, getCommand: () => null },
+      {
+        pattern: /welcome to dust/,
+        getCommand: () => 'bin/dust principles',
+      },
+      // Empty principles directory shows "No principles found" message
+      { pattern: /No principles found/, getCommand: () => null },
     ],
   })
 
   expect(session.turns[1].result.exitCode).toBe(0)
-  expect(session.turns[1].result.stdout).toContain('No goals found')
+  expect(session.turns[1].result.stdout).toContain('No principles found')
 })
 
 test('missing .dust directory shows initialization guidance', async () => {
@@ -115,7 +118,7 @@ test('task list handles tasks with no title gracefully', async () => {
             // This is a special case - intentionally malformed markdown without H1
             'no-title.md': `No heading here, just content.
 
-## Goals
+## Principles
 
 (none)
 

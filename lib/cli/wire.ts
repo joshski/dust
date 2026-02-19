@@ -33,6 +33,7 @@ export interface FileSystemPrimitives {
     (path: string, options: { recursive: true }): Promise<string[]>
   }
   chmod: (path: string, mode: number) => Promise<void>
+  rename: (oldPath: string, newPath: string) => Promise<void>
 }
 
 /**
@@ -78,6 +79,7 @@ export function createFileSystem(primitives: FileSystemPrimitives): FileSystem {
     getFileCreationTime: path => primitives.statSync(path).birthtimeMs,
     readdir: path => primitives.readdir(path),
     chmod: (path, mode) => primitives.chmod(path, mode),
+    rename: (oldPath, newPath) => primitives.rename(oldPath, newPath),
   }
 }
 

@@ -21,13 +21,14 @@ import { lintMarkdown } from './commands/lint-markdown'
 import { list } from './commands/list'
 import { loopClaude } from './commands/loop'
 import { loopCodex } from './commands/loop-codex'
-import { newGoal } from './commands/new-goal'
+import { migrate } from './commands/migrate'
 import { newIdea } from './commands/new-idea'
+import { newPrinciple } from './commands/new-principle'
 import { newTask } from './commands/new-task'
 import { next } from './commands/next'
 import { pickTask } from './commands/pick-task'
 import { prePush } from './commands/pre-push'
-import { facts, goals, ideas, tasks } from './commands/type-list'
+import { facts, ideas, principles, tasks } from './commands/type-list'
 import type {
   CommandContext,
   CommandDependencies,
@@ -50,7 +51,7 @@ export const commandRegistry = {
   lint: lintMarkdown,
   list,
   tasks,
-  goals,
+  principles,
   ideas,
   facts,
   next,
@@ -60,13 +61,14 @@ export const commandRegistry = {
   bucket,
   focus,
   'new task': newTask,
-  'new goal': newGoal,
+  'new principle': newPrinciple,
   'new idea': newIdea,
   'implement task': implementTask,
   'pick task': pickTask,
   'loop claude': loopClaude,
   'loop codex': loopCodex,
   'pre push': prePush,
+  migrate,
   help,
 }
 

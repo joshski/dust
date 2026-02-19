@@ -76,9 +76,9 @@ Audit the codebase for error handling issues. Look for silently swallowed errors
 
 ## Related Goals
 
-- [Actionable Errors](../goals/actionable-errors.md) - error messages should tell you what to do next
-- [Debugging Tooling](../goals/debugging-tooling.md) - agents need readable, structured error output
-- [Stop the Line](../goals/stop-the-line.md) - problems should be fixed at source, not hidden
+- [Actionable Errors](../principles/actionable-errors.md) - error messages should tell you what to do next
+- [Debugging Tooling](../principles/debugging-tooling.md) - agents need readable, structured error output
+- [Stop the Line](../principles/stop-the-line.md) - problems should be fixed at source, not hidden
 
 ## Related Ideas
 

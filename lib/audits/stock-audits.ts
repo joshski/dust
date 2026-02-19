@@ -30,7 +30,7 @@ function agentDeveloperExperience(): string {
     4. **Debugging tools** - Can agents diagnose issues without trial and error?
     5. **Structured logging** - Is system behavior observable through logs?
 
-    ## Goals
+    ## Principles
 
     (none)
 
@@ -64,7 +64,7 @@ function deadCode(): string {
     4. **Unused dependencies** - Packages in package.json not used in code
     5. **Commented-out code** - Old code left in comments
 
-    ## Goals
+    ## Principles
 
     (none)
 
@@ -99,7 +99,7 @@ function factsVerification(): string {
     3. **Staleness** - Have facts become outdated due to recent changes?
     4. **Relevance** - Are all facts still useful for understanding the project?
 
-    ## Goals
+    ## Principles
 
     (none)
 
@@ -133,7 +133,7 @@ function ideasFromCommits(): string {
     3. **Pattern opportunities** - Can recent changes be generalized?
     4. **Test gaps** - Do recent changes have adequate test coverage?
 
-    ## Goals
+    ## Principles
 
     (none)
 
@@ -151,22 +151,22 @@ function ideasFromCommits(): string {
   `
 }
 
-function ideasFromGoals(): string {
+function ideasFromPrinciples(): string {
   return dedent`
-    # Ideas from Goals
+    # Ideas from Principles
 
-    Review \`.dust/goals/\` to generate new improvement ideas. Review existing ideas in \`./.ideas/\` and the recent history of \`./.dust/ideas\` to understand what has been proposed or considered historically, then create new idea files in \`./.ideas/\` for any issues or opportunities you identify, avoiding duplication.
+    Review \`.dust/principles/\` to generate new improvement ideas. Review existing ideas in \`./.ideas/\` and the recent history of \`./.dust/ideas\` to understand what has been proposed or considered historically, then create new idea files in \`./.ideas/\` for any issues or opportunities you identify, avoiding duplication.
 
     ## Scope
 
     Focus on these areas:
 
-    1. **Unmet goals** - Which goals lack supporting work?
-    2. **Gap analysis** - Where does the codebase fall short of goals?
-    3. **New opportunities** - What work would better achieve each goal?
-    4. **Goal alignment** - Are current tasks aligned with stated goals?
+    1. **Unmet principles** - Which principles lack supporting work?
+    2. **Gap analysis** - Where does the codebase fall short of principles?
+    3. **New opportunities** - What work would better achieve each principle?
+    4. **Principle alignment** - Are current tasks aligned with stated principles?
 
-    ## Goals
+    ## Principles
 
     (none)
 
@@ -176,10 +176,10 @@ function ideasFromGoals(): string {
 
     ## Definition of Done
 
-    - [ ] Read each goal file in \`.dust/goals/\`
-    - [ ] Analyzed codebase for alignment with each goal
-    - [ ] Listed gaps between current state and goal intent
-    - [ ] Proposed new ideas for unmet or underserved goals
+    - [ ] Read each principle file in \`.dust/principles/\`
+    - [ ] Analyzed codebase for alignment with each principle
+    - [ ] Listed gaps between current state and principle intent
+    - [ ] Proposed new ideas for unmet or underserved principles
   `
 }
 
@@ -199,7 +199,7 @@ function performanceReview(): string {
     4. **Build performance** - How fast is the build process?
     5. **Test speed** - Are tests running efficiently?
 
-    ## Goals
+    ## Principles
 
     (none)
 
@@ -233,7 +233,7 @@ function securityReview(): string {
     4. **Sensitive data exposure** - Logging sensitive data, insecure storage
     5. **Dependency vulnerabilities** - Known CVEs in dependencies
 
-    ## Goals
+    ## Principles
 
     (none)
 
@@ -268,7 +268,7 @@ function staleIdeas(): string {
     3. **Actionability** - Can the idea be converted to a task?
     4. **Duplication** - Are there overlapping or redundant ideas?
 
-    ## Goals
+    ## Principles
 
     (none)
 
@@ -302,7 +302,7 @@ function testCoverage(): string {
     4. **User-facing features** - UI components, form validation
     5. **Recent changes** - Code modified in the last few commits
 
-    ## Goals
+    ## Principles
 
     (none)
 
@@ -324,7 +324,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'dead-code': deadCode,
   'facts-verification': factsVerification,
   'ideas-from-commits': ideasFromCommits,
-  'ideas-from-goals': ideasFromGoals,
+  'ideas-from-principles': ideasFromPrinciples,
   'performance-review': performanceReview,
   'security-review': securityReview,
   'stale-ideas': staleIdeas,

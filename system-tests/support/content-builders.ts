@@ -1,5 +1,5 @@
 /**
- * Builder functions to generate markdown content for tasks, goals, ideas, and facts files.
+ * Builder functions to generate markdown content for tasks, principles, ideas, and facts files.
  * These make e2e test data more readable and maintainable.
  */
 
@@ -8,16 +8,16 @@ type Link = { name: string; path: string }
 interface TaskOptions {
   title: string
   description?: string
-  goals?: Link[] | '(none)'
+  principles?: Link[] | '(none)'
   blockedBy?: Link[] | '(none)'
   definitionOfDone?: string[]
 }
 
-interface GoalOptions {
+interface PrincipleOptions {
   title: string
   description: string
-  parentGoal?: Link | '(none)'
-  subGoals?: Link[] | '(none)'
+  parentPrinciple?: Link | '(none)'
+  subPrinciples?: Link[] | '(none)'
 }
 
 interface IdeaOptions {
@@ -45,7 +45,7 @@ export function buildTask(options: TaskOptions): string {
   const {
     title,
     description,
-    goals = '(none)',
+    principles = '(none)',
     blockedBy = '(none)',
     definitionOfDone = ['Task complete'],
   } = options
@@ -54,9 +54,9 @@ export function buildTask(options: TaskOptions): string {
 
   return `# ${title}
 ${descriptionSection}
-## Goals
+## Principles
 
-${formatLinks(goals)}
+${formatLinks(principles)}
 
 ## Blocked By
 
@@ -68,28 +68,28 @@ ${formatChecklist(definitionOfDone)}
 `
 }
 
-export function buildGoal(options: GoalOptions): string {
-  const { title, description, parentGoal, subGoals } = options
+export function buildPrinciple(options: PrincipleOptions): string {
+  const { title, description, parentPrinciple, subPrinciples } = options
 
-  // If parentGoal or subGoals is specified, include those sections
-  if (parentGoal !== undefined || subGoals !== undefined) {
+  // If parentPrinciple or subPrinciples is specified, include those sections
+  if (parentPrinciple !== undefined || subPrinciples !== undefined) {
     const parentSection =
-      parentGoal === '(none)' || parentGoal === undefined
+      parentPrinciple === '(none)' || parentPrinciple === undefined
         ? '(none)'
-        : `- [${parentGoal.name}](${parentGoal.path})`
-    const subGoalsSection = formatLinks(subGoals)
+        : `- [${parentPrinciple.name}](${parentPrinciple.path})`
+    const subPrinciplesSection = formatLinks(subPrinciples)
 
     return `# ${title}
 
 ${description}
 
-## Parent Goal
+## Parent Principle
 
 ${parentSection}
 
-## Sub-Goals
+## Sub-Principles
 
-${subGoalsSection}
+${subPrinciplesSection}
 `
   }
 

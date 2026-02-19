@@ -41,7 +41,7 @@ describe('shell emulator', () => {
       fileSystemTree: {
         project: {
           '.dust': {
-            goals: {},
+            principles: {},
             ideas: {},
             tasks: {
               'existing-task.md': '# Existing Task\n\nSome content',

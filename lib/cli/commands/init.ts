@@ -12,7 +12,7 @@ import { getColors } from '../colors'
 import { dedent } from '../dedent'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
 
-const DUST_DIRECTORIES = ['goals', 'ideas', 'tasks', 'facts', 'config']
+const DUST_DIRECTORIES = ['principles', 'ideas', 'tasks', 'facts', 'config']
 
 /**
  * Generates starter settings based on detected project type.
@@ -181,10 +181,10 @@ export async function init(
   )
   context.stdout('')
   context.stdout(
-    `${colors.dim}If this is an existing codebase, you might want to backfill goals and facts:${colors.reset}`
+    `${colors.dim}If this is an existing codebase, you might want to backfill principles and facts:${colors.reset}`
   )
   context.stdout(
-    `   ${colors.cyan}>${colors.reset} ${runner} claude "Add goals and facts based on the code in this repository"`
+    `   ${colors.cyan}>${colors.reset} ${runner} claude "Add principles and facts based on the code in this repository"`
   )
 
   return { exitCode: 0 }

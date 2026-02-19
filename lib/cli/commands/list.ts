@@ -1,12 +1,12 @@
 /**
- * dust [type] - List tasks, ideas, goals, or facts (e.g., dust tasks, dust goals)
+ * dust [type] - List tasks, ideas, principles, or facts (e.g., dust tasks, dust principles)
  */
 
 import { basename } from 'node:path'
 import {
-  extractGoalRelationships,
-  type GoalRelationships,
-} from '../../lint/validators/goal-hierarchy'
+  extractPrincipleRelationships,
+  type PrincipleRelationships,
+} from '../../lint/validators/principle-hierarchy'
 import {
   extractOpeningSentence,
   extractTitle,
@@ -14,13 +14,13 @@ import {
 import { getColors } from '../colors'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
 
-const VALID_TYPES = ['tasks', 'ideas', 'goals', 'facts'] as const
+const VALID_TYPES = ['tasks', 'ideas', 'principles', 'facts'] as const
 type ListType = (typeof VALID_TYPES)[number]
 
 const SECTION_HEADERS: Record<ListType, string> = {
   tasks: '📋 Tasks',
   ideas: '💡 Ideas',
-  goals: '🎯 Goals',
+  principles: '🎯 Principles',
   facts: '📄 Facts',
 }
 
@@ -29,53 +29,55 @@ const TYPE_EXPLANATIONS: Record<ListType, string> = {
     'Tasks are detailed work plans with dependencies and completion criteria. Each task describes a specific piece of work to be done.',
   ideas:
     "Ideas are future feature notes and proposals. Ideas capture possibilities that haven't yet been refined into actionable tasks.",
-  goals:
-    'Goals are mission statements and guiding principles. Goals describe desired outcomes and values that inform decision-making.',
+  principles:
+    'Principles are guiding values and design constraints. Principles describe how decisions should be made and what matters most.',
   facts:
     'Facts are current state documentation. Facts capture how things work today, providing context for agents and contributors.',
 }
 
-interface GoalNode {
+interface PrincipleNode {
   filePath: string
   title: string
-  children: GoalNode[]
+  children: PrincipleNode[]
 }
 
-async function buildGoalHierarchy(
-  goalsPath: string,
+async function buildPrincipleHierarchy(
+  principlesPath: string,
   fileSystem: FileSystem
-): Promise<GoalNode[]> {
-  const files = await fileSystem.readdir(goalsPath)
+): Promise<PrincipleNode[]> {
+  const files = await fileSystem.readdir(principlesPath)
   const mdFiles = files.filter(f => f.endsWith('.md'))
 
-  // Build relationships for all goals
-  const relationships: GoalRelationships[] = []
+  // Build relationships for all principles
+  const relationships: PrincipleRelationships[] = []
   const titleMap = new Map<string, string>()
 
   for (const file of mdFiles) {
-    const filePath = `${goalsPath}/${file}`
+    const filePath = `${principlesPath}/${file}`
     const content = await fileSystem.readFile(filePath)
-    relationships.push(extractGoalRelationships(filePath, content))
+    relationships.push(extractPrincipleRelationships(filePath, content))
     const title = extractTitle(content) || basename(file, '.md')
     titleMap.set(filePath, title)
   }
 
-  // Build a map of filePath -> GoalRelationships
-  const relMap = new Map<string, GoalRelationships>()
+  // Build a map of filePath -> PrincipleRelationships
+  const relMap = new Map<string, PrincipleRelationships>()
   for (const rel of relationships) {
     relMap.set(rel.filePath, rel)
   }
 
-  // Find root goals (those with no parent or "(none)" parent)
-  const rootGoals = relationships.filter(rel => rel.parentGoals.length === 0)
+  // Find root principles (those with no parent or "(none)" parent)
+  const rootPrinciples = relationships.filter(
+    rel => rel.parentPrinciples.length === 0
+  )
 
   // Recursively build the tree
-  function buildNode(filePath: string): GoalNode {
+  function buildNode(filePath: string): PrincipleNode {
     const rel = relMap.get(filePath)
-    const children: GoalNode[] = []
+    const children: PrincipleNode[] = []
 
     if (rel) {
-      for (const childPath of rel.subGoals) {
+      for (const childPath of rel.subPrinciples) {
         children.push(buildNode(childPath))
       }
     }
@@ -87,11 +89,11 @@ async function buildGoalHierarchy(
     }
   }
 
-  return rootGoals.map(rel => buildNode(rel.filePath))
+  return rootPrinciples.map(rel => buildNode(rel.filePath))
 }
 
 function renderHierarchy(
-  nodes: GoalNode[],
+  nodes: PrincipleNode[],
   output: (line: string) => void,
   prefix = ''
 ): void {
@@ -161,9 +163,9 @@ export async function list(
     context.stdout(TYPE_EXPLANATIONS[type])
     context.stdout('')
 
-    // Show goal hierarchy above the flat list
-    if (type === 'goals') {
-      const hierarchy = await buildGoalHierarchy(dirPath, fileSystem)
+    // Show principle hierarchy above the flat list
+    if (type === 'principles') {
+      const hierarchy = await buildPrincipleHierarchy(dirPath, fileSystem)
       if (hierarchy.length > 0) {
         context.stdout(`${colors.dim}Hierarchy:${colors.reset}`)
         renderHierarchy(hierarchy, line => context.stdout(line))

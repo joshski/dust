@@ -33,8 +33,8 @@ When a developer runs `dust bucket` from within a git repository clone, the serv
 
 ## Related Goals
 
-- [Agent Autonomy](../goals/agent-autonomy.md) - Enabling agents to work effectively without human intervention
-- [Easy Adoption](../goals/easy-adoption.md) - Reducing friction when starting with dust
+- [Agent Autonomy](../principles/agent-autonomy.md) - Enabling agents to work effectively without human intervention
+- [Easy Adoption](../principles/easy-adoption.md) - Reducing friction when starting with dust
 
 ## Open Questions
 

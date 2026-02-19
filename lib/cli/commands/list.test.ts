@@ -39,7 +39,7 @@ describe('list command', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'goal.md': '# My Goal' },
+          principles: { 'principle.md': '# My Principle' },
           ideas: { 'idea.md': '# My Idea' },
           tasks: { 'task.md': '# My Task' },
           facts: { 'fact.md': '# My Fact' },
@@ -51,7 +51,7 @@ describe('list command', () => {
 
     expect(result.exitCode).toBe(0)
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('🎯 Goals')
+    expect(output).toContain('🎯 Principles')
     expect(output).toContain('💡 Ideas')
     expect(output).toContain('📋 Tasks')
     expect(output).toContain('📄 Facts')
@@ -62,19 +62,19 @@ describe('list command', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'goal.md': '# My Goal' },
+          principles: { 'principle.md': '# My Principle' },
           ideas: { 'idea.md': '# My Idea' },
         },
       },
     })
 
     const result = await list(
-      createDependencies(context, fileSystem, ['goals'])
+      createDependencies(context, fileSystem, ['principles'])
     )
 
     expect(result.exitCode).toBe(0)
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('🎯 Goals')
+    expect(output).toContain('🎯 Principles')
     expect(output).not.toContain('💡 Ideas')
   })
 
@@ -83,17 +83,18 @@ describe('list command', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'my-goal.md': '# My Goal Title\n\nThis is the opening sentence.',
+          principles: {
+            'my-principle.md':
+              '# My Principle Title\n\nThis is the opening sentence.',
           },
         },
       },
     })
 
-    await list(createDependencies(context, fileSystem, ['goals']))
+    await list(createDependencies(context, fileSystem, ['principles']))
 
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('.dust/goals/my-goal.md')
+    expect(output).toContain('.dust/principles/my-principle.md')
     expect(output).toContain('This is the opening sentence.')
   })
 
@@ -102,15 +103,15 @@ describe('list command', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'my-goal.md': 'No heading here' },
+          principles: { 'my-principle.md': 'No heading here' },
         },
       },
     })
 
-    await list(createDependencies(context, fileSystem, ['goals']))
+    await list(createDependencies(context, fileSystem, ['principles']))
 
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('my-goal')
+    expect(output).toContain('my-principle')
   })
 
   test('rejects invalid type', async () => {
@@ -118,7 +119,7 @@ describe('list command', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'g.md': '' },
+          principles: { 'g.md': '' },
         },
       },
     })
@@ -136,7 +137,7 @@ describe('list command', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'g.md': '' },
+          principles: { 'g.md': '' },
         },
       },
     })
@@ -146,17 +147,17 @@ describe('list command', () => {
     const output = context.stderrLines.join('\n')
     expect(output).toContain('tasks')
     expect(output).toContain('ideas')
-    expect(output).toContain('goals')
+    expect(output).toContain('principles')
     expect(output).toContain('facts')
   })
 
   test('skips type directories that do not exist', async () => {
     const context = createContextEmulator()
-    // Only goals directory exists, tasks/ideas/facts do not
+    // Only principles directory exists, tasks/ideas/facts do not
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'my-goal.md': '# My Goal' },
+          principles: { 'my-principle.md': '# My Principle' },
         },
       },
     })
@@ -165,8 +166,8 @@ describe('list command', () => {
 
     expect(result.exitCode).toBe(0)
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('🎯 Goals')
-    expect(output).toContain('My Goal')
+    expect(output).toContain('🎯 Principles')
+    expect(output).toContain('My Principle')
     // Other types should not appear because their directories don't exist
     expect(output).not.toContain('📋 Tasks')
     expect(output).not.toContain('💡 Ideas')
@@ -178,7 +179,7 @@ describe('list command', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'my-goal.md': '# My Goal' },
+          principles: { 'my-principle.md': '# My Principle' },
           ideas: {},
         },
       },
@@ -188,7 +189,7 @@ describe('list command', () => {
 
     expect(result.exitCode).toBe(0)
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('🎯 Goals')
+    expect(output).toContain('🎯 Principles')
     // ideas exists but has no .md files, so should not be listed
     expect(output).not.toContain('💡 Ideas')
   })
@@ -198,7 +199,7 @@ describe('list command', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'my-goal.md': '# My Goal' },
+          principles: { 'my-principle.md': '# My Principle' },
         },
       },
     })
@@ -267,21 +268,21 @@ describe('list command', () => {
     expect(output).toContain('Ideas are future feature notes and proposals')
   })
 
-  test('shows type explanation for goals', async () => {
+  test('shows type explanation for principles', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'goal.md': '# My Goal' },
+          principles: { 'principle.md': '# My Principle' },
         },
       },
     })
 
-    await list(createDependencies(context, fileSystem, ['goals']))
+    await list(createDependencies(context, fileSystem, ['principles']))
 
     const output = context.stdoutLines.join('\n')
     expect(output).toContain(
-      'Goals are mission statements and guiding principles'
+      'Principles are guiding values and design constraints'
     )
   })
 
@@ -320,45 +321,45 @@ describe('list command', () => {
     expect(output).toContain('No tasks found.')
   })
 
-  test('shows goal hierarchy with parent and sub-goals', async () => {
+  test('shows principle hierarchy with parent and sub-principles', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'parent-goal.md': `# Parent Goal
+          principles: {
+            'parent-principle.md': `# Parent Principle
 
 This is a top-level goal.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
-- [Child Goal](child-goal.md)
+- [Child Principle](child-principle.md)
 `,
-            'child-goal.md': `# Child Goal
+            'child-principle.md': `# Child Principle
 
 This is a child goal.
 
-## Parent Goal
+## Parent Principle
 
-- [Parent Goal](parent-goal.md)
+- [Parent Principle](parent-principle.md)
 
-## Sub-Goals
+## Sub-Principles
 
-- [Grandchild Goal](grandchild-goal.md)
+- [Grandchild Principle](grandchild-principle.md)
 `,
-            'grandchild-goal.md': `# Grandchild Goal
+            'grandchild-principle.md': `# Grandchild Principle
 
 This is a grandchild goal.
 
-## Parent Goal
+## Parent Principle
 
-- [Child Goal](child-goal.md)
+- [Child Principle](child-principle.md)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -367,34 +368,34 @@ This is a grandchild goal.
       },
     })
 
-    await list(createDependencies(context, fileSystem, ['goals']))
+    await list(createDependencies(context, fileSystem, ['principles']))
 
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('Hierarchy:')
-    expect(output).toContain('Parent Goal')
-    expect(output).toContain('Child Goal')
-    expect(output).toContain('Grandchild Goal')
+    expect(output).toContain('Parent Principle')
+    expect(output).toContain('Child Principle')
+    expect(output).toContain('Grandchild Principle')
     // Check tree structure is present (└── for last/only children)
-    expect(output).toContain('└── Parent Goal')
-    expect(output).toContain('└── Child Goal')
-    expect(output).toContain('└── Grandchild Goal')
+    expect(output).toContain('└── Parent Principle')
+    expect(output).toContain('└── Child Principle')
+    expect(output).toContain('└── Grandchild Principle')
   })
 
-  test('shows multiple root goals in hierarchy', async () => {
+  test('shows multiple root principles in hierarchy', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
+          principles: {
             'root-one.md': `# Root One
 
 First root.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -402,11 +403,11 @@ First root.
 
 Second root.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -415,7 +416,7 @@ Second root.
       },
     })
 
-    await list(createDependencies(context, fileSystem, ['goals']))
+    await list(createDependencies(context, fileSystem, ['principles']))
 
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('Root One')
@@ -425,53 +426,53 @@ Second root.
     expect(output).toContain('└── Root Two')
   })
 
-  test('handles sub-goal references to non-existent goals gracefully', async () => {
+  test('handles sub-principle references to non-existent principles gracefully', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'parent-goal.md': `# Parent Goal
+          principles: {
+            'parent-principle.md': `# Parent Principle
 
 This is a parent goal.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
-- [Non Existent](non-existent-goal.md)
+- [Non Existent](non-existent-principle.md)
 `,
           },
         },
       },
     })
 
-    await list(createDependencies(context, fileSystem, ['goals']))
+    await list(createDependencies(context, fileSystem, ['principles']))
 
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('Hierarchy:')
-    expect(output).toContain('Parent Goal')
-    // The non-existent goal should be shown with its basename
-    expect(output).toContain('non-existent-goal')
+    expect(output).toContain('Parent Principle')
+    // The non-existent principle should be shown with its basename
+    expect(output).toContain('non-existent-principle')
   })
 
-  test('does not show hierarchy when all goals have parents', async () => {
+  test('does not show hierarchy when all principles have parents', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'orphan-goal.md': `# Orphan Goal
+          principles: {
+            'orphan-principle.md': `# Orphan Principle
 
 This goal has a parent that does not exist.
 
-## Parent Goal
+## Parent Principle
 
 - [Missing Parent](missing-parent.md)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -480,12 +481,12 @@ This goal has a parent that does not exist.
       },
     })
 
-    await list(createDependencies(context, fileSystem, ['goals']))
+    await list(createDependencies(context, fileSystem, ['principles']))
 
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('🎯 Goals')
-    expect(output).toContain('Orphan Goal')
-    // No hierarchy because no root goals exist
+    expect(output).toContain('🎯 Principles')
+    expect(output).toContain('Orphan Principle')
+    // No hierarchy because no root principles exist
     expect(output).not.toContain('Hierarchy:')
   })
 })

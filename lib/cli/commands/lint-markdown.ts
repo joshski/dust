@@ -19,21 +19,24 @@ import {
   validateTitleFilenameMatch,
 } from '../../lint/validators/filename-validator'
 import {
-  extractGoalRelationships,
-  validateBidirectionalLinks,
-  validateGoalHierarchySections,
-  validateNoCycles,
-} from '../../lint/validators/goal-hierarchy'
-import {
   validateIdeaOpenQuestions,
   validateIdeaTransitionTitle,
 } from '../../lint/validators/idea-validator'
 import {
-  validateGoalHierarchyLinks,
   validateLinks,
+  validatePrincipleHierarchyLinks,
   validateSemanticLinks,
 } from '../../lint/validators/link-validator'
-import type { GoalRelationships, Violation } from '../../lint/validators/types'
+import {
+  extractPrincipleRelationships,
+  validateBidirectionalLinks,
+  validateNoCycles,
+  validatePrincipleHierarchySections,
+} from '../../lint/validators/principle-hierarchy'
+import type {
+  PrincipleRelationships,
+  Violation,
+} from '../../lint/validators/types'
 import type { CommandDependencies, CommandResult, GlobScanner } from '../types'
 
 interface ScanResult {
@@ -131,7 +134,7 @@ export async function lintMarkdown(
   }
 
   // Validate opening sentences and title-filename matching in all content directories
-  const contentDirs = ['goals', 'facts', 'ideas', 'tasks']
+  const contentDirs = ['principles', 'facts', 'ideas', 'tasks']
   context.stdout('Validating content files...')
 
   // Validate that content directories only contain markdown files
@@ -261,18 +264,18 @@ export async function lintMarkdown(
     }
   }
 
-  // Validate goal files hierarchy
-  const goalsPath = `${dustPath}/goals`
-  const { files: goalFiles } = await safeScanDir(glob, goalsPath)
-  if (goalFiles.length > 0) {
-    context.stdout('Validating goal hierarchy in .dust/goals/...')
+  // Validate principle files hierarchy
+  const principlesPath = `${dustPath}/principles`
+  const { files: principleFiles } = await safeScanDir(glob, principlesPath)
+  if (principleFiles.length > 0) {
+    context.stdout('Validating principle hierarchy in .dust/principles/...')
 
-    const allGoalRelationships: GoalRelationships[] = []
+    const allPrincipleRelationships: PrincipleRelationships[] = []
 
-    for (const file of goalFiles) {
+    for (const file of principleFiles) {
       if (!file.endsWith('.md')) continue
 
-      const filePath = `${goalsPath}/${file}`
+      const filePath = `${principlesPath}/${file}`
       let content: string
       try {
         content = await fileSystem.readFile(filePath)
@@ -284,14 +287,16 @@ export async function lintMarkdown(
         throw error
       }
 
-      violations.push(...validateGoalHierarchySections(filePath, content))
-      violations.push(...validateGoalHierarchyLinks(filePath, content))
+      violations.push(...validatePrincipleHierarchySections(filePath, content))
+      violations.push(...validatePrincipleHierarchyLinks(filePath, content))
 
-      allGoalRelationships.push(extractGoalRelationships(filePath, content))
+      allPrincipleRelationships.push(
+        extractPrincipleRelationships(filePath, content)
+      )
     }
 
-    violations.push(...validateBidirectionalLinks(allGoalRelationships))
-    violations.push(...validateNoCycles(allGoalRelationships))
+    violations.push(...validateBidirectionalLinks(allPrincipleRelationships))
+    violations.push(...validateNoCycles(allPrincipleRelationships))
   }
 
   if (violations.length === 0) {

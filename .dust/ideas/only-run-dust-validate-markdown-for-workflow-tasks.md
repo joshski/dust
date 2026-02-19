@@ -113,9 +113,9 @@ Warn the agent that they should separate workflow and code changes into differen
 
 This idea supports:
 
-- **[Fast Feedback](../goals/fast-feedback.md)** - Workflow tasks complete faster without running irrelevant code checks
-- **[Context Window Efficiency](../goals/context-window-efficiency.md)** - Less output from unnecessary checks means more efficient agent context usage
-- **[Agent Autonomy](../goals/agent-autonomy.md)** - Workflow tasks can complete without being blocked by unrelated code issues
+- **[Fast Feedback](../principles/fast-feedback.md)** - Workflow tasks complete faster without running irrelevant code checks
+- **[Context Window Efficiency](../principles/context-window-efficiency.md)** - Less output from unnecessary checks means more efficient agent context usage
+- **[Agent Autonomy](../principles/agent-autonomy.md)** - Workflow tasks can complete without being blocked by unrelated code issues
 
 ## Implementation Notes
 

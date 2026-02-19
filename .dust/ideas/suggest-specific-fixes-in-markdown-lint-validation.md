@@ -4,7 +4,7 @@ Enhance lint violation messages to include specific fix suggestions, so users (a
 
 Currently, most validation errors describe what's wrong but not how to fix it. For example, `Missing required heading: "## Goals"` tells you what's missing but not where to put it or what format the section should have. The one exception is the Open Questions bullet-point violation, which already suggests running `dust new idea` to see the expected format.
 
-This idea aligns with the [Actionable Errors](../goals/actionable-errors.md) goal: error messages should provide specific guidance on how to fix the problem.
+This idea aligns with the [Actionable Errors](../principles/actionable-errors.md) goal: error messages should provide specific guidance on how to fix the problem.
 
 ## Candidates for Fix Suggestions
 

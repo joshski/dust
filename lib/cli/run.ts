@@ -5,11 +5,18 @@
  * All testable logic is in wire.ts.
  */
 import { existsSync, statSync } from 'node:fs'
-import { chmod, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
+import {
+  chmod,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  writeFile,
+} from 'node:fs/promises'
 import { wireEntry } from './wire'
 
 await wireEntry(
-  { existsSync, statSync, readFile, writeFile, mkdir, readdir, chmod },
+  { existsSync, statSync, readFile, writeFile, mkdir, readdir, chmod, rename },
   {
     argv: process.argv,
     cwd: () => process.cwd(),

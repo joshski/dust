@@ -3,7 +3,7 @@
  *
  * These are emulators (not mocks) - they provide in-memory implementations
  * that allow testing observable behavior without verifying call order or arguments.
- * See .dust/goals/stubs-over-mocks.md for the rationale.
+ * See .dust/principles/stubs-over-mocks.md for the rationale.
  */
 
 import type { AgentSessionEvent } from '../agent-events'
@@ -238,7 +238,7 @@ export interface FileSystemEmulator extends FileSystem, GlobScanner {
  * createFileSystemEmulator({
  *   project: {
  *     '.dust': {
- *       goals: { 'my-goal.md': '# My Goal' },
+ *       principles: { 'my-principle.md': '# My Principle' },
  *       ideas: {}  // empty directory
  *     }
  *   }
@@ -341,6 +341,38 @@ export function createFileSystemEmulator(
         if (file.startsWith(prefix)) {
           yield file.slice(prefix.length)
         }
+      }
+    },
+    rename: async (oldPath: string, newPath: string) => {
+      // Move all files under oldPath to newPath
+      const entriesToMove: [string, string][] = []
+      const pathsToUpdate: string[] = []
+
+      for (const [path, content] of files.entries()) {
+        if (path === oldPath || path.startsWith(`${oldPath}/`)) {
+          const relativePath = path.slice(oldPath.length)
+          const newFilePath = `${newPath}${relativePath}`
+          entriesToMove.push([path, newFilePath])
+          files.set(newFilePath, content)
+          paths.add(newFilePath)
+        }
+      }
+
+      for (const path of paths) {
+        if (path === oldPath || path.startsWith(`${oldPath}/`)) {
+          pathsToUpdate.push(path)
+          const relativePath = path.slice(oldPath.length)
+          paths.add(`${newPath}${relativePath}`)
+        }
+      }
+
+      // Remove old entries
+      for (const [oldFilePath] of entriesToMove) {
+        files.delete(oldFilePath)
+        paths.delete(oldFilePath)
+      }
+      for (const oldPathEntry of pathsToUpdate) {
+        paths.delete(oldPathEntry)
       }
     },
     createdDirs,

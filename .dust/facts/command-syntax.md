@@ -16,4 +16,4 @@ Some tools use chained subcommands like `git stash pop` or hyphenated commands l
 2. **No mental parsing** - spaces clearly separate verb from noun without decoding conventions
 3. **Consistency with prompts** - users can type commands the same way they'd describe what they want
 
-This supports [Clarity Over Brevity](../goals/clarity-over-brevity.md) and [Easy Adoption](../goals/easy-adoption.md).
+This supports [Clarity Over Brevity](../principles/clarity-over-brevity.md) and [Easy Adoption](../principles/easy-adoption.md).

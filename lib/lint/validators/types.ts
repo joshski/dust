@@ -8,8 +8,8 @@ export interface Violation {
   line?: number
 }
 
-export interface GoalRelationships {
+export interface PrincipleRelationships {
   filePath: string
-  parentGoals: string[]
-  subGoals: string[]
+  parentPrinciples: string[]
+  subPrinciples: string[]
 }

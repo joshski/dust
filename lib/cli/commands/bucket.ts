@@ -237,6 +237,8 @@ export function createDefaultBucketDependencies(): BucketDependencies {
       mkdir(path, options).then(() => {}),
     readdir: (path: string) => readdir(path),
     chmod: (path: string, mode: number) => chmod(path, mode),
+    rename: (oldPath: string, newPath: string) =>
+      import('node:fs/promises').then(mod => mod.rename(oldPath, newPath)),
   }
 
   return {

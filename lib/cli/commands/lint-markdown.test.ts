@@ -14,20 +14,20 @@ import {
   validateTitleFilenameMatch,
 } from '../../lint/validators/filename-validator'
 import {
-  extractGoalRelationships,
-  validateBidirectionalLinks,
-  validateGoalHierarchySections,
-  validateNoCycles,
-} from '../../lint/validators/goal-hierarchy'
-import {
   validateIdeaOpenQuestions,
   validateIdeaTransitionTitle,
 } from '../../lint/validators/idea-validator'
 import {
-  validateGoalHierarchyLinks,
   validateLinks,
+  validatePrincipleHierarchyLinks,
   validateSemanticLinks,
 } from '../../lint/validators/link-validator'
+import {
+  extractPrincipleRelationships,
+  validateBidirectionalLinks,
+  validateNoCycles,
+  validatePrincipleHierarchySections,
+} from '../../lint/validators/principle-hierarchy'
 import {
   createContextEmulator,
   createFileSystemEmulator,
@@ -670,7 +670,7 @@ Nope.
 describe('validateTaskHeadings', () => {
   test('returns no violations for valid task', () => {
     const content = `# Task
-## Goals
+## Principles
 ## Blocked By
 ## Definition of Done`
 
@@ -680,7 +680,7 @@ describe('validateTaskHeadings', () => {
 
   test('reports missing headings', () => {
     const content = `# Task
-## Goals`
+## Principles`
 
     const violations = validateTaskHeadings('task.md', content)
     expect(violations).toHaveLength(2)
@@ -689,11 +689,11 @@ describe('validateTaskHeadings', () => {
 
 describe('validateLinks', () => {
   test('returns no violations for valid links', () => {
-    const content = '[Goal](../goals/goal.md)'
+    const content = '[Principle](../principles/principle.md)'
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'goal.md': 'content' },
+          principles: { 'principle.md': 'content' },
         },
       },
     })
@@ -707,7 +707,7 @@ describe('validateLinks', () => {
   })
 
   test('reports broken links', () => {
-    const content = '[Missing](../goals/missing.md)'
+    const content = '[Missing](../principles/missing.md)'
     const fileSystem = createFileSystemEmulator()
 
     const violations = validateLinks(
@@ -746,7 +746,7 @@ describe('validateLinks', () => {
   test('includes line numbers', () => {
     const content = `Line 1
 Line 2
-[Missing](../goals/missing.md)`
+[Missing](../principles/missing.md)`
     const fileSystem = createFileSystemEmulator()
 
     const violations = validateLinks(
@@ -759,10 +759,10 @@ Line 2
 })
 
 describe('validateSemanticLinks', () => {
-  test('returns no violations when Goals link points to goals directory', () => {
+  test('returns no violations when Goals link points to principles directory', () => {
     const content = `# Task
-## Goals
-[Goal](../goals/my-goal.md)
+## Principles
+[Principle](../principles/my-principle.md)
 ## Blocked By
 ## Definition of Done`
 
@@ -775,7 +775,7 @@ describe('validateSemanticLinks', () => {
 
   test('returns violation when Goals link points to tasks directory', () => {
     const content = `# Task
-## Goals
+## Principles
 [Task](../tasks/other-task.md)
 ## Blocked By
 ## Definition of Done`
@@ -785,14 +785,14 @@ describe('validateSemanticLinks', () => {
       content
     )
     expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('## Goals')
-    expect(violations[0].message).toContain('goal file')
+    expect(violations[0].message).toContain('## Principles')
+    expect(violations[0].message).toContain('principle file')
     expect(violations[0].line).toBe(3)
   })
 
   test('returns no violations when Blocked by link points to tasks directory', () => {
     const content = `# Task
-## Goals
+## Principles
 ## Blocked By
 [Blocker](../tasks/blocker-task.md)
 ## Definition of Done`
@@ -804,11 +804,11 @@ describe('validateSemanticLinks', () => {
     expect(violations).toHaveLength(0)
   })
 
-  test('returns violation when Blocked by link points to goals directory', () => {
+  test('returns violation when Blocked by link points to principles directory', () => {
     const content = `# Task
-## Goals
+## Principles
 ## Blocked By
-[Goal](../goals/my-goal.md)
+[Principle](../principles/my-principle.md)
 ## Definition of Done`
 
     const violations = validateSemanticLinks(
@@ -823,7 +823,7 @@ describe('validateSemanticLinks', () => {
 
   test('rejects external links in semantic sections', () => {
     const content = `# Task
-## Goals
+## Principles
 [External](https://example.com)
 ## Blocked By
 ## Definition of Done`
@@ -833,14 +833,14 @@ describe('validateSemanticLinks', () => {
       content
     )
     expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('## Goals')
+    expect(violations[0].message).toContain('## Principles')
     expect(violations[0].message).toContain('external URL')
     expect(violations[0].line).toBe(3)
   })
 
   test('rejects anchor links in semantic sections', () => {
     const content = `# Task
-## Goals
+## Principles
 [Section](#section)
 ## Blocked By
 ## Definition of Done`
@@ -850,14 +850,14 @@ describe('validateSemanticLinks', () => {
       content
     )
     expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('## Goals')
+    expect(violations[0].message).toContain('## Principles')
     expect(violations[0].message).toContain('anchor')
     expect(violations[0].line).toBe(3)
   })
 
   test('ignores links in other sections', () => {
     const content = `# Task
-## Goals
+## Principles
 ## Blocked By
 ## Definition of Done
 [Any Link](../random/file.md)`
@@ -871,10 +871,10 @@ describe('validateSemanticLinks', () => {
 
   test('handles multiple links in same section', () => {
     const content = `# Task
-## Goals
-[Goal1](../goals/goal1.md)
-[Goal2](../tasks/wrong.md)
-[Goal3](../goals/goal3.md)
+## Principles
+[Principle1](../principles/principle1.md)
+[Principle2](../tasks/wrong.md)
+[Principle3](../principles/principle3.md)
 ## Blocked By
 ## Definition of Done`
 
@@ -905,16 +905,16 @@ describe('lintMarkdown command', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -924,8 +924,8 @@ This is a goal.
 
 Implement the task functionality.
 
-## Goals
-[Goal](../goals/goal.md)
+## Principles
+[Principle](../principles/principle.md)
 ## Blocked By
 ## Definition of Done`,
           },
@@ -962,7 +962,7 @@ Implement the task functionality.
         '.dust': {
           tasks: {
             'BadFileName.md': `# Task
-## Goals
+## Principles
 ## Blocked By
 ## Definition of Done`,
           },
@@ -984,16 +984,16 @@ Implement the task functionality.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -1003,7 +1003,7 @@ This is a goal.
 
 Implement the task functionality.
 
-## Goals
+## Principles
 ## Blocked By
 ## Definition of Done`,
           },
@@ -1030,7 +1030,7 @@ Implement the task functionality.
         '.dust': {
           tasks: {
             'my-task.md': `# Task
-## Goals
+## Principles
 [Broken](../missing.md)
 ## Blocked By
 ## Definition of Done`,
@@ -1054,7 +1054,7 @@ Implement the task functionality.
         '.dust': {
           tasks: {
             'BadName.md': `# Task
-## Goals
+## Principles
 ## Blocked By
 ## Definition of Done`,
           },
@@ -1099,20 +1099,20 @@ ${longSentence}
 
   test('skips task validation when tasks directory does not exist', async () => {
     const context = createContextEmulator()
-    // Only goals directory, no tasks directory
+    // Only principles directory, no tasks directory
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -1134,11 +1134,11 @@ This is a goal.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'goal.md': '# Goal' },
+          principles: { 'principle.md': '# Principle' },
           tasks: {
             'other-task.md': '# Other',
             'my-task.md': `# Task
-## Goals
+## Principles
 [Wrong](../tasks/other-task.md)
 ## Blocked By
 ## Definition of Done`,
@@ -1151,8 +1151,8 @@ This is a goal.
 
     expect(result.exitCode).toBe(1)
     const output = context.stderrLines.join('\n')
-    expect(output).toContain('## Goals')
-    expect(output).toContain('goal file')
+    expect(output).toContain('## Principles')
+    expect(output).toContain('principle file')
   })
 
   test('reports imperative opening sentence violations for task files', async () => {
@@ -1165,7 +1165,7 @@ This is a goal.
 
 This task does something.
 
-## Goals
+## Principles
 ## Blocked By
 ## Definition of Done`,
           },
@@ -1185,12 +1185,12 @@ This task does something.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'goal.md': '# Goal' },
+          principles: { 'principle.md': '# Principle' },
           tasks: {
             'my-task.md': `# Task
-## Goals
+## Principles
 ## Blocked By
-[Wrong](../goals/goal.md)
+[Wrong](../principles/principle.md)
 ## Definition of Done`,
           },
         },
@@ -1206,136 +1206,148 @@ This task does something.
   })
 })
 
-describe('validateGoalHierarchySections', () => {
-  test('returns no violations for valid goal with both sections', () => {
-    const content = `# Goal
+describe('validatePrincipleHierarchySections', () => {
+  test('returns no violations for valid principle with both sections', () => {
+    const content = `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `
-    const violations = validateGoalHierarchySections('goal.md', content)
+    const violations = validatePrincipleHierarchySections(
+      'principle.md',
+      content
+    )
     expect(violations).toHaveLength(0)
   })
 
   test('reports missing Parent Goal section', () => {
-    const content = `# Goal
+    const content = `# Principle
 
-This is a goal.
+This is a principle.
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `
-    const violations = validateGoalHierarchySections('goal.md', content)
+    const violations = validatePrincipleHierarchySections(
+      'principle.md',
+      content
+    )
     expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('## Parent Goal')
+    expect(violations[0].message).toContain('## Parent Principle')
   })
 
   test('reports missing Sub-Goals section', () => {
-    const content = `# Goal
+    const content = `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 `
-    const violations = validateGoalHierarchySections('goal.md', content)
+    const violations = validatePrincipleHierarchySections(
+      'principle.md',
+      content
+    )
     expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('## Sub-Goals')
+    expect(violations[0].message).toContain('## Sub-Principles')
   })
 
   test('reports both missing sections', () => {
-    const content = `# Goal
+    const content = `# Principle
 
-This is a goal.
+This is a principle.
 `
-    const violations = validateGoalHierarchySections('goal.md', content)
+    const violations = validatePrincipleHierarchySections(
+      'principle.md',
+      content
+    )
     expect(violations).toHaveLength(2)
   })
 })
 
-describe('validateGoalHierarchyLinks', () => {
-  test('returns no violations for valid goal links', () => {
-    const content = `# Goal
+describe('validatePrincipleHierarchyLinks', () => {
+  test('returns no violations for valid principle links', () => {
+    const content = `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
-- [Parent](parent-goal.md)
+- [Parent](parent-principle.md)
 
-## Sub-Goals
+## Sub-Principles
 
-- [Child](child-goal.md)
+- [Child](child-principle.md)
 `
-    const violations = validateGoalHierarchyLinks(
-      '/project/.dust/goals/goal.md',
+    const violations = validatePrincipleHierarchyLinks(
+      '/project/.dust/principles/principle.md',
       content
     )
     expect(violations).toHaveLength(0)
   })
 
-  test('returns violation for non-goal link in Parent Goal section', () => {
-    const content = `# Goal
+  test('returns violation for non-principle link in Parent Principle section', () => {
+    const content = `# Principle
 
-## Parent Goal
+## Parent Principle
 
 - [Task](../tasks/task.md)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `
-    const violations = validateGoalHierarchyLinks(
-      '/project/.dust/goals/goal.md',
+    const violations = validatePrincipleHierarchyLinks(
+      '/project/.dust/principles/principle.md',
       content
     )
     expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('## Parent Goal')
-    expect(violations[0].message).toContain('goal file')
+    expect(violations[0].message).toContain('## Parent Principle')
+    expect(violations[0].message).toContain('principle file')
   })
 
-  test('returns violation for non-goal link in Sub-Goals section', () => {
-    const content = `# Goal
+  test('returns violation for non-principle link in Sub-Principles section', () => {
+    const content = `# Principle
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - [Idea](../ideas/idea.md)
 `
-    const violations = validateGoalHierarchyLinks(
-      '/project/.dust/goals/goal.md',
+    const violations = validatePrincipleHierarchyLinks(
+      '/project/.dust/principles/principle.md',
       content
     )
     expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('## Sub-Goals')
-    expect(violations[0].message).toContain('goal file')
+    expect(violations[0].message).toContain('## Sub-Principles')
+    expect(violations[0].message).toContain('principle file')
   })
 
   test('rejects external links in hierarchy sections', () => {
-    const content = `# Goal
+    const content = `# Principle
 
-## Parent Goal
+## Parent Principle
 
 - [External](https://example.com)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `
-    const violations = validateGoalHierarchyLinks(
-      '/project/.dust/goals/goal.md',
+    const violations = validatePrincipleHierarchyLinks(
+      '/project/.dust/principles/principle.md',
       content
     )
     expect(violations).toHaveLength(1)
@@ -1343,18 +1355,18 @@ This is a goal.
   })
 
   test('rejects anchor links in hierarchy sections', () => {
-    const content = `# Goal
+    const content = `# Principle
 
-## Parent Goal
+## Parent Principle
 
 - [Anchor](#section)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `
-    const violations = validateGoalHierarchyLinks(
-      '/project/.dust/goals/goal.md',
+    const violations = validatePrincipleHierarchyLinks(
+      '/project/.dust/principles/principle.md',
       content
     )
     expect(violations).toHaveLength(1)
@@ -1362,142 +1374,146 @@ This is a goal.
   })
 
   test('includes line numbers in violations', () => {
-    const content = `# Goal
+    const content = `# Principle
 
-## Parent Goal
+## Parent Principle
 
 - [Task](../tasks/task.md)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `
-    const violations = validateGoalHierarchyLinks(
-      '/project/.dust/goals/goal.md',
+    const violations = validatePrincipleHierarchyLinks(
+      '/project/.dust/principles/principle.md',
       content
     )
     expect(violations[0].line).toBe(5)
   })
 })
 
-describe('extractGoalRelationships', () => {
-  test('extracts parent and sub-goal relationships', () => {
-    const content = `# Goal
+describe('extractPrincipleRelationships', () => {
+  test('extracts parent and sub-principle relationships', () => {
+    const content = `# Principle
 
-## Parent Goal
+## Parent Principle
 
 - [Parent](parent.md)
 
-## Sub-Goals
+## Sub-Principles
 
 - [Child1](child1.md)
 - [Child2](child2.md)
 `
-    const rel = extractGoalRelationships(
-      '/project/.dust/goals/goal.md',
+    const rel = extractPrincipleRelationships(
+      '/project/.dust/principles/principle.md',
       content
     )
-    expect(rel.filePath).toBe('/project/.dust/goals/goal.md')
-    expect(rel.parentGoals).toEqual(['/project/.dust/goals/parent.md'])
-    expect(rel.subGoals).toEqual([
-      '/project/.dust/goals/child1.md',
-      '/project/.dust/goals/child2.md',
+    expect(rel.filePath).toBe('/project/.dust/principles/principle.md')
+    expect(rel.parentPrinciples).toEqual([
+      '/project/.dust/principles/parent.md',
+    ])
+    expect(rel.subPrinciples).toEqual([
+      '/project/.dust/principles/child1.md',
+      '/project/.dust/principles/child2.md',
     ])
   })
 
-  test('handles goals with no parents', () => {
-    const content = `# Goal
+  test('handles principles with no parents', () => {
+    const content = `# Principle
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - [Child](child.md)
 `
-    const rel = extractGoalRelationships(
-      '/project/.dust/goals/goal.md',
+    const rel = extractPrincipleRelationships(
+      '/project/.dust/principles/principle.md',
       content
     )
-    expect(rel.parentGoals).toEqual([])
-    expect(rel.subGoals).toEqual(['/project/.dust/goals/child.md'])
+    expect(rel.parentPrinciples).toEqual([])
+    expect(rel.subPrinciples).toEqual(['/project/.dust/principles/child.md'])
   })
 
-  test('handles goals with no sub-goals', () => {
-    const content = `# Goal
+  test('handles principles with no sub-principles', () => {
+    const content = `# Principle
 
-## Parent Goal
+## Parent Principle
 
 - [Parent](parent.md)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `
-    const rel = extractGoalRelationships(
-      '/project/.dust/goals/goal.md',
+    const rel = extractPrincipleRelationships(
+      '/project/.dust/principles/principle.md',
       content
     )
-    expect(rel.parentGoals).toEqual(['/project/.dust/goals/parent.md'])
-    expect(rel.subGoals).toEqual([])
+    expect(rel.parentPrinciples).toEqual([
+      '/project/.dust/principles/parent.md',
+    ])
+    expect(rel.subPrinciples).toEqual([])
   })
 
   test('ignores non-goal links', () => {
-    const content = `# Goal
+    const content = `# Principle
 
-## Parent Goal
+## Parent Principle
 
 - [Task](../tasks/task.md)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `
-    const rel = extractGoalRelationships(
-      '/project/.dust/goals/goal.md',
+    const rel = extractPrincipleRelationships(
+      '/project/.dust/principles/principle.md',
       content
     )
-    expect(rel.parentGoals).toEqual([])
-    expect(rel.subGoals).toEqual([])
+    expect(rel.parentPrinciples).toEqual([])
+    expect(rel.subPrinciples).toEqual([])
   })
 
   test('ignores anchor links', () => {
-    const content = `# Goal
+    const content = `# Principle
 
-## Parent Goal
+## Parent Principle
 
 - [Anchor](#section)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `
-    const rel = extractGoalRelationships(
-      '/project/.dust/goals/goal.md',
+    const rel = extractPrincipleRelationships(
+      '/project/.dust/principles/principle.md',
       content
     )
-    expect(rel.parentGoals).toEqual([])
-    expect(rel.subGoals).toEqual([])
+    expect(rel.parentPrinciples).toEqual([])
+    expect(rel.subPrinciples).toEqual([])
   })
 
   test('ignores external links', () => {
-    const content = `# Goal
+    const content = `# Principle
 
-## Parent Goal
+## Parent Principle
 
 - [External](https://example.com)
 
-## Sub-Goals
+## Sub-Principles
 
 - [HTTP](http://example.com)
 `
-    const rel = extractGoalRelationships(
-      '/project/.dust/goals/goal.md',
+    const rel = extractPrincipleRelationships(
+      '/project/.dust/principles/principle.md',
       content
     )
-    expect(rel.parentGoals).toEqual([])
-    expect(rel.subGoals).toEqual([])
+    expect(rel.parentPrinciples).toEqual([])
+    expect(rel.subPrinciples).toEqual([])
   })
 })
 
@@ -1505,78 +1521,81 @@ describe('validateBidirectionalLinks', () => {
   test('returns no violations for consistent bidirectional links', () => {
     const relationships = [
       {
-        filePath: '/project/.dust/goals/parent.md',
-        parentGoals: [],
-        subGoals: ['/project/.dust/goals/child.md'],
+        filePath: '/project/.dust/principles/parent.md',
+        parentPrinciples: [],
+        subPrinciples: ['/project/.dust/principles/child.md'],
       },
       {
-        filePath: '/project/.dust/goals/child.md',
-        parentGoals: ['/project/.dust/goals/parent.md'],
-        subGoals: [],
+        filePath: '/project/.dust/principles/child.md',
+        parentPrinciples: ['/project/.dust/principles/parent.md'],
+        subPrinciples: [],
       },
     ]
     const violations = validateBidirectionalLinks(relationships)
     expect(violations).toHaveLength(0)
   })
 
-  test('reports missing sub-goal link in parent', () => {
+  test('reports missing sub-principle link in parent', () => {
     const relationships = [
       {
-        filePath: '/project/.dust/goals/parent.md',
-        parentGoals: [],
-        subGoals: [], // Parent doesn't list child as sub-goal
+        filePath: '/project/.dust/principles/parent.md',
+        parentPrinciples: [],
+        subPrinciples: [], // Parent doesn't list child as sub-goal
       },
       {
-        filePath: '/project/.dust/goals/child.md',
-        parentGoals: ['/project/.dust/goals/parent.md'],
-        subGoals: [],
+        filePath: '/project/.dust/principles/child.md',
+        parentPrinciples: ['/project/.dust/principles/parent.md'],
+        subPrinciples: [],
       },
     ]
     const violations = validateBidirectionalLinks(relationships)
     expect(violations).toHaveLength(1)
-    expect(violations[0].file).toBe('/project/.dust/goals/child.md')
+    expect(violations[0].file).toBe('/project/.dust/principles/child.md')
     expect(violations[0].message).toContain(
-      'does not list this goal as a sub-goal'
+      'does not list this principle as a sub-principle'
     )
   })
 
   test('reports missing parent link in child', () => {
     const relationships = [
       {
-        filePath: '/project/.dust/goals/parent.md',
-        parentGoals: [],
-        subGoals: ['/project/.dust/goals/child.md'],
+        filePath: '/project/.dust/principles/parent.md',
+        parentPrinciples: [],
+        subPrinciples: ['/project/.dust/principles/child.md'],
       },
       {
-        filePath: '/project/.dust/goals/child.md',
-        parentGoals: [], // Child doesn't list parent
-        subGoals: [],
+        filePath: '/project/.dust/principles/child.md',
+        parentPrinciples: [], // Child doesn't list parent
+        subPrinciples: [],
       },
     ]
     const violations = validateBidirectionalLinks(relationships)
     expect(violations).toHaveLength(1)
-    expect(violations[0].file).toBe('/project/.dust/goals/parent.md')
+    expect(violations[0].file).toBe('/project/.dust/principles/parent.md')
     expect(violations[0].message).toContain(
-      'does not list this goal as its parent'
+      'does not list this principle as its parent'
     )
   })
 
   test('handles complex hierarchy with multiple children', () => {
     const relationships = [
       {
-        filePath: '/project/.dust/goals/root.md',
-        parentGoals: [],
-        subGoals: ['/project/.dust/goals/a.md', '/project/.dust/goals/b.md'],
+        filePath: '/project/.dust/principles/root.md',
+        parentPrinciples: [],
+        subPrinciples: [
+          '/project/.dust/principles/a.md',
+          '/project/.dust/principles/b.md',
+        ],
       },
       {
-        filePath: '/project/.dust/goals/a.md',
-        parentGoals: ['/project/.dust/goals/root.md'],
-        subGoals: [],
+        filePath: '/project/.dust/principles/a.md',
+        parentPrinciples: ['/project/.dust/principles/root.md'],
+        subPrinciples: [],
       },
       {
-        filePath: '/project/.dust/goals/b.md',
-        parentGoals: ['/project/.dust/goals/root.md'],
-        subGoals: [],
+        filePath: '/project/.dust/principles/b.md',
+        parentPrinciples: ['/project/.dust/principles/root.md'],
+        subPrinciples: [],
       },
     ]
     const violations = validateBidirectionalLinks(relationships)
@@ -1588,31 +1607,31 @@ describe('validateNoCycles', () => {
   test('returns no violations for valid hierarchy', () => {
     const relationships = [
       {
-        filePath: '/project/.dust/goals/root.md',
-        parentGoals: [],
-        subGoals: ['/project/.dust/goals/child.md'],
+        filePath: '/project/.dust/principles/root.md',
+        parentPrinciples: [],
+        subPrinciples: ['/project/.dust/principles/child.md'],
       },
       {
-        filePath: '/project/.dust/goals/child.md',
-        parentGoals: ['/project/.dust/goals/root.md'],
-        subGoals: [],
+        filePath: '/project/.dust/principles/child.md',
+        parentPrinciples: ['/project/.dust/principles/root.md'],
+        subPrinciples: [],
       },
     ]
     const violations = validateNoCycles(relationships)
     expect(violations).toHaveLength(0)
   })
 
-  test('detects simple cycle between two goals', () => {
+  test('detects simple cycle between two principles', () => {
     const relationships = [
       {
-        filePath: '/project/.dust/goals/a.md',
-        parentGoals: ['/project/.dust/goals/b.md'],
-        subGoals: [],
+        filePath: '/project/.dust/principles/a.md',
+        parentPrinciples: ['/project/.dust/principles/b.md'],
+        subPrinciples: [],
       },
       {
-        filePath: '/project/.dust/goals/b.md',
-        parentGoals: ['/project/.dust/goals/a.md'],
-        subGoals: [],
+        filePath: '/project/.dust/principles/b.md',
+        parentPrinciples: ['/project/.dust/principles/a.md'],
+        subPrinciples: [],
       },
     ]
     const violations = validateNoCycles(relationships)
@@ -1623,19 +1642,19 @@ describe('validateNoCycles', () => {
   test('detects longer cycle', () => {
     const relationships = [
       {
-        filePath: '/project/.dust/goals/a.md',
-        parentGoals: ['/project/.dust/goals/c.md'],
-        subGoals: [],
+        filePath: '/project/.dust/principles/a.md',
+        parentPrinciples: ['/project/.dust/principles/c.md'],
+        subPrinciples: [],
       },
       {
-        filePath: '/project/.dust/goals/b.md',
-        parentGoals: ['/project/.dust/goals/a.md'],
-        subGoals: [],
+        filePath: '/project/.dust/principles/b.md',
+        parentPrinciples: ['/project/.dust/principles/a.md'],
+        subPrinciples: [],
       },
       {
-        filePath: '/project/.dust/goals/c.md',
-        parentGoals: ['/project/.dust/goals/b.md'],
-        subGoals: [],
+        filePath: '/project/.dust/principles/c.md',
+        parentPrinciples: ['/project/.dust/principles/b.md'],
+        subPrinciples: [],
       },
     ]
     const violations = validateNoCycles(relationships)
@@ -1646,9 +1665,9 @@ describe('validateNoCycles', () => {
   test('detects self-referential cycle', () => {
     const relationships = [
       {
-        filePath: '/project/.dust/goals/a.md',
-        parentGoals: ['/project/.dust/goals/a.md'],
-        subGoals: [],
+        filePath: '/project/.dust/principles/a.md',
+        parentPrinciples: ['/project/.dust/principles/a.md'],
+        subPrinciples: [],
       },
     ]
     const violations = validateNoCycles(relationships)
@@ -1726,8 +1745,8 @@ describe('validateContentDirectoryFiles', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': '# Goal',
+          principles: {
+            'principle.md': '# Principle',
             subdir: {
               'nested.md': '# Nested',
             },
@@ -1737,12 +1756,12 @@ describe('validateContentDirectoryFiles', () => {
     })
 
     const violations = await validateContentDirectoryFiles(
-      '/project/.dust/goals',
+      '/project/.dust/principles',
       fileSystem
     )
 
     expect(violations.length).toBe(1)
-    expect(violations[0].file).toBe('/project/.dust/goals/subdir')
+    expect(violations[0].file).toBe('/project/.dust/principles/subdir')
     expect(violations[0].message).toContain('Subdirectory')
     expect(violations[0].message).toContain('should be flat')
   })
@@ -1816,7 +1835,7 @@ describe('validateDirectoryStructure', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'goal.md': '# Goal' },
+          principles: { 'principle.md': '# Principle' },
           tasks: { 'task.md': '# Task' },
           ideas: { 'idea.md': '# Idea' },
           facts: { 'fact.md': '# Fact' },
@@ -1837,7 +1856,7 @@ describe('validateDirectoryStructure', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'goal.md': '# Goal' },
+          principles: { 'principle.md': '# Principle' },
           task: { 'task.md': '# Task' }, // typo: "task" instead of "tasks"
         },
       },
@@ -1859,7 +1878,7 @@ describe('validateDirectoryStructure', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goal: { 'goal.md': '# Goal' }, // typo
+          goal: { 'principle.md': '# Principle' }, // typo
           task: { 'task.md': '# Task' }, // typo
         },
       },
@@ -1877,7 +1896,7 @@ describe('validateDirectoryStructure', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'goal.md': '# Goal' },
+          principles: { 'principle.md': '# Principle' },
           templates: { 'template.md': '# Template' }, // custom directory
         },
       },
@@ -1896,7 +1915,7 @@ describe('validateDirectoryStructure', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: { 'goal.md': '# Goal' },
+          principles: { 'principle.md': '# Principle' },
           'README.md': '# Readme',
           '.gitkeep': '',
         },
@@ -1960,7 +1979,7 @@ describe('validateDirectoryStructure', () => {
 
     expect(violations.length).toBe(1)
     expect(violations[0].message).toContain(
-      'config, facts, goals, ideas, tasks'
+      'config, facts, ideas, principles, tasks'
     )
   })
 })
@@ -1971,16 +1990,16 @@ describe('lintMarkdown directory structure validation', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -2002,16 +2021,16 @@ This is a goal.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -2036,16 +2055,16 @@ This is a goal.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -2068,16 +2087,16 @@ describe('lintMarkdown content directory file validation', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -2087,7 +2106,7 @@ This is a goal.
 
 Implement the task functionality.
 
-## Goals
+## Principles
 ## Blocked By
 ## Definition of Done`,
             README: 'some readme content',
@@ -2108,16 +2127,16 @@ Implement the task functionality.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -2141,16 +2160,16 @@ This is a goal.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -2160,7 +2179,7 @@ This is a goal.
 
 Implement the task functionality.
 
-## Goals
+## Principles
 ## Blocked By
 ## Definition of Done`,
             archived: {
@@ -2516,7 +2535,7 @@ describe('lintMarkdown idea transition validation', () => {
 
 Refine this idea.
 
-## Goals
+## Principles
 ## Blocked By
 ## Definition of Done`,
           },
@@ -2539,7 +2558,7 @@ Refine this idea.
 
 Refine this idea.
 
-## Goals
+## Principles
 ## Blocked By
 ## Definition of Done`,
           },
@@ -2555,34 +2574,34 @@ Refine this idea.
   })
 })
 
-describe('lintMarkdown goal hierarchy validation', () => {
+describe('lintMarkdown principle hierarchy validation', () => {
   test('passes with valid goal hierarchy', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'parent-goal.md': `# Parent Goal
+          principles: {
+            'parent-principle.md': `# Parent Principle
 
-This is the parent goal.
+This is the parent principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
-- [Child](child-goal.md)
+- [Child](child-principle.md)
 `,
-            'child-goal.md': `# Child Goal
+            'child-principle.md': `# Child Principle
 
-This is the child goal.
+This is the child principle.
 
-## Parent Goal
+## Parent Principle
 
-- [Parent](parent-goal.md)
+- [Parent](parent-principle.md)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -2597,15 +2616,15 @@ This is the child goal.
     expect(context.stdoutLines.join('\n')).toContain('All validations passed')
   })
 
-  test('reports missing hierarchy sections in goal files', async () => {
+  test('reports missing hierarchy sections in principle files', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal without hierarchy sections.
+This is a principle without hierarchy sections.
 `,
           },
         },
@@ -2616,8 +2635,8 @@ This is a goal without hierarchy sections.
 
     expect(result.exitCode).toBe(1)
     const output = context.stderrLines.join('\n')
-    expect(output).toContain('## Parent Goal')
-    expect(output).toContain('## Sub-Goals')
+    expect(output).toContain('## Parent Principle')
+    expect(output).toContain('## Sub-Principles')
   })
 
   test('reports bidirectional link violations', async () => {
@@ -2625,28 +2644,28 @@ This is a goal without hierarchy sections.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'parent.md': `# Parent Goal
+          principles: {
+            'parent.md': `# Parent Principle
 
-This is the parent goal.
+This is the parent principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
-            'child.md': `# Child Goal
+            'child.md': `# Child Principle
 
-This is the child goal.
+This is the child principle.
 
-## Parent Goal
+## Parent Principle
 
 - [Parent](parent.md)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -2659,7 +2678,7 @@ This is the child goal.
 
     expect(result.exitCode).toBe(1)
     const output = context.stderrLines.join('\n')
-    expect(output).toContain('does not list this goal as a sub-goal')
+    expect(output).toContain('does not list this principle as a sub-principle')
   })
 
   test('reports cycle in goal hierarchy', async () => {
@@ -2667,28 +2686,28 @@ This is the child goal.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'a.md': `# Goal A
+          principles: {
+            'a.md': `# Principle A
 
 This is goal A.
 
-## Parent Goal
+## Parent Principle
 
 - [Goal B](b.md)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
-            'b.md': `# Goal B
+            'b.md': `# Principle B
 
 This is goal B.
 
-## Parent Goal
+## Parent Principle
 
 - [Goal A](a.md)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -2709,16 +2728,16 @@ This is goal B.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - [Task](../tasks/task.md)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -2734,25 +2753,25 @@ This is a goal.
 
     expect(result.exitCode).toBe(1)
     const output = context.stderrLines.join('\n')
-    expect(output).toContain('## Parent Goal')
-    expect(output).toContain('goal file')
+    expect(output).toContain('## Parent Principle')
+    expect(output).toContain('principle file')
   })
 
-  test('reports non-markdown files in goals directory as violations', async () => {
+  test('reports non-markdown files in principles directory as violations', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -2930,29 +2949,29 @@ This is a goal.
     ).rejects.toThrow('Permission denied')
   })
 
-  test('rethrows non-ENOENT errors when reading goal files during goal hierarchy validation', async () => {
+  test('rethrows non-ENOENT errors when reading principle files during principle hierarchy validation', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md':
-              '# Goal\n\nThis is a goal.\n\n## Parent Goal\n\n## Sub-Goals\n',
+          principles: {
+            'principle.md':
+              '# Principle\n\nThis is a principle.\n\n## Parent Principle\n\n## Sub-Principles\n',
           },
         },
       },
     })
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
-    let goalReadCount = 0
+    let principleReadCount = 0
     fileSystem.readFile = async (path: string) => {
-      if (path.includes('/goals/')) {
-        goalReadCount++
-        // Goal files are read 3 times:
+      if (path.includes('/principles/')) {
+        principleReadCount++
+        // Principle files are read 3 times:
         // 1. Line 544: .dust root links validation
         // 2. Line 568: content validation
-        // 3. Line 648: goal hierarchy validation
+        // 3. Line 648: principle hierarchy validation
         // We want to throw non-ENOENT on the 3rd read to test line 654
-        if (goalReadCount === 3) {
+        if (principleReadCount === 3) {
           throw new Error('Permission denied')
         }
       }
@@ -2974,7 +2993,7 @@ This is a goal.
 
 Implement the task functionality.
 
-## Goals
+## Principles
 ## Blocked By
 ## Definition of Done`,
           },
@@ -3005,29 +3024,29 @@ Implement the task functionality.
     expect(result.exitCode).toBe(0)
   })
 
-  test('skips goal files that disappear between scan and hierarchy validation (ENOENT)', async () => {
+  test('skips principle files that disappear between scan and hierarchy validation (ENOENT)', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md':
-              '# Goal\n\nThis is a goal.\n\n## Parent Goal\n\n## Sub-Goals\n',
+          principles: {
+            'principle.md':
+              '# Principle\n\nThis is a principle.\n\n## Parent Principle\n\n## Sub-Principles\n',
           },
         },
       },
     })
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
-    let goalReadCount = 0
+    let principleReadCount = 0
     fileSystem.readFile = async (path: string) => {
-      if (path.includes('/goals/')) {
-        goalReadCount++
-        // Goal files are read 3 times:
+      if (path.includes('/principles/')) {
+        principleReadCount++
+        // Principle files are read 3 times:
         // 1. Line 544: .dust root links validation
         // 2. Line 568: content validation
-        // 3. Line 648: goal hierarchy validation
+        // 3. Line 648: principle hierarchy validation
         // We want to throw ENOENT on the 3rd read to test line 651-652
-        if (goalReadCount === 3) {
+        if (principleReadCount === 3) {
           const error = new Error('ENOENT: file deleted')
           ;(error as NodeJS.ErrnoException).code = 'ENOENT'
           throw error
@@ -3048,16 +3067,16 @@ describe('lintMarkdown settings.json validation', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -3083,16 +3102,16 @@ This is a goal.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -3117,16 +3136,16 @@ This is a goal.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -3152,16 +3171,16 @@ This is a goal.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -3188,16 +3207,16 @@ This is a goal.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -3227,16 +3246,16 @@ This is a goal.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -3258,16 +3277,16 @@ This is a goal.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,
@@ -3297,16 +3316,16 @@ This is a goal.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          goals: {
-            'goal.md': `# Goal
+          principles: {
+            'principle.md': `# Principle
 
-This is a goal.
+This is a principle.
 
-## Parent Goal
+## Parent Principle
 
 - (none)
 
-## Sub-Goals
+## Sub-Principles
 
 - (none)
 `,

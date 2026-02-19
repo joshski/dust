@@ -5,7 +5,7 @@ import {
   type FileSystemEmulator,
 } from '../../test/test-utilities'
 import type { CommandContext, CommandDependencies } from '../types'
-import { facts, goals, ideas, tasks } from './type-list'
+import { facts, ideas, principles, tasks } from './type-list'
 
 function createDependencies(
   context: CommandContext,
@@ -27,7 +27,7 @@ describe('tasks command', () => {
       project: {
         '.dust': {
           tasks: { 'task.md': '# My Task' },
-          goals: { 'goal.md': '# My Goal' },
+          principles: { 'principle.md': '# My Principle' },
         },
       },
     })
@@ -38,28 +38,28 @@ describe('tasks command', () => {
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('📋 Tasks')
     expect(output).toContain('My Task')
-    expect(output).not.toContain('🎯 Goals')
+    expect(output).not.toContain('🎯 Principles')
   })
 })
 
-describe('goals command', () => {
-  test('lists only goals', async () => {
+describe('principles command', () => {
+  test('lists only principles', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           tasks: { 'task.md': '# My Task' },
-          goals: { 'goal.md': '# My Goal' },
+          principles: { 'principle.md': '# My Principle' },
         },
       },
     })
 
-    const result = await goals(createDependencies(context, fileSystem))
+    const result = await principles(createDependencies(context, fileSystem))
 
     expect(result.exitCode).toBe(0)
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('🎯 Goals')
-    expect(output).toContain('My Goal')
+    expect(output).toContain('🎯 Principles')
+    expect(output).toContain('My Principle')
     expect(output).not.toContain('📋 Tasks')
   })
 })
@@ -71,7 +71,7 @@ describe('ideas command', () => {
       project: {
         '.dust': {
           ideas: { 'idea.md': '# My Idea' },
-          goals: { 'goal.md': '# My Goal' },
+          principles: { 'principle.md': '# My Principle' },
         },
       },
     })
@@ -82,7 +82,7 @@ describe('ideas command', () => {
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('💡 Ideas')
     expect(output).toContain('My Idea')
-    expect(output).not.toContain('🎯 Goals')
+    expect(output).not.toContain('🎯 Principles')
   })
 })
 
@@ -93,7 +93,7 @@ describe('facts command', () => {
       project: {
         '.dust': {
           facts: { 'fact.md': '# My Fact' },
-          goals: { 'goal.md': '# My Goal' },
+          principles: { 'principle.md': '# My Principle' },
         },
       },
     })
@@ -104,6 +104,6 @@ describe('facts command', () => {
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('📄 Facts')
     expect(output).toContain('My Fact')
-    expect(output).not.toContain('🎯 Goals')
+    expect(output).not.toContain('🎯 Principles')
   })
 })

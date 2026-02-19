@@ -164,7 +164,7 @@ function renderTask(
 
 ${openingSentence}
 ${descriptionParagraph}${resolvedSection}
-## Goals
+## Principles
 
 (none)
 
@@ -218,7 +218,7 @@ export async function createRefineIdeaTask(
     'Refine Idea: ',
     ideaSlug,
     ideaTitle =>
-      `Thoroughly research this idea and refine it into a well-defined proposal. Read the idea file, explore the codebase for relevant context, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. Review \`.dust/goals/\` for alignment and \`.dust/facts/\` for relevant design decisions. See [${ideaTitle}](../ideas/${ideaSlug}.md). If you add open questions, use \`## Open Questions\` with \`### Question?\` headings and one or more \`#### Option\` headings beneath each question, and only add questions that are meaningful decisions worth asking.`,
+      `Thoroughly research this idea and refine it into a well-defined proposal. Read the idea file, explore the codebase for relevant context, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. Review \`.dust/principles/\` for alignment and \`.dust/facts/\` for relevant design decisions. See [${ideaTitle}](../ideas/${ideaSlug}.md). If you add open questions, use \`## Open Questions\` with \`### Question?\` headings and one or more \`#### Option\` headings beneath each question, and only add questions that are meaningful decisions worth asking.`,
     [
       'Idea is thoroughly researched with relevant codebase context',
       'Open questions are added for any ambiguous or underspecified aspects',
@@ -240,10 +240,10 @@ export async function decomposeIdea(
     'Decompose Idea: ',
     options.ideaSlug,
     ideaTitle =>
-      `Create one or more well-defined tasks from this idea. Prefer smaller, narrowly scoped tasks that each deliver a thin but complete vertical slice of working software -- a path through the system that can be tested end-to-end -- rather than component-oriented tasks (like "add schema" or "build endpoint") that only work once all tasks are done. Split the idea into multiple tasks if it covers more than one logical change. Review \`.dust/goals/\` to link relevant goals and \`.dust/facts/\` for design decisions that should inform the task. See [${ideaTitle}](../ideas/${options.ideaSlug}.md).`,
+      `Create one or more well-defined tasks from this idea. Prefer smaller, narrowly scoped tasks that each deliver a thin but complete vertical slice of working software -- a path through the system that can be tested end-to-end -- rather than component-oriented tasks (like "add schema" or "build endpoint") that only work once all tasks are done. Split the idea into multiple tasks if it covers more than one logical change. Review \`.dust/principles/\` to link relevant principles and \`.dust/facts/\` for design decisions that should inform the task. See [${ideaTitle}](../ideas/${options.ideaSlug}.md).`,
     [
       'One or more new tasks are created in .dust/tasks/',
-      "Task's Goals section links to relevant goals from .dust/goals/",
+      "Task's Principles section links to relevant principles from .dust/principles/",
       'The original idea is deleted or updated to reflect remaining scope',
     ],
     {
@@ -291,13 +291,13 @@ export async function createCaptureIdeaTask(
 
     const content = `# ${taskTitle}
 
-Research this idea thoroughly, then create one or more narrowly-scoped task files in \`.dust/tasks/\`. Review \`.dust/goals/\` and \`.dust/facts/\` for relevant context. Each task should deliver a thin but complete vertical slice of working software.
+Research this idea thoroughly, then create one or more narrowly-scoped task files in \`.dust/tasks/\`. Review \`.dust/principles/\` and \`.dust/facts/\` for relevant context. Each task should deliver a thin but complete vertical slice of working software.
 
 ## Idea Description
 
 ${description}
 
-## Goals
+## Principles
 
 (none)
 
@@ -308,7 +308,7 @@ ${description}
 ## Definition of Done
 
 - [ ] One or more new tasks are created in \`.dust/tasks/\`
-- [ ] Tasks link to relevant goals from \`.dust/goals/\`
+- [ ] Tasks link to relevant principles from \`.dust/principles/\`
 - [ ] Tasks are narrowly scoped vertical slices
 `
     await fileSystem.writeFile(filePath, content)
@@ -323,13 +323,13 @@ ${description}
 
   const content = `# ${taskTitle}
 
-Research this idea thoroughly, then create an idea file at \`${ideaPath}\`. Read the codebase for relevant context, flesh out the description, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. If you add open questions, use \`## Open Questions\` with \`### Question?\` headings and one or more \`#### Option\` headings beneath each question, and only add questions that are meaningful decisions worth asking. Review \`.dust/goals/\` and \`.dust/facts/\` for relevant context.
+Research this idea thoroughly, then create an idea file at \`${ideaPath}\`. Read the codebase for relevant context, flesh out the description, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. If you add open questions, use \`## Open Questions\` with \`### Question?\` headings and one or more \`#### Option\` headings beneath each question, and only add questions that are meaningful decisions worth asking. Review \`.dust/principles/\` and \`.dust/facts/\` for relevant context.
 
 ## Idea Description
 
 ${description}
 
-## Goals
+## Principles
 
 (none)
 

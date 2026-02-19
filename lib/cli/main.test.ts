@@ -380,7 +380,7 @@ describe('COMMANDS', () => {
       'lint',
       'list',
       'tasks',
-      'goals',
+      'principles',
       'ideas',
       'facts',
       'next',
@@ -389,6 +389,7 @@ describe('COMMANDS', () => {
       'audit',
       'bucket',
       'focus',
+      'migrate',
       'help',
     ])
   })

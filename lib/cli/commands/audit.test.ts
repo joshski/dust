@@ -225,7 +225,7 @@ describe('audit command', () => {
     expect(names).toContain('dead-code')
     expect(names).toContain('facts-verification')
     expect(names).toContain('ideas-from-commits')
-    expect(names).toContain('ideas-from-goals')
+    expect(names).toContain('ideas-from-principles')
     expect(names).toContain('performance-review')
     expect(names).toContain('security-review')
     expect(names).toContain('stale-ideas')
@@ -243,11 +243,11 @@ describe('audit command', () => {
     const audits = loadStockAudits()
     for (const audit of audits) {
       const goalsMatch = audit.template.match(
-        /## Goals\n\n([\s\S]*?)(?=\n## |\n*$)/
+        /## Principles\n\n([\s\S]*?)(?=\n## |\n*$)/
       )
       expect(
         goalsMatch,
-        `${audit.name} should have a Goals section`
+        `${audit.name} should have a Principles section`
       ).not.toBeNull()
       expect(goalsMatch?.[1].trim()).toBe('(none)')
     }
@@ -263,7 +263,7 @@ describe('audit add command', () => {
           config: {
             audits: {
               'my-audit.md':
-                '# My Custom Audit\n\nCheck for custom issues.\n\n## Goals\n\n- [Example Goal](../goals/example.md)',
+                '# My Custom Audit\n\nCheck for custom issues.\n\n## Principles\n\n- [Example Goal](../principles/example.md)',
             },
           },
           tasks: {},

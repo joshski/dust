@@ -29,7 +29,7 @@ test('init command creates required directories', async () => {
 
   expect(result.exitCode).toBe(0)
   // Should mention created directories
-  expect(result.stdout).toContain('goals')
+  expect(result.stdout).toContain('principles')
   expect(result.stdout).toContain('tasks')
   expect(result.stdout).toContain('ideas')
   expect(result.stdout).toContain('facts')

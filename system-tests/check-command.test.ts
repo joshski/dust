@@ -1,5 +1,9 @@
 import { expect, test } from 'vitest'
-import { buildGoal, buildIdea, buildTask } from './support/content-builders'
+import {
+  buildIdea,
+  buildPrinciple,
+  buildTask,
+} from './support/content-builders'
 import { runSession } from './support/run-session'
 
 test('check command reports error when no checks are configured', async () => {
@@ -41,12 +45,12 @@ test('check command validates markdown files in .dust directory', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {
-            'valid-goal.md': buildGoal({
-              title: 'Valid Goal',
-              description: 'A well-formed goal.',
-              parentGoal: '(none)',
-              subGoals: '(none)',
+          principles: {
+            'valid-principle.md': buildPrinciple({
+              title: 'Valid Principle',
+              description: 'A well-formed principle.',
+              parentPrinciple: '(none)',
+              subPrinciples: '(none)',
             }),
           },
           tasks: {
@@ -168,12 +172,12 @@ test('lint passes with valid files', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {
-            'good-goal.md': buildGoal({
-              title: 'Good Goal',
-              description: 'This is a proper goal.',
-              parentGoal: '(none)',
-              subGoals: '(none)',
+          principles: {
+            'good-principle.md': buildPrinciple({
+              title: 'Good Principle',
+              description: 'This is a proper principle.',
+              parentPrinciple: '(none)',
+              subPrinciples: '(none)',
             }),
           },
           ideas: {
@@ -186,7 +190,12 @@ test('lint passes with valid files', async () => {
             'good-task.md': buildTask({
               title: 'Good Task',
               description: 'Cover all required sections for a valid task.',
-              goals: [{ name: 'Good Goal', path: '../goals/good-goal.md' }],
+              principles: [
+                {
+                  name: 'Good Principle',
+                  path: '../principles/good-principle.md',
+                },
+              ],
             }),
           },
         },

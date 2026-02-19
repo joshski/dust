@@ -32,6 +32,7 @@ function createFsPrimitives(
         .map(f => f.slice(prefix.length))
     },
     chmod: async () => {},
+    rename: async () => {},
   }
 }
 
@@ -154,6 +155,24 @@ describe('createFileSystem', () => {
     expect(chmodPath).toBe('/test.sh')
     expect(chmodMode).toBe(0o755)
   })
+
+  test('rename delegates to primitive', async () => {
+    let renameOldPath = ''
+    let renameNewPath = ''
+
+    const primitives = createFsPrimitives()
+    primitives.rename = async (oldPath, newPath) => {
+      renameOldPath = oldPath
+      renameNewPath = newPath
+    }
+    const fileSystem = createFileSystem(primitives)
+
+    await fileSystem.rename('/old.txt', '/new.txt')
+
+    expect(renameOldPath).toBe('/old.txt')
+    expect(renameNewPath).toBe('/new.txt')
+  })
+
   test('getFileCreationTime delegates to statSync birthtimeMs', () => {
     const primitives = createFsPrimitives()
     primitives.statSync = () => ({

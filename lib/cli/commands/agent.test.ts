@@ -43,7 +43,7 @@ describe('agent command', () => {
     expect(context.stdoutLines.join('\n')).toContain('dust pick task')
     expect(context.stdoutLines.join('\n')).toContain('dust focus')
     expect(context.stdoutLines.join('\n')).toContain('dust new task')
-    expect(context.stdoutLines.join('\n')).toContain('dust new goal')
+    expect(context.stdoutLines.join('\n')).toContain('dust new principle')
     expect(context.stdoutLines.join('\n')).toContain('dust new idea')
     expect(context.stdoutLines.join('\n')).toContain('dust help')
   })

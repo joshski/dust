@@ -6,10 +6,10 @@ Update CLI commands, directory names, markdown schemas, lint rules, tests, promp
 
 This task should migrate `.dust/goals/` to `.dust/principles/`, replace all `goal(s)` command names and references with `principle(s)`, and update task markdown requirements currently using `## Goals` to a principle-aligned section name. Preserve behavior and compatibility where needed by adding an explicit migration strategy (for existing repositories and existing task/idea/goal files), then remove legacy naming once tests and lint rules are updated to the new terminology.
 
-## Goals
+## Principles
 
-- [Consistent Naming](../goals/consistent-naming.md)
-- [Intuitive Directory Structure](../goals/intuitive-directory-structure.md)
+- [Consistent Naming](../principles/consistent-naming.md)
+- [Intuitive Directory Structure](../principles/intuitive-directory-structure.md)
 
 ## Blocked By
 

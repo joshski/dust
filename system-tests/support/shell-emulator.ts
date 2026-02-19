@@ -36,7 +36,7 @@ export interface ShellEmulator {
 const defaultFileSystemTree: FileSystemTree = {
   project: {
     '.dust': {
-      goals: {},
+      principles: {},
       ideas: {},
       tasks: {},
       facts: {},

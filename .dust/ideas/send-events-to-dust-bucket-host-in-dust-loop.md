@@ -39,10 +39,10 @@ The bucket service (`dustbucket.com`) already provides a WebSocket-based event s
 
 ### Goals alignment
 
-- [Easy Adoption](../goals/easy-adoption.md) — removing the `eventsUrl` escape hatch reduces configuration surface; the prompt-on-first-run model is friendlier
-- [Unsurprising UX](../goals/unsurprising-ux.md) — users running `dust loop` shouldn't need to know about `DUST_EVENTS_URL` to get events into the bucket
-- [Progressive Disclosure](../goals/progressive-disclosure.md) — the menu only appears when a decision is needed; once configured it is silent
-- [Minimal Dependencies](../goals/minimal-dependencies.md) — no new library; terminal menu uses raw ANSI codes
+- [Easy Adoption](../principles/easy-adoption.md) — removing the `eventsUrl` escape hatch reduces configuration surface; the prompt-on-first-run model is friendlier
+- [Unsurprising UX](../principles/unsurprising-ux.md) — users running `dust loop` shouldn't need to know about `DUST_EVENTS_URL` to get events into the bucket
+- [Progressive Disclosure](../principles/progressive-disclosure.md) — the menu only appears when a decision is needed; once configured it is silent
+- [Minimal Dependencies](../principles/minimal-dependencies.md) — no new library; terminal menu uses raw ANSI codes
 
 ## Open Questions
 

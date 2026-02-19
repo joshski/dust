@@ -3,7 +3,7 @@
  *
  * These are the primary commands for listing items:
  * - dust tasks - lists all tasks
- * - dust goals - lists all goals
+ * - dust principles - lists all principles
  * - dust ideas - lists all ideas
  * - dust facts - lists all facts
  */
@@ -17,10 +17,10 @@ export async function tasks(
   return list({ ...dependencies, arguments: ['tasks'] })
 }
 
-export async function goals(
+export async function principles(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
-  return list({ ...dependencies, arguments: ['goals'] })
+  return list({ ...dependencies, arguments: ['principles'] })
 }
 
 export async function ideas(

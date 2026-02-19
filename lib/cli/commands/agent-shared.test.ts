@@ -115,6 +115,7 @@ describe('loadAgentInstructions', () => {
     mkdir: async () => {},
     readdir: async () => [],
     chmod: async () => {},
+    rename: async () => {},
   })
 
   test('returns empty string when file does not exist', async () => {
@@ -182,6 +183,7 @@ describe('loadAgentInstructions', () => {
       mkdir: async () => {},
       readdir: async () => [],
       chmod: async () => {},
+      rename: async () => {},
     }
     const result = await loadAgentInstructions(
       '/project',
@@ -207,6 +209,7 @@ describe('templateVariablesWithInstructions', () => {
     mkdir: async () => {},
     readdir: async () => [],
     chmod: async () => {},
+    rename: async () => {},
   })
 
   test('includes agentInstructions when file exists', async () => {
@@ -291,6 +294,7 @@ describe('manageGitHooks', () => {
       mkdir: async () => {},
       readdir: async () => [],
       chmod: async () => {},
+      rename: async () => {},
     }
     return {
       arguments: [],

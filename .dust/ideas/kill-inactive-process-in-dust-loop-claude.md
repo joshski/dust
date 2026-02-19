@@ -14,7 +14,7 @@ This idea proposes detecting inactivity by monitoring the time since the last ev
 2. Run `git reset --hard` to discard any partial changes
 3. Retry the iteration (or move on, depending on retry policy)
 
-This aligns with the [Stop the Line](../goals/stop-the-line.md) goal — detecting a problem early and taking corrective action rather than letting it persist.
+This aligns with the [Stop the Line](../principles/stop-the-line.md) goal — detecting a problem early and taking corrective action rather than letting it persist.
 
 ## Implementation Considerations
 

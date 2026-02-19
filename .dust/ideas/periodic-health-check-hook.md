@@ -45,7 +45,7 @@ Review and maintain dust planning artifacts.
 
 ## Goals
 
-- [Repository Hygiene](../goals/repository-hygiene.md)
+- [Repository Hygiene](../principles/repository-hygiene.md)
 
 ## Blocked By
 

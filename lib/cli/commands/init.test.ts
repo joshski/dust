@@ -30,7 +30,7 @@ describe('init command', () => {
     expect(result.exitCode).toBe(0)
     expect(fileSystem.createdDirs).toEqual([
       '/project/.dust',
-      '/project/.dust/goals',
+      '/project/.dust/principles',
       '/project/.dust/ideas',
       '/project/.dust/tasks',
       '/project/.dust/facts',
@@ -445,7 +445,7 @@ describe('init command', () => {
 
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('If this is an existing codebase')
-    expect(output).toContain('goals and facts')
+    expect(output).toContain('principles and facts')
   })
 
   test('suggestions use npx runner when package-lock.json exists', async () => {

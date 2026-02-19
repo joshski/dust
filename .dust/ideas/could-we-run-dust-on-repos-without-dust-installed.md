@@ -32,9 +32,9 @@ Claude runs with `dangerouslySkipPermissions: true` and has full subprocess acce
 
 ## Relation to Goals
 
-This capability aligns with the [Easy Adoption](../goals/easy-adoption.md) goal: "Dust should be trivially easy to adopt in any repository. Getting started with Dust should require minimal friction."
+This capability aligns with the [Easy Adoption](../principles/easy-adoption.md) goal: "Dust should be trivially easy to adopt in any repository. Getting started with Dust should require minimal friction."
 
-It also relates to [Agent-Agnostic Design](../goals/agent-agnostic-design.md) since the architecture separates the orchestration (dust bucket) from the agent runtime (Claude).
+It also relates to [Agent-Agnostic Design](../principles/agent-agnostic-design.md) since the architecture separates the orchestration (dust bucket) from the agent runtime (Claude).
 
 ## Open Questions
 

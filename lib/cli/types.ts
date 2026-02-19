@@ -30,6 +30,7 @@ export interface FileSystem {
   chmod: (path: string, mode: number) => Promise<void>
   isDirectory: (path: string) => boolean
   getFileCreationTime: (path: string) => number
+  rename: (oldPath: string, newPath: string) => Promise<void>
 }
 
 export interface GlobScanner {

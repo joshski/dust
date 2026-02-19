@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { buildGoal, buildTask } from './support/content-builders'
+import { buildPrinciple, buildTask } from './support/content-builders'
 import { runSession } from './support/run-session'
 
 test('agent picks task from backlog with inline task list', async () => {
@@ -7,8 +7,8 @@ test('agent picks task from backlog with inline task list', async () => {
     fileSystemTree: {
       project: {
         '.dust': {
-          goals: {
-            'code-quality.md': buildGoal({
+          principles: {
+            'code-quality.md': buildPrinciple({
               title: 'Code Quality',
               description: 'Maintain high code quality standards.',
             }),
@@ -17,8 +17,8 @@ test('agent picks task from backlog with inline task list', async () => {
             'add-logging.md': buildTask({
               title: 'Add Logging',
               description: 'Add structured logging throughout the application.',
-              goals: [
-                { name: 'Code Quality', path: '../goals/code-quality.md' },
+              principles: [
+                { name: 'Code Quality', path: '../principles/code-quality.md' },
               ],
               definitionOfDone: [
                 'Logging library is installed',

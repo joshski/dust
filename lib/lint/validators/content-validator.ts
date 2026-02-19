@@ -5,7 +5,11 @@
 import { extractOpeningSentence } from '../../markdown/markdown-utilities'
 import type { Violation } from './types'
 
-const REQUIRED_HEADINGS = ['## Goals', '## Blocked By', '## Definition of Done']
+const REQUIRED_HEADINGS = [
+  '## Principles',
+  '## Blocked By',
+  '## Definition of Done',
+]
 
 const MAX_OPENING_SENTENCE_LENGTH = 150 // Enforces concise summaries that fit comfortably in a single line of context
 
