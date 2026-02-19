@@ -1,14 +1,21 @@
 # Workflow Tasks
 
-`lib/workflow-tasks.ts` provides functions for creating task files that trigger idea lifecycle transitions.
+`lib/artifacts.ts` provides a repository pattern for working with dust artifacts (ideas and workflow tasks). Use `buildArtifactsRepository(fileSystem, dustPath)` to create a repository instance that encapsulates the file system and dust path.
 
-## Exported Functions
+## Repository Methods
 
-- `createRefineIdeaTask(fileSystem, dustPath, ideaSlug, description?)` - Creates a task to research and refine an idea
-- `decomposeIdea(fileSystem, dustPath, options)` - Creates a task to convert an idea into a concrete task. `options` is a `DecomposeIdeaOptions` object with `ideaSlug`, optional `description`, and optional `openQuestionResponses`
-- `createShelveIdeaTask(fileSystem, dustPath, ideaSlug, description?)` - Creates a task to archive and remove an idea
-- `createCaptureIdeaTask(fileSystem, dustPath, options)` - Creates a task to capture a new idea (no existing idea required). `options` is `{ title: string; description: string; buildItNow?: boolean }`
-- `findWorkflowTaskForIdea(fileSystem, dustPath, ideaSlug)` - Returns `null` or a `WorkflowTaskMatch` (`{ type, ideaSlug, taskSlug }`) indicating the existing workflow task for an idea
+- `parseIdea({ slug })` - Parses an idea file and returns an `Idea` object
+- `listIdeas()` - Returns slugs of all ideas
+- `createRefineIdeaTask({ ideaSlug, description? })` - Creates a task to research and refine an idea
+- `createDecomposeIdeaTask({ ideaSlug, description?, openQuestionResponses? })` - Creates a task to convert an idea into concrete tasks
+- `createShelveIdeaTask({ ideaSlug, description? })` - Creates a task to archive and remove an idea
+- `createCaptureIdeaTask({ title, description, buildItNow? })` - Creates a task to capture a new idea
+- `findWorkflowTaskForIdea({ ideaSlug })` - Returns `null` or a `WorkflowTaskMatch` indicating the existing workflow task for an idea
+- `parseCaptureIdeaTask({ taskSlug })` - Parses a capture-idea task file
+
+For read-only operations, use `buildReadOnlyArtifactsRepository(fileSystem, dustPath)` which provides `parseIdea`, `listIdeas`, `findWorkflowTaskForIdea`, and `parseCaptureIdeaTask`.
+
+The legacy function exports from `lib/workflow-tasks.ts` and `lib/ideas.ts` remain available for backwards compatibility.
 
 ## Idea Transition Prefixes
 

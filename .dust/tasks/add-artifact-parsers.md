@@ -22,7 +22,7 @@ Add parsers for principles, facts, and tasks to the artifacts repository. Each p
 
 ## Blocked By
 
-- [Create Artifacts Repository](create-artifacts-repository.md)
+(none)
 
 ## Definition of Done
 

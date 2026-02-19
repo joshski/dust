@@ -16,7 +16,7 @@ Remove the `./ideas` and `./workflow-tasks` exports from package.json, completin
 
 ## Blocked By
 
-- [Create Artifacts Repository](create-artifacts-repository.md)
+(none)
 
 ## Definition of Done
 
