@@ -18,6 +18,7 @@ export default defineConfig({
         'lib/bucket/repository.ts',
         'lib/bucket/repository-loop.ts',
         'lib/cli/commands/bucket.ts',
+        'lib/version.ts',
         'lib/test/**',
       ],
       reporter: [

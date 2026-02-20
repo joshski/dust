@@ -9,6 +9,7 @@
  */
 
 import { loadSettings } from '../config/settings'
+import { DUST_VERSION } from '../version'
 import { agent } from './commands/agent'
 import { audit } from './commands/audit'
 import { bucket } from './commands/bucket'
@@ -96,6 +97,10 @@ export function isHelpRequest(command: string | undefined): boolean {
   )
 }
 
+export function isVersionRequest(command: string | undefined): boolean {
+  return command === '--version' || command === '-v'
+}
+
 export function isValidCommand(command: string): command is Command {
   return command in commandRegistry
 }
@@ -136,6 +141,11 @@ export async function main(options: MainOptions): Promise<CommandResult> {
 
   const settings = await loadSettings(context.cwd, fileSystem)
   const helpText = generateHelpText(settings)
+
+  if (isVersionRequest(commandArguments[0])) {
+    context.stdout(DUST_VERSION)
+    return { exitCode: 0 }
+  }
 
   if (isHelpRequest(commandArguments[0])) {
     context.stdout(helpText)

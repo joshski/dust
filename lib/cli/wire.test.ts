@@ -251,7 +251,7 @@ describe('wireEntry', () => {
 
     expect(exitCode).toBe(0)
     expect(logLines.join('\n')).toContain(
-      '💨 dust - Flow state for AI coding agents'
+      '✨ dust - Flow state for AI coding agents'
     )
   })
 
@@ -302,7 +302,7 @@ describe('wireEntry', () => {
 
     expect(exitCode).toBe(0)
     expect(logLines.join('\n')).toContain(
-      '💨 dust - Flow state for AI coding agents'
+      '✨ dust - Flow state for AI coding agents'
     )
   })
 

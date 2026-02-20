@@ -9,7 +9,7 @@ export function generateHelpText(settings: { dustCommand: string }): string {
   const bin = settings.dustCommand
 
   return dedent`
-    💨 dust - Flow state for AI coding agents.
+    ✨ dust - Flow state for AI coding agents.
 
     Usage: ${bin} <command> [options]
 

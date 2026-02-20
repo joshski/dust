@@ -11,6 +11,7 @@ import {
   generateHelpText,
   isHelpRequest,
   isValidCommand,
+  isVersionRequest,
   main,
   runCommand,
 } from './main'
@@ -54,6 +55,21 @@ describe('isHelpRequest', () => {
   })
 })
 
+describe('isVersionRequest', () => {
+  test('returns true for --version', () => {
+    expect(isVersionRequest('--version')).toBe(true)
+  })
+
+  test('returns true for -v', () => {
+    expect(isVersionRequest('-v')).toBe(true)
+  })
+
+  test('returns false for other commands', () => {
+    expect(isVersionRequest('version')).toBe(false)
+    expect(isVersionRequest(undefined)).toBe(false)
+  })
+})
+
 describe('isValidCommand', () => {
   test('returns true for valid commands', () => {
     for (const cmd of COMMANDS) {
@@ -78,7 +94,7 @@ describe('runCommand', () => {
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain(
-      '💨 dust - Flow state for AI coding agents'
+      '✨ dust - Flow state for AI coding agents'
     )
   })
 
@@ -113,7 +129,7 @@ describe('main', () => {
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain(
-      '💨 dust - Flow state for AI coding agents'
+      '✨ dust - Flow state for AI coding agents'
     )
     expect(context.stdoutLines.join('\n')).toContain(
       'Usage: npx dust <command>'
@@ -133,7 +149,7 @@ describe('main', () => {
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain(
-      '💨 dust - Flow state for AI coding agents'
+      '✨ dust - Flow state for AI coding agents'
     )
   })
 
@@ -171,6 +187,22 @@ describe('main', () => {
     expect(context.stdoutLines.join('\n')).toContain(
       'Usage: npx dust <command>'
     )
+  })
+
+  test('shows version for --version flag', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
+
+    const result = await main({
+      commandArguments: ['--version'],
+      context,
+      fileSystem,
+      glob: fileSystem,
+    })
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines).toHaveLength(1)
+    expect(context.stdoutLines[0]).toBe('unknown')
   })
 
   test('returns error for unknown command', async () => {
