@@ -270,6 +270,7 @@ export function createAuthFileSystem(
   }
 }
 
+/* v8 ignore start - thin wrapper around native functions */
 export function createDefaultBucketDependencies(): BucketDependencies {
   const authFileSystem = createAuthFileSystem({
     accessSync,
@@ -292,10 +293,8 @@ export function createDefaultBucketDependencies(): BucketDependencies {
     getTerminalSize: defaultGetTerminalSize,
     writeStdout: defaultWriteStdout,
     isTTY: process.stdout.isTTY ?? false,
-    /* v8 ignore start - thin wrappers around native functions */
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
     getReposDir: () => getReposDir(process.env, homedir()),
-    /* v8 ignore stop */
     auth: {
       createServer: defaultCreateServer,
       openBrowser: defaultOpenBrowser,
@@ -304,6 +303,7 @@ export function createDefaultBucketDependencies(): BucketDependencies {
     },
   }
 }
+/* v8 ignore stop */
 
 export interface BucketState {
   ws: WebSocketLike | null
@@ -658,6 +658,7 @@ export function connectWebSocket(
           fileSystem
         )
         const repoContext = createTUIContext(state, context, useTUI)
+        /* v8 ignore start - async callback internals not tracked by v8 */
         handleRepositoryListFromRepo(repos, state, repoDeps, repoContext)
           .then(() => {
             syncTUI(state)
@@ -694,6 +695,7 @@ export function connectWebSocket(
               'stderr'
             )
           })
+        /* v8 ignore stop */
       } else if (message.type === 'task-available') {
         const repoName = message.repository
         if (typeof repoName === 'string') {
@@ -720,6 +722,7 @@ export function connectWebSocket(
             )
           }
         }
+        /* v8 ignore stop */
       }
     } catch {
       logMessage(

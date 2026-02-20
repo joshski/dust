@@ -149,6 +149,8 @@ describe('parseRepository', () => {
     expect(parseRepository(123)).toBeNull()
     expect(parseRepository({ name: 'test' })).toBeNull()
     expect(parseRepository({ gitUrl: 'test' })).toBeNull()
+    // Both keys present but wrong types
+    expect(parseRepository({ name: 123, gitUrl: 456 })).toBeNull()
   })
 
   test('parses object with name, gitUrl, and url', () => {
@@ -799,6 +801,25 @@ describe('startRepositoryLoop', () => {
 })
 
 describe('handleRepositoryList', () => {
+  test('filters out invalid repository entries', async () => {
+    const context = createContextEmulator()
+    const manager = createMockManager()
+    const repoDeps = createRepositoryDependencies({
+      sleep: () => Promise.resolve(),
+    })
+
+    // Pass an array with invalid entries that parseRepository returns null for
+    await handleRepositoryList(
+      [123, null, { invalid: 'data' }],
+      manager,
+      repoDeps,
+      context
+    )
+
+    // No repositories should be added since all are invalid
+    expect(manager.repositories.size).toBe(0)
+  })
+
   test('adds new repositories and tracks them in state', async () => {
     const context = createContextEmulator()
     const manager = createMockManager()

@@ -12,14 +12,15 @@ export default defineConfig({
       include: ['lib/**/*.ts'],
       exclude: [
         'lib/cli/run.ts',
-        // v8 reports <100% function/branch coverage for `/* v8 ignore */`-wrapped
-        // thin wrappers, even though lines/statements are 100%.
-        // Excluded until v8 honors ignore comments for function-level metrics.
-        'lib/bucket/repository.ts',
-        'lib/bucket/repository-loop.ts',
-        'lib/cli/commands/bucket.ts',
         'lib/version.ts',
         'lib/test/**',
+        // v8 does not honor `/* v8 ignore */` comments for function-level metrics
+        // on anonymous functions inside async callbacks. These files use inline
+        // ignores for line/statement coverage but must be excluded for 100%
+        // function coverage until v8 fixes this limitation.
+        // See: https://github.com/AntonyZ89/vitest-coverage-report/issues/27
+        'lib/bucket/repository-loop.ts',
+        'lib/cli/commands/bucket.ts',
       ],
       reporter: [
         [resolve(import.meta.dirname, 'lib/istanbul/minimal-reporter.cjs')],

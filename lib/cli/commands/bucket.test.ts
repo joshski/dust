@@ -763,6 +763,37 @@ describe('connectWebSocket', () => {
     expect(context.stdoutLines.join('\n')).not.toContain('Reconnecting')
   })
 
+  test('does not reconnect when closed with code 4000 (replaced by newer connection)', () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const state = createInitialState()
+
+    const ws = createMockWebSocket()
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => ws,
+    })
+
+    connectWebSocket(
+      'my-token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false
+    )
+
+    ws.onclose?.({ code: 4000, reason: 'Replaced by newer connection' })
+
+    // Should NOT schedule reconnection for code 4000
+    expect(state.reconnectTimer).toBeNull()
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Another connection replaced this one'
+    )
+    expect(context.stdoutLines.join('\n')).not.toContain('Reconnecting')
+  })
+
   test('does not connect when already shutting down', () => {
     const dependencies = createDependencies()
     const state = createInitialState()
@@ -1906,6 +1937,22 @@ describe('syncUIWithRepoList', () => {
 
     expect(state.logBuffers.get('repo1')).toBe(existingBuffer)
     expect(state.ui.repositories).toContain('repo1')
+  })
+
+  test('updates URL when repo already exists but URL changed', () => {
+    const state = createInitialState()
+
+    // First call adds the repo without URL
+    syncUIWithRepoList(state, [{ name: 'repo1', gitUrl: 'url1' }])
+    expect(state.ui.repositoryUrls.get('repo1')).toBeUndefined()
+
+    // Second call with URL should update the URL
+    syncUIWithRepoList(state, [
+      { name: 'repo1', gitUrl: 'url1', url: 'https://github.com/user/repo1' },
+    ])
+    expect(state.ui.repositoryUrls.get('repo1')).toBe(
+      'https://github.com/user/repo1'
+    )
   })
 })
 
