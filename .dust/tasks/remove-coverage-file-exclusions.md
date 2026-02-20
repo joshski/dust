@@ -25,7 +25,6 @@ Remove file-level exclusions from `vitest.config.ts` for `bucket.ts`, `repositor
 ## Blocked By
 
 - [Inject logger in loop error handler](inject-logger-in-loop-error-handler.md)
-- [Extract bucket auth filesystem construction](extract-bucket-auth-filesystem-construction.md)
 - [Extract repos dir environment variable logic](extract-repos-dir-environment-variable-logic.md)
 
 ## Definition of Done

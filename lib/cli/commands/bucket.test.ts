@@ -18,9 +18,11 @@ import {
 } from '../../test/test-utilities'
 import type { CommandDependencies } from '../types'
 import {
+  type AuthFileSystemDependencies,
   type BucketDependencies,
   bucket,
   connectWebSocket,
+  createAuthFileSystem,
   createDefaultBucketDependencies,
   createInitialState,
   createKeypressHandler,
@@ -116,6 +118,184 @@ describe('createDefaultBucketDependencies', () => {
     expect(typeof bucketDependencies.isTTY).toBe('boolean')
     expect(typeof bucketDependencies.sleep).toBe('function')
     expect(typeof bucketDependencies.getReposDir).toBe('function')
+  })
+})
+
+function createMockAuthFileSystemDeps(
+  overrides: Partial<AuthFileSystemDependencies> = {}
+): AuthFileSystemDependencies {
+  return {
+    accessSync: () => {},
+    statSync: () => ({ isDirectory: () => false, birthtimeMs: 1000 }),
+    readFile: async () => '',
+    writeFile: async () => {},
+    mkdir: async () => undefined,
+    readdir: async () => [],
+    chmod: async () => {},
+    rename: async () => {},
+    ...overrides,
+  }
+}
+
+describe('createAuthFileSystem', () => {
+  describe('exists', () => {
+    test('returns true when accessSync succeeds', () => {
+      const authFs = createAuthFileSystem(createMockAuthFileSystemDeps())
+      expect(authFs.exists('/some/path')).toBe(true)
+    })
+
+    test('returns false when accessSync throws', () => {
+      const authFs = createAuthFileSystem(
+        createMockAuthFileSystemDeps({
+          accessSync: () => {
+            throw new Error('ENOENT')
+          },
+        })
+      )
+      expect(authFs.exists('/some/path')).toBe(false)
+    })
+  })
+
+  describe('isDirectory', () => {
+    test('returns true when statSync indicates directory', () => {
+      const authFs = createAuthFileSystem(
+        createMockAuthFileSystemDeps({
+          statSync: () => ({ isDirectory: () => true, birthtimeMs: 1000 }),
+        })
+      )
+      expect(authFs.isDirectory('/some/path')).toBe(true)
+    })
+
+    test('returns false when statSync indicates file', () => {
+      const authFs = createAuthFileSystem(
+        createMockAuthFileSystemDeps({
+          statSync: () => ({ isDirectory: () => false, birthtimeMs: 1000 }),
+        })
+      )
+      expect(authFs.isDirectory('/some/path')).toBe(false)
+    })
+
+    test('returns false when statSync throws', () => {
+      const authFs = createAuthFileSystem(
+        createMockAuthFileSystemDeps({
+          statSync: () => {
+            throw new Error('ENOENT')
+          },
+        })
+      )
+      expect(authFs.isDirectory('/some/path')).toBe(false)
+    })
+  })
+
+  describe('getFileCreationTime', () => {
+    test('returns birthtimeMs from statSync', () => {
+      const authFs = createAuthFileSystem(
+        createMockAuthFileSystemDeps({
+          statSync: () => ({
+            isDirectory: () => false,
+            birthtimeMs: 1234567890,
+          }),
+        })
+      )
+      expect(authFs.getFileCreationTime('/some/path')).toBe(1234567890)
+    })
+  })
+
+  describe('thin wrapper methods', () => {
+    test('readFile delegates to dependency', async () => {
+      let capturedPath: string | undefined
+      const authFs = createAuthFileSystem(
+        createMockAuthFileSystemDeps({
+          readFile: async (path: string) => {
+            capturedPath = path
+            return 'file contents'
+          },
+        })
+      )
+      const result = await authFs.readFile('/test/file')
+      expect(capturedPath).toBe('/test/file')
+      expect(result).toBe('file contents')
+    })
+
+    test('writeFile delegates to dependency', async () => {
+      let capturedPath: string | undefined
+      let capturedContent: string | undefined
+      const authFs = createAuthFileSystem(
+        createMockAuthFileSystemDeps({
+          writeFile: async (path: string, content: string) => {
+            capturedPath = path
+            capturedContent = content
+          },
+        })
+      )
+      await authFs.writeFile('/test/file', 'content')
+      expect(capturedPath).toBe('/test/file')
+      expect(capturedContent).toBe('content')
+    })
+
+    test('mkdir delegates to dependency', async () => {
+      let capturedPath: string | undefined
+      let capturedOptions: { recursive?: boolean } | undefined
+      const authFs = createAuthFileSystem(
+        createMockAuthFileSystemDeps({
+          mkdir: async (path: string, options?: { recursive?: boolean }) => {
+            capturedPath = path
+            capturedOptions = options
+            return undefined
+          },
+        })
+      )
+      await authFs.mkdir('/test/dir', { recursive: true })
+      expect(capturedPath).toBe('/test/dir')
+      expect(capturedOptions).toEqual({ recursive: true })
+    })
+
+    test('readdir delegates to dependency', async () => {
+      let capturedPath: string | undefined
+      const authFs = createAuthFileSystem(
+        createMockAuthFileSystemDeps({
+          readdir: async (path: string) => {
+            capturedPath = path
+            return ['file1', 'file2']
+          },
+        })
+      )
+      const result = await authFs.readdir('/test/dir')
+      expect(capturedPath).toBe('/test/dir')
+      expect(result).toEqual(['file1', 'file2'])
+    })
+
+    test('chmod delegates to dependency', async () => {
+      let capturedPath: string | undefined
+      let capturedMode: number | undefined
+      const authFs = createAuthFileSystem(
+        createMockAuthFileSystemDeps({
+          chmod: async (path: string, mode: number) => {
+            capturedPath = path
+            capturedMode = mode
+          },
+        })
+      )
+      await authFs.chmod('/test/file', 0o755)
+      expect(capturedPath).toBe('/test/file')
+      expect(capturedMode).toBe(0o755)
+    })
+
+    test('rename delegates to dependency', async () => {
+      let capturedOldPath: string | undefined
+      let capturedNewPath: string | undefined
+      const authFs = createAuthFileSystem(
+        createMockAuthFileSystemDeps({
+          rename: async (oldPath: string, newPath: string) => {
+            capturedOldPath = oldPath
+            capturedNewPath = newPath
+          },
+        })
+      )
+      await authFs.rename('/old/path', '/new/path')
+      expect(capturedOldPath).toBe('/old/path')
+      expect(capturedNewPath).toBe('/new/path')
+    })
   })
 })
 

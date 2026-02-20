@@ -212,11 +212,38 @@ function defaultOpenBrowser(url: string): void {
 }
 /* v8 ignore stop */
 
-export function createDefaultBucketDependencies(): BucketDependencies {
-  const authFileSystem: FileSystem = {
+/**
+ * Dependencies for createAuthFileSystem - allows injection of low-level fs operations
+ */
+export interface AuthFileSystemDependencies {
+  accessSync: (path: string) => void
+  statSync: (path: string) => {
+    isDirectory: () => boolean
+    birthtimeMs: number
+  }
+  readFile: (path: string, encoding: 'utf8') => Promise<string>
+  writeFile: (path: string, content: string, encoding: 'utf8') => Promise<void>
+  mkdir: (
+    path: string,
+    options?: { recursive?: boolean }
+  ) => Promise<string | undefined>
+  readdir: (path: string) => Promise<string[]>
+  chmod: (path: string, mode: number) => Promise<void>
+  rename: (oldPath: string, newPath: string) => Promise<void>
+}
+
+/**
+ * Creates a FileSystem implementation for auth operations.
+ * The exists, isDirectory, and getFileCreationTime methods wrap sync fs operations
+ * with try/catch to convert exceptions to boolean/default values.
+ */
+export function createAuthFileSystem(
+  dependencies: AuthFileSystemDependencies
+): FileSystem {
+  return {
     exists: (path: string) => {
       try {
-        accessSync(path)
+        dependencies.accessSync(path)
         return true
       } catch {
         return false
@@ -224,22 +251,37 @@ export function createDefaultBucketDependencies(): BucketDependencies {
     },
     isDirectory: (path: string) => {
       try {
-        return statSync(path).isDirectory()
+        return dependencies.statSync(path).isDirectory()
       } catch {
         return false
       }
     },
-    getFileCreationTime: (path: string) => statSync(path).birthtimeMs,
-    readFile: (path: string) => readFile(path, 'utf8'),
+    getFileCreationTime: (path: string) =>
+      dependencies.statSync(path).birthtimeMs,
+    readFile: (path: string) => dependencies.readFile(path, 'utf8'),
     writeFile: (path: string, content: string) =>
-      writeFile(path, content, 'utf8'),
+      dependencies.writeFile(path, content, 'utf8'),
     mkdir: (path: string, options?: { recursive?: boolean }) =>
-      mkdir(path, options).then(() => {}),
-    readdir: (path: string) => readdir(path),
-    chmod: (path: string, mode: number) => chmod(path, mode),
+      dependencies.mkdir(path, options).then(() => {}),
+    readdir: (path: string) => dependencies.readdir(path),
+    chmod: (path: string, mode: number) => dependencies.chmod(path, mode),
     rename: (oldPath: string, newPath: string) =>
-      import('node:fs/promises').then(mod => mod.rename(oldPath, newPath)),
+      dependencies.rename(oldPath, newPath),
   }
+}
+
+export function createDefaultBucketDependencies(): BucketDependencies {
+  const authFileSystem = createAuthFileSystem({
+    accessSync,
+    statSync,
+    readFile,
+    writeFile,
+    mkdir,
+    readdir,
+    chmod,
+    rename: (oldPath, newPath) =>
+      import('node:fs/promises').then(mod => mod.rename(oldPath, newPath)),
+  })
 
   return {
     spawn: nodeSpawn,
