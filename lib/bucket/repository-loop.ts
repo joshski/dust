@@ -25,12 +25,93 @@ import type { CommandDependencies } from '../cli/types'
 import { loadSettings } from '../config/settings'
 import { createLogger } from '../logging'
 import type { SendEventFn } from './events'
-import { appendLogLine, createLogLine } from './log-buffer'
+import { appendLogLine, createLogLine, type LogBuffer } from './log-buffer'
 import type { RepositoryDependencies, RepositoryState } from './repository'
 
 const log = createLogger('dust:bucket:repository-loop')
 
 const FALLBACK_TIMEOUT_MS = 300000
+
+/**
+ * Create stdout/stderr callbacks that append to a log buffer.
+ * Extracted for testability (v8 coverage limitation on inline callbacks).
+ */
+export function createLogCallbacks(logBuffer: LogBuffer): {
+  stdout: (msg: string) => void
+  stderr: (msg: string) => void
+} {
+  return {
+    stdout: (msg: string) =>
+      appendLogLine(logBuffer, createLogLine(msg, 'stdout')),
+    stderr: (msg: string) =>
+      appendLogLine(logBuffer, createLogLine(msg, 'stderr')),
+  }
+}
+
+/**
+ * Flush any pending partial line and log all segments of multi-line text.
+ * Returns the new partial line state (always empty string after flush).
+ * Extracted for testability (v8 coverage limitation on inline callbacks).
+ */
+export function flushAndLogMultiLine(
+  partialLine: string,
+  text: string,
+  logBuffer: LogBuffer
+): string {
+  // Flush any pending partial text first
+  if (partialLine) {
+    appendLogLine(logBuffer, createLogLine(partialLine, 'stdout'))
+  }
+  // Split multi-line content (e.g. tool_result file contents)
+  // into separate log lines
+  for (const segment of text.split('\n')) {
+    appendLogLine(logBuffer, createLogLine(segment, 'stdout'))
+  }
+  return ''
+}
+
+/**
+ * Build an EventMessage from agent session event data.
+ * Extracted for testability (v8 coverage limitation on inline callbacks).
+ */
+export function buildEventMessage(parameters: {
+  sequence: number
+  sessionId: string
+  repository: string
+  event: AgentSessionEvent
+  agentSessionId?: string
+}): EventMessage {
+  const msg: EventMessage = {
+    sequence: parameters.sequence,
+    timestamp: new Date().toISOString(),
+    sessionId: parameters.sessionId,
+    repository: parameters.repository,
+    event: parameters.event,
+  }
+  if (parameters.agentSessionId) {
+    msg.agentSessionId = parameters.agentSessionId
+  }
+  return msg
+}
+
+/**
+ * Create a wake-up handler that resolves the wait promise.
+ * The handler guards against being called after a newer wait has started.
+ * Extracted for testability (v8 coverage limitation on inline callbacks).
+ */
+export function createWakeUpHandler(
+  repoState: RepositoryState,
+  resolve: () => void
+): () => void {
+  const handler = () => {
+    if (repoState.wakeUp !== handler) {
+      return
+    }
+    repoState.wakeUp = undefined
+    resolve()
+  }
+  return handler
+}
 
 /**
  * Create a no-op glob scanner for CommandDependencies.
@@ -60,15 +141,14 @@ export async function runRepositoryLoop(
 
   // Build CommandDependencies for runOneIteration
   const settings = await loadSettings(repoState.path, fileSystem)
+  const logCallbacks = createLogCallbacks(repoState.logBuffer)
   /* v8 ignore start - callback internals not tracked by v8 */
   const commandDeps: CommandDependencies = {
     arguments: [],
     context: {
       cwd: repoState.path,
-      stdout: (msg: string) =>
-        appendLogLine(repoState.logBuffer, createLogLine(msg, 'stdout')),
-      stderr: (msg: string) =>
-        appendLogLine(repoState.logBuffer, createLogLine(msg, 'stderr')),
+      stdout: (msg: string) => logCallbacks.stdout(msg),
+      stderr: (msg: string) => logCallbacks.stderr(msg),
     },
     /* v8 ignore stop */
     fileSystem,
@@ -93,19 +173,11 @@ export async function runRepositoryLoop(
       },
       /* v8 ignore start - callback internals not tracked by v8 */
       line: (text: string) => {
-        // Flush any pending partial text first
-        if (partialLine) {
-          appendLogLine(
-            repoState.logBuffer,
-            createLogLine(partialLine, 'stdout')
-          )
-          partialLine = ''
-        }
-        // Split multi-line content (e.g. tool_result file contents)
-        // into separate log lines
-        for (const segment of text.split('\n')) {
-          appendLogLine(repoState.logBuffer, createLogLine(segment, 'stdout'))
-        }
+        partialLine = flushAndLogMultiLine(
+          partialLine,
+          text,
+          repoState.logBuffer
+        )
       },
       /* v8 ignore stop */
     }),
@@ -148,17 +220,15 @@ export async function runRepositoryLoop(
     /* v8 ignore start - callback internals not tracked by v8 */
     if (sendEvent && sessionId) {
       sequence++
-      const msg: EventMessage = {
-        sequence,
-        timestamp: new Date().toISOString(),
-        sessionId,
-        repository: repoName,
-        event,
-      }
-      if (agentSessionId) {
-        msg.agentSessionId = agentSessionId
-      }
-      sendEvent(msg)
+      sendEvent(
+        buildEventMessage({
+          sequence,
+          sessionId,
+          repository: repoName,
+          event,
+          agentSessionId,
+        })
+      )
     }
     /* v8 ignore stop */
   }
@@ -225,13 +295,7 @@ export async function runRepositoryLoop(
       logLine('Waiting for tasks...')
       /* v8 ignore start - callback internals not tracked by v8 */
       await new Promise<void>(resolve => {
-        const wakeUpForThisWait = () => {
-          if (repoState.wakeUp !== wakeUpForThisWait) {
-            return
-          }
-          repoState.wakeUp = undefined
-          resolve()
-        }
+        const wakeUpForThisWait = createWakeUpHandler(repoState, resolve)
         repoState.wakeUp = wakeUpForThisWait
         /* v8 ignore stop */
         // Fallback timeout so the loop isn't stuck forever if no signal arrives
