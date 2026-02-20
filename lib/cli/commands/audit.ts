@@ -12,8 +12,8 @@
  */
 
 import { basename } from 'node:path'
-import { loadStockAudits } from '../../audits/stock-audits'
 import { transformAuditContent } from '../../audits/index'
+import { loadStockAudits } from '../../audits/stock-audits'
 import {
   extractOpeningSentence,
   extractTitle,

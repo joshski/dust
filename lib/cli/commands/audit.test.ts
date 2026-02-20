@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { transformAuditContent } from '../../audits/index'
 import { loadStockAudits } from '../../audits/stock-audits'
 import {
   createContextEmulator,
@@ -7,7 +8,6 @@ import {
   lintTaskFile,
 } from '../../test/test-utilities'
 import type { CommandContext, CommandDependencies } from '../types'
-import { transformAuditContent } from '../../audits/index'
 import { audit } from './audit'
 
 function createDependencies(
