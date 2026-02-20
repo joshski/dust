@@ -277,6 +277,7 @@ export interface IterationOptions {
   hooksInstalled?: boolean
   signal?: AbortSignal
   logger?: LogFn
+  repositoryId?: string
 }
 
 export async function runOneIteration(
@@ -290,7 +291,20 @@ export async function runOneIteration(
   const { spawn, run } = loopDependencies
   const agentName = loopDependencies.agentType === 'codex' ? 'Codex' : 'Claude'
 
-  const { onRawEvent, hooksInstalled = false, signal, logger = log } = options
+  const {
+    onRawEvent,
+    hooksInstalled = false,
+    signal,
+    logger = log,
+    repositoryId,
+  } = options
+  const baseEnv: Record<string, string> = {
+    DUST_UNATTENDED: '1',
+    DUST_SKIP_AGENT: '1',
+  }
+  if (repositoryId) {
+    baseEnv.DUST_REPOSITORY_ID = repositoryId
+  }
 
   // Step 1: Sync with remote
   log('syncing with remote')
@@ -329,7 +343,7 @@ Make sure the repository is in a clean state and synced with remote before finis
         spawnOptions: {
           cwd: context.cwd,
           dangerouslySkipPermissions: true,
-          env: { DUST_UNATTENDED: '1', DUST_SKIP_AGENT: '1' },
+          env: baseEnv,
           signal,
         },
         onRawEvent,
@@ -400,7 +414,7 @@ ${instructions}`
       spawnOptions: {
         cwd: context.cwd,
         dangerouslySkipPermissions: true,
-        env: { DUST_UNATTENDED: '1', DUST_SKIP_AGENT: '1' },
+        env: baseEnv,
         signal,
       },
       onRawEvent,

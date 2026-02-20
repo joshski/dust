@@ -222,13 +222,24 @@ export function formatFileSize(bytes: number): string {
 
 export async function bucketAssetUpload(
   dependencies: CommandDependencies,
-  uploadDeps: UploadDependencies = createDefaultUploadDependencies()
+  uploadDeps: UploadDependencies = createDefaultUploadDependencies(),
+  env: NodeJS.ProcessEnv = process.env
 ): Promise<CommandResult> {
   const { context } = dependencies
   const filePath = dependencies.arguments[0]
 
   if (!filePath) {
     context.stderr('Usage: dust bucket asset upload <file-path>')
+    return { exitCode: 1 }
+  }
+
+  // Require repository context
+  const repositoryId = env.DUST_REPOSITORY_ID
+  if (!repositoryId) {
+    context.stderr('Error: DUST_REPOSITORY_ID environment variable is not set.')
+    context.stderr(
+      'This command must be run within a repository context (via `dust bucket`).'
+    )
     return { exitCode: 1 }
   }
 
@@ -266,7 +277,7 @@ export async function bucketAssetUpload(
   // Read file and upload
   const fileBytes = await uploadDeps.readFileBytes(filePath)
   const contentType = getContentType(filePath)
-  const uploadUrl = `${getDustbucketHost()}/api/assets`
+  const uploadUrl = `${getDustbucketHost()}/api/assets?repositoryId=${encodeURIComponent(repositoryId)}`
 
   try {
     const result = await uploadDeps.uploadFile(

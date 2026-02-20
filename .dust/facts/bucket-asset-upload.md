@@ -10,6 +10,12 @@ dust bucket asset upload <file-path>
 
 On success, the command outputs the public URL of the uploaded asset.
 
+## Repository Context
+
+This command requires a repository context and must be run within an agent iteration started by `dust bucket`. The `DUST_REPOSITORY_ID` environment variable must be set.
+
+When run outside of a repository context (without `DUST_REPOSITORY_ID`), the command fails with an actionable error message.
+
 ## Authentication
 
 The command uses the same authentication infrastructure as `dust bucket`. It tries authentication methods in order:
@@ -30,10 +36,12 @@ On successful browser authentication, the token is stored in `~/.dust/credential
 
 ## Server API Contract
 
-The command makes a `POST` request to `{DUST_BUCKET_HOST}/api/assets` (defaults to `https://dustbucket.com/api/assets`).
+The command makes a `POST` request to `{DUST_BUCKET_HOST}/api/assets?repositoryId=<id>` (defaults to `https://dustbucket.com/api/assets?repositoryId=<id>`).
 
 **Request:**
 - Method: `POST`
+- Query parameters:
+  - `repositoryId`: The repository ID from `DUST_REPOSITORY_ID` environment variable
 - Headers:
   - `Authorization: Bearer <token>`
   - `Content-Type: <mime-type>` (derived from file extension)

@@ -603,6 +603,58 @@ describe('runOneIteration', () => {
     expect(capturedEnv?.DUST_UNATTENDED).toBe('1')
   })
 
+  test('passes DUST_REPOSITORY_ID env var when repositoryId is provided', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+        },
+      },
+    })
+    let capturedEnv: Record<string, string> | undefined
+    const loopDeps = createLoopDeps({
+      run: async (_prompt, options) => {
+        const runOptions = options as {
+          spawnOptions?: { env?: Record<string, string> }
+        }
+        capturedEnv = runOptions?.spawnOptions?.env
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent, {
+      repositoryId: 'repo-abc-123',
+    })
+
+    expect(capturedEnv).toBeDefined()
+    expect(capturedEnv?.DUST_REPOSITORY_ID).toBe('repo-abc-123')
+  })
+
+  test('does not set DUST_REPOSITORY_ID when repositoryId is not provided', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+        },
+      },
+    })
+    let capturedEnv: Record<string, string> | undefined
+    const loopDeps = createLoopDeps({
+      run: async (_prompt, options) => {
+        const runOptions = options as {
+          spawnOptions?: { env?: Record<string, string> }
+        }
+        capturedEnv = runOptions?.spawnOptions?.env
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent, {})
+
+    expect(capturedEnv).toBeDefined()
+    expect(capturedEnv?.DUST_REPOSITORY_ID).toBeUndefined()
+  })
+
   test('handles Claude errors gracefully', async () => {
     const dependencies = createDependencies({
       project: {

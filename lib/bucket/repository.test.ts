@@ -178,6 +178,32 @@ describe('parseRepository', () => {
     })
     expect(repo?.url).toBeUndefined()
   })
+
+  test('parses object with name, gitUrl, and id', () => {
+    const repo = parseRepository({
+      name: 'my-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+      id: 'repo-123',
+    })
+    expect(repo).toEqual({
+      name: 'my-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+      id: 'repo-123',
+    })
+  })
+
+  test('ignores id field if not a string', () => {
+    const repo = parseRepository({
+      name: 'my-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+      id: 456,
+    })
+    expect(repo).toEqual({
+      name: 'my-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+    })
+    expect(repo?.id).toBeUndefined()
+  })
 })
 
 describe('getRepoPath', () => {

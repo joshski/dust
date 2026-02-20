@@ -55,6 +55,15 @@ function createMockUploadDeps(
   }
 }
 
+function createMockEnv(
+  overrides: Record<string, string> = {}
+): NodeJS.ProcessEnv {
+  return {
+    DUST_REPOSITORY_ID: 'test-repo-id',
+    ...overrides,
+  }
+}
+
 describe('getContentType', () => {
   test('returns correct MIME type for images', () => {
     expect(getContentType('/path/to/image.png')).toBe('image/png')
@@ -153,13 +162,33 @@ describe('bucketAssetUpload', () => {
       typeof createContextEmulator
     >
     const uploadDeps = createMockUploadDeps()
+    const env = createMockEnv()
 
-    const result = await bucketAssetUpload(dependencies, uploadDeps)
+    const result = await bucketAssetUpload(dependencies, uploadDeps, env)
 
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain('Usage:')
     expect(context.stderrLines.join('\n')).toContain(
       'dust bucket asset upload <file-path>'
+    )
+  })
+
+  test('returns error when DUST_REPOSITORY_ID is not set', async () => {
+    const dependencies = createDependencies(['/path/to/image.png'])
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const uploadDeps = createMockUploadDeps()
+    const env = {} // No DUST_REPOSITORY_ID
+
+    const result = await bucketAssetUpload(dependencies, uploadDeps, env)
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain(
+      'DUST_REPOSITORY_ID environment variable is not set'
+    )
+    expect(context.stderrLines.join('\n')).toContain(
+      'must be run within a repository context'
     )
   })
 
@@ -171,8 +200,9 @@ describe('bucketAssetUpload', () => {
     const uploadDeps = createMockUploadDeps({
       fileExists: async () => false,
     })
+    const env = createMockEnv()
 
-    const result = await bucketAssetUpload(dependencies, uploadDeps)
+    const result = await bucketAssetUpload(dependencies, uploadDeps, env)
 
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain('File not found')
@@ -185,8 +215,9 @@ describe('bucketAssetUpload', () => {
       typeof createContextEmulator
     >
     const uploadDeps = createMockUploadDeps()
+    const env = createMockEnv()
 
-    const result = await bucketAssetUpload(dependencies, uploadDeps)
+    const result = await bucketAssetUpload(dependencies, uploadDeps, env)
 
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain('Unsupported file type')
@@ -200,8 +231,9 @@ describe('bucketAssetUpload', () => {
       typeof createContextEmulator
     >
     const uploadDeps = createMockUploadDeps()
+    const env = createMockEnv()
 
-    const result = await bucketAssetUpload(dependencies, uploadDeps)
+    const result = await bucketAssetUpload(dependencies, uploadDeps, env)
 
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain('Unsupported file type')
@@ -216,8 +248,9 @@ describe('bucketAssetUpload', () => {
     const uploadDeps = createMockUploadDeps({
       getFileSize: async () => 11 * 1024 * 1024, // 11 MB
     })
+    const env = createMockEnv()
 
-    const result = await bucketAssetUpload(dependencies, uploadDeps)
+    const result = await bucketAssetUpload(dependencies, uploadDeps, env)
 
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain('File too large')
@@ -236,8 +269,9 @@ describe('bucketAssetUpload', () => {
         return { url: 'https://dustbucket.com/assets/abc123' }
       },
     })
+    const env = createMockEnv()
 
-    await bucketAssetUpload(dependencies, uploadDeps)
+    await bucketAssetUpload(dependencies, uploadDeps, env)
 
     expect(capturedToken).toBe('env-token')
   })
@@ -257,8 +291,9 @@ describe('bucketAssetUpload', () => {
         return { url: 'https://dustbucket.com/assets/abc123' }
       },
     })
+    const env = createMockEnv()
 
-    await bucketAssetUpload(dependencies, uploadDeps)
+    await bucketAssetUpload(dependencies, uploadDeps, env)
 
     expect(capturedToken).toBe('stored-token')
   })
@@ -286,8 +321,9 @@ describe('bucketAssetUpload', () => {
         return { url: 'https://dustbucket.com/assets/abc123' }
       },
     })
+    const env = createMockEnv()
 
-    await bucketAssetUpload(dependencies, uploadDeps)
+    await bucketAssetUpload(dependencies, uploadDeps, env)
 
     expect(capturedToken).toBe('browser-tok')
     expect(context.stdoutLines.join('\n')).toContain('Opening browser')
@@ -309,8 +345,9 @@ describe('bucketAssetUpload', () => {
         },
       }),
     })
+    const env = createMockEnv()
 
-    const result = await bucketAssetUpload(dependencies, uploadDeps)
+    const result = await bucketAssetUpload(dependencies, uploadDeps, env)
 
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain('Authentication failed')
@@ -336,11 +373,14 @@ describe('bucketAssetUpload', () => {
         return { url: 'https://dustbucket.com/assets/uploaded123' }
       },
     })
+    const env = createMockEnv()
 
-    const result = await bucketAssetUpload(dependencies, uploadDeps)
+    const result = await bucketAssetUpload(dependencies, uploadDeps, env)
 
     expect(result.exitCode).toBe(0)
-    expect(capturedUrl).toBe('https://dustbucket.com/api/assets')
+    expect(capturedUrl).toBe(
+      'https://dustbucket.com/api/assets?repositoryId=test-repo-id'
+    )
     expect(capturedContentType).toBe('image/png')
     expect(capturedBytes).toEqual(new Uint8Array([1, 2, 3, 4]))
     expect(context.stdoutLines).toContain(
@@ -358,17 +398,18 @@ describe('bucketAssetUpload', () => {
         return { url: 'https://dustbucket.com/assets/abc' }
       },
     })
+    const env = createMockEnv()
 
     const jpegDeps = createDependencies(['/path/to/photo.jpeg'])
-    await bucketAssetUpload(jpegDeps, uploadDeps)
+    await bucketAssetUpload(jpegDeps, uploadDeps, env)
     expect(capturedContentType).toBe('image/jpeg')
 
     const pdfDeps = createDependencies(['/path/to/doc.pdf'])
-    await bucketAssetUpload(pdfDeps, uploadDeps)
+    await bucketAssetUpload(pdfDeps, uploadDeps, env)
     expect(capturedContentType).toBe('application/pdf')
 
     const svgDeps = createDependencies(['/path/to/icon.svg'])
-    await bucketAssetUpload(svgDeps, uploadDeps)
+    await bucketAssetUpload(svgDeps, uploadDeps, env)
     expect(capturedContentType).toBe('image/svg+xml')
   })
 
@@ -384,8 +425,9 @@ describe('bucketAssetUpload', () => {
         throw new Error('Upload failed (500): Internal server error')
       },
     })
+    const env = createMockEnv()
 
-    const result = await bucketAssetUpload(dependencies, uploadDeps)
+    const result = await bucketAssetUpload(dependencies, uploadDeps, env)
 
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain('Upload failed')
@@ -404,10 +446,13 @@ describe('bucketAssetUpload', () => {
         return { url: 'https://custom-bucket.example.com/assets/abc' }
       },
     })
+    const env = createMockEnv()
 
-    await bucketAssetUpload(dependencies, uploadDeps)
+    await bucketAssetUpload(dependencies, uploadDeps, env)
 
-    expect(capturedUrl).toBe('https://custom-bucket.example.com/api/assets')
+    expect(capturedUrl).toBe(
+      'https://custom-bucket.example.com/api/assets?repositoryId=test-repo-id'
+    )
   })
 
   test('accepts file at maximum allowed size', async () => {
@@ -421,10 +466,53 @@ describe('bucketAssetUpload', () => {
       getFileSize: async () => 10 * 1024 * 1024, // Exactly 10 MB
       uploadFile: async () => ({ url: 'https://dustbucket.com/assets/abc' }),
     })
+    const env = createMockEnv()
 
-    const result = await bucketAssetUpload(dependencies, uploadDeps)
+    const result = await bucketAssetUpload(dependencies, uploadDeps, env)
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines).toContain('https://dustbucket.com/assets/abc')
+  })
+
+  test('includes repository ID in upload URL', async () => {
+    stubEnv('DUST_BUCKET_TOKEN', 'token')
+    const dependencies = createDependencies(['/path/to/image.png'])
+    let capturedUrl: string | undefined
+
+    const uploadDeps = createMockUploadDeps({
+      uploadFile: async url => {
+        capturedUrl = url
+        return { url: 'https://dustbucket.com/assets/abc' }
+      },
+    })
+    const env = createMockEnv({ DUST_REPOSITORY_ID: 'my-custom-repo-123' })
+
+    await bucketAssetUpload(dependencies, uploadDeps, env)
+
+    expect(capturedUrl).toBe(
+      'https://dustbucket.com/api/assets?repositoryId=my-custom-repo-123'
+    )
+  })
+
+  test('URL-encodes special characters in repository ID', async () => {
+    stubEnv('DUST_BUCKET_TOKEN', 'token')
+    const dependencies = createDependencies(['/path/to/image.png'])
+    let capturedUrl: string | undefined
+
+    const uploadDeps = createMockUploadDeps({
+      uploadFile: async url => {
+        capturedUrl = url
+        return { url: 'https://dustbucket.com/assets/abc' }
+      },
+    })
+    const env = createMockEnv({
+      DUST_REPOSITORY_ID: 'repo/with spaces&special',
+    })
+
+    await bucketAssetUpload(dependencies, uploadDeps, env)
+
+    expect(capturedUrl).toBe(
+      'https://dustbucket.com/api/assets?repositoryId=repo%2Fwith%20spaces%26special'
+    )
   })
 })
