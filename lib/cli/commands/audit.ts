@@ -13,6 +13,7 @@
 
 import { basename } from 'node:path'
 import { loadStockAudits } from '../../audits/stock-audits'
+import { transformAuditContent } from '../../audits/index'
 import {
   extractOpeningSentence,
   extractTitle,
@@ -24,19 +25,6 @@ interface AuditInfo {
   name: string
   description: string
   source: string
-}
-
-/**
- * Transforms audit template content for the task file.
- * Changes the title from "# Original Title" to "# Audit: Original Title"
- */
-export function transformAuditContent(content: string): string {
-  const titleMatch = content.match(/^#\s+(.+)$/m)
-  if (!titleMatch) {
-    return content
-  }
-  const originalTitle = titleMatch[1]
-  return content.replace(/^#\s+.+$/m, `# Audit: ${originalTitle}`)
 }
 
 /**

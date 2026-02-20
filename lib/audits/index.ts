@@ -8,13 +8,14 @@
  */
 
 import { basename } from 'node:path'
-import { transformAuditContent } from '../cli/commands/audit'
 import type { FileSystem } from '../filesystem/types'
 import {
   extractOpeningSentence,
   extractTitle,
 } from '../markdown/markdown-utilities'
 import { loadStockAudits } from './stock-audits'
+
+export { loadStockAudits } from './stock-audits'
 
 export interface Audit {
   name: string
@@ -33,6 +34,19 @@ export interface AuditsRepository {
   listAudits(): Promise<Audit[]>
   parseAudit(options: { name: string }): Promise<Audit>
   createAuditTask(options: { name: string }): Promise<CreateAuditTaskResult>
+}
+
+/**
+ * Transforms audit template content for the task file.
+ * Changes the title from "# Original Title" to "# Audit: Original Title"
+ */
+export function transformAuditContent(content: string): string {
+  const titleMatch = content.match(/^#\s+(.+)$/m)
+  if (!titleMatch) {
+    return content
+  }
+  const originalTitle = titleMatch[1]
+  return content.replace(/^#\s+.+$/m, `# Audit: ${originalTitle}`)
 }
 
 export function buildAuditsRepository(
