@@ -270,10 +270,13 @@ export type IterationResult =
   | 'claude_error'
   | 'resolved_pull_conflict'
 
+export type LogFn = (message: string) => void
+
 export interface IterationOptions {
   onRawEvent?: (rawEvent: Record<string, unknown>) => void
   hooksInstalled?: boolean
   signal?: AbortSignal
+  logger?: LogFn
 }
 
 export async function runOneIteration(
@@ -287,7 +290,7 @@ export async function runOneIteration(
   const { spawn, run } = loopDependencies
   const agentName = loopDependencies.agentType === 'codex' ? 'Codex' : 'Claude'
 
-  const { onRawEvent, hooksInstalled = false, signal } = options
+  const { onRawEvent, hooksInstalled = false, signal, logger = log } = options
 
   // Step 1: Sync with remote
   log('syncing with remote')
@@ -407,11 +410,9 @@ ${instructions}`
     return 'ran_claude'
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    /* v8 ignore start - log is a no-op in test (no DEBUG) */
-    log(
+    logger(
       `${agentName} error on task ${task.title ?? task.path}: ${errorMessage}`
     )
-    /* v8 ignore stop */
     context.stderr(`${agentName} exited with error: ${errorMessage}`)
     onAgentEvent?.({
       type: 'agent-session-ended',

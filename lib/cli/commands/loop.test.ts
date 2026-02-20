@@ -632,6 +632,64 @@ describe('runOneIteration', () => {
     expect(context.stderrLines.join('\n')).toContain('Claude crashed')
   })
 
+  test('logs error with injected logger when Claude fails', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# My Task\n\n## Blocked By\n\n(none)' },
+        },
+      },
+    })
+    const loopDeps = createLoopDeps({
+      run: async () => {
+        throw new Error('Connection timeout')
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+    const logMessages: string[] = []
+    const mockLogger = (message: string) => {
+      logMessages.push(message)
+    }
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent, {
+      logger: mockLogger,
+    })
+
+    expect(logMessages).toHaveLength(1)
+    expect(logMessages[0]).toBe(
+      'Claude error on task My Task: Connection timeout'
+    )
+  })
+
+  test('logs error with task path when task has no title', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': 'No heading here\n\n## Blocked By\n\n(none)' },
+        },
+      },
+    })
+    const loopDeps = createLoopDeps({
+      run: async () => {
+        throw new Error('API error')
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+    const logMessages: string[] = []
+    const mockLogger = (message: string) => {
+      logMessages.push(message)
+    }
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent, {
+      logger: mockLogger,
+    })
+
+    expect(logMessages).toHaveLength(1)
+    expect(logMessages[0]).toBe(
+      'Claude error on task .dust/tasks/task.md: API error'
+    )
+  })
+
   test('handles non-Error throws from Claude', async () => {
     const dependencies = createDependencies({
       project: {
