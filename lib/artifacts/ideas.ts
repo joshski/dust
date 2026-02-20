@@ -1,4 +1,4 @@
-import type { ReadableFileSystem } from '../cli/types'
+import type { ReadableFileSystem } from '../filesystem/types'
 import {
   extractOpeningSentence,
   extractTitle,

@@ -14,6 +14,7 @@
   "include": [
     "lib/workflow-tasks.ts",
     "lib/cli/types.ts",
+    "lib/filesystem/types.ts",
     "lib/types.ts",
     "lib/logging/index.ts",
     "lib/agents/detection.ts",

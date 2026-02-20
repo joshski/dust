@@ -6,7 +6,8 @@
  */
 
 import { join } from 'node:path'
-import type { DustSettings, FileSystem } from '../cli/types'
+import type { DustSettings } from '../cli/types'
+import type { FileSystem } from '../filesystem/types'
 
 const DUST_HOOK_START = '# BEGIN DUST HOOK'
 const DUST_HOOK_END = '# END DUST HOOK'

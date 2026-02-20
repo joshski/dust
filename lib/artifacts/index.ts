@@ -1,4 +1,4 @@
-import type { FileSystem, ReadableFileSystem } from '../cli/types'
+import type { FileSystem, ReadableFileSystem } from '../filesystem/types'
 import { type Fact, parseFact as parseFactImpl } from './facts'
 import {
   type Idea,

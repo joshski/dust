@@ -11,10 +11,8 @@ import type {
   CommandContext,
   CommandDependencies,
   DustSettings,
-  FileSystem,
-  GlobScanner,
-  WriteOptions,
 } from '../cli/types'
+import type { FileSystem, GlobScanner, WriteOptions } from '../filesystem/types'
 import {
   validateImperativeOpeningSentence,
   validateOpeningSentence,

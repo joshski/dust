@@ -2,7 +2,7 @@
  * Directory structure validation for .dust
  */
 
-import type { ReadableFileSystem } from '../../cli/types'
+import type { ReadableFileSystem } from '../../filesystem/types'
 import type { Violation } from './types'
 
 const EXPECTED_DIRECTORIES = ['principles', 'ideas', 'tasks', 'facts', 'config']

@@ -22,6 +22,10 @@
       "import": "./dist/artifacts.js",
       "types": "./dist/artifacts/index.d.ts"
     },
+    "./audits": {
+      "import": "./dist/audits.js",
+      "types": "./dist/audits/index.d.ts"
+    },
     "./istanbul/minimal-reporter": "./lib/istanbul/minimal-reporter.cjs"
   },
   "files": [

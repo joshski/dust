@@ -6,7 +6,7 @@ import {
   IDEA_TRANSITION_PREFIXES,
   titleToFilename,
 } from '../../artifacts/workflow-tasks'
-import type { ReadableFileSystem } from '../../cli/types'
+import type { ReadableFileSystem } from '../../filesystem/types'
 import { extractTitle } from '../../markdown/markdown-utilities'
 import type { Violation } from './types'
 

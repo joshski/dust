@@ -14,6 +14,7 @@ const bundles: { entrypoint: string; outfile: string; shebang?: boolean }[] = [
   { entrypoint: 'lib/logging/index.ts', outfile: 'dist/logging.js' },
   { entrypoint: 'lib/agents/detection.ts', outfile: 'dist/agents.js' },
   { entrypoint: 'lib/artifacts/index.ts', outfile: 'dist/artifacts.js' },
+  { entrypoint: 'lib/audits/index.ts', outfile: 'dist/audits.js' },
 ]
 
 for (const { entrypoint, outfile, shebang } of bundles) {

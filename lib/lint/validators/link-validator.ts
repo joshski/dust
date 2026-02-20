@@ -3,7 +3,7 @@
  */
 
 import { dirname, resolve } from 'node:path'
-import type { ReadableFileSystem } from '../../cli/types'
+import type { ReadableFileSystem } from '../../filesystem/types'
 import { MARKDOWN_LINK_PATTERN } from '../../markdown/markdown-utilities'
 import type { Violation } from './types'
 

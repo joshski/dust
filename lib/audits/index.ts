@@ -9,7 +9,7 @@
 
 import { basename } from 'node:path'
 import { transformAuditContent } from '../cli/commands/audit'
-import type { FileSystem } from '../cli/types'
+import type { FileSystem } from '../filesystem/types'
 import {
   extractOpeningSentence,
   extractTitle,

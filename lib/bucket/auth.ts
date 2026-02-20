@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import type { FileSystem } from '../cli/types'
+import type { FileSystem } from '../filesystem/types'
 
 const CREDENTIALS_DIR = '.dust'
 const CREDENTIALS_FILE = 'credentials.json'
