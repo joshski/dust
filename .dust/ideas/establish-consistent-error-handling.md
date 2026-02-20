@@ -1,40 +1,53 @@
 # Establish consistent error handling
 
-Commands use two strategies for errors, with no documented convention.
+Add a top-level error handler in `wireEntry` to catch unhandled errors from commands and convert them to clean error messages with exit code 1.
 
-1. `context.stderr()` + return `{ exitCode: 1 }` — used for user-facing errors (bad input, missing `.dust` directory, unknown command). Examples: `focus.ts`, `check.ts`, `list.ts`, `next.ts`, `pick-task.ts`.
-2. `catch` + re-throw — used for infrastructure/filesystem errors where only specific error codes (e.g. `EEXIST`) are handled; unexpected errors are re-thrown. Examples: `init.ts`, `lint-markdown.ts`.
-3. Bare `throw new Error()` — used in lower-level infrastructure code for unrecoverable failures. Examples: `spawn-claude-code.ts` (failed to get stdout from process).
+Currently, `wireEntry` in `lib/cli/wire.ts` does not catch unhandled rejections. If an infrastructure error (filesystem failure, network error, etc.) propagates up from a command, the process crashes with an unhandled rejection rather than showing a clean error message.
 
-The third pattern (bare throw) is used in library code below the command layer, which is appropriate. The real issue is that `wireEntry` in `wire.ts` does not catch unhandled rejections from commands — if an infrastructure throw propagates up, it crashes the process with an unhandled rejection rather than a clean error message and exit code.
+The codebase already follows two appropriate patterns:
+1. **User input errors** → `context.stderr()` + `return { exitCode: 1 }`
+2. **Infrastructure failures** → `throw` (handled by ENOENT checks where appropriate, otherwise propagated)
 
-The proposed convention is already partially in practice:
-- User input errors → `context.stderr()` + `return { exitCode: 1 }`
-- Infrastructure failures → throw (re-throw or bare throw)
+The missing piece is a final safety net in `wireEntry` that catches any escaped exceptions and converts them to `context.stderr()` + `exit(1)`.
 
-What's missing is a top-level error handler in `wireEntry` that catches infrastructure throws and converts them to `context.stderr()` + `exit(1)`.
+## Findings
+
+### Existing error handling is mostly sound
+
+The codebase already handles errors appropriately in most places:
+- Commands use `context.stderr()` + exit code 1 for user-facing errors
+- ENOENT checks with re-throw for file operations avoid swallowing unexpected errors
+- Infrastructure errors are thrown and propagated
+
+### Debug logging is appropriately best-effort
+
+`lib/logging/sink.ts` silently swallows errors because logging should never crash the application. This is an appropriate exception to "no error swallowing" since:
+- It's explicitly documented ("Best-effort — never crash the caller")
+- Logging is non-critical infrastructure
+- Failing to log is recoverable (the app continues working)
+
+### JSON parsing in event streams is defensive
+
+`spawn-claude-code.ts` and `spawn-codex.ts` skip malformed JSON lines. This is appropriate because:
+- External process output may include non-JSON debug lines
+- The overall stream processing continues
+- Real errors from the spawned process are captured via exit code and stderr
+
+### Agent instructions loading could be improved
+
+`agent-shared.ts:loadAgentInstructions` swallows all errors when reading optional config files. Since it already checks `fileSystem.exists()` before reading, the catch block only triggers for non-ENOENT errors (permissions, I/O failures). These should probably propagate rather than silently returning an empty string.
 
 ## Open Questions
 
-### What should the top-level handler in `wireEntry` print when an infrastructure error escapes?
+### Should `loadAgentInstructions` propagate non-ENOENT errors?
 
-#### Print just the error message
+#### Propagate errors
 
-Less noisy for users. Hides implementation details. Matches the style of user-facing errors.
+If reading the file fails after confirming it exists, something is wrong (permissions, disk error). The user should know. This aligns with "no error swallowing".
 
-#### Print the full stack trace
+#### Keep silent fallback
 
-More useful for debugging unexpected failures. Stack traces help identify the root cause.
-
-### Should infrastructure errors be distinguishable from user errors at the type level?
-
-#### Use a custom `UserError` class
-
-Commands throw `UserError` for user-facing problems; the top-level handler prints it cleanly. All other errors get stack traces. Clear type-level separation.
-
-#### Rely on call-site convention only
-
-User input errors use `context.stderr()` + `return { exitCode: 1 }`. Infrastructure failures throw. No new types needed, but requires discipline to maintain.
+The agent instructions file is optional enhancement. Failing silently means the agent continues working without custom instructions rather than blocking entirely.
 
 ### Where should the convention be documented?
 
