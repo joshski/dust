@@ -14,7 +14,7 @@ This principle governs how we develop and maintain dust itself, separate from th
 - [Minimal Dependencies](minimal-dependencies.md)
 - [Intuitive Directory Structure](intuitive-directory-structure.md)
 - [Repository Hygiene](repository-hygiene.md)
-- [Clarity Over Brevity](clarity-over-brevity.md)
+- [Naming Matters](naming-matters.md)
 - [Reasonably DRY](reasonably-dry.md)
 - [Make the Change Easy](make-the-change-easy.md)
 - [Boy Scout Rule](boy-scout-rule.md)

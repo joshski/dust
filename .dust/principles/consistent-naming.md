@@ -6,7 +6,7 @@ Principles use Title Case. File names use kebab-case. Commands use lowercase wit
 
 ## Parent Principle
 
-- [Repository Hygiene](repository-hygiene.md)
+- [Naming Matters](naming-matters.md)
 
 ## Sub-Principles
 

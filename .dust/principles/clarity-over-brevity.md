@@ -6,7 +6,7 @@ Abbreviated names like `ctx`, `deps`, `fs`, or `args` save a few keystrokes but 
 
 ## Parent Principle
 
-- [Maintainable Codebase](maintainable-codebase.md)
+- [Naming Matters](naming-matters.md)
 
 ## Sub-Principles
 
