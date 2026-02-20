@@ -2,16 +2,13 @@
  * Common types for CLI commands
  */
 
-import type {
-  FileSystem,
-  GlobScanner,
-} from '../filesystem/types'
+import type { FileSystem, GlobScanner } from '../filesystem/types'
 
 export type {
-  WriteOptions,
-  ReadableFileSystem,
   FileSystem,
   GlobScanner,
+  ReadableFileSystem,
+  WriteOptions,
 } from '../filesystem/types'
 
 export interface CommandContext {
