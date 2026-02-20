@@ -1,0 +1,128 @@
+/**
+ * Audits repository - programmatic access to audit templates.
+ *
+ * Audits are canned tasks that help maintain project health.
+ * Sources:
+ * 1. User-configured audits in .dust/config/audits/*.md (takes precedence)
+ * 2. Stock audits from lib/audits/stock-audits.ts
+ */
+
+import { basename } from 'node:path'
+import { transformAuditContent } from '../cli/commands/audit'
+import type { FileSystem } from '../cli/types'
+import {
+  extractOpeningSentence,
+  extractTitle,
+} from '../markdown/markdown-utilities'
+import { loadStockAudits } from './stock-audits'
+
+export interface Audit {
+  name: string
+  title: string
+  description: string
+  template: string
+  source: 'stock' | string
+}
+
+export interface CreateAuditTaskResult {
+  filePath: string
+  relativePath: string
+}
+
+export interface AuditsRepository {
+  listAudits(): Promise<Audit[]>
+  parseAudit(options: { name: string }): Promise<Audit>
+  createAuditTask(options: { name: string }): Promise<CreateAuditTaskResult>
+}
+
+export function buildAuditsRepository(
+  fileSystem: FileSystem,
+  dustPath: string
+): AuditsRepository {
+  const userAuditsPath = `${dustPath}/config/audits`
+  const tasksPath = `${dustPath}/tasks`
+
+  async function loadAllAudits(): Promise<Map<string, Audit>> {
+    const audits = new Map<string, Audit>()
+
+    // First, add stock audits (stock audits always have h1 titles)
+    for (const stockAudit of loadStockAudits()) {
+      audits.set(stockAudit.name, {
+        name: stockAudit.name,
+        title: extractTitle(stockAudit.template) as string,
+        description: stockAudit.description,
+        template: stockAudit.template,
+        source: 'stock',
+      })
+    }
+
+    // Then, add user-configured audits (these take precedence)
+    if (fileSystem.exists(userAuditsPath)) {
+      const files = await fileSystem.readdir(userAuditsPath)
+      const mdFiles = files.filter(f => f.endsWith('.md')).sort()
+
+      for (const file of mdFiles) {
+        const name = basename(file, '.md')
+        const filePath = `${userAuditsPath}/${file}`
+        const content = await fileSystem.readFile(filePath)
+        const title = extractTitle(content) || name
+        const description = extractOpeningSentence(content) || ''
+        const relativePath = `.dust/config/audits/${file}`
+
+        audits.set(name, {
+          name,
+          title,
+          description,
+          template: content,
+          source: relativePath,
+        })
+      }
+    }
+
+    return audits
+  }
+
+  return {
+    async listAudits(): Promise<Audit[]> {
+      const auditsMap = await loadAllAudits()
+      return Array.from(auditsMap.values()).sort((a, b) =>
+        a.name.localeCompare(b.name)
+      )
+    },
+
+    async parseAudit(options: { name: string }): Promise<Audit> {
+      const auditsMap = await loadAllAudits()
+      const audit = auditsMap.get(options.name)
+
+      if (!audit) {
+        throw new Error(`Audit not found: "${options.name}"`)
+      }
+
+      return audit
+    },
+
+    async createAuditTask(options: {
+      name: string
+    }): Promise<CreateAuditTaskResult> {
+      const audit = await this.parseAudit(options)
+
+      const taskFilePath = `${tasksPath}/audit-${options.name}.md`
+      const relativeTaskPath = `.dust/tasks/audit-${options.name}.md`
+
+      // Check if audit task already exists
+      if (fileSystem.exists(taskFilePath)) {
+        throw new Error(`Audit task already exists at ${relativeTaskPath}`)
+      }
+
+      const transformedContent = transformAuditContent(audit.template)
+
+      await fileSystem.mkdir(tasksPath, { recursive: true })
+      await fileSystem.writeFile(taskFilePath, transformedContent)
+
+      return {
+        filePath: taskFilePath,
+        relativePath: relativeTaskPath,
+      }
+    },
+  }
+}
