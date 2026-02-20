@@ -22,7 +22,6 @@ import { accessSync, statSync } from 'node:fs'
 import { chmod, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { createServer as httpCreateServer } from 'node:http'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
 import {
   type AuthDependencies,
   authenticate,
@@ -44,6 +43,7 @@ import {
   createLogLine,
   type LogBuffer,
 } from '../../bucket/log-buffer'
+import { getReposDir } from '../../bucket/paths'
 import {
   handleRepositoryList as handleRepositoryListFromRepo,
   parseRepository,
@@ -294,8 +294,7 @@ export function createDefaultBucketDependencies(): BucketDependencies {
     isTTY: process.stdout.isTTY ?? false,
     /* v8 ignore start - thin wrappers around native functions */
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
-    getReposDir: () =>
-      process.env.DUST_REPOS_DIR || join(homedir(), '.dust', 'repos'),
+    getReposDir: () => getReposDir(process.env, homedir()),
     /* v8 ignore stop */
     auth: {
       createServer: defaultCreateServer,

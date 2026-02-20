@@ -24,7 +24,7 @@ Remove file-level exclusions from `vitest.config.ts` for `bucket.ts`, `repositor
 
 ## Blocked By
 
-- [Extract repos dir environment variable logic](extract-repos-dir-environment-variable-logic.md)
+(none)
 
 ## Definition of Done
 

@@ -7,7 +7,7 @@
 
 import { spawn as nodeSpawn } from 'node:child_process'
 import { homedir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname } from 'node:path'
 import { run as claudeRun } from '../claude/run'
 import type { CommandDependencies, FileSystem } from '../cli/types'
 import { createLogger } from '../logging'
@@ -25,6 +25,7 @@ import {
   createLogLine,
   type LogBuffer,
 } from './log-buffer'
+import { getReposDir } from './paths'
 import {
   cloneRepository,
   getRepoPath,
@@ -122,8 +123,7 @@ export function createDefaultRepositoryDependencies(
     run: claudeRun,
     fileSystem,
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
-    getReposDir: () =>
-      process.env.DUST_REPOS_DIR || join(homedir(), '.dust', 'repos'),
+    getReposDir: () => getReposDir(process.env, homedir()),
   }
 }
 /* v8 ignore stop */
