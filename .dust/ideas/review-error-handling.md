@@ -83,7 +83,6 @@ Audit the codebase for error handling issues. Look for silently swallowed errors
 ## Related Ideas
 
 - [Establish consistent error handling](establish-consistent-error-handling.md) - documenting error handling conventions
-- [Consolidate process runner patterns](consolidate-process-runner-patterns.md) - shared error handling for process spawning
 
 ## Open Questions
 
@@ -107,12 +106,3 @@ Failed operations are logged even if the overall command continues. Provides vis
 
 Stop the operation immediately when any error occurs. Aligns with "Stop the Line" principle.
 
-### Fix spawn-codex.ts independently or as part of consolidation?
-
-#### Fix independently
-
-Simpler and faster. Address the immediate bug without waiting for larger refactor.
-
-#### Fix as part of consolidation
-
-Address the root cause by extracting a shared abstraction. Prevents similar issues in future.
