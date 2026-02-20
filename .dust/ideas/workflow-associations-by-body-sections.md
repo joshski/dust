@@ -22,15 +22,23 @@ This title-based lookup is unidirectional and requires understanding the filenam
 
 ## Proposed Alternative
 
-Add a body section like `## Target Idea` that explicitly declares which idea a workflow task operates on. The section would contain a markdown link to the idea file, following the same pattern used for `## Principles` and `## Blocked By`.
+Add a body section that explicitly declares which idea a workflow task operates on. The section heading itself indicates the operation type:
+
+- `## Refines Idea` — for refine tasks
+- `## Decomposes Idea` — for decompose tasks
+- `## Shelves Idea` — for shelve tasks
+- `## Creates Idea` — for add/build tasks that produce new ideas
+
+Each section contains a markdown link to the idea file, following the same pattern used for `## Principles` and `## Blocked By`.
 
 This would make the relationship:
 - **Explicit**: The link is visible in the task body, not encoded in the title
+- **Self-describing**: The heading communicates both the relationship and the operation type
 - **Consistent**: Uses the same markdown link pattern as `## Principles` and `## Blocked By`
 - **Navigable**: Both humans and code can follow the link directly
 - **Robust**: Renaming an idea wouldn't break the association if the link is updated
 
-The existing `extractLinksFromSection` function in `lib/artifacts/tasks.ts` could parse this section, reusing the pattern already established for principles and blocked-by relationships.
+The existing `extractLinksFromSection` function in `lib/artifacts/tasks.ts` could parse these sections, reusing the pattern already established for principles and blocked-by relationships. Code could check for any of the known operation headings to determine both the target idea and the operation type in a single pass.
 
 ## Trade-offs
 
@@ -48,48 +56,36 @@ The existing `extractLinksFromSection` function in `lib/artifacts/tasks.ts` coul
 
 ## Open Questions
 
-### Should the title prefix convention be retained alongside explicit body links?
+### Should the title prefix convention be retained alongside explicit body sections?
 
-#### Option: Keep prefixes, add body link as redundant backup
+#### Option: Keep prefixes, add body section as redundant backup
 
-Retain the existing title-based convention but also include a `## Target Idea` section. This provides both human-readable titles ("Refine Idea: Progress Broadcasting") and machine-parseable body links. The body link serves as the source of truth for code, while the title remains human-friendly. This is additive and backwards-compatible.
+Retain the existing title-based convention but also include the operation-specific section (e.g., `## Refines Idea`). This provides both human-readable titles ("Refine Idea: Progress Broadcasting") and machine-parseable body links. The body section serves as the source of truth for code, while the title remains human-friendly. This is additive and backwards-compatible.
 
-#### Option: Keep prefixes, use body link as primary source of truth
+#### Option: Keep prefixes, use body section as primary source of truth
 
-The title prefix remains for readability, but code only uses the body link to determine relationships. If the body link is missing, the task is not associated with any idea. This breaks backwards compatibility but is cleaner long-term.
+The title prefix remains for readability, but code only uses the body section to determine relationships. If the body section is missing, the task is not associated with any idea. This breaks backwards compatibility but is cleaner long-term.
 
-#### Option: Remove prefixes entirely, rely only on body links
+#### Option: Remove prefixes entirely, rely only on body sections
 
-Workflow task titles become generic (e.g., "Refine this idea") or describe the work without naming the target. The `## Target Idea` section is the only way to determine what the task operates on. This is the most explicit approach but loses the at-a-glance readability of current titles.
+Workflow task titles become descriptive of the work itself (e.g., "Research and refine the proposal") rather than naming the target idea. The operation-specific section (`## Refines Idea`, etc.) is the only way to determine what the task operates on and what operation is being performed. This is the most explicit approach but loses the at-a-glance readability of current titles.
 
-### Should this apply to all workflow task types or only some?
+### How should "Add Idea" and "Build Idea" tasks be handled?
 
-#### Option: Apply to all idea-related workflow tasks
+#### Option: Use `## Creates Idea` with the intended idea title
 
-All tasks that operate on ideas (Refine, Decompose, Shelve, Add Idea, Build Idea) include a `## Target Idea` section. This provides consistency and makes the pattern learnable.
+These tasks create new ideas rather than operating on existing ones. The idea file doesn't exist yet when the task is created. The section contains the title of the idea that will be created (not a link, since the file doesn't exist). Code can verify completion by checking if an idea with that title now exists. Example:
 
-#### Option: Apply only to transition tasks (Refine, Decompose, Shelve)
+```markdown
+## Creates Idea
 
-Add Idea and Build Idea tasks create new ideas rather than operating on existing ones. They might use a different section (e.g., `## Creates Idea`) or no section at all since the idea doesn't exist yet.
+Progress Broadcasting
+```
 
-#### Option: Extend to other relationship types
+#### Option: No relationship section for creation tasks
 
-Beyond ideas, this pattern could apply to other workflow relationships. For example, tasks that fix bugs might link to issue trackers, or tasks that implement facts might link to the fact file. This would generalize the concept but may be over-engineering for the current use case.
+Add Idea and Build Idea tasks don't use this pattern at all. They continue using title prefixes only. The body section approach only applies to tasks that operate on existing ideas.
 
-### What section heading should be used?
+#### Option: Use `## Creates Idea` with a link to the expected path
 
-#### Option: `## Target Idea`
-
-Clear and direct. "Target" implies the task acts upon this idea. Consistent with imperative naming.
-
-#### Option: `## Idea`
-
-Shorter but potentially ambiguous. Could be confused with a section that describes an idea rather than links to one.
-
-#### Option: `## Related Idea`
-
-More generic, but "related" is weaker than "target" — it doesn't convey that this is the idea being modified.
-
-#### Option: `## Operates On`
-
-Very explicit about the relationship type, but sounds technical and doesn't specifically indicate an idea.
+The section contains a link to where the idea file will be created. The link is "broken" initially but becomes valid once the task is complete. This provides consistency but may confuse tooling that validates links.
