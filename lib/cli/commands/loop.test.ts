@@ -10,6 +10,7 @@ import {
 import type { CommandDependencies } from '../types'
 import {
   createDefaultDependencies,
+  createPostEvent,
   createWireEventSender,
   findAvailableTasks,
   formatLoopEvent,
@@ -89,6 +90,79 @@ function createStubCallbacks(): {
     onAgentEvent: Object.assign(onAgentEvent, { events: agentEvents }),
   }
 }
+
+describe('createPostEvent', () => {
+  test('calls fetch with correct URL, method, and headers', async () => {
+    const fetchCalls: { url: string; options: RequestInit }[] = []
+    const mockFetch = async (
+      url: string | URL | Request,
+      options?: RequestInit
+    ) => {
+      fetchCalls.push({ url: url.toString(), options: options ?? {} })
+      return new Response()
+    }
+    const postEvent = createPostEvent(mockFetch as typeof fetch)
+
+    await postEvent('http://example.com/events', {
+      sequence: 1,
+      timestamp: '2024-01-01T00:00:00.000Z',
+      sessionId: 'test-session',
+      repository: '',
+      event: { type: 'agent-session-ended', success: true },
+    })
+
+    expect(fetchCalls).toHaveLength(1)
+    expect(fetchCalls[0].url).toBe('http://example.com/events')
+    expect(fetchCalls[0].options.method).toBe('POST')
+    expect(fetchCalls[0].options.headers).toEqual({
+      'Content-Type': 'application/json',
+    })
+  })
+
+  test('serializes payload as JSON body', async () => {
+    const fetchCalls: { url: string; options: RequestInit }[] = []
+    const mockFetch = async (
+      url: string | URL | Request,
+      options?: RequestInit
+    ) => {
+      fetchCalls.push({ url: url.toString(), options: options ?? {} })
+      return new Response()
+    }
+    const postEvent = createPostEvent(mockFetch as typeof fetch)
+
+    const payload: EventMessage = {
+      sequence: 42,
+      timestamp: '2024-01-01T12:34:56.789Z',
+      sessionId: 'session-abc',
+      repository: 'my-repo',
+      event: { type: 'agent-session-ended', success: false, error: 'timeout' },
+    }
+    await postEvent('http://example.com/events', payload)
+
+    expect(fetchCalls).toHaveLength(1)
+    expect(fetchCalls[0].options.body).toBe(JSON.stringify(payload))
+  })
+
+  test('propagates fetch errors', async () => {
+    const mockFetch = async (
+      _url: string | URL | Request,
+      _options?: RequestInit
+    ): Promise<Response> => {
+      throw new Error('Network failure')
+    }
+    const postEvent = createPostEvent(mockFetch as typeof fetch)
+
+    await expect(
+      postEvent('http://example.com/events', {
+        sequence: 1,
+        timestamp: '2024-01-01T00:00:00.000Z',
+        sessionId: 'test-session',
+        repository: '',
+        event: { type: 'agent-session-ended', success: true },
+      })
+    ).rejects.toThrow('Network failure')
+  })
+})
 
 describe('createDefaultDependencies', () => {
   test('returns object with spawn, run, sleep, and postEvent functions', () => {

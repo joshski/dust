@@ -139,27 +139,25 @@ export interface LoopDependencies {
   sleep: (ms: number) => Promise<void>
   postEvent: PostEventFn
   agentType?: string
+  fetch?: typeof fetch
 }
 
-/* v8 ignore start - thin wrapper around fetch, tested via integration */
-async function defaultPostEvent(
-  url: string,
-  payload: EventMessage
-): Promise<void> {
-  await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
+export function createPostEvent(fetchFn: typeof fetch): PostEventFn {
+  return async (url: string, payload: EventMessage): Promise<void> => {
+    await fetchFn(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+  }
 }
-/* v8 ignore stop */
 
 export function createDefaultDependencies(): LoopDependencies {
   return {
     spawn: nodeSpawn,
     run: claudeRun,
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
-    postEvent: defaultPostEvent,
+    postEvent: createPostEvent(fetch),
   }
 }
 
