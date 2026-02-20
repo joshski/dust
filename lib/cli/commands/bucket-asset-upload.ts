@@ -7,10 +7,8 @@
  * Reuses the same authentication infrastructure as `dust bucket`.
  */
 
-import { spawn as nodeSpawn } from 'node:child_process'
 import { accessSync, statSync } from 'node:fs'
 import { chmod, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
-import { createServer as httpCreateServer } from 'node:http'
 import { homedir } from 'node:os'
 import { extname } from 'node:path'
 import {
@@ -20,6 +18,7 @@ import {
   loadStoredToken,
   storeToken,
 } from '../../bucket/auth'
+import { createLocalServer, openBrowser } from '../../bucket/auth-server'
 import type { CommandDependencies, CommandResult } from '../types'
 import { type AuthFileSystemDependencies, createAuthFileSystem } from './bucket'
 
@@ -71,44 +70,6 @@ export interface UploadDependencies {
 }
 
 /* v8 ignore start - thin wrappers around native functions */
-function defaultCreateServer(handler: (request: Request) => Response): {
-  port: number
-  stop: () => void
-} {
-  let resolvedPort = 0
-  const server = httpCreateServer(async (nodeRequest, nodeResponse) => {
-    const url = new URL(
-      nodeRequest.url ?? '/',
-      `http://localhost:${resolvedPort}`
-    )
-    const request = new Request(url.toString(), {
-      method: nodeRequest.method ?? 'GET',
-    })
-    const response = handler(request)
-    const body = await response.text()
-    nodeResponse.writeHead(response.status, {
-      'Content-Type': response.headers.get('content-type') ?? 'text/plain',
-    })
-    nodeResponse.end(body)
-  })
-  server.listen(0, () => {
-    const addr = server.address()
-    if (addr && typeof addr === 'object') {
-      resolvedPort = addr.port
-    }
-  })
-  const addr = server.address()
-  if (addr && typeof addr === 'object') {
-    resolvedPort = addr.port
-  }
-  return { port: resolvedPort, stop: () => server.close() }
-}
-
-function defaultOpenBrowser(url: string): void {
-  const cmd = process.platform === 'darwin' ? 'open' : 'xdg-open'
-  nodeSpawn(cmd, [url], { stdio: 'ignore', detached: true }).unref()
-}
-
 export function createDefaultUploadDependencies(): UploadDependencies {
   const authFileSystemDeps: AuthFileSystemDependencies = {
     accessSync,
@@ -125,8 +86,8 @@ export function createDefaultUploadDependencies(): UploadDependencies {
 
   return {
     auth: {
-      createServer: defaultCreateServer,
-      openBrowser: defaultOpenBrowser,
+      createServer: createLocalServer,
+      openBrowser: openBrowser,
       getHomeDir: () => homedir(),
       fileSystem: authFileSystem,
     },

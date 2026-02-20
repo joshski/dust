@@ -20,7 +20,6 @@
 import { spawn as nodeSpawn } from 'node:child_process'
 import { accessSync, statSync } from 'node:fs'
 import { chmod, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
-import { createServer as httpCreateServer } from 'node:http'
 import { homedir } from 'node:os'
 import {
   type AuthDependencies,
@@ -29,6 +28,7 @@ import {
   loadStoredToken,
   storeToken,
 } from '../../bucket/auth'
+import { createLocalServer, openBrowser } from '../../bucket/auth-server'
 import {
   type BucketEmitFn,
   createEventMessageSender,
@@ -171,47 +171,6 @@ function defaultWriteStdout(data: string): void {
 }
 /* v8 ignore stop */
 
-/* v8 ignore start - thin wrappers around native functions */
-function defaultCreateServer(handler: (request: Request) => Response): {
-  port: number
-  stop: () => void
-} {
-  let resolvedPort = 0
-  const server = httpCreateServer(async (nodeRequest, nodeResponse) => {
-    const url = new URL(
-      nodeRequest.url ?? '/',
-      `http://localhost:${resolvedPort}`
-    )
-    const request = new Request(url.toString(), {
-      method: nodeRequest.method ?? 'GET',
-    })
-    const response = handler(request)
-    const body = await response.text()
-    nodeResponse.writeHead(response.status, {
-      'Content-Type': response.headers.get('content-type') ?? 'text/plain',
-    })
-    nodeResponse.end(body)
-  })
-  server.listen(0, () => {
-    const addr = server.address()
-    if (addr && typeof addr === 'object') {
-      resolvedPort = addr.port
-    }
-  })
-  // Block until port is assigned (listen is sync for port 0 in practice)
-  const addr = server.address()
-  if (addr && typeof addr === 'object') {
-    resolvedPort = addr.port
-  }
-  return { port: resolvedPort, stop: () => server.close() }
-}
-
-function defaultOpenBrowser(url: string): void {
-  const cmd = process.platform === 'darwin' ? 'open' : 'xdg-open'
-  nodeSpawn(cmd, [url], { stdio: 'ignore', detached: true }).unref()
-}
-/* v8 ignore stop */
-
 /**
  * Dependencies for createAuthFileSystem - allows injection of low-level fs operations
  */
@@ -296,8 +255,8 @@ export function createDefaultBucketDependencies(): BucketDependencies {
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
     getReposDir: () => getReposDir(process.env, homedir()),
     auth: {
-      createServer: defaultCreateServer,
-      openBrowser: defaultOpenBrowser,
+      createServer: createLocalServer,
+      openBrowser: openBrowser,
       getHomeDir: () => homedir(),
       fileSystem: authFileSystem,
     },
