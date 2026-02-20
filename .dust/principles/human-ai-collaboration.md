@@ -8,7 +8,7 @@ Today's AI coding tools keep humans in a tight loop with agents. Dust is designe
 
 ## Parent Principle
 
-- [Make Software Development Joyful](make-software-development-joyful.md)
+- [Enable Flow State](enable-flow-state.md)
 
 ## Sub-Principles
 

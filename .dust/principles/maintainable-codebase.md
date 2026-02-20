@@ -6,7 +6,7 @@ This principle governs how we develop and maintain dust itself, separate from th
 
 ## Parent Principle
 
-- [Make Software Development Joyful](make-software-development-joyful.md)
+- [Enable Flow State](enable-flow-state.md)
 
 ## Sub-Principles
 

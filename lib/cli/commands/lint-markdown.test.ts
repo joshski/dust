@@ -72,9 +72,7 @@ describe('validateFilename', () => {
 
 describe('titleToFilename', () => {
   test('converts simple titles to filenames', () => {
-    expect(titleToFilename('Make Software Development Joyful')).toBe(
-      'make-software-development-joyful.md'
-    )
+    expect(titleToFilename('Enable Flow State')).toBe('enable-flow-state.md')
     expect(titleToFilename('Commit Log Observations')).toBe(
       'commit-log-observations.md'
     )
@@ -124,25 +122,22 @@ describe('titleToFilename', () => {
 
 describe('validateTitleFilenameMatch', () => {
   test('returns null when title matches filename', () => {
-    const content = '# Make Software Development Joyful\n\nDescription.'
+    const content = '# Enable Flow State\n\nDescription.'
     expect(
-      validateTitleFilenameMatch(
-        '/path/to/make-software-development-joyful.md',
-        content
-      )
+      validateTitleFilenameMatch('/path/to/enable-flow-state.md', content)
     ).toBeNull()
   })
 
   test('returns violation when title does not match filename', () => {
-    const content = '# Make Software Development Joyful\n\nDescription.'
+    const content = '# Enable Flow State\n\nDescription.'
     const violation = validateTitleFilenameMatch(
       '/path/to/wrong-filename.md',
       content
     )
     expect(violation).not.toBeNull()
     expect(violation?.message).toContain('wrong-filename.md')
-    expect(violation?.message).toContain('Make Software Development Joyful')
-    expect(violation?.message).toContain('make-software-development-joyful.md')
+    expect(violation?.message).toContain('Enable Flow State')
+    expect(violation?.message).toContain('enable-flow-state.md')
   })
 
   test('returns null when no title exists', () => {
