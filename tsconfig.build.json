@@ -21,6 +21,7 @@
     "lib/ideas.ts",
     "lib/markdown/markdown-utilities.ts",
     "lib/artifacts/index.ts",
-    "lib/audits/index.ts"
+    "lib/audits/index.ts",
+    "lib/biome/index.ts"
   ]
 }

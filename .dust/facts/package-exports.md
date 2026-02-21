@@ -1,6 +1,6 @@
 # Package Exports
 
-The `@joshski/dust` package exposes five entry points for downstream consumers.
+The `@joshski/dust` package exposes six entry points for downstream consumers.
 
 ## Available Exports
 
@@ -57,6 +57,23 @@ export default defineConfig({
     },
   },
 });
+```
+
+### @joshski/dust/biome
+
+Path export for accessing dust's custom GritQL lint rules. The `biome/` directory contains rules like `dust-no-abbreviated-names.grit` that enforce coding standards.
+
+```typescript
+import { biomePath } from "@joshski/dust/biome";
+// Returns: "/path/to/node_modules/@joshski/dust/biome"
+```
+
+Or reference rules directly in biome.json:
+
+```json
+{
+  "plugins": ["./node_modules/@joshski/dust/biome/dust-no-abbreviated-names.grit"]
+}
 ```
 
 ## Related Facts

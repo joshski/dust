@@ -29,12 +29,17 @@
     "./filesystem": {
       "types": "./dist/filesystem/types.d.ts"
     },
-    "./istanbul/minimal-reporter": "./lib/istanbul/minimal-reporter.cjs"
+    "./istanbul/minimal-reporter": "./lib/istanbul/minimal-reporter.cjs",
+    "./biome": {
+      "import": "./dist/biome.js",
+      "types": "./dist/biome/index.d.ts"
+    }
   },
   "files": [
     "dist",
     "bin",
-    "lib/istanbul/minimal-reporter.cjs"
+    "lib/istanbul/minimal-reporter.cjs",
+    "biome"
   ],
   "repository": {
     "type": "git",
