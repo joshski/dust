@@ -4,11 +4,14 @@ Task files in `.dust/tasks/` must follow a specific structure.
 
 ## Required Headings
 
-Every task file must contain these three headings in any order:
+Every task file must contain these two headings in any order:
 
-- `## Principles` - Links to principle documents this task supports
 - `## Blocked By` - Links to tasks that must complete first (can be empty)
 - `## Definition of Done` - Criteria for determining task completion
+
+## Optional Headings
+
+- `## Principles` - Links to principle documents this task supports (optional)
 
 ## Naming Convention
 
