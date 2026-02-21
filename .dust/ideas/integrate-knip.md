@@ -53,7 +53,7 @@ Before knip can pass as a check, these false positives need configuration:
 
 - [Remove Unused Self-Reference Dependency](../tasks/remove-unused-self-reference-dependency.md) - Identified by knip
 - [Remove Unused Test Utilities Exports](remove-unused-test-utilities-exports.md) - Identified by knip
-- [Unexport Internal Validation Functions](unexport-internal-validation-functions.md) - Identified by knip
+- [Unexport Internal Validation Functions](../tasks/unexport-internal-validation-functions.md) - Identified by knip
 - [Integrate FTA](integrate-fta.md) - Complementary complexity analysis tool
 - [Repository Hygiene](../principles/repository-hygiene.md) - Keeping the codebase clean
 - [Lint Everything](../principles/lint-everything.md) - Static analysis for all code aspects
