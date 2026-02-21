@@ -1,5 +1,7 @@
 # Remove Unused Test Utilities Exports
 
+Remove two exported symbols from `lib/test/test-utilities.ts` that are never imported anywhere.
+
 Two exports in `lib/test/test-utilities.ts` are defined but never imported anywhere:
 
 ## Unused Exports

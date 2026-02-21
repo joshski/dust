@@ -1,5 +1,7 @@
 # Unexport Internal Validation Functions
 
+Remove the `export` keyword from three validation functions in `lib/config/settings.ts` that are only used internally.
+
 Three validation functions in `lib/config/settings.ts` are exported but only used internally:
 
 ## Internal-Only Exports
