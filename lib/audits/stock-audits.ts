@@ -14,6 +14,41 @@ export interface StockAudit {
   template: string
 }
 
+function componentReuse(): string {
+  return dedent`
+    # Component Reuse
+
+    Find repeated patterns and code that could be extracted into reusable components. Review existing ideas in \`./.ideas/\` and the recent history of \`./.dust/ideas\` to understand what has been proposed or considered historically, then create new idea files in \`./.ideas/\` for any opportunities you identify, avoiding duplication.
+
+    ## Scope
+
+    Focus on these areas:
+
+    1. **Repeated patterns** - Similar code blocks that appear multiple times
+    2. **Copy-pasted code** - Near-identical logic across different files
+    3. **Parallel structures** - Code that handles similar cases with minor variations
+    4. **Extraction opportunities** - Logic that could be unified without forcing unrelated concepts together
+
+    ## Principles
+
+    - [Reasonably DRY](../principles/reasonably-dry.md)
+    - [Decoupled Code](../principles/decoupled-code.md)
+    - [Maintainable Codebase](../principles/maintainable-codebase.md)
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - [ ] Searched for repeated patterns across the codebase
+    - [ ] Identified copy-pasted or near-duplicate code
+    - [ ] Evaluated each case for whether extraction would be beneficial
+    - [ ] Considered whether similar code serves different purposes that may evolve independently
+    - [ ] Proposed ideas only for extractions where duplication is truly about the same concept
+  `
+}
+
 function agentDeveloperExperience(): string {
   return dedent`
     # Agent Developer Experience
@@ -321,6 +356,7 @@ function testCoverage(): string {
 
 const stockAuditFunctions: Record<string, () => string> = {
   'agent-developer-experience': agentDeveloperExperience,
+  'component-reuse': componentReuse,
   'dead-code': deadCode,
   'facts-verification': factsVerification,
   'ideas-from-commits': ideasFromCommits,

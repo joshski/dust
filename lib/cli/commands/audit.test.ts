@@ -219,10 +219,11 @@ describe('audit command', () => {
   test('loadStockAudits loads audits from markdown files', () => {
     const audits = loadStockAudits()
     expect(audits).toBeInstanceOf(Array)
-    expect(audits.length).toBe(9)
+    expect(audits.length).toBe(10)
 
     const names = audits.map(a => a.name)
     expect(names).toContain('agent-developer-experience')
+    expect(names).toContain('component-reuse')
     expect(names).toContain('dead-code')
     expect(names).toContain('facts-verification')
     expect(names).toContain('ideas-from-commits')
@@ -241,6 +242,9 @@ describe('audit command', () => {
   })
 
   test('stock audits have no principles because they are designed for downstream projects', () => {
+    // component-reuse is an exception: it references the reasonably-dry principle
+    // to help agents avoid over-extraction
+    const auditsWithPrinciples = ['component-reuse']
     const audits = loadStockAudits()
     for (const audit of audits) {
       const goalsMatch = audit.template.match(
@@ -250,7 +254,11 @@ describe('audit command', () => {
         goalsMatch,
         `${audit.name} should have a Principles section`
       ).not.toBeNull()
-      expect(goalsMatch?.[1].trim()).toBe('(none)')
+      if (auditsWithPrinciples.includes(audit.name)) {
+        expect(goalsMatch?.[1].trim()).not.toBe('(none)')
+      } else {
+        expect(goalsMatch?.[1].trim()).toBe('(none)')
+      }
     }
   })
 })
