@@ -14,11 +14,16 @@ export interface StockAudit {
   template: string
 }
 
+const ideasHint =
+  'Review existing ideas in `./.dust/ideas/` to understand what has been proposed or considered historically, then create new idea files in `./.dust/ideas/` for any issues you identify, avoiding duplication.'
+
 function componentReuse(): string {
   return dedent`
     # Component Reuse
 
-    Find repeated patterns and code that could be extracted into reusable components. Review existing ideas in \`./.ideas/\` and the recent history of \`./.dust/ideas\` to understand what has been proposed or considered historically, then create new idea files in \`./.ideas/\` for any opportunities you identify, avoiding duplication.
+    Find repeated patterns and code that could be extracted into reusable components.
+
+    ${ideasHint}
 
     ## Scope
 
@@ -53,7 +58,9 @@ function agentDeveloperExperience(): string {
   return dedent`
     # Agent Developer Experience
 
-    Review the codebase to ensure agents have everything they need to operate effectively. Review existing ideas in \`./.ideas/\` and the recent history of \`./.dust/ideas\` to understand what has been proposed or considered historically, then create new idea files in \`./.ideas/\` for any issues you identify, avoiding duplication.
+    Review the codebase to ensure agents have everything they need to operate effectively.
+
+    ${ideasHint}
 
     ## Scope
 
@@ -87,7 +94,9 @@ function deadCode(): string {
   return dedent`
     # Dead Code
 
-    Find and remove unused code to improve maintainability and reduce bundle size. Review existing ideas in \`./.ideas/\` and the recent history of \`./.dust/ideas\` to understand what has been proposed or considered historically, then create new idea files in \`./.ideas/\` for any issues you identify, avoiding duplication.
+    Find and remove unused code to improve maintainability and reduce bundle size.
+
+    ${ideasHint}
 
     ## Scope
 
@@ -123,7 +132,9 @@ function factsVerification(): string {
   return dedent`
     # Facts Verification
 
-    Review \`.dust/facts/\` to ensure documented facts match current reality. Review existing ideas in \`./.ideas/\` and the recent history of \`./.dust/ideas\` to understand what has been proposed or considered historically, then create new idea files in \`./.ideas/\` for any issues you identify, avoiding duplication.
+    Review \`.dust/facts/\` to ensure documented facts match current reality.
+
+    ${ideasHint}
 
     ## Scope
 
@@ -157,7 +168,9 @@ function ideasFromCommits(): string {
   return dedent`
     # Ideas from Commits
 
-    Review recent commit history to identify follow-up improvement ideas. Review existing ideas in \`./.ideas/\` and the recent history of \`./.dust/ideas\` to understand what has been proposed or considered historically, then create new idea files in \`./.ideas/\` for any issues or opportunities you identify, avoiding duplication.
+    Review recent commit history to identify follow-up improvement ideas.
+
+    ${ideasHint}
 
     ## Scope
 
@@ -190,7 +203,9 @@ function ideasFromPrinciples(): string {
   return dedent`
     # Ideas from Principles
 
-    Review \`.dust/principles/\` to generate new improvement ideas. Review existing ideas in \`./.ideas/\` and the recent history of \`./.dust/ideas\` to understand what has been proposed or considered historically, then create new idea files in \`./.ideas/\` for any issues or opportunities you identify, avoiding duplication.
+    Review \`.dust/principles/\` to generate new improvement ideas.
+
+    ${ideasHint}
 
     ## Scope
 
@@ -222,7 +237,9 @@ function performanceReview(): string {
   return dedent`
     # Performance Review
 
-    Review the application for performance issues and optimization opportunities. Review existing ideas in \`./.ideas/\` and the recent history of \`./.dust/ideas\` to understand what has been proposed or considered historically, then create new idea files in \`./.ideas/\` for any issues you identify, avoiding duplication.
+    Review the application for performance issues and optimization opportunities.
+
+    ${ideasHint}
 
     ## Scope
 
@@ -256,7 +273,9 @@ function securityReview(): string {
   return dedent`
     # Security Review
 
-    Review the codebase for common security vulnerabilities and misconfigurations. Review existing ideas in \`./.ideas/\` and the recent history of \`./.dust/ideas\` to understand what has been proposed or considered historically, then create new idea files in \`./.ideas/\` for any issues you identify, avoiding duplication.
+    Review the codebase for common security vulnerabilities and misconfigurations.
+
+    ${ideasHint}
 
     ## Scope
 
@@ -292,7 +311,9 @@ function staleIdeas(): string {
   return dedent`
     # Stale Ideas
 
-    Review \`.dust/ideas/\` to identify ideas that have become stale or irrelevant. Review existing ideas in \`./.ideas/\` and the recent history of \`./.dust/ideas\` to understand what has been proposed or considered historically, then create new idea files in \`./.ideas/\` for any issues you identify, avoiding duplication.
+    Review \`.dust/ideas/\` to identify ideas that have become stale or irrelevant.
+
+    ${ideasHint}
 
     ## Scope
 
@@ -325,7 +346,9 @@ function testCoverage(): string {
   return dedent`
     # Test Coverage
 
-    Identify untested code paths and areas that need additional test coverage. Review existing ideas in \`./.ideas/\` and the recent history of \`./.dust/ideas\` to understand what has been proposed or considered historically, then create new idea files in \`./.ideas/\` for any issues you identify, avoiding duplication.
+    Identify untested code paths and areas that need additional test coverage.
+
+    ${ideasHint}
 
     ## Scope
 
