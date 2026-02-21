@@ -104,7 +104,7 @@ function validateCheckEntry(
   return violations
 }
 
-export function validateChecksConfig(
+function validateChecksConfig(
   settings: Record<string, unknown>
 ): SettingsViolation[] {
   if (!('checks' in settings)) {
@@ -120,7 +120,7 @@ export function validateChecksConfig(
   return violations
 }
 
-export function validateExtraDirectories(
+function validateExtraDirectories(
   settings: Record<string, unknown>
 ): SettingsViolation[] {
   if (!('extraDirectories' in settings)) {
@@ -138,7 +138,7 @@ export function validateExtraDirectories(
   return violations
 }
 
-export function validateDustEventsUrl(
+function validateDustEventsUrl(
   settings: Record<string, unknown>
 ): SettingsViolation[] {
   if ('eventsUrl' in settings && typeof settings.eventsUrl !== 'string') {
