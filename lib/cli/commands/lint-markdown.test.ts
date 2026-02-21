@@ -668,7 +668,6 @@ Nope.
 describe('validateTaskHeadings', () => {
   test('returns no violations for valid task', () => {
     const content = `# Task
-## Principles
 ## Blocked By
 ## Definition of Done`
 
@@ -678,10 +677,10 @@ describe('validateTaskHeadings', () => {
 
   test('reports missing headings', () => {
     const content = `# Task
-## Principles`
+## Blocked By`
 
     const violations = validateTaskHeadings('task.md', content)
-    expect(violations).toHaveLength(2)
+    expect(violations).toHaveLength(1)
   })
 })
 

@@ -67,7 +67,6 @@ describe('createRefineIdeaTask', () => {
     expect(content).toContain(
       'If you add open questions, use `## Open Questions` with `### Question?` headings and one or more `#### Option` headings beneath each question, and only add questions that are meaningful decisions worth asking.'
     )
-    expect(content).toContain('## Principles\n\n(none)')
     expect(content).toContain('## Blocked By\n\n(none)')
     expect(content).toContain(
       '- [ ] Idea is thoroughly researched with relevant codebase context'
@@ -92,7 +91,7 @@ describe('createRefineIdeaTask', () => {
 
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain(
-      'Review `.dust/principles/` for alignment and `.dust/facts/` for relevant design decisions. See [Progress Broadcasting](../ideas/progress-broadcasting.md). If you add open questions, use `## Open Questions` with `### Question?` headings and one or more `#### Option` headings beneath each question, and only add questions that are meaningful decisions worth asking.\n\nFocus on the WebSocket approach.\n\n## Principles'
+      'Review `.dust/principles/` for alignment and `.dust/facts/` for relevant design decisions. See [Progress Broadcasting](../ideas/progress-broadcasting.md). If you add open questions, use `## Open Questions` with `### Question?` headings and one or more `#### Option` headings beneath each question, and only add questions that are meaningful decisions worth asking.\n\nFocus on the WebSocket approach.\n\n## Blocked By'
     )
   })
 })

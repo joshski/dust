@@ -164,10 +164,6 @@ function renderTask(
 
 ${openingSentence}
 ${descriptionParagraph}${resolvedSection}
-## Principles
-
-(none)
-
 ## Blocked By
 
 (none)
@@ -297,10 +293,6 @@ Research this idea thoroughly, then create one or more narrowly-scoped task file
 
 ${description}
 
-## Principles
-
-(none)
-
 ## Blocked By
 
 (none)
@@ -326,10 +318,6 @@ Research this idea thoroughly, then create one or more idea files in \`.dust/ide
 ## Idea Description
 
 ${description}
-
-## Principles
-
-(none)
 
 ## Blocked By
 
