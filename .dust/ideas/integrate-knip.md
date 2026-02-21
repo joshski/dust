@@ -9,7 +9,7 @@ Knip already runs successfully on this codebase via `bunx knip`. Current finding
 | Category | Count |
 |----------|-------|
 | Unused files | 3 |
-| Unused dependencies | 1 |
+| Unused dependencies | 0 |
 | Unused devDependencies | 1 |
 | Unlisted dependencies | 3 |
 | Unused exports | 14 |
@@ -46,12 +46,10 @@ Knip may require a `knip.json` configuration file to:
 Before knip can pass as a check, these false positives need configuration:
 
 1. **`@biomejs/biome` devDependency** - Invoked via `bunx biome` in scripts, not imported
-2. **`@joshski/dust` dependency** - Self-reference that exists in package.json (see [Remove Unused Self-Reference Dependency](../tasks/remove-unused-self-reference-dependency.md))
-3. **Istanbul packages as unlisted** - `istanbul-lib-report` and `istanbul-lib-coverage` are transitive dependencies of `@vitest/coverage-v8`
+2. **Istanbul packages as unlisted** - `istanbul-lib-report` and `istanbul-lib-coverage` are transitive dependencies of `@vitest/coverage-v8`
 
 ## Related Ideas and Principles
 
-- [Remove Unused Self-Reference Dependency](../tasks/remove-unused-self-reference-dependency.md) - Identified by knip
 - [Remove Unused Test Utilities Exports](remove-unused-test-utilities-exports.md) - Identified by knip
 - [Unexport Internal Validation Functions](../tasks/unexport-internal-validation-functions.md) - Identified by knip
 - [Integrate FTA](integrate-fta.md) - Complementary complexity analysis tool
