@@ -224,7 +224,7 @@ describe('createCaptureIdeaTask', () => {
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain('# Add Idea: Progress Broadcasting')
     expect(content).toContain(
-      'Research this idea thoroughly, then create an idea file at `.dust/ideas/progress-broadcasting.md`.'
+      'Research this idea thoroughly, then create one or more idea files in `.dust/ideas/`.'
     )
     expect(content).toContain(
       'Review `.dust/principles/` and `.dust/facts/` for relevant context.'
@@ -240,6 +240,12 @@ describe('createCaptureIdeaTask', () => {
     // Opening sentence should NOT reference title/description inline
     expect(content).not.toContain('The idea should have the title')
     expect(content).not.toContain('start from the following description')
+    expect(content).toContain(
+      '- [ ] One or more idea files are created in `.dust/ideas/`'
+    )
+    expect(content).toContain(
+      '- [ ] Each idea file has an H1 title matching its content'
+    )
     expect(content).toContain(
       '- [ ] Idea includes relevant context from codebase exploration'
     )
@@ -333,7 +339,7 @@ describe('createCaptureIdeaTask', () => {
     )
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain(`# ${CAPTURE_IDEA_PREFIX}Progress Broadcasting`)
-    expect(content).toContain('create an idea file')
+    expect(content).toContain('create one or more idea files')
     expect(content).not.toContain(BUILD_IDEA_PREFIX)
   })
 })
