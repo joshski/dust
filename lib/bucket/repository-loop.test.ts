@@ -171,7 +171,12 @@ describe('buildEventMessage', () => {
 describe('createWakeUpHandler', () => {
   function createMinimalRepoState(): RepositoryState {
     return {
-      repository: { name: 'test', gitUrl: 'test' },
+      repository: {
+        name: 'test',
+        gitUrl: 'test',
+        url: 'https://example.com/test',
+        id: 1,
+      },
       path: '/test',
       loopPromise: null,
       stopRequested: false,

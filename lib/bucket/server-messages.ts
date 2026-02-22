@@ -10,8 +10,7 @@ export interface RepositoryListMessage {
 }
 
 export interface RepositoryListItem extends Repository {
-  id: number
-  hasTask?: boolean
+  hasTask: boolean
 }
 
 export interface TaskAvailableMessage {
@@ -45,21 +44,20 @@ export function parseServerMessage(data: unknown): ServerMessage | null {
       if (typeof repo.name !== 'string' || typeof repo.gitUrl !== 'string') {
         return null
       }
-      if (typeof repo.id !== 'number') {
+      if (
+        typeof repo.id !== 'number' ||
+        typeof repo.url !== 'string' ||
+        typeof repo.hasTask !== 'boolean'
+      ) {
         return null
       }
-      const item: RepositoryListItem = {
+      repositories.push({
         id: repo.id,
         name: repo.name,
         gitUrl: repo.gitUrl,
-      }
-      if (typeof repo.url === 'string') {
-        item.url = repo.url
-      }
-      if (typeof repo.hasTask === 'boolean') {
-        item.hasTask = repo.hasTask
-      }
-      repositories.push(item)
+        url: repo.url,
+        hasTask: repo.hasTask,
+      })
     }
     return { type: 'repository-list', repositories }
   }

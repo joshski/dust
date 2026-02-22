@@ -882,12 +882,14 @@ describe('connectWebSocket', () => {
             name: 'repo-b',
             id: 456,
             gitUrl: 'git@example.com:repo-b.git',
+            url: 'https://example.com/repo-b',
             hasTask: false,
           },
           {
             name: 'repo-c',
             id: 789,
             gitUrl: 'git@example.com:repo-c.git',
+            url: 'https://example.com/repo-c',
             hasTask: false,
           },
         ],
@@ -900,10 +902,10 @@ describe('connectWebSocket', () => {
       'name=repo-a, id=123, gitUrl=git@example.com:repo-a.git, url=https://example.com/repo-a, hasTask=true'
     )
     expect(output).toContain(
-      'name=repo-b, id=456, gitUrl=git@example.com:repo-b.git, hasTask=false'
+      'name=repo-b, id=456, gitUrl=git@example.com:repo-b.git, url=https://example.com/repo-b, hasTask=false'
     )
     expect(output).toContain(
-      'name=repo-c, id=789, gitUrl=git@example.com:repo-c.git, hasTask=false'
+      'name=repo-c, id=789, gitUrl=git@example.com:repo-c.git, url=https://example.com/repo-c, hasTask=false'
     )
   })
 
@@ -929,8 +931,20 @@ describe('connectWebSocket', () => {
       data: JSON.stringify({
         type: 'repository-list',
         repositories: [
-          { name: 'repo1', id: 1, gitUrl: 'git@example.com:user/repo1.git' },
-          { name: 'repo2', id: 2, gitUrl: 'git@example.com:user/repo2.git' },
+          {
+            name: 'repo1',
+            id: 1,
+            gitUrl: 'git@example.com:user/repo1.git',
+            url: 'https://example.com/repo1',
+            hasTask: false,
+          },
+          {
+            name: 'repo2',
+            id: 2,
+            gitUrl: 'git@example.com:user/repo2.git',
+            url: 'https://example.com/repo2',
+            hasTask: false,
+          },
         ],
       }),
     })
@@ -965,8 +979,20 @@ describe('connectWebSocket', () => {
       data: JSON.stringify({
         type: 'repository-list',
         repositories: [
-          { name: 'repo1', id: 1, gitUrl: 'git@example.com:user/repo1.git' },
-          { name: 'repo2', id: 2, gitUrl: 'git@example.com:user/repo2.git' },
+          {
+            name: 'repo1',
+            id: 1,
+            gitUrl: 'git@example.com:user/repo1.git',
+            url: 'https://example.com/repo1',
+            hasTask: false,
+          },
+          {
+            name: 'repo2',
+            id: 2,
+            gitUrl: 'git@example.com:user/repo2.git',
+            url: 'https://example.com/repo2',
+            hasTask: false,
+          },
         ],
       }),
     })
@@ -979,7 +1005,13 @@ describe('connectWebSocket', () => {
       data: JSON.stringify({
         type: 'repository-list',
         repositories: [
-          { name: 'repo2', id: 2, gitUrl: 'git@example.com:user/repo2.git' },
+          {
+            name: 'repo2',
+            id: 2,
+            gitUrl: 'git@example.com:user/repo2.git',
+            url: 'https://example.com/repo2',
+            hasTask: false,
+          },
         ],
       }),
     })
@@ -1107,7 +1139,13 @@ describe('connectWebSocket', () => {
       data: JSON.stringify({
         type: 'repository-list',
         repositories: [
-          { name: 'repo1', id: 1, gitUrl: 'git@example.com:user/repo1.git' },
+          {
+            name: 'repo1',
+            id: 1,
+            gitUrl: 'git@example.com:user/repo1.git',
+            url: 'https://example.com/repo1',
+            hasTask: false,
+          },
         ],
       }),
     })
@@ -1141,7 +1179,12 @@ describe('connectWebSocket', () => {
     // Add a fake repository to state
     let wokenUp = false
     const repoState: RepositoryState = {
-      repository: { name: 'owner/repo', gitUrl: 'url' },
+      repository: {
+        name: 'owner/repo',
+        gitUrl: 'url',
+        url: 'https://example.com/owner/repo',
+        id: 1,
+      },
       path: '/tmp/owner/repo',
       loopPromise: null,
       stopRequested: false,
@@ -1196,7 +1239,12 @@ describe('connectWebSocket', () => {
     )
 
     const repoState: RepositoryState = {
-      repository: { name: 'owner/repo', gitUrl: 'url' },
+      repository: {
+        name: 'owner/repo',
+        gitUrl: 'url',
+        url: 'https://example.com/owner/repo',
+        id: 1,
+      },
       path: '/tmp/owner/repo',
       loopPromise: null,
       stopRequested: false,
@@ -1268,7 +1316,12 @@ describe('connectWebSocket', () => {
     // Pre-populate a repository in state (simulating it already being cloned)
     let wokenUp = false
     const repoState: RepositoryState = {
-      repository: { name: 'owner/repo', gitUrl: 'url' },
+      repository: {
+        name: 'owner/repo',
+        gitUrl: 'url',
+        url: 'https://example.com/owner/repo',
+        id: 1,
+      },
       path: '/tmp/owner/repo',
       loopPromise: null,
       stopRequested: false,
@@ -1288,6 +1341,7 @@ describe('connectWebSocket', () => {
             name: 'owner/repo',
             id: 1,
             gitUrl: 'https://github.com/owner/repo.git',
+            url: 'https://example.com/owner/repo',
             hasTask: true,
           },
         ],
@@ -1340,7 +1394,12 @@ describe('shutdown', () => {
     const state = createInitialState()
 
     const repoState: RepositoryState = {
-      repository: { name: 'repo', gitUrl: 'repo' },
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
       path: '/tmp/dust-bucket-repo',
       loopPromise: Promise.resolve(),
       stopRequested: false,
@@ -1948,8 +2007,20 @@ describe('syncUIWithRepoList', () => {
     const state = createInitialState()
 
     syncUIWithRepoList(state, [
-      { name: 'repo1', id: 1, gitUrl: 'https://github.com/user/repo1.git' },
-      { name: 'repo2', id: 2, gitUrl: 'https://github.com/user/repo2.git' },
+      {
+        name: 'repo1',
+        id: 1,
+        gitUrl: 'https://github.com/user/repo1.git',
+        url: 'https://example.com/repo1',
+        hasTask: false,
+      },
+      {
+        name: 'repo2',
+        id: 2,
+        gitUrl: 'https://github.com/user/repo2.git',
+        url: 'https://example.com/repo2',
+        hasTask: false,
+      },
     ])
 
     expect(state.ui.repositories).toContain('repo1')
@@ -1962,10 +2033,30 @@ describe('syncUIWithRepoList', () => {
     const state = createInitialState()
 
     syncUIWithRepoList(state, [
-      { name: 'repo1', id: 1, gitUrl: 'url1' },
-      { name: 'repo2', id: 2, gitUrl: 'url2' },
+      {
+        name: 'repo1',
+        id: 1,
+        gitUrl: 'url1',
+        url: 'https://example.com/repo1',
+        hasTask: false,
+      },
+      {
+        name: 'repo2',
+        id: 2,
+        gitUrl: 'url2',
+        url: 'https://example.com/repo2',
+        hasTask: false,
+      },
     ])
-    syncUIWithRepoList(state, [{ name: 'repo2', id: 2, gitUrl: 'url2' }])
+    syncUIWithRepoList(state, [
+      {
+        name: 'repo2',
+        id: 2,
+        gitUrl: 'url2',
+        url: 'https://example.com/repo2',
+        hasTask: false,
+      },
+    ])
 
     expect(state.ui.repositories).not.toContain('repo1')
     expect(state.ui.repositories).toContain('repo2')
@@ -1997,7 +2088,15 @@ describe('syncUIWithRepoList', () => {
     const existingBuffer = createLogBuffer()
     state.logBuffers.set('repo1', existingBuffer)
 
-    syncUIWithRepoList(state, [{ name: 'repo1', id: 1, gitUrl: 'url1' }])
+    syncUIWithRepoList(state, [
+      {
+        name: 'repo1',
+        id: 1,
+        gitUrl: 'url1',
+        url: 'https://example.com/repo1',
+        hasTask: false,
+      },
+    ])
 
     expect(state.logBuffers.get('repo1')).toBe(existingBuffer)
     expect(state.ui.repositories).toContain('repo1')
@@ -2006,17 +2105,27 @@ describe('syncUIWithRepoList', () => {
   test('updates URL when repo already exists but URL changed', () => {
     const state = createInitialState()
 
-    // First call adds the repo without URL
-    syncUIWithRepoList(state, [{ name: 'repo1', id: 1, gitUrl: 'url1' }])
-    expect(state.ui.repositoryUrls.get('repo1')).toBeUndefined()
+    syncUIWithRepoList(state, [
+      {
+        name: 'repo1',
+        id: 1,
+        gitUrl: 'url1',
+        url: 'https://example.com/repo1',
+        hasTask: false,
+      },
+    ])
+    expect(state.ui.repositoryUrls.get('repo1')).toBe(
+      'https://example.com/repo1'
+    )
 
-    // Second call with URL should update the URL
+    // Second call with different URL should update it
     syncUIWithRepoList(state, [
       {
         name: 'repo1',
         id: 1,
         gitUrl: 'url1',
         url: 'https://github.com/user/repo1',
+        hasTask: false,
       },
     ])
     expect(state.ui.repositoryUrls.get('repo1')).toBe(
@@ -2029,7 +2138,12 @@ describe('syncAgentStatuses', () => {
   test('copies agent statuses from RepositoryState to UI', () => {
     const state = createInitialState()
     state.repositories.set('repo1', {
-      repository: { name: 'repo1', gitUrl: 'url1' },
+      repository: {
+        name: 'repo1',
+        gitUrl: 'url1',
+        url: 'https://example.com/repo1',
+        id: 1,
+      },
       path: '/tmp/repo1',
       loopPromise: null,
       stopRequested: false,
@@ -2037,7 +2151,12 @@ describe('syncAgentStatuses', () => {
       agentStatus: 'busy',
     })
     state.repositories.set('repo2', {
-      repository: { name: 'repo2', gitUrl: 'url2' },
+      repository: {
+        name: 'repo2',
+        gitUrl: 'url2',
+        url: 'https://example.com/repo2',
+        id: 2,
+      },
       path: '/tmp/repo2',
       loopPromise: null,
       stopRequested: false,
@@ -2054,7 +2173,12 @@ describe('syncAgentStatuses', () => {
   test('updates existing status when agent status changes', () => {
     const state = createInitialState()
     const repoState: RepositoryState = {
-      repository: { name: 'repo1', gitUrl: 'url1' },
+      repository: {
+        name: 'repo1',
+        gitUrl: 'url1',
+        url: 'https://example.com/repo1',
+        id: 1,
+      },
       path: '/tmp/repo1',
       loopPromise: null,
       stopRequested: false,
@@ -2077,7 +2201,12 @@ describe('syncTUI', () => {
     const state = createInitialState()
     const repoBuffer = createLogBuffer()
     state.repositories.set('repo1', {
-      repository: { name: 'repo1', gitUrl: 'url1' },
+      repository: {
+        name: 'repo1',
+        gitUrl: 'url1',
+        url: 'https://example.com/repo1',
+        id: 1,
+      },
       path: '/tmp/repo1',
       loopPromise: null,
       stopRequested: false,
@@ -2094,7 +2223,12 @@ describe('syncTUI', () => {
   test('syncs agent statuses from RepositoryState to UI', () => {
     const state = createInitialState()
     state.repositories.set('repo1', {
-      repository: { name: 'repo1', gitUrl: 'url1' },
+      repository: {
+        name: 'repo1',
+        gitUrl: 'url1',
+        url: 'https://example.com/repo1',
+        id: 1,
+      },
       path: '/tmp/repo1',
       loopPromise: null,
       stopRequested: false,
@@ -2111,7 +2245,15 @@ describe('syncTUI', () => {
     const state = createInitialState()
 
     // Add a repo to UI directly (simulating eager add)
-    syncUIWithRepoList(state, [{ name: 'stale-repo', id: 1, gitUrl: 'url' }])
+    syncUIWithRepoList(state, [
+      {
+        name: 'stale-repo',
+        id: 1,
+        gitUrl: 'url',
+        url: 'https://example.com/stale-repo',
+        hasTask: false,
+      },
+    ])
     expect(state.ui.repositories).toContain('stale-repo')
 
     // syncTUI should remove it since it's not in state.repositories

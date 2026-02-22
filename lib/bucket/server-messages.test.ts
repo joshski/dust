@@ -31,30 +31,6 @@ describe('parseServerMessage', () => {
       })
     })
 
-    it('parses repository-list with numeric id', () => {
-      const data = {
-        type: 'repository-list',
-        repositories: [
-          {
-            name: 'minimal-repo',
-            gitUrl: 'git@github.com:user/minimal.git',
-            id: 701,
-          },
-        ],
-      }
-      const result = parseServerMessage(data)
-      expect(result).toEqual({
-        type: 'repository-list',
-        repositories: [
-          {
-            name: 'minimal-repo',
-            gitUrl: 'git@github.com:user/minimal.git',
-            id: 701,
-          },
-        ],
-      })
-    })
-
     it('returns null for repository missing id', () => {
       const data = {
         type: 'repository-list',
@@ -62,6 +38,38 @@ describe('parseServerMessage', () => {
           {
             name: 'minimal-repo',
             gitUrl: 'git@github.com:user/minimal.git',
+            url: 'https://example.com/minimal',
+            hasTask: false,
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for repository missing url', () => {
+      const data = {
+        type: 'repository-list',
+        repositories: [
+          {
+            name: 'minimal-repo',
+            gitUrl: 'git@github.com:user/minimal.git',
+            id: 701,
+            hasTask: false,
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for repository missing hasTask', () => {
+      const data = {
+        type: 'repository-list',
+        repositories: [
+          {
+            name: 'minimal-repo',
+            gitUrl: 'git@github.com:user/minimal.git',
+            id: 701,
+            url: 'https://example.com/minimal',
           },
         ],
       }

@@ -127,19 +127,18 @@ describe('createDefaultRepositoryDependencies', () => {
 })
 
 describe('parseRepository', () => {
-  test('parses string as simple repository', () => {
-    const repo = parseRepository('my-repo')
-    expect(repo).toEqual({ name: 'my-repo', gitUrl: 'my-repo' })
-  })
-
-  test('parses object with name and gitUrl', () => {
+  test('parses object with all required fields', () => {
     const repo = parseRepository({
       name: 'my-repo',
       gitUrl: 'https://github.com/user/repo.git',
+      url: 'https://example.com/my-repo',
+      id: 123,
     })
     expect(repo).toEqual({
       name: 'my-repo',
       gitUrl: 'https://github.com/user/repo.git',
+      url: 'https://example.com/my-repo',
+      id: 123,
     })
   })
 
@@ -147,62 +146,46 @@ describe('parseRepository', () => {
     expect(parseRepository(null)).toBeNull()
     expect(parseRepository(undefined)).toBeNull()
     expect(parseRepository(123)).toBeNull()
+    expect(parseRepository('my-repo')).toBeNull()
     expect(parseRepository({ name: 'test' })).toBeNull()
     expect(parseRepository({ gitUrl: 'test' })).toBeNull()
-    // Both keys present but wrong types
     expect(parseRepository({ name: 123, gitUrl: 456 })).toBeNull()
   })
 
-  test('parses object with name, gitUrl, and url', () => {
-    const repo = parseRepository({
-      name: 'my-repo',
-      gitUrl: 'https://github.com/user/repo.git',
-      url: 'https://github.com/user/repo',
-    })
-    expect(repo).toEqual({
-      name: 'my-repo',
-      gitUrl: 'https://github.com/user/repo.git',
-      url: 'https://github.com/user/repo',
-    })
+  test('returns null when url is missing or invalid', () => {
+    expect(
+      parseRepository({
+        name: 'my-repo',
+        gitUrl: 'https://github.com/user/repo.git',
+        id: 123,
+      })
+    ).toBeNull()
+    expect(
+      parseRepository({
+        name: 'my-repo',
+        gitUrl: 'https://github.com/user/repo.git',
+        id: 123,
+        url: 123,
+      })
+    ).toBeNull()
   })
 
-  test('ignores url field if not a string', () => {
-    const repo = parseRepository({
-      name: 'my-repo',
-      gitUrl: 'https://github.com/user/repo.git',
-      url: 123, // Invalid url
-    })
-    expect(repo).toEqual({
-      name: 'my-repo',
-      gitUrl: 'https://github.com/user/repo.git',
-    })
-    expect(repo?.url).toBeUndefined()
-  })
-
-  test('parses object with name, gitUrl, and id', () => {
-    const repo = parseRepository({
-      name: 'my-repo',
-      gitUrl: 'https://github.com/user/repo.git',
-      id: 123,
-    })
-    expect(repo).toEqual({
-      name: 'my-repo',
-      gitUrl: 'https://github.com/user/repo.git',
-      id: 123,
-    })
-  })
-
-  test('ignores id field if not a number', () => {
-    const repo = parseRepository({
-      name: 'my-repo',
-      gitUrl: 'https://github.com/user/repo.git',
-      id: 'not-a-number',
-    })
-    expect(repo).toEqual({
-      name: 'my-repo',
-      gitUrl: 'https://github.com/user/repo.git',
-    })
-    expect(repo?.id).toBeUndefined()
+  test('returns null when id is missing or invalid', () => {
+    expect(
+      parseRepository({
+        name: 'my-repo',
+        gitUrl: 'https://github.com/user/repo.git',
+        url: 'https://example.com/my-repo',
+      })
+    ).toBeNull()
+    expect(
+      parseRepository({
+        name: 'my-repo',
+        gitUrl: 'https://github.com/user/repo.git',
+        url: 'https://example.com/my-repo',
+        id: 'not-a-number',
+      })
+    ).toBeNull()
   })
 })
 
@@ -230,6 +213,8 @@ describe('cloneRepository', () => {
     const repo: Repository = {
       name: 'test-repo',
       gitUrl: 'https://github.com/user/repo.git',
+      url: 'https://example.com/test-repo',
+      id: 1,
     }
 
     const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
@@ -252,7 +237,12 @@ describe('cloneRepository', () => {
   test('returns false on clone failure', async () => {
     const { spawn, processes } = createMockSpawn()
     const context = createContextEmulator()
-    const repo: Repository = { name: 'test-repo', gitUrl: 'invalid-url' }
+    const repo: Repository = {
+      name: 'test-repo',
+      gitUrl: 'invalid-url',
+      url: 'https://example.com/test-repo',
+      id: 2,
+    }
 
     const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
 
@@ -271,7 +261,12 @@ describe('cloneRepository', () => {
   test('handles spawn error', async () => {
     const { spawn, processes } = createMockSpawn()
     const context = createContextEmulator()
-    const repo: Repository = { name: 'test-repo', gitUrl: 'url' }
+    const repo: Repository = {
+      name: 'test-repo',
+      gitUrl: 'url',
+      url: 'https://example.com/test-repo',
+      id: 3,
+    }
 
     const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
 
@@ -336,7 +331,12 @@ describe('runRepositoryLoop', () => {
     const fileSystem = createFileSystemEmulator()
 
     const repoState = {
-      repository: { name: 'repo', gitUrl: 'repo' },
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
       path: '/tmp/repo',
       loopPromise: null,
       stopRequested: true,
@@ -362,7 +362,12 @@ describe('runRepositoryLoop', () => {
     const fileSystem = createFileSystemEmulator()
 
     const repoState: RepositoryState = {
-      repository: { name: 'repo', gitUrl: 'repo' },
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
       path: '/tmp/repo',
       loopPromise: null,
       stopRequested: false,
@@ -404,7 +409,12 @@ describe('runRepositoryLoop', () => {
     const fileSystem = createFileSystemEmulator()
 
     const repoState: RepositoryState = {
-      repository: { name: 'repo', gitUrl: 'repo' },
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
       path: '/tmp/repo',
       loopPromise: null,
       stopRequested: false,
@@ -445,7 +455,12 @@ describe('runRepositoryLoop', () => {
     const fileSystem = createFileSystemEmulator()
 
     const repoState: RepositoryState = {
-      repository: { name: 'repo', gitUrl: 'repo' },
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
       path: '/tmp/repo',
       loopPromise: null,
       stopRequested: false,
@@ -495,7 +510,12 @@ describe('runRepositoryLoop', () => {
     })
 
     const repoState: RepositoryState = {
-      repository: { name: 'repo', gitUrl: 'repo' },
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
       path: '/tmp/repo',
       loopPromise: null,
       stopRequested: false,
@@ -552,7 +572,12 @@ describe('runRepositoryLoop', () => {
     const fileSystem = createFileSystemEmulator()
 
     const repoState: RepositoryState = {
-      repository: { name: 'repo', gitUrl: 'repo' },
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
       path: '/tmp/repo',
       loopPromise: null,
       stopRequested: false,
@@ -615,7 +640,12 @@ describe('runRepositoryLoop', () => {
     })
 
     const repoState = {
-      repository: { name: 'repo', gitUrl: 'repo' },
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
       path: '/tmp/repo',
       loopPromise: null,
       stopRequested: false,
@@ -717,7 +747,12 @@ describe('runRepositoryLoop', () => {
     })
 
     const repoState = {
-      repository: { name: 'repo', gitUrl: 'repo' },
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
       path: '/tmp/repo',
       loopPromise: null,
       stopRequested: false,
@@ -763,7 +798,12 @@ describe('runRepositoryLoop', () => {
     })
 
     const repoState = {
-      repository: { name: 'repo', gitUrl: 'repo' },
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
       path: '/tmp/repo',
       loopPromise: null,
       stopRequested: false,
@@ -800,7 +840,12 @@ describe('startRepositoryLoop', () => {
     const fileSystem = createFileSystemEmulator()
 
     const repoState: RepositoryState = {
-      repository: { name: 'repo', gitUrl: 'repo' },
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
       path: '/tmp/repo',
       loopPromise: null,
       stopRequested: false,
@@ -879,7 +924,14 @@ describe('handleRepositoryList', () => {
     })
 
     const handlePromise = handleRepositoryList(
-      ['repo1'],
+      [
+        {
+          name: 'repo1',
+          gitUrl: 'https://github.com/user/repo1.git',
+          url: 'https://example.com/repo1',
+          id: 1,
+        },
+      ],
       manager,
       repoDeps,
       context
@@ -888,7 +940,9 @@ describe('handleRepositoryList', () => {
     // Wait for clone to be spawned
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    const cloneProc = processes.get('git clone repo1 /tmp/repo1')
+    const cloneProc = processes.get(
+      'git clone https://github.com/user/repo1.git /tmp/repo1'
+    )
     cloneProc?.emit('close', 0)
     cloneResolved = true
 
@@ -909,7 +963,12 @@ describe('handleRepositoryList', () => {
     const { spawn, processes } = createMockSpawn()
 
     manager.repositories.set('old-repo', {
-      repository: { name: 'old-repo', gitUrl: 'old-repo' },
+      repository: {
+        name: 'old-repo',
+        gitUrl: 'old-repo',
+        url: 'https://example.com/old-repo',
+        id: 99,
+      },
       path: '/tmp/old-repo',
       loopPromise: Promise.resolve(),
       stopRequested: false,
@@ -941,7 +1000,12 @@ describe('addRepository', () => {
     const manager = createMockManager()
 
     manager.repositories.set('repo', {
-      repository: { name: 'repo', gitUrl: 'repo' },
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
       path: '/tmp/repo',
       loopPromise: null,
       stopRequested: false,
@@ -959,7 +1023,7 @@ describe('addRepository', () => {
     })
 
     await addRepository(
-      { name: 'repo', gitUrl: 'repo' },
+      { name: 'repo', gitUrl: 'repo', url: 'https://example.com/repo', id: 1 },
       manager,
       repoDeps,
       context
@@ -1010,7 +1074,12 @@ describe('addRepository', () => {
     })
 
     const addPromise = addRepository(
-      { name: 'stale-repo', gitUrl: 'stale-repo' },
+      {
+        name: 'stale-repo',
+        gitUrl: 'stale-repo',
+        url: 'https://example.com/stale-repo',
+        id: 1,
+      },
       manager,
       repoDeps,
       context
@@ -1038,7 +1107,12 @@ describe('addRepository', () => {
     const repoDeps = createRepositoryDependencies({ spawn })
 
     const addPromise = addRepository(
-      { name: 'fail-repo', gitUrl: 'bad-url' },
+      {
+        name: 'fail-repo',
+        gitUrl: 'bad-url',
+        url: 'https://example.com/fail-repo',
+        id: 2,
+      },
       manager,
       repoDeps,
       context

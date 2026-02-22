@@ -641,12 +641,8 @@ export function connectWebSocket(
           attrs.push(`name=${r.name}`)
           attrs.push(`id=${r.id}`)
           attrs.push(`gitUrl=${r.gitUrl}`)
-          if (r.url !== undefined) {
-            attrs.push(`url=${r.url}`)
-          }
-          if (r.hasTask !== undefined) {
-            attrs.push(`hasTask=${r.hasTask}`)
-          }
+          attrs.push(`url=${r.url}`)
+          attrs.push(`hasTask=${r.hasTask}`)
           logMessage(state, context, useTUI, `  - ${attrs.join(', ')}`)
         }
       }

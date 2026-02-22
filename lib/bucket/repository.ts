@@ -45,8 +45,8 @@ const log = createLogger('dust:bucket:repository')
 export interface Repository {
   name: string
   gitUrl: string
-  url?: string
-  id?: number
+  url: string
+  id: number
 }
 
 export interface RepositoryState {
@@ -136,36 +136,25 @@ export function createDefaultRepositoryDependencies(
  * Supports both simple names and git URLs.
  */
 export function parseRepository(data: unknown): Repository | null {
-  if (typeof data === 'string') {
-    return { name: data, gitUrl: data }
-  }
   if (
     typeof data === 'object' &&
     data !== null &&
     'name' in data &&
     'gitUrl' in data
   ) {
-    const repositoryData = data as {
-      name: unknown
-      gitUrl: unknown
-      url?: unknown
-      id?: unknown
-    }
+    const repositoryData = data as Record<string, unknown>
     if (
       typeof repositoryData.name === 'string' &&
-      typeof repositoryData.gitUrl === 'string'
+      typeof repositoryData.gitUrl === 'string' &&
+      typeof repositoryData.url === 'string' &&
+      typeof repositoryData.id === 'number'
     ) {
-      const repo: Repository = {
+      return {
         name: repositoryData.name,
         gitUrl: repositoryData.gitUrl,
+        url: repositoryData.url,
+        id: repositoryData.id,
       }
-      if (typeof repositoryData.url === 'string') {
-        repo.url = repositoryData.url
-      }
-      if (typeof repositoryData.id === 'number') {
-        repo.id = repositoryData.id
-      }
-      return repo
     }
   }
   return null
