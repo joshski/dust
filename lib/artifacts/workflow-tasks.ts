@@ -362,7 +362,7 @@ export async function createCaptureIdeaTask(
 
     const content = `# ${taskTitle}
 
-Research this idea thoroughly, then create one or more narrowly-scoped task files in \`.dust/tasks/\`. Review \`.dust/principles/\` and \`.dust/facts/\` for relevant context. Each task should deliver a thin but complete vertical slice of working software.
+Research this idea briefly. If confident the implementation is straightforward (clear scope, minimal risk, no open questions), implement directly and commit. Otherwise, create one or more narrowly-scoped task files in \`.dust/tasks/\`. Review \`.dust/principles/\` and \`.dust/facts/\` for relevant context.
 
 ## Idea Description
 
@@ -374,9 +374,9 @@ ${description}
 
 ## Definition of Done
 
-- [ ] One or more new tasks are created in \`.dust/tasks/\`
-- [ ] Tasks link to relevant principles from \`.dust/principles/\`
-- [ ] Tasks are narrowly scoped vertical slices
+- [ ] Idea is implemented directly OR one or more new tasks are created in \`.dust/tasks/\`
+- [ ] If tasks were created, they link to relevant principles from \`.dust/principles/\`
+- [ ] Changes are committed with a clear commit message
 `
     await fileSystem.writeFile(filePath, content)
     return { filePath }

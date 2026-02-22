@@ -352,17 +352,21 @@ describe('createCaptureIdeaTask', () => {
     )
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain(`# ${BUILD_IDEA_PREFIX}Progress Broadcasting`)
+    expect(content).toContain('Research this idea briefly')
+    expect(content).toContain('implement directly and commit')
     expect(content).toContain(
       'create one or more narrowly-scoped task files in `.dust/tasks/`'
     )
     expect(content).toContain('Review `.dust/principles/` and `.dust/facts/`')
     expect(content).toContain(
-      '- [ ] One or more new tasks are created in `.dust/tasks/`'
+      '- [ ] Idea is implemented directly OR one or more new tasks are created'
     )
     expect(content).toContain(
-      '- [ ] Tasks link to relevant principles from `.dust/principles/`'
+      '- [ ] If tasks were created, they link to relevant principles'
     )
-    expect(content).toContain('- [ ] Tasks are narrowly scoped vertical slices')
+    expect(content).toContain(
+      '- [ ] Changes are committed with a clear commit message'
+    )
     // Should NOT contain idea-file-specific instructions
     expect(content).not.toContain('Idea file exists at')
     expect(content).not.toContain('create an idea file')
