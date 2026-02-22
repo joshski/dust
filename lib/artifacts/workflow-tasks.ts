@@ -1,4 +1,5 @@
 import type { FileSystem, ReadableFileSystem } from '../filesystem/types'
+import { MARKDOWN_LINK_PATTERN } from '../markdown/markdown-utilities'
 
 export const IDEA_TRANSITION_PREFIXES = [
   'Refine Idea: ',
@@ -79,25 +80,71 @@ export interface WorkflowTaskMatch {
   taskSlug: string
 }
 
-const WORKFLOW_TASK_TYPES: { type: WorkflowTaskType; prefix: string }[] = [
-  { type: 'refine', prefix: 'Refine Idea: ' },
-  { type: 'decompose-idea', prefix: 'Decompose Idea: ' },
-  { type: 'shelve', prefix: 'Shelve Idea: ' },
-]
+const WORKFLOW_SECTION_HEADINGS: { type: WorkflowTaskType; heading: string }[] =
+  [
+    { type: 'refine', heading: 'Refines Idea' },
+    { type: 'decompose-idea', heading: 'Decomposes Idea' },
+    { type: 'shelve', heading: 'Shelves Idea' },
+  ]
+
+function extractIdeaSlugFromSection(
+  content: string,
+  sectionHeading: string
+): string | null {
+  const lines = content.split('\n')
+  let inSection = false
+
+  for (const line of lines) {
+    if (line.startsWith('## ')) {
+      inSection = line.trimEnd() === `## ${sectionHeading}`
+      continue
+    }
+
+    if (!inSection) continue
+
+    if (line.startsWith('# ')) break
+
+    const linkMatch = line.match(MARKDOWN_LINK_PATTERN)
+    if (linkMatch) {
+      const target = linkMatch[2]
+      const slugMatch = target.match(/([^/]+)\.md$/)
+      if (slugMatch) {
+        return slugMatch[1]
+      }
+    }
+  }
+
+  return null
+}
 
 export async function findWorkflowTaskForIdea(
   fileSystem: ReadableFileSystem,
   dustPath: string,
   ideaSlug: string
 ): Promise<WorkflowTaskMatch | null> {
-  const ideaTitle = await readIdeaTitle(fileSystem, dustPath, ideaSlug)
+  const ideaPath = `${dustPath}/ideas/${ideaSlug}.md`
+  if (!fileSystem.exists(ideaPath)) {
+    throw new Error(
+      `Idea not found: "${ideaSlug}" (expected file at ${ideaPath})`
+    )
+  }
 
-  for (const { type, prefix } of WORKFLOW_TASK_TYPES) {
-    const filename = titleToFilename(`${prefix}${ideaTitle}`)
-    const filePath = `${dustPath}/tasks/${filename}`
-    if (fileSystem.exists(filePath)) {
-      const taskSlug = filename.replace(/\.md$/, '')
-      return { type, ideaSlug, taskSlug }
+  const tasksPath = `${dustPath}/tasks`
+  if (!fileSystem.exists(tasksPath)) {
+    return null
+  }
+
+  const files = await fileSystem.readdir(tasksPath)
+
+  for (const file of files.filter(f => f.endsWith('.md')).sort()) {
+    const content = await fileSystem.readFile(`${tasksPath}/${file}`)
+
+    for (const { type, heading } of WORKFLOW_SECTION_HEADINGS) {
+      const linkedSlug = extractIdeaSlugFromSection(content, heading)
+      if (linkedSlug === ideaSlug) {
+        const taskSlug = file.replace(/\.md$/, '')
+        return { type, ideaSlug, taskSlug }
+      }
     }
   }
 

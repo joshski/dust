@@ -458,6 +458,244 @@ describe('findWorkflowTaskForIdea', () => {
       findWorkflowTaskForIdea(fileSystem, '/project/.dust', 'nonexistent')
     ).rejects.toThrow('Idea not found: "nonexistent"')
   })
+
+  test('returns null for task with matching title prefix but no body section', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'progress-broadcasting.md':
+              '# Progress Broadcasting\n\nA great idea.',
+          },
+          tasks: {
+            'decompose-idea-progress-broadcasting.md': `# Decompose Idea: Progress Broadcasting
+
+Create tasks from this idea.
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- [ ] Tasks created
+`,
+          },
+        },
+      },
+    })
+    const result = await findWorkflowTaskForIdea(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+    expect(result).toBeNull()
+  })
+
+  test('finds task by body section link regardless of title', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'progress-broadcasting.md':
+              '# Progress Broadcasting\n\nA great idea.',
+          },
+          tasks: {
+            'some-unrelated-name.md': `# Some Unrelated Name
+
+Do something.
+
+## Refines Idea
+
+- [Progress Broadcasting](../ideas/progress-broadcasting.md)
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- [ ] Done
+`,
+          },
+        },
+      },
+    })
+    const result = await findWorkflowTaskForIdea(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+    expect(result).toEqual({
+      type: 'refine',
+      ideaSlug: 'progress-broadcasting',
+      taskSlug: 'some-unrelated-name',
+    })
+  })
+
+  test('finds decompose task by Decomposes Idea section', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea\n\nDescription.',
+          },
+          tasks: {
+            'custom-task-name.md': `# Custom Task Name
+
+Do something.
+
+## Decomposes Idea
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- [ ] Done
+`,
+          },
+        },
+      },
+    })
+    const result = await findWorkflowTaskForIdea(
+      fileSystem,
+      '/project/.dust',
+      'my-idea'
+    )
+    expect(result).toEqual({
+      type: 'decompose-idea',
+      ideaSlug: 'my-idea',
+      taskSlug: 'custom-task-name',
+    })
+  })
+
+  test('finds shelve task by Shelves Idea section', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea\n\nDescription.',
+          },
+          tasks: {
+            'archive-task.md': `# Archive Task
+
+Archive this idea.
+
+## Shelves Idea
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- [ ] Done
+`,
+          },
+        },
+      },
+    })
+    const result = await findWorkflowTaskForIdea(
+      fileSystem,
+      '/project/.dust',
+      'my-idea'
+    )
+    expect(result).toEqual({
+      type: 'shelve',
+      ideaSlug: 'my-idea',
+      taskSlug: 'archive-task',
+    })
+  })
+
+  test('returns null when tasks directory does not exist', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea\n\nDescription.',
+          },
+        },
+      },
+    })
+    const result = await findWorkflowTaskForIdea(
+      fileSystem,
+      '/project/.dust',
+      'my-idea'
+    )
+    expect(result).toBeNull()
+  })
+
+  test('stops parsing section at next H1 heading', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea\n\nDescription.',
+          },
+          tasks: {
+            'some-task.md': `# Some Task
+
+Do something.
+
+## Refines Idea
+
+# Another H1 heading interrupts
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await findWorkflowTaskForIdea(
+      fileSystem,
+      '/project/.dust',
+      'my-idea'
+    )
+    expect(result).toBeNull()
+  })
+
+  test('ignores links without .md extension in body section', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea\n\nDescription.',
+          },
+          tasks: {
+            'some-task.md': `# Some Task
+
+Do something.
+
+## Refines Idea
+
+- [External Link](https://example.com/my-idea)
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await findWorkflowTaskForIdea(
+      fileSystem,
+      '/project/.dust',
+      'my-idea'
+    )
+    expect(result).toBeNull()
+  })
 })
 
 describe('shared error handling', () => {

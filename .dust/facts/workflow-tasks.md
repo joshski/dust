@@ -33,7 +33,9 @@ The `titleToFilename` function strips the colon from the prefix, producing predi
 
 ## Finding Existing Workflow Tasks
 
-`findWorkflowTaskForIdea` reads the idea title, computes each possible task filename, and checks for existence. Returns a `WorkflowTaskMatch` with `type` (`'refine' | 'decompose-idea' | 'shelve'`), `ideaSlug`, and `taskSlug` (the task filename without `.md`) — or `null` if no workflow task exists.
+`findWorkflowTaskForIdea` scans all task files for body sections that link to the target idea. The operation-specific sections are `## Refines Idea`, `## Decomposes Idea`, and `## Shelves Idea`. Returns a `WorkflowTaskMatch` with `type` (`'refine' | 'decompose-idea' | 'shelve'`), `ideaSlug`, and `taskSlug` (the task filename without `.md`) — or `null` if no workflow task exists.
+
+Tasks must include the body section to be associated with an idea. If a task has a matching title prefix but no body section, it is not considered associated with any idea.
 
 ## Linter Validation
 
