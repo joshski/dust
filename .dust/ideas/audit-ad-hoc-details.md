@@ -23,29 +23,14 @@ The agent could be more effective if it knew the context that motivated the audi
 ### Related ideas
 
 - [Meta Audit](meta-audit.md) - Proposes automatically selecting audits based on recent commit activity; the ad-hoc details feature would complement this by allowing manual context specification
-- [Audit Workflow Guidance](audit-workflow-guidance.md) - Proposes guidance for working through audits; could reference how to use ad-hoc details effectively
 
 ### Related principles
 
 - [Agent Context Inference](../principles/agent-context-inference.md) - While agents can discover context, explicit hints improve efficiency
-- [Progressive Disclosure](../principles/progressive-disclosure.md) - Ad-hoc details should be optional, keeping the simple case simple
+- [Progressive Disclosure](../principles/progressive-disclosure.md) - Ad-hoc details are optional, keeping the simple case simple
 - [Unsurprising UX](../principles/unsurprising-ux.md) - The command should accept details naturally, following established patterns
 
-### Implementation location
-
-The audits sub-package (`lib/audits/index.ts`) contains the `AuditsRepository` interface and `createAuditTask` method. This is where the focus text should be integrated:
-
-```typescript
-// Current signature
-createAuditTask(options: { name: string }): Promise<CreateAuditTaskResult>
-
-// With focus support
-createAuditTask(options: { name: string; focus?: string }): Promise<CreateAuditTaskResult>
-```
-
-The `transformAuditContent` function already modifies the title; it can be extended to inject the focus section.
-
-## How it should work
+## How it will work
 
 Accept freeform text as a single focus argument:
 
@@ -84,23 +69,16 @@ dust audit <name> [focus]
 
 1. **CLI command** (`lib/cli/commands/audit.ts`): Pass optional second argument to the audits repository
 2. **Audits repository** (`lib/audits/index.ts`): Accept `focus` option in `createAuditTask`, inject into content
-3. **Content transformation**: Add logic to inject `## Focus\n\n{focus}` after the title when provided
-4. **Tests**: Add test coverage for focus injection behavior
+3. **Content transformation**: Extend `transformAuditContent` to inject `## Focus\n\n{focus}\n\n` after the title when provided
+4. **Tests** (`lib/audits/index.test.ts`): Add test coverage for focus injection behavior
 
-## Open Questions
+### Design decisions
 
-### Should focus text be validated or processed?
+- **Single text field**: No flags, no complex parsing. Users write whatever context is relevant in natural language.
+- **Pass through verbatim**: No validation of paths or commits. The agent will discover if paths don't exist. This allows conceptual focus areas like "authentication flow" alongside file paths.
+- **Focus section placement**: After the title puts user-provided context prominently visible, before the standard template content.
+- **Optional feature**: Users who don't need focus can continue using `dust audit <name>` unchanged.
 
-#### Option: Pass through verbatim
+## Blocked By
 
-Accept whatever text the user provides and insert it as-is. The agent will interpret the focus naturally.
-
-Pros: Simple implementation, flexible for any use case, follows progressive disclosure
-Cons: No feedback on typos or invalid paths
-
-#### Option: Basic path validation with warning
-
-Check if text that looks like file paths (contains `/` or `\`) actually exists; warn but continue if not.
-
-Pros: Catches common mistakes early, still allows conceptual focus areas
-Cons: May warn incorrectly on valid patterns (globs, future files, descriptions containing paths)
+(none)
