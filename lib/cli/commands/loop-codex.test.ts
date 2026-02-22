@@ -1,9 +1,11 @@
 import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
-import { describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import {
   createContextEmulator,
   createFileSystemEmulator,
+  restoreEnv,
+  stubEnv,
 } from '../../test/test-utilities'
 import type { CommandDependencies } from '../types'
 import type { LoopDependencies } from './loop'
@@ -70,6 +72,14 @@ describe('createCodexDependencies', () => {
 })
 
 describe('loopCodex', () => {
+  beforeEach(() => {
+    stubEnv('DUST_UNATTENDED', undefined)
+  })
+
+  afterEach(() => {
+    restoreEnv()
+  })
+
   test('uses codex agentType in startup message', async () => {
     const dependencies = createDependencies()
     dependencies.arguments = ['1']

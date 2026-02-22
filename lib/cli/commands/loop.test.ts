@@ -1,11 +1,13 @@
 import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
-import { describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import type { AgentSessionEvent, EventMessage } from '../../agent-events'
 import {
   createContextEmulator,
   createFileSystemEmulator,
   createTestAgentSessionStartedEvent,
+  restoreEnv,
+  stubEnv,
 } from '../../test/test-utilities'
 import type { CommandDependencies } from '../types'
 import {
@@ -1095,26 +1097,25 @@ describe('parseMaxIterations', () => {
 })
 
 describe('loopClaude', () => {
+  beforeEach(() => {
+    stubEnv('DUST_UNATTENDED', undefined)
+  })
+
+  afterEach(() => {
+    restoreEnv()
+  })
+
   test('refuses to run when DUST_UNATTENDED is set', async () => {
-    const originalEnv = process.env.DUST_UNATTENDED
-    process.env.DUST_UNATTENDED = '1'
-    try {
-      const dependencies = createDependencies()
-      const context = dependencies.context as ReturnType<
-        typeof createContextEmulator
-      >
-      const result = await loopClaude(dependencies)
-      expect(result.exitCode).toBe(1)
-      expect(context.stderrLines.join('\n')).toContain(
-        'dust loop cannot run inside an unattended session'
-      )
-    } finally {
-      if (originalEnv === undefined) {
-        delete process.env.DUST_UNATTENDED
-      } else {
-        process.env.DUST_UNATTENDED = originalEnv
-      }
-    }
+    stubEnv('DUST_UNATTENDED', '1')
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const result = await loopClaude(dependencies)
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain(
+      'dust loop cannot run inside an unattended session'
+    )
   })
 
   test('outputs startup message with max iterations', async () => {
@@ -1727,6 +1728,14 @@ describe('loopClaude', () => {
 })
 
 describe('integration: HTTP event posting', () => {
+  beforeEach(() => {
+    stubEnv('DUST_UNATTENDED', undefined)
+  })
+
+  afterEach(() => {
+    restoreEnv()
+  })
+
   test('posts events to actual HTTP endpoint', async () => {
     const { createServer } = await import('node:http')
 

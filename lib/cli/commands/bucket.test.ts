@@ -1380,6 +1380,10 @@ describe('shutdown', () => {
 })
 
 describe('bucketWorker', () => {
+  beforeEach(() => {
+    stubEnv('DUST_UNATTENDED', undefined)
+  })
+
   afterEach(() => {
     restoreEnv()
   })
