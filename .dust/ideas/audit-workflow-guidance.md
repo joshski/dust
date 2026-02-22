@@ -1,133 +1,107 @@
 # Audit Workflow Guidance
 
-Add a `dust agent how to audit` command that guides agents through audit workflows, and inject instructions into audits to run this command.
+Add a `dust how to audit` command that guides agents through audit workflows.
 
 ## Context
 
-The audit system (`lib/audits/stock-audits.ts`) provides 10 stock audits covering different aspects of codebase health. When an agent picks up an audit task, it receives the audit template content which includes scope, principles, and a definition of done checklist. However, the template doesn't explain:
+The audit system (`lib/audits/stock-audits.ts`) provides 11 stock audits covering different aspects of codebase health. When an agent picks up an audit task, it receives the audit template content which includes scope, principles, and a definition of done checklist. However, the template doesn't explain:
 
 1. How to determine when this audit was last run
 2. How to consider results from previous audits
 3. How to navigate the general audit workflow
-4. How to run dust commands within the audit context
+4. How to create ideas from findings
 
 The existing `dust new idea` command (`lib/cli/commands/new-idea.ts:15-64`) provides a pattern for this: it emits step-by-step instructions using template variables (like `${vars.bin}`) so agents know exactly how to invoke dust commands in their environment. The `TemplateVars` interface in `agent-shared.ts` already supports `bin` (the dust command), `agentName`, and other context-aware values.
-
-Currently, the only injected content in audit templates is `ideasHint`:
-
-```typescript
-const ideasHint =
-  'Review existing ideas in `./.dust/ideas/` to understand what has been proposed or considered historically...'
-```
-
-This is interpolated into every stock audit template. A similar pattern could inject guidance about running `dust agent how to audit`.
 
 ### Related ideas
 
 - [Workflow instruction tasks](workflow-instruction-tasks.md) - proposes adding `dust decompose idea` and similar commands that emit step-by-step instructions
-- [Context-aware guidance](context-aware-guidance.md) - explores varying guidance based on repository maturity and feature scope
 - [Meta Audit](meta-audit.md) - analyzes commit activity to select which audits to run
 
 ## How it could work
 
-### Part 1: The `dust agent how to audit` command
-
-A new command that emits guidance for running audits:
+A new command following the existing verb-noun pattern:
 
 ```
-dust agent how to audit
+dust how to audit
 ```
 
-Output would include:
-1. How to determine when audits were last run (search git history for audit task deletions)
-2. How to review previous audit results (check commit messages, idea files)
-3. How to run the current audit systematically
-4. How to create ideas from findings
-5. How to mark the audit as complete
+Output would include step-by-step instructions:
+1. How to determine when audits were last run (search git history for "Audit:" commit prefixes)
+2. How to review previous audit results (check recent commits, idea files created)
+3. How to work through the definition of done systematically
+4. How to create ideas from findings (reference `dust new idea`)
+5. How to mark the audit as complete (delete task file, commit with "Audit: <name>" prefix)
 
-The command would use `TemplateVars` to include the correct dust command (e.g., `bin/dust`, `npx dust`) in its instructions.
+The command would use `TemplateVars` to include the correct dust command (e.g., `bin/dust`, `npx dust`) in its instructions, following the pattern established by `dust new idea` and `dust new task`.
 
-### Part 2: Template injection in audits
+### Implementation approach
 
-Each audit template would include a reference to the guidance command:
+Add a new command file `lib/cli/commands/how-to-audit.ts` following the pattern of `new-idea.ts`:
 
 ```typescript
-const auditGuidanceHint = `For help with audit workflow, run \`${bin} agent how to audit\`.`
+function howToAuditInstructions(vars: TemplateVars): string {
+  return dedent`
+    ## Running an Audit
+
+    Follow these steps:
+
+    1. Check when this audit was last run:
+       \`git log --oneline --grep="Audit:" | head -20\`
+    2. Review any ideas created from previous audit runs
+    3. Work through the Definition of Done checklist systematically
+    4. Create ideas for issues found: \`${vars.bin} new idea\`
+    5. When complete, delete the task file and commit:
+       \`git add -A && git commit -m "Audit: <Audit Name>"\`
+    6. Push your commit to the remote repository
+  `
+}
 ```
-
-This would be injected into audit templates similar to `ideasHint`, appearing near the top of each audit so agents know help is available.
-
-### Part 3: Environment-aware instructions
-
-The `transformAuditContent()` function in `lib/audits/index.ts` would be extended to accept template variables and perform substitution when creating audit task files. This ensures the injected dust command matches the project's `dustCommand` setting.
 
 ## Open Questions
 
-### Should `dust agent how to audit` be a separate command or part of `dust agent`?
+### Should guidance be injected into audit templates or provided on-demand via command?
 
-#### Option: Separate `dust agent how to audit` command
+#### Option: On-demand command only
 
-Create a new dedicated command for audit guidance. Follows the pattern established by `dust new idea` and `dust new task`.
+The `dust how to audit` command is run by agents when they need guidance. Audit templates remain unchanged.
 
-Pros: Clear purpose, easy to discover via `dust help`, can evolve independently
-Cons: Another command to maintain, may not be discoverable during an audit
+Pros: No template bloat, guidance can evolve independently, follows established pattern
+Cons: Agents may not know to run the command
 
-#### Option: Integrate into `dust agent` routing
+#### Option: Inject hint into audit templates
 
-Extend `dust agent` to recognize audit contexts and route to audit-specific guidance. When an agent runs `dust agent` while working on an audit task, it could automatically include audit guidance.
+Add a line to each audit template like: "For workflow guidance, run `{bin} how to audit`."
 
-Pros: Context-aware, no extra command needed
-Cons: More complex routing logic, harder to invoke explicitly
+Pros: Agents always see the hint when working on audits
+Cons: Requires template variable substitution in `transformAuditContent()`, adds coupling
 
-#### Option: Add guidance section to audit templates directly
+#### Option: Both
 
-Instead of a command, embed the workflow guidance directly in each audit template's preamble. No separate command needed.
+Inject a hint AND provide the command. The hint tells agents the command exists; the command provides the full guidance.
 
-Pros: All guidance in one place, always visible
-Cons: Significantly lengthens audit templates, harder to update consistently
+Pros: Combines discoverability with on-demand detail
+Cons: More implementation work, potential duplication
 
-### How should agents determine when an audit was last run?
+### How detailed should the git history search guidance be?
 
-#### Option: Git history search
+#### Option: Simple grep pattern
 
-Instruct agents to search git history for patterns like "Audit: <name>" in commit messages or deleted audit task files.
+Instruct agents to use `git log --oneline --grep="Audit:"` to find previous audit completions.
 
-Pros: Uses existing git infrastructure, no new state needed
-Cons: Requires agents to construct appropriate git commands, may miss audits that didn't follow naming conventions
+Pros: Simple, works with current commit conventions
+Cons: May miss audits with different commit message formats
 
-#### Option: Audit run log
+#### Option: Specific per-audit search
 
-Add a `.dust/logs/audits.jsonl` file that tracks when each audit was run. The `dust audit` command would append entries when creating audit tasks.
+When an agent is working on "security-review", guide them to search for "Audit: Security Review" specifically.
 
-Pros: Structured data, easy to query, reliable
-Cons: New state to maintain, needs cleanup logic for old entries
+Pros: More precise results
+Cons: Requires knowing the current audit name, more complex instructions
 
-#### Option: Commit message convention
+#### Option: List all audit history
 
-Establish a convention like `[audit:security-review]` in commit messages that mark audit completion. Easy to grep.
+Provide a more comprehensive search that shows all audit-related commits, letting the agent filter.
 
-Pros: Human-readable, searchable via git log
-Cons: Relies on discipline, may not be followed consistently
-
-### Should template injection happen at audit definition time or task creation time?
-
-#### Option: Task creation time (transformAuditContent)
-
-The `transformAuditContent()` function in `lib/audits/index.ts` would perform template variable substitution when creating the audit task file.
-
-Pros: Task file contains resolved values, works even if user overrides audits
-Cons: Requires passing template variables through the audit command pipeline
-
-#### Option: Audit definition time (stock-audits.ts)
-
-Stock audits would accept template variables as parameters and embed them directly.
-
-Pros: Self-contained audit templates
-Cons: Stock audits can't know the dust command until invoked, breaks current parameter-free design
-
-#### Option: Leave placeholders for agent to resolve
-
-Use placeholders like `{dustCommand}` in templates and document that agents should consult settings to resolve them.
-
-Pros: No code changes needed, agents can handle this
-Cons: Adds cognitive load, agents may not resolve correctly
+Pros: Complete visibility
+Cons: May be noisy for repositories with many audit runs
