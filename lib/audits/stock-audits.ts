@@ -17,6 +17,65 @@ interface StockAudit {
 const ideasHint =
   'Review existing ideas in `./.dust/ideas/` to understand what has been proposed or considered historically, then create new idea files in `./.dust/ideas/` for any issues you identify, avoiding duplication.'
 
+function dataAccessReview(): string {
+  return dedent`
+    # Data Access Review
+
+    Review data access patterns for performance issues and optimization opportunities.
+
+    ${ideasHint}
+
+    ## Scope
+
+    Focus on these areas:
+
+    1. **N+1 query patterns** - Loops that make individual data requests instead of batching
+    2. **Missing indexes** - Database schema files lacking indexes on frequently queried columns
+    3. **Inefficient data loading** - Over-fetching (loading more data than needed) or under-fetching (requiring multiple round trips)
+    4. **Caching opportunities** - Repeated lookups that could benefit from memoization or caching
+    5. **Batch processing** - Sequential operations that could be parallelized or batched
+    6. **Connection management** - Connection pooling configuration and resource cleanup
+
+    ## Analysis Steps
+
+    1. Search for loops containing data access calls (API requests, database queries, file reads)
+    2. Review database schema or migration files for index definitions
+    3. Identify functions that make multiple related data requests
+    4. Look for repeated identical lookups within the same request lifecycle
+    5. Check for proper resource cleanup (connection closing, stream ending)
+
+    ## Applicability
+
+    This audit applies to codebases that interact with:
+    - Databases (SQL, NoSQL, ORM queries)
+    - External APIs (REST, GraphQL, gRPC)
+    - File systems (reading/writing files)
+    - Caches (Redis, Memcached, in-memory)
+
+    If none of these apply, document that finding and skip the detailed analysis.
+
+    ## Principles
+
+    - [Decoupled Code](../principles/decoupled-code.md) - Data access should be isolated for testability
+    - [Fast Feedback](../principles/fast-feedback.md) - Efficient data access enables faster feedback loops
+    - [Maintainable Codebase](../principles/maintainable-codebase.md) - Good data patterns improve maintainability
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - [ ] Searched for N+1 query patterns (loops with data access)
+    - [ ] Reviewed database schemas for missing indexes (if applicable)
+    - [ ] Identified over-fetching or under-fetching patterns
+    - [ ] Found repeated lookups that could be cached
+    - [ ] Checked for sequential operations that could be batched
+    - [ ] Verified connection/resource cleanup is handled properly
+    - [ ] Proposed ideas for any data access improvements identified
+  `
+}
+
 function coverageExclusions(): string {
   return dedent`
     # Coverage Exclusions
@@ -525,6 +584,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'agent-developer-experience': agentDeveloperExperience,
   'component-reuse': componentReuse,
   'coverage-exclusions': coverageExclusions,
+  'data-access-review': dataAccessReview,
   'dead-code': deadCode,
   'facts-verification': factsVerification,
   'ideas-from-commits': ideasFromCommits,
