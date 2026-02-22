@@ -2,6 +2,8 @@
 
 Add a top-level error handler in `wireEntry` to catch unhandled errors from commands and convert them to clean error messages with exit code 1.
 
+**Note:** A repeatable audit for error handling is now available: `bin/dust audit error-handling`.
+
 Currently, `wireEntry` in `lib/cli/wire.ts` does not catch unhandled rejections. If an infrastructure error (filesystem failure, network error, etc.) propagates up from a command, the process crashes with an unhandled rejection rather than showing a clean error message.
 
 The codebase already follows two appropriate patterns:

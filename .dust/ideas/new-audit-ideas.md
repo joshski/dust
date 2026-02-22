@@ -4,24 +4,15 @@ Proposals for new stock audits that address gaps in the current audit suite, ali
 
 ## Context
 
-The current stock audits (`lib/audits/stock-audits.ts`) cover 14 areas: agent developer experience, component reuse, coverage exclusions, data access, dead code, facts verification, ideas from commits, ideas from principles, performance, refactoring opportunities, security, stale ideas, test coverage, and ubiquitous language.
+The current stock audits (`lib/audits/stock-audits.ts`) cover 15 areas: agent developer experience, component reuse, coverage exclusions, data access, dead code, error handling, facts verification, ideas from commits, ideas from principles, performance, refactoring opportunities, security, stale ideas, test coverage, and ubiquitous language.
 
 Reviewing these against dust's principles and goals reveals several gaps where new audits would provide value.
 
 ## Proposed Audits
 
-### Error Handling Audit
+### ~~Error Handling Audit~~ (Implemented)
 
-Review error handling patterns for consistency and agent-friendliness.
-
-**Why this matters:** The [Actionable Errors](../principles/actionable-errors.md) principle emphasizes that error messages should tell agents what to do next. The existing [Review error handling](review-error-handling.md) idea documents findings from a manual review, but a repeatable audit template would help maintain these standards over time.
-
-**Scope:**
-- Silently swallowed errors (empty catch blocks)
-- Missing error context (errors converted to booleans)
-- Fire-and-forget promises without error handling
-- Error messages lacking actionable guidance
-- Inconsistent error recovery patterns
+Now available as a stock audit: `bin/dust audit error-handling`
 
 ### Dependency Health Audit
 
@@ -118,9 +109,9 @@ Flag slowdowns relative to historical measurements rather than absolute threshol
 
 ### Should the error handling audit overlap with security-review?
 
-#### Option: Keep separate with distinct focus
+#### Option: Keep separate with distinct focus (Selected)
 
-Error handling audit focuses on agent-friendliness and consistency. Security audit focuses on vulnerabilities. Minimal overlap.
+Error handling audit focuses on agent-friendliness and consistency. Security audit focuses on vulnerabilities. Minimal overlap. This option was selected when implementing the error-handling stock audit.
 
 #### Option: Merge error handling into security
 

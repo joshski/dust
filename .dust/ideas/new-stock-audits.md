@@ -4,24 +4,15 @@ Propose additional stock audits to improve codebase health monitoring.
 
 ## Context
 
-The dust audit system (`lib/audits/stock-audits.ts`) currently provides 14 stock audits covering: agent developer experience, component reuse, coverage exclusions, data access review, dead code, facts verification, ideas from commits, ideas from principles, performance review, refactoring opportunities, security review, stale ideas, test coverage, and ubiquitous language.
+The dust audit system (`lib/audits/stock-audits.ts`) currently provides 15 stock audits covering: agent developer experience, component reuse, coverage exclusions, data access review, dead code, error handling, facts verification, ideas from commits, ideas from principles, performance review, refactoring opportunities, security review, stale ideas, test coverage, and ubiquitous language.
 
 Reviewing dust's core goals—human-AI collaboration, agent autonomy, maintainable codebase, and lightweight planning—several areas are not currently covered by audits.
 
 ## Proposed Audits
 
-### Error Handling Consistency
+### ~~Error Handling Consistency~~ (Implemented)
 
-Review error handling patterns across the codebase for consistency and completeness.
-
-Focus areas:
-1. **Inconsistent error types** - Are errors thrown as strings, Error objects, or custom types?
-2. **Missing error handling** - Are there async operations without try/catch or .catch()?
-3. **Error swallowing** - Are errors being caught but not logged or re-thrown?
-4. **Error message quality** - Do error messages help diagnose the problem?
-5. **Error boundaries** - Are errors contained appropriately at module boundaries?
-
-Relates to principles: [Actionable Errors](../principles/actionable-errors.md)
+Now available as a stock audit: `bin/dust audit error-handling`
 
 ### Dependency Health
 

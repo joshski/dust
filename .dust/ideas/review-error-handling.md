@@ -1,6 +1,8 @@
 # Review error handling
 
-Audit the codebase for error handling issues. Look for silently swallowed errors, missing context, race conditions, and patterns that hide failures.
+Audit the codebase for error handling issues.
+
+**Note:** A repeatable audit for error handling is now available: `bin/dust audit error-handling`. This idea documents findings from a one-time manual review.
 
 ## Findings
 
