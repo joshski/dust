@@ -1,6 +1,6 @@
 # Package Exports
 
-The `@joshski/dust` package exposes six entry points for downstream consumers.
+The `@joshski/dust` package exposes eight entry points for downstream consumers.
 
 ## Available Exports
 
@@ -38,10 +38,29 @@ const agent = detectAgent(); // "claude-code" | "claude-code-web" | "codex" | "u
 Repository interface for reading and manipulating dust artifacts (principles, facts, ideas, tasks) and workflow task operations.
 
 ```typescript
-import { readPrinciples, readFacts, readIdeas, readTasks } from "@joshski/dust/artifacts";
+import { buildArtifactsRepository, buildReadOnlyArtifactsRepository } from "@joshski/dust/artifacts";
 
-const principles = await readPrinciples(dustDir);
-const tasks = await readTasks(dustDir);
+const repository = buildReadOnlyArtifactsRepository(fileSystem, dustPath);
+const principles = await repository.listPrinciples();
+const idea = await repository.parseIdea({ slug: 'my-idea' });
+```
+
+### @joshski/dust/audits
+
+Audit framework for defining and running codebase audits.
+
+```typescript
+import { getStockAudits } from "@joshski/dust/audits";
+
+const audits = getStockAudits();
+```
+
+### @joshski/dust/filesystem
+
+Type definitions for the file system abstraction used throughout dust.
+
+```typescript
+import type { FileSystem, ReadableFileSystem } from "@joshski/dust/filesystem";
 ```
 
 ### @joshski/dust/istanbul/minimal-reporter

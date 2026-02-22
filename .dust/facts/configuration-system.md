@@ -6,11 +6,21 @@ Dust uses a JSON configuration file at `.dust/config/settings.json` to customize
 
 ### dustCommand
 
-The command used to invoke dust in agent instructions. Defaults to `dust` if not specified.
+The command used to invoke dust in agent instructions. Auto-detected based on lockfiles if not specified (bun.lockb → `bunx dust`, pnpm-lock.yaml → `pnpx dust`, package-lock.json → `npx dust`).
 
 ```json
 {
   "dustCommand": "npx dust"
+}
+```
+
+### installCommand
+
+The command used to install dependencies. Auto-detected based on lockfiles if not specified (bun.lockb → `bun install`, pnpm-lock.yaml → `pnpm install`, package-lock.json → `npm install`).
+
+```json
+{
+  "installCommand": "npm install"
 }
 ```
 

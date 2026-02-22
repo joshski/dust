@@ -8,7 +8,7 @@ Each principle file contains:
 - `## Parent Principle` — exactly one parent (or `(none)` for root principles)
 - `## Sub-Principles` — zero or more child principles
 
-The hierarchy has two root principles: **Maintainable Codebase** (how we develop dust) and **Human-AI Collaboration** (what dust offers users).
+The hierarchy has one root principle: **Enable Flow State** (with `## Parent Principle` of `(none)`). This root has two sub-principles: **Maintainable Codebase** (how we develop dust) and **Human-AI Collaboration** (what dust offers users).
 
 ## Trade-offs
 

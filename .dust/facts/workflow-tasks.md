@@ -1,6 +1,6 @@
 # Workflow Tasks
 
-`lib/artifacts.ts` provides a repository pattern for working with dust artifacts (ideas and workflow tasks). Use `buildArtifactsRepository(fileSystem, dustPath)` to create a repository instance that encapsulates the file system and dust path.
+`lib/artifacts/index.ts` provides a repository pattern for working with dust artifacts (ideas and workflow tasks). Use `buildArtifactsRepository(fileSystem, dustPath)` to create a repository instance that encapsulates the file system and dust path.
 
 ## Repository Methods
 
@@ -13,7 +13,7 @@
 - `findWorkflowTaskForIdea({ ideaSlug })` - Returns `null` or a `WorkflowTaskMatch` indicating the existing workflow task for an idea
 - `parseCaptureIdeaTask({ taskSlug })` - Parses a capture-idea task file
 
-For read-only operations, use `buildReadOnlyArtifactsRepository(fileSystem, dustPath)` which provides `parseIdea`, `listIdeas`, `findWorkflowTaskForIdea`, and `parseCaptureIdeaTask`.
+For read-only operations, use `buildReadOnlyArtifactsRepository(fileSystem, dustPath)` which provides all parsing and listing methods (`parseIdea`, `listIdeas`, `parsePrinciple`, `listPrinciples`, `parseFact`, `listFacts`, `parseTask`, `listTasks`) plus `findWorkflowTaskForIdea` and `parseCaptureIdeaTask`.
 
 ## Idea Transition Prefixes
 
@@ -45,4 +45,4 @@ The linter validates:
 2. Workflow tasks include the required body section (`## Refines Idea`, `## Decomposes Idea`, or `## Shelves Idea`)
 3. The body section contains a markdown link to an existing idea file
 
-`IDEA_TRANSITION_PREFIXES` and `titleToFilename` are defined in `lib/workflow-tasks.ts` and re-exported from `lint-markdown.ts` for external tool use. The body section validation is in `lib/lint/validators/idea-validator.ts`.
+`IDEA_TRANSITION_PREFIXES` and `titleToFilename` are defined in `lib/artifacts/workflow-tasks.ts` and imported by `lib/lint/validators/idea-validator.ts` for linter use.
