@@ -219,11 +219,12 @@ describe('audit command', () => {
   test('loadStockAudits loads audits from markdown files', () => {
     const audits = loadStockAudits()
     expect(audits).toBeInstanceOf(Array)
-    expect(audits.length).toBe(10)
+    expect(audits.length).toBe(11)
 
     const names = audits.map(a => a.name)
     expect(names).toContain('agent-developer-experience')
     expect(names).toContain('component-reuse')
+    expect(names).toContain('coverage-exclusions')
     expect(names).toContain('dead-code')
     expect(names).toContain('facts-verification')
     expect(names).toContain('ideas-from-commits')
@@ -242,9 +243,9 @@ describe('audit command', () => {
   })
 
   test('stock audits have no principles because they are designed for downstream projects', () => {
-    // component-reuse is an exception: it references the reasonably-dry principle
-    // to help agents avoid over-extraction
-    const auditsWithPrinciples = ['component-reuse']
+    // component-reuse references the reasonably-dry principle to help agents avoid over-extraction
+    // coverage-exclusions references decoupling and test coverage principles
+    const auditsWithPrinciples = ['component-reuse', 'coverage-exclusions']
     const audits = loadStockAudits()
     for (const audit of audits) {
       const goalsMatch = audit.template.match(
