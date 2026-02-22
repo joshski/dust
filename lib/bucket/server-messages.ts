@@ -10,6 +10,7 @@ export interface RepositoryListMessage {
 }
 
 export interface RepositoryListItem extends Repository {
+  id: number
   hasTask?: boolean
 }
 
@@ -44,15 +45,16 @@ export function parseServerMessage(data: unknown): ServerMessage | null {
       if (typeof repo.name !== 'string' || typeof repo.gitUrl !== 'string') {
         return null
       }
+      if (typeof repo.id !== 'number') {
+        return null
+      }
       const item: RepositoryListItem = {
+        id: repo.id,
         name: repo.name,
         gitUrl: repo.gitUrl,
       }
       if (typeof repo.url === 'string') {
         item.url = repo.url
-      }
-      if (typeof repo.id === 'string') {
-        item.id = repo.id
       }
       if (typeof repo.hasTask === 'boolean') {
         item.hasTask = repo.hasTask

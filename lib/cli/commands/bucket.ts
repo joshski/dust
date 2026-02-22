@@ -639,9 +639,7 @@ export function connectWebSocket(
         for (const r of repos) {
           const attrs: string[] = []
           attrs.push(`name=${r.name}`)
-          if (r.id !== undefined) {
-            attrs.push(`id=${r.id}`)
-          }
+          attrs.push(`id=${r.id}`)
           attrs.push(`gitUrl=${r.gitUrl}`)
           if (r.url !== undefined) {
             attrs.push(`url=${r.url}`)

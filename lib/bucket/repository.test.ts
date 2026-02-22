@@ -183,20 +183,20 @@ describe('parseRepository', () => {
     const repo = parseRepository({
       name: 'my-repo',
       gitUrl: 'https://github.com/user/repo.git',
-      id: 'repo-123',
+      id: 123,
     })
     expect(repo).toEqual({
       name: 'my-repo',
       gitUrl: 'https://github.com/user/repo.git',
-      id: 'repo-123',
+      id: 123,
     })
   })
 
-  test('ignores id field if not a string', () => {
+  test('ignores id field if not a number', () => {
     const repo = parseRepository({
       name: 'my-repo',
       gitUrl: 'https://github.com/user/repo.git',
-      id: 456,
+      id: 'not-a-number',
     })
     expect(repo).toEqual({
       name: 'my-repo',

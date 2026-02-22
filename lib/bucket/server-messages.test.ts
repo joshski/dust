@@ -11,7 +11,7 @@ describe('parseServerMessage', () => {
             name: 'test-repo',
             gitUrl: 'git@github.com:user/test-repo.git',
             url: 'https://github.com/user/test-repo',
-            id: 'abc123',
+            id: 123,
             hasTask: true,
           },
         ],
@@ -24,20 +24,21 @@ describe('parseServerMessage', () => {
             name: 'test-repo',
             gitUrl: 'git@github.com:user/test-repo.git',
             url: 'https://github.com/user/test-repo',
-            id: 'abc123',
+            id: 123,
             hasTask: true,
           },
         ],
       })
     })
 
-    it('parses repository-list with minimal repository data', () => {
+    it('parses repository-list with numeric id', () => {
       const data = {
         type: 'repository-list',
         repositories: [
           {
             name: 'minimal-repo',
             gitUrl: 'git@github.com:user/minimal.git',
+            id: 701,
           },
         ],
       }
@@ -48,9 +49,23 @@ describe('parseServerMessage', () => {
           {
             name: 'minimal-repo',
             gitUrl: 'git@github.com:user/minimal.git',
+            id: 701,
           },
         ],
       })
+    })
+
+    it('returns null for repository missing id', () => {
+      const data = {
+        type: 'repository-list',
+        repositories: [
+          {
+            name: 'minimal-repo',
+            gitUrl: 'git@github.com:user/minimal.git',
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
     })
 
     it('parses empty repository list', () => {

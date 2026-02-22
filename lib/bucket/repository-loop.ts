@@ -258,7 +258,7 @@ export async function runRepositoryLoop(
         {
           hooksInstalled,
           signal: abortController.signal,
-          repositoryId: repoState.repository.id,
+          repositoryId: repoState.repository.id?.toString(),
           onRawEvent: (rawEvent: Record<string, unknown>) => {
             onAgentEvent(rawEventToAgentEvent(rawEvent))
           },

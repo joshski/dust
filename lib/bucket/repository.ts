@@ -46,7 +46,7 @@ export interface Repository {
   name: string
   gitUrl: string
   url?: string
-  id?: string
+  id?: number
 }
 
 export interface RepositoryState {
@@ -162,7 +162,7 @@ export function parseRepository(data: unknown): Repository | null {
       if (typeof repositoryData.url === 'string') {
         repo.url = repositoryData.url
       }
-      if (typeof repositoryData.id === 'string') {
+      if (typeof repositoryData.id === 'number') {
         repo.id = repositoryData.id
       }
       return repo
