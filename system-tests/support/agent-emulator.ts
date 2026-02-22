@@ -48,7 +48,7 @@ export interface ActionHandler {
 /**
  * Default action handlers for standard dust workflows
  */
-export const defaultActionHandlers: ActionHandler[] = [
+const defaultActionHandlers: ActionHandler[] = [
   {
     // Match "dust new task" instruction from agent greeting
     pattern: /dust new task/,
@@ -56,7 +56,7 @@ export const defaultActionHandlers: ActionHandler[] = [
   },
 ]
 
-export interface AgentEmulatorOptions {
+interface AgentEmulatorOptions {
   /** Custom action handlers (merged with defaults unless useDefaultHandlers is false) */
   actionHandlers?: ActionHandler[]
   /** Maximum number of turns before stopping */
@@ -65,7 +65,7 @@ export interface AgentEmulatorOptions {
   useDefaultHandlers?: boolean
 }
 
-export interface AgentEmulator {
+interface AgentEmulator {
   /** Run a multi-turn session starting with the given command */
   runSession(initialCommand: string): Promise<AgentSession>
 }

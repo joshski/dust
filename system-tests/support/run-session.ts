@@ -12,7 +12,7 @@ import {
   type ShellEmulatorOptions,
 } from './shell-emulator'
 
-export interface RunSessionOptions extends ShellEmulatorOptions {
+interface RunSessionOptions extends ShellEmulatorOptions {
   handlers: ActionHandler[]
 }
 

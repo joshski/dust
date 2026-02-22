@@ -22,11 +22,11 @@ export interface WebSocketLike {
 }
 
 // Local-only bucket event types (UI lifecycle, never sent over wire)
-export interface BucketConnectedEvent {
+interface BucketConnectedEvent {
   type: 'bucket.connected'
 }
 
-export interface BucketDisconnectedEvent {
+interface BucketDisconnectedEvent {
   type: 'bucket.disconnected'
   code: number
   reason: string

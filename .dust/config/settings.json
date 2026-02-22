@@ -2,6 +2,14 @@
   "dustCommand": "bin/dust",
   "checks": [
     {
+      "name": "unused code (knip)",
+      "command": "bunx knip",
+      "hints": [
+        "Run `bunx knip` to see full details",
+        "Add intentional exports to knip.json entry configuration"
+      ]
+    },
+    {
       "name": "lint (biome)",
       "command": "bunx biome check .",
       "hints": [

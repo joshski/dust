@@ -8,7 +8,7 @@
 import { dedent } from '../cli/dedent'
 import { extractOpeningSentence } from '../markdown/markdown-utilities'
 
-export interface StockAudit {
+interface StockAudit {
   name: string
   description: string
   template: string

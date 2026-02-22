@@ -44,7 +44,7 @@ export function parseGitDiffNameStatus(output: string): FileChange[] {
 /**
  * Result of analyzing commit changes for task-only pattern
  */
-export interface TaskOnlyAnalysis {
+interface TaskOnlyAnalysis {
   isTaskOnly: boolean
   taskFiles: string[]
   ideaDeletions: string[]

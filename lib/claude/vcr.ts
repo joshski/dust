@@ -60,7 +60,7 @@ export function cassetteExists(name: string): boolean {
   return existsSync(getCassettePath(name))
 }
 
-export type VcrMode = 'record' | 'replay'
+type VcrMode = 'record' | 'replay'
 
 export function getVcrMode(): VcrMode {
   return process.env.CLAUDE_CODE_VCR_MODE === 'record' ? 'record' : 'replay'

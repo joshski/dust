@@ -5,7 +5,7 @@ import {
 } from './streamer'
 import type { RawEventCallback, SpawnOptions } from './types'
 
-export interface RunOptions {
+interface RunOptions {
   spawnOptions?: SpawnOptions
   onRawEvent?: RawEventCallback
 }

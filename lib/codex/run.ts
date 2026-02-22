@@ -3,7 +3,7 @@ import type { RawEventCallback, SpawnOptions } from '../claude/types'
 import { spawnCodex as defaultSpawnCodex } from './spawn-codex'
 import { streamCodexEvents as defaultStreamCodexEvents } from './streamer'
 
-export interface RunOptions {
+interface RunOptions {
   spawnOptions?: SpawnOptions
   onRawEvent?: RawEventCallback
 }

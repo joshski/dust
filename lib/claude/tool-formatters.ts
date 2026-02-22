@@ -5,7 +5,7 @@
  * Unknown tools fall back to JSON rendering.
  */
 
-export type FormatterResult = string[]
+type FormatterResult = string[]
 
 type ToolFormatter = (input: Record<string, unknown>) => FormatterResult
 

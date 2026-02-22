@@ -217,9 +217,7 @@ async function sleepWithProgress(
   writeLine('')
 }
 
-export type GitPullResult =
-  | { success: true }
-  | { success: false; message: string }
+type GitPullResult = { success: true } | { success: false; message: string }
 
 export async function gitPull(
   cwd: string,
@@ -262,15 +260,15 @@ export async function findAvailableTasks(
   return result.tasks
 }
 
-export type IterationResult =
+type IterationResult =
   | 'no_tasks'
   | 'ran_claude'
   | 'claude_error'
   | 'resolved_pull_conflict'
 
-export type LogFn = (message: string) => void
+type LogFn = (message: string) => void
 
-export interface IterationOptions {
+interface IterationOptions {
   onRawEvent?: (rawEvent: Record<string, unknown>) => void
   hooksInstalled?: boolean
   signal?: AbortSignal

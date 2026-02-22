@@ -70,7 +70,7 @@ export interface UploadDependencies {
 }
 
 /* v8 ignore start - thin wrappers around native functions */
-export function createDefaultUploadDependencies(): UploadDependencies {
+function createDefaultUploadDependencies(): UploadDependencies {
   const authFileSystemDeps: AuthFileSystemDependencies = {
     accessSync,
     statSync,

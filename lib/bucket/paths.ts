@@ -11,7 +11,7 @@ import { join } from 'node:path'
  * Environment variables used by getReposDir.
  * Includes an index signature for compatibility with process.env.
  */
-export interface ReposDirEnv {
+interface ReposDirEnv {
   DUST_REPOS_DIR?: string
   [key: string]: string | undefined
 }

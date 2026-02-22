@@ -264,7 +264,7 @@ export function createDefaultBucketDependencies(): BucketDependencies {
 }
 /* v8 ignore stop */
 
-export interface BucketState {
+interface BucketState {
   ws: WebSocketLike | null
   repositories: Map<string, RepositoryState>
   reconnectDelay: number
@@ -744,7 +744,7 @@ export async function shutdown(
  * TUI lifecycle handle returned by setupTUI.
  * Call cleanup() to tear down the alternate screen, render loop, and resize handler.
  */
-export interface TUIHandle {
+interface TUIHandle {
   cleanup: () => void
 }
 

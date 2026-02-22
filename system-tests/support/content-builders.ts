@@ -25,11 +25,6 @@ interface IdeaOptions {
   description: string
 }
 
-interface FactOptions {
-  title: string
-  content: string
-}
-
 function formatLinks(links: Link[] | '(none)' | undefined): string {
   if (links === '(none)' || links === undefined || links.length === 0) {
     return '(none)'
@@ -104,13 +99,5 @@ export function buildIdea(options: IdeaOptions): string {
   return `# ${title}
 
 ${description}
-`
-}
-
-export function buildFact(options: FactOptions): string {
-  const { title, content } = options
-  return `# ${title}
-
-${content}
 `
 }

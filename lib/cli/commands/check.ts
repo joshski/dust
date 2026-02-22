@@ -36,7 +36,7 @@ export function truncateOutput(output: string): string {
   ].join('\n')
 }
 
-export interface CheckResult {
+interface CheckResult {
   name: string
   command: string
   exitCode: number

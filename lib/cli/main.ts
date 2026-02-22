@@ -48,7 +48,7 @@ import type {
  * - `dust new task` -> `new task`
  * - `dust pre push` -> `pre push`
  */
-export const commandRegistry = {
+const commandRegistry = {
   init,
   lint: lintMarkdown,
   list,
@@ -75,7 +75,7 @@ export const commandRegistry = {
   help,
 }
 
-export type Command = keyof typeof commandRegistry
+type Command = keyof typeof commandRegistry
 
 // Top-level commands shown in help (excludes multi-word subcommands)
 export const COMMANDS = Object.keys(commandRegistry).filter(
@@ -85,7 +85,7 @@ export const COMMANDS = Object.keys(commandRegistry).filter(
 // Re-export for backward compatibility
 export { generateHelpText }
 
-export interface MainOptions {
+interface MainOptions {
   commandArguments: string[]
   context: CommandContext
   fileSystem: FileSystem

@@ -322,7 +322,7 @@ export function getLogAreaHeight(state: TerminalUIState): number {
 /**
  * Extended log line with repository info for "All" view.
  */
-export interface DisplayLogLine extends LogLine {
+interface DisplayLogLine extends LogLine {
   repository: string
   color: string
 }

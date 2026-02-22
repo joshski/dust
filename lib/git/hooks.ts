@@ -12,7 +12,7 @@ import type { FileSystem } from '../filesystem/types'
 const DUST_HOOK_START = '# BEGIN DUST HOOK'
 const DUST_HOOK_END = '# END DUST HOOK'
 
-export interface HooksManager {
+interface HooksManager {
   isGitRepo: () => boolean
   isHookInstalled: () => Promise<boolean>
   installHook: () => Promise<void>

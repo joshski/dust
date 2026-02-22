@@ -29,7 +29,7 @@ import type { Violation } from '../lint/validators/types'
 /**
  * Default environment context values for tests
  */
-export const testEnvironmentContext = {
+const testEnvironmentContext = {
   machineName: 'test-machine',
   cwd: '/test/cwd',
   platform: 'test-os 1.0.0',
@@ -185,7 +185,7 @@ export function restoreEnv(): void {
 /**
  * Extended context with captured output lines for assertions
  */
-export interface ContextEmulator extends CommandContext {
+interface ContextEmulator extends CommandContext {
   stdoutLines: string[]
   stderrLines: string[]
 }
@@ -242,7 +242,7 @@ export interface FileSystemEmulator extends FileSystem, GlobScanner {
  *   }
  * })
  */
-export type FileSystemEmulatorOptions = FileSystemTree
+type FileSystemEmulatorOptions = FileSystemTree
 
 /**
  * Creates a file system emulator with optional file contents and write tracking.
@@ -383,7 +383,7 @@ export function createFileSystemEmulator(
 /**
  * Default settings for command tests
  */
-export const defaultTestSettings: DustSettings = { dustCommand: 'dust' }
+const defaultTestSettings: DustSettings = { dustCommand: 'dust' }
 
 /**
  * Lints a task file by running all validators and collecting violations.

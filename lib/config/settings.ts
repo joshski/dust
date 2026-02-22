@@ -14,7 +14,7 @@ import type {
 // Re-export for backwards compatibility
 export type { CheckConfig, DustSettings }
 
-export interface SettingsViolation {
+interface SettingsViolation {
   message: string
 }
 

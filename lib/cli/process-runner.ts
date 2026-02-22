@@ -13,7 +13,7 @@ export interface ProcessResult {
   timedOut?: boolean
 }
 
-export type SpawnFn = (
+type SpawnFn = (
   command: string,
   commandArguments: string[],
   options: { cwd: string; shell?: boolean }

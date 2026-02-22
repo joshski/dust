@@ -10,7 +10,7 @@ The testing framework has three layers:
 
 2. **Agent Emulator** (`system-tests/support/agent-emulator.ts`) - Simulates an AI agent by using pattern-based handlers to determine the next command based on command output. Handlers match regex patterns against stdout/stderr and return the next command (or null to stop).
 
-3. **Content Builders** (`system-tests/support/content-builders.ts`) - Helper functions (`buildTask`, `buildGoal`, `buildIdea`, `buildFact`) that generate properly formatted markdown content for test fixtures.
+3. **Content Builders** (`system-tests/support/content-builders.ts`) - Helper functions (`buildTask`, `buildPrinciple`, `buildIdea`) that generate properly formatted markdown content for test fixtures.
 
 ## Key Concepts
 

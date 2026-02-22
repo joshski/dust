@@ -8,7 +8,6 @@ export type {
   FileSystem,
   GlobScanner,
   ReadableFileSystem,
-  WriteOptions,
 } from '../filesystem/types'
 
 export interface CommandContext {
