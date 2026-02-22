@@ -146,11 +146,28 @@ function renderResolvedQuestions(responses: OpenQuestionResponse[]): string {
   return `## Resolved Questions\n\n${sections.join('\n\n')}\n`
 }
 
+interface IdeaSection {
+  heading: string
+  ideaTitle: string
+  ideaSlug: string
+}
+
+function renderIdeaSection(ideaSection: IdeaSection): string {
+  return `## ${ideaSection.heading}
+
+- [${ideaSection.ideaTitle}](../ideas/${ideaSection.ideaSlug}.md)
+`
+}
+
 function renderTask(
   title: string,
   openingSentence: string,
   definitionOfDone: string[],
-  options?: { description?: string; resolvedQuestions?: OpenQuestionResponse[] }
+  ideaSection: IdeaSection,
+  options?: {
+    description?: string
+    resolvedQuestions?: OpenQuestionResponse[]
+  }
 ): string {
   const descriptionParagraph =
     options?.description !== undefined ? `\n${options.description}\n` : ''
@@ -160,11 +177,12 @@ function renderTask(
       ? `\n${renderResolvedQuestions(options.resolvedQuestions)}\n`
       : ''
 
+  const ideaSectionContent = `\n${renderIdeaSection(ideaSection)}\n`
+
   return `# ${title}
 
 ${openingSentence}
-${descriptionParagraph}${resolvedSection}
-## Blocked By
+${descriptionParagraph}${resolvedSection}${ideaSectionContent}## Blocked By
 
 (none)
 
@@ -181,6 +199,7 @@ async function createIdeaTask(
   ideaSlug: string,
   openingSentenceTemplate: (ideaTitle: string) => string,
   definitionOfDone: string[],
+  ideaSectionHeading: string,
   taskOptions?: {
     description?: string
     resolvedQuestions?: OpenQuestionResponse[]
@@ -192,11 +211,17 @@ async function createIdeaTask(
   const filePath = `${dustPath}/tasks/${filename}`
   const openingSentence = openingSentenceTemplate(ideaTitle)
 
+  const ideaSection = { heading: ideaSectionHeading, ideaTitle, ideaSlug }
+
   const content = renderTask(
     taskTitle,
     openingSentence,
     definitionOfDone,
-    taskOptions
+    ideaSection,
+    {
+      description: taskOptions?.description,
+      resolvedQuestions: taskOptions?.resolvedQuestions,
+    }
   )
   await fileSystem.writeFile(filePath, content)
   return { filePath }
@@ -221,6 +246,7 @@ export async function createRefineIdeaTask(
       'Open questions follow the required heading format and focus on high-value decisions',
       'Idea file is updated with findings',
     ],
+    'Refines Idea',
     { description }
   )
 }
@@ -242,6 +268,7 @@ export async function decomposeIdea(
       "Task's Principles section links to relevant principles from .dust/principles/",
       'The original idea is deleted or updated to reflect remaining scope',
     ],
+    'Decomposes Idea',
     {
       description: options.description,
       resolvedQuestions: options.openQuestionResponses,
@@ -263,6 +290,7 @@ export async function createShelveIdeaTask(
     ideaTitle =>
       `Archive this idea and remove it from the active backlog. See [${ideaTitle}](../ideas/${ideaSlug}.md).`,
     ['Idea file is deleted', 'Rationale is recorded in the commit message'],
+    'Shelves Idea',
     { description }
   )
 }

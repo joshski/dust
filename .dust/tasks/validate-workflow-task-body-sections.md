@@ -22,7 +22,7 @@ Report actionable lint errors when:
 
 ## Blocked By
 
-- [Add body sections to workflow task creation](add-body-sections-to-workflow-task-creation.md)
+(none)
 
 ## Definition of Done
 

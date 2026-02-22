@@ -25,7 +25,7 @@ Reuse the `extractLinksFromSection` pattern from `tasks.ts` for parsing.
 
 ## Blocked By
 
-- [Add body sections to workflow task creation](add-body-sections-to-workflow-task-creation.md)
+(none)
 
 ## Definition of Done
 

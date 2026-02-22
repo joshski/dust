@@ -91,7 +91,22 @@ describe('createRefineIdeaTask', () => {
 
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain(
-      'Review `.dust/principles/` for alignment and `.dust/facts/` for relevant design decisions. See [Progress Broadcasting](../ideas/progress-broadcasting.md). If you add open questions, use `## Open Questions` with `### Question?` headings and one or more `#### Option` headings beneath each question, and only add questions that are meaningful decisions worth asking.\n\nFocus on the WebSocket approach.\n\n## Blocked By'
+      'Review `.dust/principles/` for alignment and `.dust/facts/` for relevant design decisions. See [Progress Broadcasting](../ideas/progress-broadcasting.md). If you add open questions, use `## Open Questions` with `### Question?` headings and one or more `#### Option` headings beneath each question, and only add questions that are meaningful decisions worth asking.\n\nFocus on the WebSocket approach.'
+    )
+  })
+
+  test('includes Refines Idea section with link to target idea', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createRefineIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('## Refines Idea')
+    expect(content).toContain(
+      '- [Progress Broadcasting](../ideas/progress-broadcasting.md)'
     )
   })
 })
@@ -183,6 +198,19 @@ describe('decomposeIdea', () => {
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).not.toContain('## Resolved Questions')
   })
+
+  test('includes Decomposes Idea section with link to target idea', async () => {
+    const fileSystem = createFileSystem()
+    const result = await decomposeIdea(fileSystem, '/project/.dust', {
+      ideaSlug: 'progress-broadcasting',
+    })
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('## Decomposes Idea')
+    expect(content).toContain(
+      '- [Progress Broadcasting](../ideas/progress-broadcasting.md)'
+    )
+  })
 })
 
 describe('createShelveIdeaTask', () => {
@@ -205,6 +233,21 @@ describe('createShelveIdeaTask', () => {
     expect(content).toContain('- [ ] Idea file is deleted')
     expect(content).toContain(
       '- [ ] Rationale is recorded in the commit message'
+    )
+  })
+
+  test('includes Shelves Idea section with link to target idea', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createShelveIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('## Shelves Idea')
+    expect(content).toContain(
+      '- [Progress Broadcasting](../ideas/progress-broadcasting.md)'
     )
   })
 })
