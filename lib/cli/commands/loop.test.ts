@@ -1095,6 +1095,28 @@ describe('parseMaxIterations', () => {
 })
 
 describe('loopClaude', () => {
+  test('refuses to run when DUST_UNATTENDED is set', async () => {
+    const originalEnv = process.env.DUST_UNATTENDED
+    process.env.DUST_UNATTENDED = '1'
+    try {
+      const dependencies = createDependencies()
+      const context = dependencies.context as ReturnType<
+        typeof createContextEmulator
+      >
+      const result = await loopClaude(dependencies)
+      expect(result.exitCode).toBe(1)
+      expect(context.stderrLines.join('\n')).toContain(
+        'dust loop cannot run inside an unattended session'
+      )
+    } finally {
+      if (originalEnv === undefined) {
+        delete process.env.DUST_UNATTENDED
+      } else {
+        process.env.DUST_UNATTENDED = originalEnv
+      }
+    }
+  })
+
   test('outputs startup message with max iterations', async () => {
     const dependencies = createDependencies()
     dependencies.arguments = ['3']

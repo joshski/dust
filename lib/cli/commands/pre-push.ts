@@ -7,6 +7,7 @@
  */
 
 import { detectAgent } from '../../agents/detection'
+import { isUnattended } from '../../session'
 import { defaultGitRunner, type GitRunner } from '../process-runner'
 import type { CommandDependencies, CommandResult } from '../types'
 import { check } from './check'
@@ -189,7 +190,7 @@ export async function prePush(
   }
 
   // Block push when running unattended with uncommitted changes
-  if (env.DUST_UNATTENDED) {
+  if (isUnattended(env)) {
     const uncommittedFiles = await getUncommittedFiles(context.cwd, gitRunner)
     if (uncommittedFiles.length > 0) {
       context.stderr('')

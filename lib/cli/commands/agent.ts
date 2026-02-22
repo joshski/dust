@@ -4,6 +4,7 @@
  * Displays the welcome message and command routing guidance for AI agents.
  */
 
+import { DUST_SKIP_AGENT } from '../../session'
 import { dedent } from '../dedent'
 import type { CommandDependencies, CommandResult } from '../types'
 import {
@@ -53,7 +54,7 @@ export async function agent(
   const { context, fileSystem, settings } = dependencies
 
   // Detect if running in an automated loop context
-  if (env.DUST_SKIP_AGENT === '1') {
+  if (env[DUST_SKIP_AGENT] === '1') {
     context.stdout(
       "You're running in an automated loop - proceeding to implement the assigned task."
     )

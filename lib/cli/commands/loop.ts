@@ -26,6 +26,7 @@ import {
 } from '../../agent-events'
 import { run as claudeRun } from '../../claude/run'
 import { createLogger, enableFileLogs } from '../../logging'
+import { buildUnattendedEnv, isUnattended } from '../../session'
 import { DUST_VERSION } from '../../version'
 import type { CommandDependencies, CommandResult } from '../types'
 import { manageGitHooks } from './agent-shared'
@@ -294,13 +295,7 @@ export async function runOneIteration(
     logger = log,
     repositoryId,
   } = options
-  const baseEnv: Record<string, string> = {
-    DUST_UNATTENDED: '1',
-    DUST_SKIP_AGENT: '1',
-  }
-  if (repositoryId) {
-    baseEnv.DUST_REPOSITORY_ID = repositoryId
-  }
+  const baseEnv = buildUnattendedEnv({ repositoryId })
 
   // Step 1: Sync with remote
   log('syncing with remote')
@@ -450,6 +445,13 @@ export async function loopClaude(
 ): Promise<CommandResult> {
   enableFileLogs('loop')
   const { context, settings } = dependencies
+
+  if (isUnattended()) {
+    context.stderr(
+      'dust loop cannot run inside an unattended session (DUST_UNATTENDED is set)'
+    )
+    return { exitCode: 1 }
+  }
   const { postEvent } = loopDependencies
   const maxIterations = parseMaxIterations(dependencies.arguments)
 
