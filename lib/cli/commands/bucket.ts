@@ -599,18 +599,40 @@ export function connectWebSocket(
       log(`ws message: ${message.type}`)
       if (message.type === 'repository-list') {
         const repos = message.repositories ?? []
-        const repoNames = repos
-          .map((r: { name?: string; hasTask?: boolean }) => {
-            const name = r?.name ?? '?'
-            return r?.hasTask ? `${name} (has task)` : name
-          })
-          .join(', ')
         logMessage(
           state,
           context,
           useTUI,
-          `Received repository list: ${repoNames || '(empty)'}`
+          `Received repository list (${repos.length} repositories):`
         )
+        if (repos.length === 0) {
+          logMessage(state, context, useTUI, '  (empty)')
+        } else {
+          for (const r of repos) {
+            const attrs: string[] = []
+            if (typeof r?.name === 'string') {
+              attrs.push(`name=${r.name}`)
+            }
+            if (typeof r?.id === 'string') {
+              attrs.push(`id=${r.id}`)
+            }
+            if (typeof r?.gitUrl === 'string') {
+              attrs.push(`gitUrl=${r.gitUrl}`)
+            }
+            if (typeof r?.url === 'string') {
+              attrs.push(`url=${r.url}`)
+            }
+            if (typeof r?.hasTask === 'boolean') {
+              attrs.push(`hasTask=${r.hasTask}`)
+            }
+            logMessage(
+              state,
+              context,
+              useTUI,
+              `  - ${attrs.length > 0 ? attrs.join(', ') : '(no attributes)'}`
+            )
+          }
+        }
         // Eagerly add repos to UI so tabs appear before cloning finishes
         syncUIWithRepoList(state, repos)
         const repoDeps = toRepositoryDependencies(

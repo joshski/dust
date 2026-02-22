@@ -870,12 +870,40 @@ describe('connectWebSocket', () => {
     ws.onmessage?.({
       data: JSON.stringify({
         type: 'repository-list',
-        repositories: ['repo1', 'repo2', 'repo3'],
+        repositories: [
+          {
+            name: 'repo-a',
+            id: '123',
+            gitUrl: 'git@example.com:repo-a.git',
+            url: 'https://example.com/repo-a',
+            hasTask: true,
+          },
+          {
+            name: 'repo-b',
+            id: '456',
+            gitUrl: 'git@example.com:repo-b.git',
+            hasTask: false,
+          },
+          {
+            name: 'repo-c',
+            id: '789',
+            gitUrl: 'git@example.com:repo-c.git',
+            hasTask: false,
+          },
+        ],
       }),
     })
 
-    expect(context.stdoutLines.join('\n')).toContain(
-      'Received repository list: ?, ?, ?'
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('Received repository list (3 repositories):')
+    expect(output).toContain(
+      'name=repo-a, id=123, gitUrl=git@example.com:repo-a.git, url=https://example.com/repo-a, hasTask=true'
+    )
+    expect(output).toContain(
+      'name=repo-b, id=456, gitUrl=git@example.com:repo-b.git, hasTask=false'
+    )
+    expect(output).toContain(
+      'name=repo-c, id=789, gitUrl=git@example.com:repo-c.git, hasTask=false'
     )
   })
 
@@ -981,9 +1009,9 @@ describe('connectWebSocket', () => {
       }),
     })
 
-    expect(context.stdoutLines.join('\n')).toContain(
-      'Received repository list: (empty)'
-    )
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('Received repository list (0 repositories):')
+    expect(output).toContain('(empty)')
   })
 
   test('logs WebSocket errors to system buffer in TUI mode', () => {
