@@ -21,6 +21,7 @@ import {
 import {
   validateIdeaOpenQuestions,
   validateIdeaTransitionTitle,
+  validateWorkflowTaskBodySection,
 } from '../../lint/validators/idea-validator'
 import {
   validateLinks,
@@ -261,6 +262,15 @@ export async function lintMarkdown(
       if (ideaTransitionViolation) {
         violations.push(ideaTransitionViolation)
       }
+
+      violations.push(
+        ...validateWorkflowTaskBodySection(
+          filePath,
+          content,
+          ideasPath,
+          fileSystem
+        )
+      )
     }
   }
 

@@ -39,4 +39,10 @@ Tasks must include the body section to be associated with an idea. If a task has
 
 ## Linter Validation
 
-The linter validates that the idea title after the prefix corresponds to an existing idea file in `.dust/ideas/`. `IDEA_TRANSITION_PREFIXES` and `titleToFilename` are defined in `lib/workflow-tasks.ts` and re-exported from `lint-markdown.ts` for external tool use.
+The linter validates:
+
+1. The idea title after the prefix corresponds to an existing idea file in `.dust/ideas/`
+2. Workflow tasks include the required body section (`## Refines Idea`, `## Decomposes Idea`, or `## Shelves Idea`)
+3. The body section contains a markdown link to an existing idea file
+
+`IDEA_TRANSITION_PREFIXES` and `titleToFilename` are defined in `lib/workflow-tasks.ts` and re-exported from `lint-markdown.ts` for external tool use. The body section validation is in `lib/lint/validators/idea-validator.ts`.

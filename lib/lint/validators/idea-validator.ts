@@ -7,8 +7,17 @@ import {
   titleToFilename,
 } from '../../artifacts/workflow-tasks'
 import type { ReadableFileSystem } from '../../filesystem/types'
-import { extractTitle } from '../../markdown/markdown-utilities'
+import {
+  extractTitle,
+  MARKDOWN_LINK_PATTERN,
+} from '../../markdown/markdown-utilities'
 import type { Violation } from './types'
+
+const WORKFLOW_PREFIX_TO_SECTION: Record<string, string> = {
+  'Refine Idea: ': 'Refines Idea',
+  'Decompose Idea: ': 'Decomposes Idea',
+  'Shelve Idea: ': 'Shelves Idea',
+}
 
 export function validateIdeaOpenQuestions(
   filePath: string,
@@ -152,4 +161,125 @@ export function validateIdeaTransitionTitle(
   }
 
   return null
+}
+
+function extractSectionContent(
+  content: string,
+  sectionHeading: string
+): { content: string; startLine: number } | null {
+  const lines = content.split('\n')
+  let inSection = false
+  let sectionContent = ''
+  let startLine = 0
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+
+    if (line.startsWith('## ')) {
+      if (inSection) break
+      if (line.trimEnd() === `## ${sectionHeading}`) {
+        inSection = true
+        startLine = i + 1
+      }
+      continue
+    }
+
+    if (line.startsWith('# ') && inSection) break
+
+    if (inSection) {
+      sectionContent += `${line}\n`
+    }
+  }
+
+  if (!inSection) return null
+  return { content: sectionContent, startLine }
+}
+
+export function validateWorkflowTaskBodySection(
+  filePath: string,
+  content: string,
+  ideasPath: string,
+  fileSystem: ReadableFileSystem
+): Violation[] {
+  const violations: Violation[] = []
+  const title = extractTitle(content)
+  if (!title) return violations
+
+  let matchedPrefix: string | null = null
+  for (const prefix of IDEA_TRANSITION_PREFIXES) {
+    if (title.startsWith(prefix)) {
+      matchedPrefix = prefix
+      break
+    }
+  }
+
+  if (!matchedPrefix) return violations
+
+  const expectedHeading = WORKFLOW_PREFIX_TO_SECTION[matchedPrefix]
+  const section = extractSectionContent(content, expectedHeading)
+
+  if (!section) {
+    violations.push({
+      file: filePath,
+      message: `Workflow task with "${matchedPrefix.trim()}" prefix is missing required "## ${expectedHeading}" section. Add a section with a link to the idea file, e.g.:\n\n## ${expectedHeading}\n\n- [Idea Title](../ideas/idea-slug.md)`,
+    })
+    return violations
+  }
+
+  const linkRegex = new RegExp(MARKDOWN_LINK_PATTERN.source, 'g')
+  const links: { text: string; target: string; line: number }[] = []
+  const sectionLines = section.content.split('\n')
+
+  for (let i = 0; i < sectionLines.length; i++) {
+    const line = sectionLines[i]
+    let match: RegExpExecArray | null = linkRegex.exec(line)
+    while (match !== null) {
+      links.push({
+        text: match[1],
+        target: match[2],
+        line: section.startLine + i + 1,
+      })
+      match = linkRegex.exec(line)
+    }
+  }
+
+  if (links.length === 0) {
+    violations.push({
+      file: filePath,
+      message: `"## ${expectedHeading}" section contains no link. Add a markdown link to the idea file, e.g.:\n\n- [Idea Title](../ideas/idea-slug.md)`,
+      line: section.startLine,
+    })
+    return violations
+  }
+
+  const ideaLinks = links.filter(
+    l => l.target.includes('/ideas/') || l.target.startsWith('../ideas/')
+  )
+
+  if (ideaLinks.length === 0) {
+    violations.push({
+      file: filePath,
+      message: `"## ${expectedHeading}" section contains no link to an idea file. Links must point to a file in ../ideas/, e.g.:\n\n- [Idea Title](../ideas/idea-slug.md)`,
+      line: section.startLine,
+    })
+    return violations
+  }
+
+  for (const link of ideaLinks) {
+    const slugMatch = link.target.match(/([^/]+)\.md$/)
+    if (!slugMatch) continue
+
+    const ideaSlug = slugMatch[1]
+    const ideaFilePath = `${ideasPath}/${ideaSlug}.md`
+
+    if (!fileSystem.exists(ideaFilePath)) {
+      violations.push({
+        file: filePath,
+        message: `Link to idea "${link.text}" points to non-existent file: ${ideaSlug}.md. Either create the idea file at ideas/${ideaSlug}.md or update the link to point to an existing idea.`,
+        line: link.line,
+      })
+    }
+  }
+
+  return violations
 }

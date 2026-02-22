@@ -20,6 +20,7 @@ import {
 import {
   validateIdeaOpenQuestions,
   validateIdeaTransitionTitle,
+  validateWorkflowTaskBodySection,
 } from '../../lint/validators/idea-validator'
 import {
   validateLinks,
@@ -2518,6 +2519,346 @@ describe('IDEA_TRANSITION_PREFIXES', () => {
   })
 })
 
+describe('validateWorkflowTaskBodySection', () => {
+  test('returns no violations for non-workflow tasks', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { '.dust': { ideas: {}, tasks: {} } },
+    })
+    const content = `# Regular Task
+
+Do something.
+
+## Blocked By
+
+(none)
+`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/regular-task.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toEqual([])
+  })
+
+  test('returns no violations for files without a title', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { '.dust': { ideas: {}, tasks: {} } },
+    })
+    const content = 'Just some text without a heading.'
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/no-title.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toEqual([])
+  })
+
+  test('returns violation when Refines Idea section is missing', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Refine Idea: My Idea
+
+Research and refine this idea.
+
+## Blocked By
+
+(none)
+`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/refine-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('missing required')
+    expect(violations[0].message).toContain('## Refines Idea')
+  })
+
+  test('returns violation when Refines Idea section has no links', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Refine Idea: My Idea
+
+Research and refine this idea.
+
+## Refines Idea
+
+This section has no links.
+
+## Blocked By
+
+(none)
+`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/refine-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('contains no link')
+  })
+
+  test('returns violation when Refines Idea section has no idea links', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Refine Idea: My Idea
+
+Research and refine this idea.
+
+## Refines Idea
+
+- [External Link](https://example.com/idea)
+
+## Blocked By
+
+(none)
+`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/refine-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('contains no link to an idea file')
+  })
+
+  test('returns violation when linked idea file does not exist', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Refine Idea: My Idea
+
+Research and refine this idea.
+
+## Refines Idea
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+
+(none)
+`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/refine-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('points to non-existent file')
+  })
+
+  test('returns no violations when Refines Idea section links to existing idea', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Refine Idea: My Idea
+
+Research and refine this idea.
+
+## Refines Idea
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+
+(none)
+`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/refine-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toEqual([])
+  })
+
+  test('returns violation for Decompose Idea task missing section', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Decompose Idea: My Idea
+
+Create tasks from this idea.
+
+## Blocked By
+
+(none)
+`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/decompose-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('## Decomposes Idea')
+  })
+
+  test('returns violation for Shelve Idea task missing section', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Shelve Idea: My Idea
+
+Archive this idea.
+
+## Blocked By
+
+(none)
+`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/shelve-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('## Shelves Idea')
+  })
+
+  test('section parsing stops at next H1 heading', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Refine Idea: My Idea
+
+Research and refine this idea.
+
+## Refines Idea
+
+# Another H1 heading interrupts
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+
+(none)
+`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/refine-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('contains no link')
+  })
+
+  test('section parsing stops at next H2 heading', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Refine Idea: My Idea
+
+Research and refine this idea.
+
+## Refines Idea
+
+## Next Section
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+
+(none)
+`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/refine-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('contains no link')
+  })
+
+  test('ignores idea links without .md extension in filename', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Refine Idea: My Idea
+
+Research and refine this idea.
+
+## Refines Idea
+
+- [My Idea](../ideas/my-idea)
+- [Other Idea](../ideas/other-idea.md)
+
+## Blocked By
+
+(none)
+`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/refine-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('other-idea.md')
+  })
+})
+
 describe('lintMarkdown idea transition validation', () => {
   test('passes when transition task references existing idea', async () => {
     const context = createContextEmulator()
@@ -2531,6 +2872,10 @@ describe('lintMarkdown idea transition validation', () => {
             'refine-idea-my-idea.md': `# Refine Idea: My Idea
 
 Refine this idea.
+
+## Refines Idea
+
+- [My Idea](../ideas/my-idea.md)
 
 ## Principles
 ## Blocked By
@@ -2554,6 +2899,10 @@ Refine this idea.
             'refine-idea-missing-idea.md': `# Refine Idea: Missing Idea
 
 Refine this idea.
+
+## Refines Idea
+
+- [Missing Idea](../ideas/missing-idea.md)
 
 ## Principles
 ## Blocked By
@@ -3344,5 +3693,295 @@ This is a principle.
     await expect(
       lintMarkdown(createDependencies(context, fileSystem))
     ).rejects.toThrow('Permission denied')
+  })
+})
+
+describe('validateWorkflowTaskBodySection', () => {
+  test('returns no violations for non-workflow tasks', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { '.dust': { ideas: {}, tasks: {} } },
+    })
+    const content = `# Regular Task
+
+Do something.
+
+## Blocked By
+## Definition of Done`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/regular-task.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toEqual([])
+  })
+
+  test('reports missing Refines Idea section', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Refine Idea: My Idea
+
+Refine this idea.
+
+## Blocked By
+## Definition of Done`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/refine-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain(
+      'missing required "## Refines Idea" section'
+    )
+  })
+
+  test('reports missing Decomposes Idea section', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Decompose Idea: My Idea
+
+Create tasks from this idea.
+
+## Blocked By
+## Definition of Done`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/decompose-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain(
+      'missing required "## Decomposes Idea" section'
+    )
+  })
+
+  test('reports missing Shelves Idea section', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Shelve Idea: My Idea
+
+Archive this idea.
+
+## Blocked By
+## Definition of Done`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/shelve-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain(
+      'missing required "## Shelves Idea" section'
+    )
+  })
+
+  test('reports empty body section with no links', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Refine Idea: My Idea
+
+Refine this idea.
+
+## Refines Idea
+
+No links here.
+
+## Blocked By
+## Definition of Done`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/refine-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('contains no link')
+  })
+
+  test('reports section with only non-idea links', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Refine Idea: My Idea
+
+Refine this idea.
+
+## Refines Idea
+
+- [External](https://example.com)
+
+## Blocked By
+## Definition of Done`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/refine-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('contains no link to an idea file')
+  })
+
+  test('reports link to non-existent idea file', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Refine Idea: My Idea
+
+Refine this idea.
+
+## Refines Idea
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+## Definition of Done`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/refine-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('points to non-existent file')
+    expect(violations[0].message).toContain('my-idea.md')
+  })
+
+  test('passes with valid body section linking to existing idea', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Refine Idea: My Idea
+
+Refine this idea.
+
+## Refines Idea
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+## Definition of Done`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/refine-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toEqual([])
+  })
+
+  test('returns no violations when file has no title', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { '.dust': { ideas: {}, tasks: {} } },
+    })
+    const content = 'Just some content without a title.'
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/some-file.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toEqual([])
+  })
+
+  test('stops parsing section at H1 heading', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Refine Idea: My Idea
+
+Refine this idea.
+
+## Refines Idea
+
+# Another H1
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/refine-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('contains no link')
+  })
+
+  test('ignores idea links without .md extension', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Refine Idea: My Idea
+
+Refine this idea.
+
+## Refines Idea
+
+- [My Idea](../ideas/my-idea)
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By`
+    const violations = validateWorkflowTaskBodySection(
+      '/project/.dust/tasks/refine-idea-my-idea.md',
+      content,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toEqual([])
   })
 })
