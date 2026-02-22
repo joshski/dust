@@ -20,7 +20,7 @@ import type { CommandDependencies } from '../types'
 import {
   type AuthFileSystemDependencies,
   type BucketDependencies,
-  bucket,
+  bucketWorker,
   connectWebSocket,
   createAuthFileSystem,
   createDefaultBucketDependencies,
@@ -1351,9 +1351,24 @@ describe('shutdown', () => {
   })
 })
 
-describe('bucket', () => {
+describe('bucketWorker', () => {
   afterEach(() => {
     restoreEnv()
+  })
+
+  test('refuses to run when DUST_UNATTENDED is set', async () => {
+    stubEnv('DUST_UNATTENDED', '1')
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+
+    const result = await bucketWorker(dependencies)
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('')).toContain(
+      'cannot run inside an unattended session'
+    )
   })
 
   test('uses stored credential when available', async () => {
@@ -1376,7 +1391,7 @@ describe('bucket', () => {
       },
     })
 
-    await bucket(dependencies, bucketDependencies)
+    await bucketWorker(dependencies, bucketDependencies)
 
     expect(capturedToken).toBe('stored-tok')
   })
@@ -1409,7 +1424,7 @@ describe('bucket', () => {
       },
     })
 
-    await bucket(dependencies, bucketDependencies)
+    await bucketWorker(dependencies, bucketDependencies)
 
     expect(capturedToken).toBe('browser-tok')
     expect(context.stdoutLines.join('\n')).toContain('Opening browser')
@@ -1440,7 +1455,7 @@ describe('bucket', () => {
       },
     })
 
-    await bucket(dependencies, bucketDependencies)
+    await bucketWorker(dependencies, bucketDependencies)
 
     expect(authFs.writtenFiles.get('/home/.dust/credentials.json')).toBe(
       '{"token":"browser-tok"}'
@@ -1461,7 +1476,7 @@ describe('bucket', () => {
       }),
     })
 
-    const result = await bucket(dependencies, bucketDependencies)
+    const result = await bucketWorker(dependencies, bucketDependencies)
 
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain('Authentication failed')
@@ -1484,7 +1499,7 @@ describe('bucket', () => {
       },
     })
 
-    await bucket(dependencies, bucketDependencies)
+    await bucketWorker(dependencies, bucketDependencies)
 
     expect(capturedToken).toBe('env-var-token')
   })
@@ -1511,7 +1526,7 @@ describe('bucket', () => {
       },
     })
 
-    await bucket(dependencies, bucketDependencies)
+    await bucketWorker(dependencies, bucketDependencies)
 
     expect(capturedToken).toBe('env-var-token')
   })
@@ -1538,7 +1553,7 @@ describe('bucket', () => {
       },
     })
 
-    await bucket(dependencies, bucketDependencies)
+    await bucketWorker(dependencies, bucketDependencies)
 
     expect(capturedToken).toBe('stored-tok')
   })
@@ -1558,7 +1573,7 @@ describe('bucket', () => {
       },
     })
 
-    const result = await bucket(dependencies, bucketDependencies)
+    const result = await bucketWorker(dependencies, bucketDependencies)
 
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain('Failed to connect')
@@ -1583,7 +1598,7 @@ describe('bucket', () => {
       },
     })
 
-    const result = await bucket(dependencies, bucketDependencies)
+    const result = await bucketWorker(dependencies, bucketDependencies)
 
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain('Token rejected')
@@ -1604,7 +1619,7 @@ describe('bucket', () => {
       },
     })
 
-    const result = await bucket(dependencies, bucketDependencies)
+    const result = await bucketWorker(dependencies, bucketDependencies)
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain('Shutting down')
@@ -1622,7 +1637,7 @@ describe('bucket', () => {
       },
     })
 
-    const result = await bucket(dependencies, bucketDependencies)
+    const result = await bucketWorker(dependencies, bucketDependencies)
 
     expect(result.exitCode).toBe(0)
   })
@@ -1638,7 +1653,7 @@ describe('bucket', () => {
       },
     })
 
-    const result = await bucket(dependencies, bucketDependencies)
+    const result = await bucketWorker(dependencies, bucketDependencies)
 
     expect(result.exitCode).toBe(0)
   })
@@ -1665,7 +1680,7 @@ describe('bucket', () => {
       },
     })
 
-    const result = await bucket(dependencies, bucketDependencies)
+    const result = await bucketWorker(dependencies, bucketDependencies)
 
     expect(result.exitCode).toBe(0)
     expect(keyCallCount).toBe(2)
@@ -1694,7 +1709,7 @@ describe('bucket', () => {
       },
     })
 
-    await bucket(dependencies, bucketDependencies)
+    await bucketWorker(dependencies, bucketDependencies)
 
     expect(keypressCleanedUp).toBe(true)
     expect(signalsCleanedUp).toBe(true)
@@ -1716,7 +1731,7 @@ describe('bucket', () => {
       },
     })
 
-    const result = await bucket(dependencies, bucketDependencies)
+    const result = await bucketWorker(dependencies, bucketDependencies)
 
     expect(result.exitCode).toBe(0)
     // Verify alternate screen was entered and exited
@@ -1736,7 +1751,7 @@ describe('bucket', () => {
       },
     })
 
-    const result = await bucket(dependencies, bucketDependencies)
+    const result = await bucketWorker(dependencies, bucketDependencies)
 
     expect(result.exitCode).toBe(0)
   })

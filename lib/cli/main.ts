@@ -12,7 +12,7 @@ import { loadSettings } from '../config/settings'
 import { DUST_VERSION } from '../version'
 import { agent } from './commands/agent'
 import { audit } from './commands/audit'
-import { bucket } from './commands/bucket'
+import { bucketWorker } from './commands/bucket'
 import { bucketAssetUpload } from './commands/bucket-asset-upload'
 import { check } from './commands/check'
 import { focus } from './commands/focus'
@@ -60,7 +60,7 @@ const commandRegistry = {
   check,
   agent,
   audit,
-  bucket,
+  'bucket worker': bucketWorker,
   'bucket asset upload': bucketAssetUpload,
   focus,
   'new task': newTask,

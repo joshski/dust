@@ -419,7 +419,6 @@ describe('COMMANDS', () => {
       'check',
       'agent',
       'audit',
-      'bucket',
       'focus',
       'migrate',
       'help',
