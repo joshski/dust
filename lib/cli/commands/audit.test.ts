@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { transformAuditContent } from '../../audits/index'
+import { injectAdHocScope, transformAuditContent } from '../../audits/index'
 import { loadStockAudits } from '../../audits/stock-audits'
 import {
   createContextEmulator,
@@ -418,6 +418,95 @@ describe('audit add command', () => {
     expect(writtenContent).toContain('# Audit: Security Review')
     expect(writtenContent).toContain('Review the codebase for common security')
   })
+
+  test('creates task with ad-hoc details when provided', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {},
+          tasks: {},
+        },
+      },
+    })
+
+    const result = await audit({
+      ...createDependencies(context, fileSystem),
+      arguments: [
+        'security-review',
+        'Focus on authentication changes from last week',
+      ],
+    })
+
+    expect(result.exitCode).toBe(0)
+    const writtenContent = fileSystem.writtenFiles.get(
+      '/project/.dust/tasks/audit-security-review.md'
+    )
+    expect(writtenContent).toContain('## Ad-hoc Scope')
+    expect(writtenContent).toContain(
+      'Focus on authentication changes from last week'
+    )
+    // Verify Ad-hoc Scope appears before ## Scope
+    const adHocIndex = writtenContent?.indexOf('## Ad-hoc Scope')
+    const scopeIndex = writtenContent?.indexOf('## Scope')
+    expect(adHocIndex).toBeLessThan(scopeIndex as number)
+  })
+
+  test('creates task without ad-hoc section when no details provided', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {},
+          tasks: {},
+        },
+      },
+    })
+
+    const result = await audit({
+      ...createDependencies(context, fileSystem),
+      arguments: ['security-review'],
+    })
+
+    expect(result.exitCode).toBe(0)
+    const writtenContent = fileSystem.writtenFiles.get(
+      '/project/.dust/tasks/audit-security-review.md'
+    )
+    expect(writtenContent).not.toContain('## Ad-hoc Scope')
+  })
+
+  test('creates task with ad-hoc details from user audit', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {
+            audits: {
+              'my-audit.md':
+                '# My Custom Audit\n\nCheck for custom issues.\n\n## Scope\n\nFocus on these areas.',
+            },
+          },
+          tasks: {},
+        },
+      },
+    })
+
+    const result = await audit({
+      ...createDependencies(context, fileSystem),
+      arguments: ['my-audit', 'Check src/api/ directory specifically'],
+    })
+
+    expect(result.exitCode).toBe(0)
+    const writtenContent = fileSystem.writtenFiles.get(
+      '/project/.dust/tasks/audit-my-audit.md'
+    )
+    expect(writtenContent).toContain('## Ad-hoc Scope')
+    expect(writtenContent).toContain('Check src/api/ directory specifically')
+    // Verify Ad-hoc Scope appears before ## Scope
+    const adHocIndex = writtenContent?.indexOf('## Ad-hoc Scope')
+    const scopeIndex = writtenContent?.indexOf('## Scope')
+    expect(adHocIndex).toBeLessThan(scopeIndex as number)
+  })
 })
 
 describe('generated stock audit tasks pass lint rules', () => {
@@ -463,5 +552,30 @@ describe('transformAuditContent', () => {
     const content = '# First Title\n\nContent.\n\n# Second Title'
     const result = transformAuditContent(content)
     expect(result).toBe('# Audit: First Title\n\nContent.\n\n# Second Title')
+  })
+})
+
+describe('injectAdHocScope', () => {
+  test('injects ad-hoc scope section before ## Scope', () => {
+    const content =
+      '# Audit: Security Review\n\nDescription.\n\n## Scope\n\nFocus areas.'
+    const result = injectAdHocScope(content, 'Check authentication code')
+    expect(result).toBe(
+      '# Audit: Security Review\n\nDescription.\n\n## Ad-hoc Scope\n\nCheck authentication code\n\n## Scope\n\nFocus areas.'
+    )
+  })
+
+  test('appends ad-hoc scope at end when no ## Scope heading exists', () => {
+    const content = '# Audit: Simple\n\nDescription.'
+    const result = injectAdHocScope(content, 'Focus on this area')
+    expect(result).toBe(
+      '# Audit: Simple\n\nDescription.\n\n## Ad-hoc Scope\n\nFocus on this area\n'
+    )
+  })
+
+  test('preserves multiline ad-hoc details', () => {
+    const content = '# Audit: Test\n\nDesc.\n\n## Scope\n\nAreas.'
+    const result = injectAdHocScope(content, 'Line 1\nLine 2\nLine 3')
+    expect(result).toContain('Line 1\nLine 2\nLine 3')
   })
 })

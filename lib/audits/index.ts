@@ -49,6 +49,27 @@ export function transformAuditContent(content: string): string {
   return content.replace(/^#\s+.+$/m, `# Audit: ${originalTitle}`)
 }
 
+/**
+ * Injects an Ad-hoc Scope section after the opening description, before ## Scope.
+ * The ad-hoc details are passed through without validation.
+ */
+export function injectAdHocScope(
+  content: string,
+  adHocDetails: string
+): string {
+  // Find the ## Scope heading and insert before it
+  const scopeMatch = content.match(/\n## Scope\n/)
+  if (scopeMatch?.index !== undefined) {
+    const insertIndex = scopeMatch.index
+    const adHocSection = `\n## Ad-hoc Scope\n\n${adHocDetails}\n`
+    return (
+      content.slice(0, insertIndex) + adHocSection + content.slice(insertIndex)
+    )
+  }
+  // If no ## Scope heading, append at end
+  return `${content}\n\n## Ad-hoc Scope\n\n${adHocDetails}\n`
+}
+
 export function buildAuditsRepository(
   fileSystem: FileSystem,
   dustPath: string

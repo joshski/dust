@@ -7,12 +7,13 @@
  * 2. Stock audits from lib/audits/stock-audits.ts
  *
  * Usage:
- *   dust audit              - List available audits
- *   dust audit <name>       - Create a task from the audit template
+ *   dust audit                      - List available audits
+ *   dust audit <name>               - Create a task from the audit template
+ *   dust audit <name> "<details>"   - Create a task with ad-hoc scope details
  */
 
 import { basename } from 'node:path'
-import { transformAuditContent } from '../../audits/index'
+import { injectAdHocScope, transformAuditContent } from '../../audits/index'
 import { loadStockAudits } from '../../audits/stock-audits'
 import {
   extractOpeningSentence,
@@ -32,6 +33,7 @@ interface AuditInfo {
  */
 async function addAudit(
   auditName: string,
+  adHocDetails: string | undefined,
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
   const { context, fileSystem, settings } = dependencies
@@ -52,7 +54,10 @@ async function addAudit(
   const userAuditPath = `${userAuditsPath}/${auditName}.md`
   if (fileSystem.exists(userAuditPath)) {
     const content = await fileSystem.readFile(userAuditPath)
-    const transformedContent = transformAuditContent(content)
+    let transformedContent = transformAuditContent(content)
+    if (adHocDetails) {
+      transformedContent = injectAdHocScope(transformedContent, adHocDetails)
+    }
 
     await fileSystem.mkdir(tasksPath, { recursive: true })
     await fileSystem.writeFile(taskFilePath, transformedContent)
@@ -64,7 +69,10 @@ async function addAudit(
   // Try stock audit
   const stockAudit = loadStockAudits().find(a => a.name === auditName)
   if (stockAudit) {
-    const transformedContent = transformAuditContent(stockAudit.template)
+    let transformedContent = transformAuditContent(stockAudit.template)
+    if (adHocDetails) {
+      transformedContent = injectAdHocScope(transformedContent, adHocDetails)
+    }
 
     await fileSystem.mkdir(tasksPath, { recursive: true })
     await fileSystem.writeFile(taskFilePath, transformedContent)
@@ -145,9 +153,10 @@ export async function audit(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
   const auditName = dependencies.arguments[0]
+  const adHocDetails = dependencies.arguments[1]
 
   if (auditName) {
-    return addAudit(auditName, dependencies)
+    return addAudit(auditName, adHocDetails, dependencies)
   }
 
   return listAudits(dependencies)

@@ -24,6 +24,7 @@ export function generateHelpText(settings: { dustCommand: string }): string {
       next              Show tasks ready to work on (not blocked)
       check             Run project-defined quality gate hook
       agent             Agent greeting and routing instructions
+      audit             Create tasks from audit templates
       focus             Declare current objective (for remote session tracking)
       pick task         Pick the next task to work on
       implement task    Implement a task
