@@ -28,158 +28,79 @@ The agent could be more effective if it knew the context that motivated the audi
 ### Related principles
 
 - [Agent Context Inference](../principles/agent-context-inference.md) - While agents can discover context, explicit hints improve efficiency
-- [Progressive Disclosure](../principles/progressive-disclosure.md) - Ad-hoc details could be optional, keeping the simple case simple
+- [Progressive Disclosure](../principles/progressive-disclosure.md) - Ad-hoc details should be optional, keeping the simple case simple
 - [Unsurprising UX](../principles/unsurprising-ux.md) - The command should accept details naturally, following established patterns
 
-## How it could work
+### Implementation location
 
-Extend the audit command to accept additional arguments or a details block:
+The audits sub-package (`lib/audits/index.ts`) contains the `AuditsRepository` interface and `createAuditTask` method. This is where the focus text should be integrated:
 
-```
-dust audit security-review src/auth/
-dust audit test-coverage --since abc123
-dust audit dead-code lib/legacy/
-```
+```typescript
+// Current signature
+createAuditTask(options: { name: string }): Promise<CreateAuditTaskResult>
 
-The details would be injected into the generated task file, either:
-1. As a new "## Context" or "## Focus" section at the top
-2. Appended to the existing "## Scope" section
-3. As metadata that appears before the standard template content
-
-The agent would then see both the general audit template and the specific context provided, allowing it to focus its efforts.
-
-## Open Questions
-
-### How should ad-hoc details be passed to the command?
-
-#### Option: Positional arguments after audit name
-
-```
-dust audit security-review src/auth/ src/api/middleware.ts
+// With focus support
+createAuditTask(options: { name: string; focus?: string }): Promise<CreateAuditTaskResult>
 ```
 
-Pros: Simple, no flags needed, feels natural
-Cons: Ambiguous whether arguments are files, directories, or general text
+The `transformAuditContent` function already modifies the title; it can be extended to inject the focus section.
 
-#### Option: Named flags for different detail types
+## How it should work
 
-```
-dust audit security-review --files src/auth/ --commits abc123..def456 --focus "JWT validation"
-```
-
-Pros: Explicit intent, supports multiple detail types, self-documenting
-Cons: More verbose, more to remember, may feel heavy for quick audits
-
-#### Option: Freeform text after separator
+Accept freeform text as a single focus argument:
 
 ```
-dust audit security-review -- Focus on JWT token handling in src/auth/
+dust audit security-review "Focus on JWT token handling in src/auth/"
+dust audit test-coverage "Verify the new payment module has adequate coverage"
+dust audit dead-code "Check for unused exports after the refactoring in lib/legacy/"
 ```
 
-Pros: Flexible, allows natural language, simple implementation
-Cons: Less structured, harder to parse programmatically if needed later
-
-#### Option: Interactive prompt for details
-
-```
-dust audit security-review
-> Enter focus areas (optional): JWT validation in src/auth/
-```
-
-Pros: Guided experience, can explain what details are useful
-Cons: Breaks non-interactive usage, adds friction for quick invocations
-
-### How should details appear in the generated task file?
-
-#### Option: As a new "## Focus" section
-
-Insert a new section between the title and the standard template:
+The focus text is captured as a single string and embedded into the generated task file under a `## Focus` heading, placed after the title and before other sections:
 
 ```markdown
 # Audit: Security Review
 
 ## Focus
 
-- Files: src/auth/, src/api/middleware.ts
-- Since commit: abc123
-```
+Focus on JWT token handling in src/auth/
 
-Pros: Clear separation, easy to identify user-provided context
-Cons: Adds a new section format that agents need to understand
-
-#### Option: Prepended to the "## Scope" section
-
-Integrate the details into the existing Scope section:
-
-```markdown
 ## Scope
 
-**Specific focus areas provided:**
-- src/auth/
-- JWT token handling
-
 Focus on these areas:
-1. **Input validation** - ...
+...
 ```
 
-Pros: Keeps section count unchanged, context is near related content
-Cons: Mixes generated and user content in one section
+When no focus is provided, the command works exactly as it does today - no Focus section is added.
 
-#### Option: As leading prose before any sections
+### Command interface
 
-```markdown
-# Audit: Security Review
+Following the [Command Syntax](../facts/command-syntax.md) pattern (verb-then-noun with natural reading), the focus is passed as a second positional argument. This keeps the simple case simple while allowing optional context:
 
-This audit was requested with specific focus on: src/auth/, JWT validation.
-
-Review the codebase to identify security vulnerabilities...
+```
+dust audit <name> [focus]
 ```
 
-Pros: Natural reading flow, context appears immediately
-Cons: Could be overlooked as boilerplate, less structured
+### Changes required
 
-### Should file/commit details be validated?
+1. **CLI command** (`lib/cli/commands/audit.ts`): Pass optional second argument to the audits repository
+2. **Audits repository** (`lib/audits/index.ts`): Accept `focus` option in `createAuditTask`, inject into content
+3. **Content transformation**: Add logic to inject `## Focus\n\n{focus}` after the title when provided
+4. **Tests**: Add test coverage for focus injection behavior
 
-#### Option: No validation
+## Open Questions
 
-Accept whatever the user provides and include it verbatim. The agent will discover if paths don't exist or commits aren't valid.
+### Should focus text be validated or processed?
 
-Pros: Simple implementation, flexible input, works for conceptual focus areas too
-Cons: Errors surface late, may waste agent effort on invalid paths
+#### Option: Pass through verbatim
 
-#### Option: Validate files exist, warn on missing
+Accept whatever text the user provides and insert it as-is. The agent will interpret the focus naturally.
 
-Check that provided paths exist; warn but continue if they don't.
+Pros: Simple implementation, flexible for any use case, follows progressive disclosure
+Cons: No feedback on typos or invalid paths
 
-Pros: Catches typos early, still allows intentional patterns
-Cons: May reject valid glob patterns or future files
+#### Option: Basic path validation with warning
 
-#### Option: Validate and fail on invalid
+Check if text that looks like file paths (contains `/` or `\`) actually exists; warn but continue if not.
 
-Require all file paths to exist before creating the audit task.
-
-Pros: Prevents clearly broken audit tasks
-Cons: Overly strict, blocks legitimate use cases like "review deleted code"
-
-### Should ad-hoc details be stored separately from the task file?
-
-#### Option: Inline in task file only
-
-The details become part of the task file content. No separate storage.
-
-Pros: Single source of truth, simple, task is self-contained
-Cons: Lost when task is deleted, can't easily query what context was provided
-
-#### Option: Separate metadata file
-
-Store details in `.dust/config/audit-context/security-review.json` or similar.
-
-Pros: Could persist across audit runs, enables tooling around audit history
-Cons: Adds complexity, two places to look, sync issues
-
-#### Option: Git commit metadata
-
-If details include commits, use git notes or similar to link audits to specific commits.
-
-Pros: Tight integration with version control, traceable
-Cons: Complex implementation, git notes are obscure, may not suit all detail types
+Pros: Catches common mistakes early, still allows conceptual focus areas
+Cons: May warn incorrectly on valid patterns (globs, future files, descriptions containing paths)
