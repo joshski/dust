@@ -3,7 +3,7 @@
   "checks": [
     {
       "name": "unused code (knip)",
-      "command": "bun run knip",
+      "command": "bunx knip",
       "hints": [
         "Run `bun run knip` to see full details",
         "Add intentional exports to knip.json entry configuration"
@@ -11,7 +11,7 @@
     },
     {
       "name": "lint (biome)",
-      "command": "bun run biome check .",
+      "command": "bunx biome check .",
       "hints": [
         "Run `bun run biome check . --write` to auto-fix lint errors",
         "Check biome.json for rule configurations"
@@ -40,7 +40,7 @@
     },
     {
       "name": "typecheck (tsc)",
-      "command": "bun run tsc -p tsconfig.json --noEmit",
+      "command": "bunx tsc -p tsconfig.json --noEmit",
       "hints": [
         "Check type definitions in the files you modified",
         "Ensure all imports have proper type declarations"
