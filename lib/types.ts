@@ -21,3 +21,6 @@ export type {
   WorkflowTaskMatch,
   WorkflowTaskType,
 } from './artifacts/workflow-tasks'
+
+// Bucket repository
+export type { Repository } from './bucket/repository'
