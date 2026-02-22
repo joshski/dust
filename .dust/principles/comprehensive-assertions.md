@@ -1,42 +1,45 @@
 # Comprehensive Assertions
 
-In tests, we should strive for a single complex assertion where the result is determined by the test itself.
+Assert the whole, not the parts.
 
-## Why it matters
+When you break a complex object into many small assertions, a failure tells you *one thing that's wrong*. When you assert against the whole expected value, the diff tells you *what actually happened versus what you expected* — the full picture, in one glance.
 
-When assertions are comprehensive, test failures provide better feedback. Instead of knowing that an array "doesn't contain 'apples'", we see what the array actually contains.
+Small assertions are like yes/no questions to a witness. A whole-object assertion is like asking "tell me what you saw."
 
 ## In practice
 
 Collapse multiple partial assertions into one comprehensive assertion:
 
 ```javascript
-// Avoid: multiple partial assertions
+// Fragmented — each failure is a narrow keyhole
+expect(result.name).toBe("Alice");
+expect(result.age).toBe(30);
+expect(result.role).toBe("admin");
+
+// Whole — a failure diff tells the full story
+expect(result).toEqual({
+  name: "Alice",
+  age: 30,
+  role: "admin",
+});
+```
+
+If `role` is `"user"` and `age` is `29`, the fragmented version stops at the first failure. The whole-object assertion shows both discrepancies at once, in context.
+
+The same applies to arrays:
+
+```javascript
+// Avoid: partial assertions that hide the actual state
 expect(array).toContain('apples')
 expect(array).toContain('oranges')
 
-// Avoid: assertions in a loop (still multiple assertions)
-for (const item of ['apples', 'oranges']) {
-  expect(array).toContain(item)
-}
-
-// Avoid: partial matchers that don't verify the complete state
-expect(array).toEqual(expect.arrayContaining(['apples', 'oranges']))
-expect(array).toHaveLength(2)
-
-// Prefer: one assertion that verifies the exact expected value
+// Prefer: one assertion that reveals the full picture on failure
 expect(array).toEqual(['apples', 'oranges'])
 ```
 
-The comprehensive form:
-- Is a single assertion, not multiple assertions or loops
-- Verifies the complete expected state, not just fragments
-- Provides full context on failure (showing what _is_ present, not just what's missing)
-- Makes the test's intent clearer by showing the expected outcome in one place
-
 ## How to evaluate
 
-Work supports this principle when tests use assertions that capture the complete expected result, allowing failures to reveal the actual state alongside the expected state.
+Work supports this principle when test failures tell a rich story — showing the complete actual value alongside the complete expected value, so the reader can understand what happened without re-running anything.
 
 ## Parent Principle
 
