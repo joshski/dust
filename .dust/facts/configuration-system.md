@@ -56,4 +56,4 @@ Checks run in parallel with buffered output. The `dust check` command also runs 
 
 ## Implementation
 
-Settings are loaded by `lib/config/settings.ts`. The `loadSettings` function reads from `.dust/config/settings.json` and returns defaults if the file doesn't exist. Validation is performed by the exported `validateSettingsJson` function, which internally delegates to per-key validators for checks, extra directories, and events URL.
+Settings are loaded by `lib/config/settings.ts`. The `loadSettings` function reads from `.dust/config/settings.json` and returns defaults if the file doesn't exist. Validation is performed by the exported `validateSettingsJson` function, which validates all known keys (dustCommand, checks, extraDirectories, installCommand, eventsUrl) and reports unknown keys.
