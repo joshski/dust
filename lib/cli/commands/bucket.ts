@@ -46,12 +46,15 @@ import {
 import { getReposDir } from '../../bucket/paths'
 import {
   handleRepositoryList as handleRepositoryListFromRepo,
-  parseRepository,
   type RepositoryDependencies,
   type RepositoryState,
   removeRepository,
   startRepositoryLoop,
 } from '../../bucket/repository'
+import {
+  parseServerMessage,
+  type RepositoryListItem,
+} from '../../bucket/server-messages'
 import {
   addRepository as addRepoToUI,
   createTerminalUIState,
@@ -368,23 +371,23 @@ function signalTaskAvailable(
  * Called immediately on receiving a repository-list message so
  * tabs appear before the async clone work starts.
  */
-export function syncUIWithRepoList(state: BucketState, repos: unknown[]): void {
+export function syncUIWithRepoList(
+  state: BucketState,
+  repos: RepositoryListItem[]
+): void {
   const incomingNames = new Set<string>()
-  for (const data of repos) {
-    const repo = parseRepository(data)
-    if (repo) {
-      incomingNames.add(repo.name)
-      if (!state.ui.repositories.includes(repo.name)) {
-        let buffer = state.logBuffers.get(repo.name)
-        if (!buffer) {
-          buffer = createLogBuffer()
-          state.logBuffers.set(repo.name, buffer)
-        }
-        addRepoToUI(state.ui, repo.name, buffer, repo.url)
-      } else if (repo.url) {
-        // Update URL if repository already exists but URL changed
-        state.ui.repositoryUrls.set(repo.name, repo.url)
+  for (const repo of repos) {
+    incomingNames.add(repo.name)
+    if (!state.ui.repositories.includes(repo.name)) {
+      let buffer = state.logBuffers.get(repo.name)
+      if (!buffer) {
+        buffer = createLogBuffer()
+        state.logBuffers.set(repo.name, buffer)
       }
+      addRepoToUI(state.ui, repo.name, buffer, repo.url)
+    } else if (repo.url) {
+      // Update URL if repository already exists but URL changed
+      state.ui.repositoryUrls.set(repo.name, repo.url)
     }
   }
 
@@ -594,118 +597,9 @@ export function connectWebSocket(
   }
 
   ws.onmessage = event => {
+    let rawData: unknown
     try {
-      const message = JSON.parse(event.data)
-      log(`ws message: ${message.type}`)
-      if (message.type === 'repository-list') {
-        const repos = message.repositories ?? []
-        logMessage(
-          state,
-          context,
-          useTUI,
-          `Received repository list (${repos.length} repositories):`
-        )
-        if (repos.length === 0) {
-          logMessage(state, context, useTUI, '  (empty)')
-        } else {
-          for (const r of repos) {
-            const attrs: string[] = []
-            if (typeof r?.name === 'string') {
-              attrs.push(`name=${r.name}`)
-            }
-            if (typeof r?.id === 'string') {
-              attrs.push(`id=${r.id}`)
-            }
-            if (typeof r?.gitUrl === 'string') {
-              attrs.push(`gitUrl=${r.gitUrl}`)
-            }
-            if (typeof r?.url === 'string') {
-              attrs.push(`url=${r.url}`)
-            }
-            if (typeof r?.hasTask === 'boolean') {
-              attrs.push(`hasTask=${r.hasTask}`)
-            }
-            logMessage(
-              state,
-              context,
-              useTUI,
-              `  - ${attrs.length > 0 ? attrs.join(', ') : '(no attributes)'}`
-            )
-          }
-        }
-        // Eagerly add repos to UI so tabs appear before cloning finishes
-        syncUIWithRepoList(state, repos)
-        const repoDeps = toRepositoryDependencies(
-          bucketDependencies,
-          fileSystem
-        )
-        const repoContext = createTUIContext(state, context, useTUI)
-        /* v8 ignore start - async callback internals not tracked by v8 */
-        handleRepositoryListFromRepo(repos, state, repoDeps, repoContext)
-          .then(() => {
-            syncTUI(state)
-            // Wake repos that already have tasks waiting
-            for (const repoData of repos) {
-              if (
-                typeof repoData === 'object' &&
-                repoData !== null &&
-                'name' in repoData &&
-                'hasTask' in repoData &&
-                (repoData as { hasTask: boolean }).hasTask
-              ) {
-                const repoState = state.repositories.get(
-                  (repoData as { name: string }).name
-                )
-                if (repoState) {
-                  signalTaskAvailable(
-                    repoState,
-                    state,
-                    repoDeps,
-                    context,
-                    useTUI
-                  )
-                }
-              }
-            }
-          })
-          .catch(error => {
-            logMessage(
-              state,
-              context,
-              useTUI,
-              `Failed to handle repository list: ${error.message}`,
-              'stderr'
-            )
-          })
-        /* v8 ignore stop */
-      } else if (message.type === 'task-available') {
-        const repoName = message.repository
-        if (typeof repoName === 'string') {
-          const repoDeps = toRepositoryDependencies(
-            bucketDependencies,
-            fileSystem
-          )
-          logMessage(
-            state,
-            context,
-            useTUI,
-            `Received task-available for ${repoName}`
-          )
-          const repoState = state.repositories.get(repoName)
-          if (repoState) {
-            signalTaskAvailable(repoState, state, repoDeps, context, useTUI)
-          } else {
-            logMessage(
-              state,
-              context,
-              useTUI,
-              `No repository state found for ${repoName}`,
-              'stderr'
-            )
-          }
-        }
-        /* v8 ignore stop */
-      }
+      rawData = JSON.parse(event.data)
     } catch {
       logMessage(
         state,
@@ -714,6 +608,99 @@ export function connectWebSocket(
         `Failed to parse WebSocket message: ${event.data}`,
         'stderr'
       )
+      return
+    }
+
+    const message = parseServerMessage(rawData)
+    if (!message) {
+      logMessage(
+        state,
+        context,
+        useTUI,
+        `Invalid WebSocket message format: ${event.data}`,
+        'stderr'
+      )
+      return
+    }
+
+    log(`ws message: ${message.type}`)
+
+    if (message.type === 'repository-list') {
+      const repos = message.repositories
+      logMessage(
+        state,
+        context,
+        useTUI,
+        `Received repository list (${repos.length} repositories):`
+      )
+      if (repos.length === 0) {
+        logMessage(state, context, useTUI, '  (empty)')
+      } else {
+        for (const r of repos) {
+          const attrs: string[] = []
+          attrs.push(`name=${r.name}`)
+          if (r.id !== undefined) {
+            attrs.push(`id=${r.id}`)
+          }
+          attrs.push(`gitUrl=${r.gitUrl}`)
+          if (r.url !== undefined) {
+            attrs.push(`url=${r.url}`)
+          }
+          if (r.hasTask !== undefined) {
+            attrs.push(`hasTask=${r.hasTask}`)
+          }
+          logMessage(state, context, useTUI, `  - ${attrs.join(', ')}`)
+        }
+      }
+      // Eagerly add repos to UI so tabs appear before cloning finishes
+      syncUIWithRepoList(state, repos)
+      const repoDeps = toRepositoryDependencies(bucketDependencies, fileSystem)
+      const repoContext = createTUIContext(state, context, useTUI)
+      /* v8 ignore start - async callback internals not tracked by v8 */
+      handleRepositoryListFromRepo(repos, state, repoDeps, repoContext)
+        .then(() => {
+          syncTUI(state)
+          // Wake repos that already have tasks waiting
+          for (const repoData of repos) {
+            if (repoData.hasTask) {
+              const repoState = state.repositories.get(repoData.name)
+              if (repoState) {
+                signalTaskAvailable(repoState, state, repoDeps, context, useTUI)
+              }
+            }
+          }
+        })
+        .catch(error => {
+          logMessage(
+            state,
+            context,
+            useTUI,
+            `Failed to handle repository list: ${error.message}`,
+            'stderr'
+          )
+        })
+      /* v8 ignore stop */
+    } else if (message.type === 'task-available') {
+      const repoName = message.repository
+      const repoDeps = toRepositoryDependencies(bucketDependencies, fileSystem)
+      logMessage(
+        state,
+        context,
+        useTUI,
+        `Received task-available for ${repoName}`
+      )
+      const repoState = state.repositories.get(repoName)
+      if (repoState) {
+        signalTaskAvailable(repoState, state, repoDeps, context, useTUI)
+      } else {
+        logMessage(
+          state,
+          context,
+          useTUI,
+          `No repository state found for ${repoName}`,
+          'stderr'
+        )
+      }
     }
   }
 }

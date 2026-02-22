@@ -928,7 +928,10 @@ describe('connectWebSocket', () => {
     ws.onmessage?.({
       data: JSON.stringify({
         type: 'repository-list',
-        repositories: ['repo1', 'repo2'],
+        repositories: [
+          { name: 'repo1', gitUrl: 'git@example.com:user/repo1.git' },
+          { name: 'repo2', gitUrl: 'git@example.com:user/repo2.git' },
+        ],
       }),
     })
 
@@ -961,7 +964,10 @@ describe('connectWebSocket', () => {
     ws.onmessage?.({
       data: JSON.stringify({
         type: 'repository-list',
-        repositories: ['repo1', 'repo2'],
+        repositories: [
+          { name: 'repo1', gitUrl: 'git@example.com:user/repo1.git' },
+          { name: 'repo2', gitUrl: 'git@example.com:user/repo2.git' },
+        ],
       }),
     })
 
@@ -972,7 +978,9 @@ describe('connectWebSocket', () => {
     ws.onmessage?.({
       data: JSON.stringify({
         type: 'repository-list',
-        repositories: ['repo2'],
+        repositories: [
+          { name: 'repo2', gitUrl: 'git@example.com:user/repo2.git' },
+        ],
       }),
     })
 
@@ -982,7 +990,7 @@ describe('connectWebSocket', () => {
     expect(state.ui.repositories).toContain('system')
   })
 
-  test('handles repository-list messages with no repositories array', () => {
+  test('handles repository-list messages with no repositories array as invalid', () => {
     const dependencies = createDependencies()
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
@@ -1009,9 +1017,9 @@ describe('connectWebSocket', () => {
       }),
     })
 
-    const output = context.stdoutLines.join('\n')
-    expect(output).toContain('Received repository list (0 repositories):')
-    expect(output).toContain('(empty)')
+    expect(context.stderrLines.join('\n')).toContain(
+      'Invalid WebSocket message format'
+    )
   })
 
   test('logs WebSocket errors to system buffer in TUI mode', () => {
@@ -1098,7 +1106,9 @@ describe('connectWebSocket', () => {
     ws.onmessage?.({
       data: JSON.stringify({
         type: 'repository-list',
-        repositories: ['repo1'],
+        repositories: [
+          { name: 'repo1', gitUrl: 'git@example.com:user/repo1.git' },
+        ],
       }),
     })
 
@@ -1961,18 +1971,24 @@ describe('syncUIWithRepoList', () => {
     expect(state.ui.repositories).toContain('system')
   })
 
-  test('skips invalid repository entries', () => {
+  test('handles repository with all fields', () => {
     const state = createInitialState()
 
     syncUIWithRepoList(state, [
-      null,
-      undefined,
-      123,
-      { name: 'valid', gitUrl: 'url' },
+      {
+        name: 'full-repo',
+        gitUrl: 'git@github.com:user/repo.git',
+        url: 'https://github.com/user/repo',
+        id: 'abc123',
+        hasTask: true,
+      },
     ])
 
-    expect(state.ui.repositories).toContain('valid')
-    expect(state.ui.repositories.length).toBe(2) // valid + system
+    expect(state.ui.repositories).toContain('full-repo')
+    expect(state.ui.repositoryUrls.get('full-repo')).toBe(
+      'https://github.com/user/repo'
+    )
+    expect(state.ui.repositories.length).toBe(2) // full-repo + system
   })
 
   test('reuses existing log buffers when buffer is pre-populated', () => {
