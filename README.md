@@ -15,6 +15,16 @@ npx dust init
 
 This creates a [.dust](./.dust/facts/dust-directory-structure.md) directory and adds an [instruction](./.dust/facts/agents-md-instruction.md) to your `AGENTS.md` file.
 
+## Adding Tasks
+
+Use your AI coding CLI (Claude Code, Codex, etc.) to add and refine tasks:
+
+```bash
+claude "add a task to refactor the auth module"
+```
+
+Ideas (`.dust/ideas/`) are backlog items you may or may not do later. Tasks (`.dust/tasks/`) are ready to work on now. Both are markdown files that agents and humans can read and edit.
+
 ## Running Agents
 
 Start an agent on a single task:
