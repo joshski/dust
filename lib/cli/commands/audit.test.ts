@@ -219,7 +219,7 @@ describe('audit command', () => {
   test('loadStockAudits loads audits from markdown files', () => {
     const audits = loadStockAudits()
     expect(audits).toBeInstanceOf(Array)
-    expect(audits.length).toBe(11)
+    expect(audits.length).toBe(12)
 
     const names = audits.map(a => a.name)
     expect(names).toContain('agent-developer-experience')
@@ -230,6 +230,7 @@ describe('audit command', () => {
     expect(names).toContain('ideas-from-commits')
     expect(names).toContain('ideas-from-principles')
     expect(names).toContain('performance-review')
+    expect(names).toContain('refactoring-opportunities')
     expect(names).toContain('security-review')
     expect(names).toContain('stale-ideas')
     expect(names).toContain('test-coverage')
@@ -245,7 +246,12 @@ describe('audit command', () => {
   test('stock audits have no principles because they are designed for downstream projects', () => {
     // component-reuse references the reasonably-dry principle to help agents avoid over-extraction
     // coverage-exclusions references decoupling and test coverage principles
-    const auditsWithPrinciples = ['component-reuse', 'coverage-exclusions']
+    // refactoring-opportunities references boy scout rule, make the change easy, etc.
+    const auditsWithPrinciples = [
+      'component-reuse',
+      'coverage-exclusions',
+      'refactoring-opportunities',
+    ]
     const audits = loadStockAudits()
     for (const audit of audits) {
       const goalsMatch = audit.template.match(
