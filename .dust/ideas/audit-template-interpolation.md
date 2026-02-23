@@ -39,9 +39,9 @@ const audits = loadStockAudits()
 
 Downstream consumers (e.g., a web app using the GitHub API) receive static audit templates without access to the repository's lockfiles for runtime detection.
 
-### Related Task
+### Related Implementation
 
-The task [Use dust commands in workflow task templates](../tasks/use-dust-commands-in-workflow-task-templates.md) implements `{bin}` template variable interpolation for workflow task templates. This pattern is already used in `lib/cli/commands/agent-shared.ts` via `TemplateVars.bin`.
+Workflow task templates now use dust commands (e.g., `dust principles`, `dust facts`) instead of directory paths. This is implemented via the `dustCommand` parameter in `lib/artifacts/workflow-tasks.ts`. The pattern aligns with `TemplateVars.bin` used in `lib/cli/commands/agent-shared.ts`.
 
 ## Proposed Approaches
 
@@ -135,6 +135,6 @@ The promote-commands idea focuses on workflow tasks where `DustSettings` is avai
 
 ## Related
 
-- [Use dust commands in workflow task templates](../tasks/use-dust-commands-in-workflow-task-templates.md)
+- [Workflow Tasks](../facts/workflow-tasks.md) - Documents the `dustCommand` parameter pattern
 - [Package Exports](../facts/package-exports.md)
 - [Agent-Agnostic Design](../principles/agent-agnostic-design.md)

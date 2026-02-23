@@ -63,7 +63,10 @@ describe('createRefineIdeaTask', () => {
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain('# Refine Idea: Progress Broadcasting')
     expect(content).toContain(
-      'Thoroughly research this idea and refine it into a well-defined proposal. Read the idea file, explore the codebase for relevant context, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. Review `.dust/principles/` for alignment and `.dust/facts/` for relevant design decisions. See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
+      'Run `dust principles` for alignment and `dust facts` for relevant design decisions.'
+    )
+    expect(content).toContain(
+      'See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
     )
     expect(content).toContain(
       'If you add open questions, use `## Open Questions` with `### Question?` headings and one or more `#### Option` headings beneath each question, and only add questions that are meaningful decisions worth asking.'
@@ -92,8 +95,23 @@ describe('createRefineIdeaTask', () => {
 
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain(
-      'Review `.dust/principles/` for alignment and `.dust/facts/` for relevant design decisions. See [Progress Broadcasting](../ideas/progress-broadcasting.md). If you add open questions, use `## Open Questions` with `### Question?` headings and one or more `#### Option` headings beneath each question, and only add questions that are meaningful decisions worth asking.\n\nFocus on the WebSocket approach.'
+      'Run `dust principles` for alignment and `dust facts` for relevant design decisions. See [Progress Broadcasting](../ideas/progress-broadcasting.md). If you add open questions, use `## Open Questions` with `### Question?` headings and one or more `#### Option` headings beneath each question, and only add questions that are meaningful decisions worth asking.\n\nFocus on the WebSocket approach.'
     )
+  })
+
+  test('uses custom dustCommand in template', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createRefineIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting',
+      undefined,
+      'bin/dust'
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('Run `bin/dust principles` for alignment')
+    expect(content).toContain('`bin/dust facts` for relevant design decisions')
   })
 
   test('includes Refines Idea section with link to target idea', async () => {
@@ -125,7 +143,10 @@ describe('decomposeIdea', () => {
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain('# Decompose Idea: Progress Broadcasting')
     expect(content).toContain(
-      'Create one or more well-defined tasks from this idea. Prefer smaller, narrowly scoped tasks that each deliver a thin but complete vertical slice of working software -- a path through the system that can be tested end-to-end -- rather than component-oriented tasks (like "add schema" or "build endpoint") that only work once all tasks are done. Split the idea into multiple tasks if it covers more than one logical change. Review `.dust/principles/` to link relevant principles and `.dust/facts/` for design decisions that should inform the task. See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
+      'Run `dust principles` to link relevant principles and `dust facts` for design decisions that should inform the task.'
+    )
+    expect(content).toContain(
+      'See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
     )
     expect(content).toContain(
       '- [ ] One or more new tasks are created in .dust/tasks/'
@@ -136,6 +157,24 @@ describe('decomposeIdea', () => {
     expect(content).toContain(
       '- [ ] The original idea is deleted or updated to reflect remaining scope'
     )
+  })
+
+  test('uses custom dustCommand in template', async () => {
+    const fileSystem = createFileSystem()
+    const result = await decomposeIdea(
+      fileSystem,
+      '/project/.dust',
+      {
+        ideaSlug: 'progress-broadcasting',
+      },
+      'bin/dust'
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain(
+      'Run `bin/dust principles` to link relevant principles'
+    )
+    expect(content).toContain('`bin/dust facts` for design decisions')
   })
 
   test('includes open question responses as a Resolved Questions section', async () => {
@@ -270,7 +309,7 @@ describe('createIdeaTask', () => {
       'Research this idea thoroughly, then create one or more idea files in `.dust/ideas/`.'
     )
     expect(content).toContain(
-      'Review `.dust/principles/` and `.dust/facts/` for relevant context.'
+      'Run `dust principles` and `dust facts` for relevant context.'
     )
     expect(content).toContain(
       'If you add open questions, use `## Open Questions` with `### Question?` headings and one or more `#### Option` headings beneath each question, and only add questions that are meaningful decisions worth asking.'
@@ -358,7 +397,9 @@ describe('createIdeaTask', () => {
     expect(content).toContain(
       'create one or more narrowly-scoped task files in `.dust/tasks/`'
     )
-    expect(content).toContain('Review `.dust/principles/` and `.dust/facts/`')
+    expect(content).toContain(
+      'Run `dust principles` and `dust facts` for relevant context.'
+    )
     expect(content).toContain(
       '- [ ] Idea is implemented directly OR one or more new tasks are created'
     )
@@ -371,6 +412,35 @@ describe('createIdeaTask', () => {
     // Should NOT contain idea-file-specific instructions
     expect(content).not.toContain('Idea file exists at')
     expect(content).not.toContain('create an idea file')
+  })
+
+  test('uses custom dustCommand in templates', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'Allow agents to broadcast progress via WebSocket.',
+      dustCommand: 'bin/dust',
+    })
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain(
+      'Run `bin/dust principles` and `bin/dust facts` for relevant context.'
+    )
+  })
+
+  test('uses custom dustCommand in expedite templates', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'Allow agents to broadcast progress via WebSocket.',
+      expedite: true,
+      dustCommand: 'bin/dust',
+    })
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain(
+      'Run `bin/dust principles` and `bin/dust facts` for relevant context.'
+    )
   })
 
   test('creates a capture-idea task when expedite is false', async () => {

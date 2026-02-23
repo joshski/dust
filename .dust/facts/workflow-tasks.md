@@ -6,12 +6,14 @@
 
 - `parseIdea({ slug })` - Parses an idea file and returns an `Idea` object
 - `listIdeas()` - Returns slugs of all ideas
-- `createRefineIdeaTask({ ideaSlug, description? })` - Creates a task to research and refine an idea
-- `createDecomposeIdeaTask({ ideaSlug, description?, openQuestionResponses? })` - Creates a task to convert an idea into concrete tasks
-- `createShelveIdeaTask({ ideaSlug, description? })` - Creates a task to archive and remove an idea
-- `createIdeaTask({ title, description, expedite? })` - Creates a task to capture a new idea
+- `createRefineIdeaTask({ ideaSlug, description?, dustCommand? })` - Creates a task to research and refine an idea
+- `createDecomposeIdeaTask({ ideaSlug, description?, openQuestionResponses?, dustCommand? })` - Creates a task to convert an idea into concrete tasks
+- `createShelveIdeaTask({ ideaSlug, description?, dustCommand? })` - Creates a task to archive and remove an idea
+- `createIdeaTask({ title, description, expedite?, dustCommand? })` - Creates a task to capture a new idea
 - `findWorkflowTaskForIdea({ ideaSlug })` - Returns `null` or a `WorkflowTaskMatch` indicating the existing workflow task for an idea
 - `parseCaptureIdeaTask({ taskSlug })` - Parses a capture-idea task file
+
+The `dustCommand` parameter controls how the generated task templates reference dust commands. When provided, templates use `{dustCommand} principles` and `{dustCommand} facts` instead of the default `dust principles` and `dust facts`. This allows callers to specify the appropriate command invocation (e.g., `bin/dust` for local development).
 
 For read-only operations, use `buildReadOnlyArtifactsRepository(fileSystem, dustPath)` which provides all parsing and listing methods (`parseIdea`, `listIdeas`, `parsePrinciple`, `listPrinciples`, `parseFact`, `listFacts`, `parseTask`, `listTasks`) plus `findWorkflowTaskForIdea` and `parseCaptureIdeaTask`.
 

@@ -68,18 +68,21 @@ export interface ArtifactsRepository {
   createRefineIdeaTask(options: {
     ideaSlug: string
     description?: string
+    dustCommand?: string
   }): Promise<CreateIdeaTransitionTaskResult>
   createDecomposeIdeaTask(
-    options: DecomposeIdeaOptions
+    options: DecomposeIdeaOptions & { dustCommand?: string }
   ): Promise<CreateIdeaTransitionTaskResult>
   createShelveIdeaTask(options: {
     ideaSlug: string
     description?: string
+    dustCommand?: string
   }): Promise<CreateIdeaTransitionTaskResult>
   createIdeaTask(options: {
     title: string
     description: string
     expedite?: boolean
+    dustCommand?: string
   }): Promise<CreateIdeaTransitionTaskResult>
   findWorkflowTaskForIdea(options: {
     ideaSlug: string
@@ -161,30 +164,39 @@ export function buildArtifactsRepository(
     async createRefineIdeaTask(options: {
       ideaSlug: string
       description?: string
+      dustCommand?: string
     }): Promise<CreateIdeaTransitionTaskResult> {
       return createRefineIdeaTaskImpl(
         fileSystem,
         dustPath,
         options.ideaSlug,
-        options.description
+        options.description,
+        options.dustCommand
       )
     },
 
     async createDecomposeIdeaTask(
-      options: DecomposeIdeaOptions
+      options: DecomposeIdeaOptions & { dustCommand?: string }
     ): Promise<CreateIdeaTransitionTaskResult> {
-      return decomposeIdeaImpl(fileSystem, dustPath, options)
+      return decomposeIdeaImpl(
+        fileSystem,
+        dustPath,
+        options,
+        options.dustCommand
+      )
     },
 
     async createShelveIdeaTask(options: {
       ideaSlug: string
       description?: string
+      dustCommand?: string
     }): Promise<CreateIdeaTransitionTaskResult> {
       return createShelveIdeaTaskImpl(
         fileSystem,
         dustPath,
         options.ideaSlug,
-        options.description
+        options.description,
+        options.dustCommand
       )
     },
 
@@ -192,6 +204,7 @@ export function buildArtifactsRepository(
       title: string
       description: string
       expedite?: boolean
+      dustCommand?: string
     }): Promise<CreateIdeaTransitionTaskResult> {
       return createIdeaTaskImpl(fileSystem, dustPath, options)
     },
