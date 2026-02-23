@@ -42,7 +42,10 @@ export async function findAllCaptureIdeaTasks(
         taskSlug: file.replace(/\.md$/, ''),
         ideaTitle: title.slice(CAPTURE_IDEA_PREFIX.length),
       })
-    } else if (title.startsWith(BUILD_IDEA_PREFIX)) {
+    } else if (
+      title.startsWith(BUILD_IDEA_PREFIX) &&
+      !content.includes('## Decomposes Idea')
+    ) {
       results.push({
         taskSlug: file.replace(/\.md$/, ''),
         ideaTitle: title.slice(BUILD_IDEA_PREFIX.length),
@@ -115,6 +118,65 @@ function extractIdeaSlugFromSection(
   }
 
   return null
+}
+
+export interface AllWorkflowTasks {
+  captureIdeaTasks: IdeaInProgress[]
+  workflowTasksByIdeaSlug: Map<string, WorkflowTaskMatch>
+}
+
+export async function findAllWorkflowTasks(
+  fileSystem: ReadableFileSystem,
+  dustPath: string
+): Promise<AllWorkflowTasks> {
+  const tasksPath = `${dustPath}/tasks`
+  const captureIdeaTasks: IdeaInProgress[] = []
+  const workflowTasksByIdeaSlug = new Map<string, WorkflowTaskMatch>()
+
+  if (!fileSystem.exists(tasksPath)) {
+    return { captureIdeaTasks, workflowTasksByIdeaSlug }
+  }
+
+  const files = await fileSystem.readdir(tasksPath)
+
+  for (const file of files.filter(f => f.endsWith('.md')).sort()) {
+    const content = await fileSystem.readFile(`${tasksPath}/${file}`)
+    const titleMatch = content.match(/^#\s+(.+)$/m)
+    if (!titleMatch) continue
+
+    const title = titleMatch[1].trim()
+    const taskSlug = file.replace(/\.md$/, '')
+
+    // Check for capture idea tasks
+    if (title.startsWith(CAPTURE_IDEA_PREFIX)) {
+      captureIdeaTasks.push({
+        taskSlug,
+        ideaTitle: title.slice(CAPTURE_IDEA_PREFIX.length),
+      })
+    } else if (
+      title.startsWith(BUILD_IDEA_PREFIX) &&
+      !content.includes('## Decomposes Idea')
+    ) {
+      captureIdeaTasks.push({
+        taskSlug,
+        ideaTitle: title.slice(BUILD_IDEA_PREFIX.length),
+      })
+    }
+
+    // Check for workflow task sections
+    for (const { type, heading } of WORKFLOW_SECTION_HEADINGS) {
+      const linkedSlug = extractIdeaSlugFromSection(content, heading)
+      if (linkedSlug) {
+        workflowTasksByIdeaSlug.set(linkedSlug, {
+          type,
+          ideaSlug: linkedSlug,
+          taskSlug,
+        })
+      }
+    }
+  }
+
+  return { captureIdeaTasks, workflowTasksByIdeaSlug }
 }
 
 export async function findWorkflowTaskForIdea(

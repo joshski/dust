@@ -13,6 +13,7 @@ import {
 } from './principles'
 import { parseTask as parseTaskImpl, type Task } from './tasks'
 import {
+  type AllWorkflowTasks,
   CAPTURE_IDEA_PREFIX,
   type CreateIdeaTransitionTaskResult,
   createCaptureIdeaTask as createCaptureIdeaTaskImpl,
@@ -21,6 +22,7 @@ import {
   type DecomposeIdeaOptions,
   decomposeIdea as decomposeIdeaImpl,
   findAllCaptureIdeaTasks,
+  findAllWorkflowTasks,
   findWorkflowTaskForIdea as findWorkflowTaskForIdeaImpl,
   type IdeaInProgress,
   type OpenQuestionResponse,
@@ -31,6 +33,7 @@ import {
 
 // Re-export types
 export type {
+  AllWorkflowTasks,
   CreateIdeaTransitionTaskResult,
   DecomposeIdeaOptions,
   Fact,
@@ -45,7 +48,12 @@ export type {
 }
 
 // Re-export constants and standalone functions
-export { CAPTURE_IDEA_PREFIX, findAllCaptureIdeaTasks, parseOpenQuestions }
+export {
+  CAPTURE_IDEA_PREFIX,
+  findAllCaptureIdeaTasks,
+  findAllWorkflowTasks,
+  parseOpenQuestions,
+}
 export type { IdeaInProgress }
 
 export interface ArtifactsRepository {

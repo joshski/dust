@@ -8,6 +8,7 @@ import {
   createShelveIdeaTask,
   decomposeIdea,
   findAllCaptureIdeaTasks,
+  findAllWorkflowTasks,
   findWorkflowTaskForIdea,
   IDEA_TRANSITION_PREFIXES,
   type OpenQuestionResponse,
@@ -920,6 +921,36 @@ describe('findAllCaptureIdeaTasks', () => {
       { taskSlug: 'add-idea-auto-linting', ideaTitle: 'Auto Linting' },
     ])
   })
+
+  test('excludes Decompose Idea tasks that have a Decomposes Idea section', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'progress-broadcasting.md':
+              '# Progress Broadcasting\n\nWebSocket-based progress.',
+          },
+          tasks: {},
+        },
+      },
+    })
+    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Auto Linting',
+      description: 'Lint on save.',
+      buildItNow: true,
+    })
+    await decomposeIdea(fileSystem, '/project/.dust', {
+      ideaSlug: 'progress-broadcasting',
+      description: 'WebSocket-based progress.',
+    })
+    const result = await findAllCaptureIdeaTasks(fileSystem, '/project/.dust')
+    expect(result).toEqual([
+      {
+        taskSlug: 'decompose-idea-auto-linting',
+        ideaTitle: 'Auto Linting',
+      },
+    ])
+  })
 })
 
 describe('parseCaptureIdeaTask', () => {
@@ -1053,6 +1084,110 @@ const x = 1;
       ideaTitle: 'Complex Idea',
       ideaDescription: multilineDescription,
       buildItNow: false,
+    })
+  })
+})
+
+describe('findAllWorkflowTasks', () => {
+  test('returns empty results when tasks directory does not exist', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { '.dust': { ideas: {} } },
+    })
+    const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
+    expect(result.captureIdeaTasks).toEqual([])
+    expect(result.workflowTasksByIdeaSlug.size).toBe(0)
+  })
+
+  test('skips task files with no title', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {
+            'no-title.md': 'Just some text without a heading.',
+          },
+        },
+      },
+    })
+    const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
+    expect(result.captureIdeaTasks).toEqual([])
+    expect(result.workflowTasksByIdeaSlug.size).toBe(0)
+  })
+
+  test('finds capture idea tasks (add-idea and decompose-idea without section)', async () => {
+    const fileSystem = createFileSystem()
+    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Auto Linting',
+      description: 'Lint on save.',
+    })
+    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'WebSocket-based progress.',
+      buildItNow: true,
+    })
+    const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
+    expect(result.captureIdeaTasks).toEqual([
+      { taskSlug: 'add-idea-auto-linting', ideaTitle: 'Auto Linting' },
+      {
+        taskSlug: 'decompose-idea-progress-broadcasting',
+        ideaTitle: 'Progress Broadcasting',
+      },
+    ])
+  })
+
+  test('builds workflow task map for ideas with refine/decompose/shelve tasks', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'idea-a.md': '# Idea A\n\nDescription.',
+            'idea-b.md': '# Idea B\n\nDescription.',
+          },
+          tasks: {},
+        },
+      },
+    })
+    await createRefineIdeaTask(fileSystem, '/project/.dust', 'idea-a')
+    await createShelveIdeaTask(fileSystem, '/project/.dust', 'idea-b')
+    const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
+    expect(result.workflowTasksByIdeaSlug.get('idea-a')).toEqual({
+      type: 'refine',
+      ideaSlug: 'idea-a',
+      taskSlug: 'refine-idea-idea-a',
+    })
+    expect(result.workflowTasksByIdeaSlug.get('idea-b')).toEqual({
+      type: 'shelve',
+      ideaSlug: 'idea-b',
+      taskSlug: 'shelve-idea-idea-b',
+    })
+  })
+
+  test('returns both capture tasks and workflow task map in a single call', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'existing-idea.md': '# Existing Idea\n\nDescription.',
+          },
+          tasks: {},
+        },
+      },
+    })
+    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      title: 'New Idea',
+      description: 'A new idea.',
+    })
+    await decomposeIdea(fileSystem, '/project/.dust', {
+      ideaSlug: 'existing-idea',
+    })
+    const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
+    expect(result.captureIdeaTasks).toEqual([
+      { taskSlug: 'add-idea-new-idea', ideaTitle: 'New Idea' },
+    ])
+    expect(result.workflowTasksByIdeaSlug.get('existing-idea')).toEqual({
+      type: 'decompose-idea',
+      ideaSlug: 'existing-idea',
+      taskSlug: 'decompose-idea-existing-idea',
     })
   })
 })
