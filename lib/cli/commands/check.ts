@@ -43,8 +43,8 @@ interface CheckResult {
   output: string
   isBuiltIn?: boolean
   hints?: string[]
-  durationMs?: number
-  timedOut?: boolean
+  durationMs: number
+  timedOut: boolean
   timeoutSeconds?: number
 }
 
@@ -71,7 +71,7 @@ async function runSingleCheck(
     output: result.output,
     hints: check.hints,
     durationMs,
-    timedOut: result.timedOut,
+    timedOut: result.timedOut ?? false,
     timeoutSeconds: timeoutMs / 1000,
   }
 }
@@ -125,6 +125,7 @@ async function runValidationCheck(
     output: outputLines.join('\n'),
     isBuiltIn: true,
     durationMs,
+    timedOut: false,
   }
 }
 
@@ -143,7 +144,7 @@ function displayResults(
       )
     } else {
       const timing =
-        result.durationMs !== undefined && result.durationMs >= 1000
+        result.durationMs >= 1000
           ? ` [${(result.durationMs / 1000).toFixed(1)}s]`
           : ''
       if (result.exitCode === 0) {
