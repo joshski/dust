@@ -29,6 +29,10 @@
     "./filesystem": {
       "types": "./dist/filesystem/types.d.ts"
     },
+    "./filesystem/emulator": {
+      "import": "./dist/filesystem-emulator.js",
+      "types": "./dist/filesystem/emulator.d.ts"
+    },
     "./istanbul/minimal-reporter": "./lib/istanbul/minimal-reporter.cjs",
     "./biome": {
       "import": "./dist/biome.js",
