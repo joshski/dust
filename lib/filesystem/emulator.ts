@@ -72,10 +72,12 @@ export interface FileSystemEmulator extends FileSystem, GlobScanner {
  * Implements both FileSystem and GlobScanner interfaces - the scan() method
  * iterates over the files the emulator knows about.
  *
- * @param tree - Nested object representing file system hierarchy
+ * @param tree - Nested object representing file system hierarchy (paths get '/' prefix)
+ * @param flatFiles - Optional record of path→content entries added as-is (no prefix)
  * @returns FileSystemEmulator with tracking for created directories and written files
  *
  * @example
+ * // Nested tree (paths become /project/.dust/...)
  * createFileSystemEmulator({
  *   project: {
  *     '.dust': {
@@ -84,11 +86,34 @@ export interface FileSystemEmulator extends FileSystem, GlobScanner {
  *     }
  *   }
  * })
+ *
+ * // Flat files (paths used as-is)
+ * createFileSystemEmulator({}, {
+ *   '.dust/config/audits/security.md': '# Security Audit\n...',
+ *   '.dust/tasks/audit-security.md': '# Run security audit\n...',
+ * })
  */
 export function createFileSystemEmulator(
-  tree: FileSystemTree = {}
+  tree: FileSystemTree = {},
+  flatFiles?: Record<string, string>
 ): FileSystemEmulator {
   const { files, paths } = flattenFileSystemTree(tree)
+
+  // Add flat file entries directly (paths used as-is, no prefix added)
+  if (flatFiles) {
+    for (const [filePath, content] of Object.entries(flatFiles)) {
+      files.set(filePath, content)
+      paths.add(filePath)
+      // Add parent directories
+      for (
+        let dir = filePath.substring(0, filePath.lastIndexOf('/'));
+        dir;
+        dir = dir.substring(0, dir.lastIndexOf('/'))
+      ) {
+        paths.add(dir)
+      }
+    }
+  }
 
   const createdDirs: string[] = []
   const writtenFiles = new Map<string, string>()
