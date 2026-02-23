@@ -1,118 +1,73 @@
 # Meta Audit
 
-An audit that analyzes recent commit activity and selects which other audits to run based on what changed.
+A stock audit that analyzes recent commits and creates ideas for relevant follow-up audits.
 
 ## Context
 
-The current audit system (`lib/audits/stock-audits.ts:357-378`) provides 10 stock audits covering different aspects of codebase health: dead code, test coverage, security, performance, facts verification, and more. Each audit is independent and runs in isolation when invoked via `dust audit <name>`.
+The current audit system (`lib/audits/stock-audits.ts`) provides 16 stock audits covering different aspects of codebase health. Each audit is independent and runs in isolation when invoked via `dust audit <name>`.
 
-Currently, selecting which audit to run is a manual decision. A user or agent must know:
-1. What audits are available
-2. Which audit is relevant to recent work
-3. When an audit is worth running
+Currently, selecting which audit to run is a manual decision. A user or agent must know what audits are available and which ones are relevant to recent work.
 
-A meta-audit would automate this selection by analyzing recent commits and determining which audits are most relevant. For example:
-- Changes to `.dust/facts/` files would trigger the `facts-verification` audit
-- Changes to test files might trigger the `test-coverage` audit to ensure new code is tested
-- Changes to security-sensitive files could trigger the `security-review` audit
+The `ideas-from-commits` audit already reviews recent commit history (last 20 commits) to find improvement opportunities. The meta-audit follows a similar pattern but focuses specifically on audit selection—producing ideas that recommend which audits to run based on what changed.
 
-The existing `ideas-from-commits` audit already reviews recent commit history (last 20 commits) to find improvement opportunities. The meta-audit would use similar commit analysis but with a different purpose: selecting which audits to run rather than generating new ideas.
+## Proposed Implementation
 
-The pre-push hook in `lib/cli/commands/pre-push.ts` demonstrates existing patterns for commit change detection:
-- `parseGitDiffNameStatus()` parses `git diff --name-status` output
-- `getChangesFromRemote()` gets file changes for unpushed commits
-- File categorization by path patterns (e.g., `.dust/tasks/`, `.dust/ideas/`)
+Add a new stock audit called `suggest-audits` in `lib/audits/stock-audits.ts`:
 
-## How it could work
+```
+# Suggest Audits Based On Commits
 
-When invoked, the meta-audit would:
-1. Analyze the last N commits (or unpushed commits)
-2. Categorize changed files by path and type
-3. Map file categories to relevant audits
-4. Create tasks for the selected audits
+Review recent commit history and suggest which audits would be valuable to run.
 
-## Open Questions
+## Scope
 
-### What should trigger each audit?
+Analyze the last 20 commits to identify patterns that suggest specific audits:
 
-#### Option: Path-based rules
+1. **Path-based triggers**
+   - `.dust/facts/*` changes → suggest `facts-verification` audit
+   - `.dust/principles/*` changes → suggest `ideas-from-principles` audit
+   - `*.test.*` or `__tests__/*` changes → suggest `test-coverage` audit
+   - `package.json` or lockfile changes → suggest `security-review` audit
+   - Error handling code changes → suggest `error-handling` audit
 
-Define explicit mappings from file paths to audits:
-- `.dust/facts/*` changes trigger `facts-verification`
-- `.dust/principles/*` changes trigger `ideas-from-principles`
-- `*.test.*` or `__tests__/*` changes trigger `test-coverage`
-- `package.json` or lockfile changes trigger `security-review`
+2. **Commit message patterns**
+   - "refactor" in message → suggest `component-reuse` or `dead-code` audit
+   - "fix" or "bug" in message → suggest `error-handling` or `test-coverage` audit
+   - "perf" or "performance" in message → suggest `performance-review` or `data-access-review` audit
 
-Simple and predictable, but requires maintaining a mapping table.
+3. **Change size heuristics**
+   - Large commits (many files) → suggest `agent-developer-experience` audit
+   - Files with repeated modifications → suggest `refactoring-opportunities` audit
 
-#### Option: Commit message analysis
+For each suggested audit, create an idea file explaining why that audit is relevant given the recent changes.
 
-Parse commit messages for keywords or patterns that suggest audit relevance. For example, commits mentioning "refactor" might trigger `dead-code` or `component-reuse`.
+## Definition of Done
 
-More flexible but less reliable; depends on commit message quality.
+- [ ] Analyzed commits from the last 20 commits
+- [ ] Identified file paths matching audit-relevant patterns
+- [ ] Reviewed commit messages for relevant keywords
+- [ ] Noted files with high churn that might need attention
+- [ ] Created idea files for each suggested audit with context explaining why
+```
 
-#### Option: Change size heuristics
+## Alignment with Principles
 
-Large commits (many files changed, many lines added) might benefit from broader audits like `agent-developer-experience` or `performance-review`. Small, focused commits might need narrower audits.
+- **[Task-First Workflow](../principles/task-first-workflow.md)** — The audit creates ideas (lightweight planning artifacts) rather than immediately running audits, maintaining the progression from abstract to concrete.
+- **[Lightweight Planning](../principles/lightweight-planning.md)** — Suggestions are captured as ideas that can be evaluated before becoming tasks, avoiding over-automation.
+- **[Development Traceability](../principles/development-traceability.md)** — The audit creates a connection between commit activity and audit suggestions, making the reasoning visible.
 
-Captures a dimension that path-based rules miss, but may trigger false positives.
+## Implementation Details
 
-### Should the meta-audit create tasks or run audits directly?
+The implementation follows the existing stock audit pattern in `lib/audits/stock-audits.ts`:
 
-#### Option: Create audit tasks
+1. Add a `suggestAudits()` function that returns the audit template
+2. Register it in `stockAuditFunctions` with key `'suggest-audits'`
+3. The audit instructions guide the agent to analyze commits and create ideas
 
-The meta-audit outputs a list of recommended audits and creates task files for each. The agent or loop then works through these tasks. Consistent with the existing task-based workflow.
+The audit does not automate audit execution. It produces ideas explaining which audits would be valuable and why, letting the agent or user decide whether to proceed.
 
-#### Option: Run audits inline
+## Relationship to Other Audits
 
-The meta-audit executes selected audits as part of its own run, producing a combined report. More immediate but loses the task-tracking benefits.
+This audit complements `ideas-from-commits` which looks for general improvement opportunities. The meta-audit is specifically focused on suggesting other audits as follow-up work.
 
-#### Option: Create a single combined task
-
-Rather than separate audit tasks, create one task that includes instructions to run the selected audits. Keeps the work unit atomic.
-
-### How should audit results be aggregated?
-
-#### Option: Independent tasks
-
-Each triggered audit becomes its own task. Results are separate and can be worked on independently. Matches current audit behavior.
-
-#### Option: Prioritized list
-
-The meta-audit produces a ranked list of audits by relevance. Only the top N are created as tasks to avoid overwhelming the work queue.
-
-#### Option: Dependency-aware scheduling
-
-Some audits might logically depend on others (e.g., fix dead code before checking performance). The meta-audit could order tasks accordingly.
-
-### What time window should the meta-audit analyze?
-
-#### Option: Fixed commit count
-
-Analyze the last N commits (e.g., 20, matching `ideas-from-commits`). Simple and consistent.
-
-#### Option: Unpushed commits only
-
-Use `getChangesFromRemote()` to analyze only commits not yet pushed. Focuses on recent local work that might need review before sharing.
-
-#### Option: Time-based window
-
-Analyze commits from the last N days. Better for infrequent committers but may span unrelated work.
-
-#### Option: Since last audit
-
-Track when audits were last run and analyze commits since then. Ensures complete coverage but requires state tracking.
-
-### Should some audits always run regardless of changes?
-
-#### Option: Periodic audits
-
-Some audits like `stale-ideas` or `security-review` are valuable to run periodically regardless of what changed. The meta-audit could include these on a schedule.
-
-#### Option: Change-triggered only
-
-Keep the meta-audit focused on change relevance. Periodic audits can be scheduled separately.
-
-#### Option: Configurable
-
-Allow users to configure which audits should always be included in meta-audit runs via `.dust/config/`.
+The path-based triggers mirror patterns already used in `pre-push.ts` for commit analysis (`parseGitDiffNameStatus`, file categorization by path).
