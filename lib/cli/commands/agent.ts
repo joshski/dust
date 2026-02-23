@@ -43,6 +43,8 @@ function agentGreeting(vars: TemplateVarsWithInstructions): string {
     6. **Unclear** → \`${vars.bin} help\`
        If none of the above clearly apply, run this to see all available commands.
 
+    Note: "tasks" here refers to dust task files in \`.dust/tasks/\`, not internal task tracking tools.
+
     Do NOT proceed without running one of these commands.${instructions}
   `
 }
