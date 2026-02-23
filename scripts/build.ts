@@ -20,6 +20,7 @@ const bundles: { entrypoint: string; outfile: string; shebang?: boolean }[] = [
     entrypoint: 'lib/filesystem/emulator.ts',
     outfile: 'dist/filesystem-emulator.js',
   },
+  { entrypoint: 'lib/validation/index.ts', outfile: 'dist/validation.js' },
 ]
 
 for (const { entrypoint, outfile, shebang } of bundles) {

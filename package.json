@@ -37,6 +37,10 @@
     "./biome": {
       "import": "./dist/biome.js",
       "types": "./dist/biome/index.d.ts"
+    },
+    "./validation": {
+      "import": "./dist/validation.js",
+      "types": "./dist/validation/index.d.ts"
     }
   },
   "files": [

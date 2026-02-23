@@ -7,7 +7,8 @@
     "lib/artifacts/index.ts",
     "lib/audits/index.ts",
     "lib/biome/index.ts",
-    "lib/bucket/server-messages.ts"
+    "lib/bucket/server-messages.ts",
+    "lib/validation/index.ts"
   ],
   "ignoreDependencies": ["@biomejs/biome"]
 }
