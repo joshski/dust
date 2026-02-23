@@ -9,7 +9,7 @@
 - `createRefineIdeaTask({ ideaSlug, description? })` - Creates a task to research and refine an idea
 - `createDecomposeIdeaTask({ ideaSlug, description?, openQuestionResponses? })` - Creates a task to convert an idea into concrete tasks
 - `createShelveIdeaTask({ ideaSlug, description? })` - Creates a task to archive and remove an idea
-- `createCaptureIdeaTask({ title, description, buildItNow? })` - Creates a task to capture a new idea
+- `createIdeaTask({ title, description, expedite? })` - Creates a task to capture a new idea
 - `findWorkflowTaskForIdea({ ideaSlug })` - Returns `null` or a `WorkflowTaskMatch` indicating the existing workflow task for an idea
 - `parseCaptureIdeaTask({ taskSlug })` - Parses a capture-idea task file
 

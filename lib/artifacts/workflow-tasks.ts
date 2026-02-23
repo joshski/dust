@@ -8,7 +8,7 @@ export const IDEA_TRANSITION_PREFIXES = [
 ]
 
 export const CAPTURE_IDEA_PREFIX = 'Add Idea: '
-export const BUILD_IDEA_PREFIX = 'Decompose Idea: '
+export const EXPEDITE_IDEA_PREFIX = 'Expedite Idea: '
 
 export interface IdeaInProgress {
   taskSlug: string
@@ -18,7 +18,7 @@ export interface IdeaInProgress {
 export interface ParsedCaptureIdeaTask {
   ideaTitle: string
   ideaDescription: string
-  buildItNow: boolean
+  expedite: boolean
 }
 
 export async function findAllCaptureIdeaTasks(
@@ -42,13 +42,10 @@ export async function findAllCaptureIdeaTasks(
         taskSlug: file.replace(/\.md$/, ''),
         ideaTitle: title.slice(CAPTURE_IDEA_PREFIX.length),
       })
-    } else if (
-      title.startsWith(BUILD_IDEA_PREFIX) &&
-      !content.includes('## Decomposes Idea')
-    ) {
+    } else if (title.startsWith(EXPEDITE_IDEA_PREFIX)) {
       results.push({
         taskSlug: file.replace(/\.md$/, ''),
-        ideaTitle: title.slice(BUILD_IDEA_PREFIX.length),
+        ideaTitle: title.slice(EXPEDITE_IDEA_PREFIX.length),
       })
     }
   }
@@ -153,13 +150,10 @@ export async function findAllWorkflowTasks(
         taskSlug,
         ideaTitle: title.slice(CAPTURE_IDEA_PREFIX.length),
       })
-    } else if (
-      title.startsWith(BUILD_IDEA_PREFIX) &&
-      !content.includes('## Decomposes Idea')
-    ) {
+    } else if (title.startsWith(EXPEDITE_IDEA_PREFIX)) {
       captureIdeaTasks.push({
         taskSlug,
-        ideaTitle: title.slice(BUILD_IDEA_PREFIX.length),
+        ideaTitle: title.slice(EXPEDITE_IDEA_PREFIX.length),
       })
     }
 
@@ -301,7 +295,7 @@ ${definitionOfDone.map(item => `- [ ] ${item}`).join('\n')}
 `
 }
 
-async function createIdeaTask(
+async function createIdeaTransitionTask(
   fileSystem: FileSystem,
   dustPath: string,
   prefix: string,
@@ -342,7 +336,7 @@ export async function createRefineIdeaTask(
   ideaSlug: string,
   description?: string
 ): Promise<CreateIdeaTransitionTaskResult> {
-  return createIdeaTask(
+  return createIdeaTransitionTask(
     fileSystem,
     dustPath,
     'Refine Idea: ',
@@ -365,7 +359,7 @@ export async function decomposeIdea(
   dustPath: string,
   options: DecomposeIdeaOptions
 ): Promise<CreateIdeaTransitionTaskResult> {
-  return createIdeaTask(
+  return createIdeaTransitionTask(
     fileSystem,
     dustPath,
     'Decompose Idea: ',
@@ -391,7 +385,7 @@ export async function createShelveIdeaTask(
   ideaSlug: string,
   description?: string
 ): Promise<CreateIdeaTransitionTaskResult> {
-  return createIdeaTask(
+  return createIdeaTransitionTask(
     fileSystem,
     dustPath,
     'Shelve Idea: ',
@@ -404,12 +398,12 @@ export async function createShelveIdeaTask(
   )
 }
 
-export async function createCaptureIdeaTask(
+export async function createIdeaTask(
   fileSystem: FileSystem,
   dustPath: string,
-  options: { title: string; description: string; buildItNow?: boolean }
+  options: { title: string; description: string; expedite?: boolean }
 ): Promise<CreateIdeaTransitionTaskResult> {
-  const { title, description, buildItNow } = options
+  const { title, description, expedite } = options
   if (!title || !title.trim()) {
     throw new Error('title is required and must not be whitespace-only')
   }
@@ -417,8 +411,8 @@ export async function createCaptureIdeaTask(
     throw new Error('description is required and must not be whitespace-only')
   }
 
-  if (buildItNow) {
-    const taskTitle = `${BUILD_IDEA_PREFIX}${title}`
+  if (expedite) {
+    const taskTitle = `${EXPEDITE_IDEA_PREFIX}${title}`
     const filename = titleToFilename(taskTitle)
     const filePath = `${dustPath}/tasks/${filename}`
 
@@ -492,14 +486,14 @@ export async function parseCaptureIdeaTask(
 
   const title = titleMatch[1].trim()
   let ideaTitle: string
-  let buildItNow: boolean
+  let expedite: boolean
 
-  if (title.startsWith(BUILD_IDEA_PREFIX)) {
-    ideaTitle = title.slice(BUILD_IDEA_PREFIX.length)
-    buildItNow = true
+  if (title.startsWith(EXPEDITE_IDEA_PREFIX)) {
+    ideaTitle = title.slice(EXPEDITE_IDEA_PREFIX.length)
+    expedite = true
   } else if (title.startsWith(CAPTURE_IDEA_PREFIX)) {
     ideaTitle = title.slice(CAPTURE_IDEA_PREFIX.length)
-    buildItNow = false
+    expedite = false
   } else {
     return null
   }
@@ -514,5 +508,5 @@ export async function parseCaptureIdeaTask(
 
   const ideaDescription = descriptionMatch[1]
 
-  return { ideaTitle, ideaDescription, buildItNow }
+  return { ideaTitle, ideaDescription, expedite }
 }

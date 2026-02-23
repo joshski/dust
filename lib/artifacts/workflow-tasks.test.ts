@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'vitest'
 import { createFileSystemEmulator, lintTaskFile } from '../test/test-utilities'
 import {
-  BUILD_IDEA_PREFIX,
   CAPTURE_IDEA_PREFIX,
-  createCaptureIdeaTask,
+  createIdeaTask,
   createRefineIdeaTask,
   createShelveIdeaTask,
   decomposeIdea,
+  EXPEDITE_IDEA_PREFIX,
   findAllCaptureIdeaTasks,
   findAllWorkflowTasks,
   findWorkflowTaskForIdea,
@@ -253,10 +253,10 @@ describe('createShelveIdeaTask', () => {
   })
 })
 
-describe('createCaptureIdeaTask', () => {
+describe('createIdeaTask', () => {
   test('creates a capture-idea task with title and description', async () => {
     const fileSystem = createFileSystem()
-    const result = await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    const result = await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Progress Broadcasting',
       description: 'Allow agents to broadcast progress via WebSocket.',
     })
@@ -303,7 +303,7 @@ describe('createCaptureIdeaTask', () => {
   test('throws if title is empty', async () => {
     const fileSystem = createFileSystem()
     await expect(
-      createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      createIdeaTask(fileSystem, '/project/.dust', {
         title: '',
         description: 'Some description',
       })
@@ -313,7 +313,7 @@ describe('createCaptureIdeaTask', () => {
   test('throws if title is whitespace-only', async () => {
     const fileSystem = createFileSystem()
     await expect(
-      createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      createIdeaTask(fileSystem, '/project/.dust', {
         title: '   ',
         description: 'Some description',
       })
@@ -323,7 +323,7 @@ describe('createCaptureIdeaTask', () => {
   test('throws if description is empty', async () => {
     const fileSystem = createFileSystem()
     await expect(
-      createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      createIdeaTask(fileSystem, '/project/.dust', {
         title: 'Some Title',
         description: '',
       })
@@ -333,26 +333,26 @@ describe('createCaptureIdeaTask', () => {
   test('throws if description is whitespace-only', async () => {
     const fileSystem = createFileSystem()
     await expect(
-      createCaptureIdeaTask(fileSystem, '/project/.dust', {
+      createIdeaTask(fileSystem, '/project/.dust', {
         title: 'Some Title',
         description: '   ',
       })
     ).rejects.toThrow('description is required and must not be whitespace-only')
   })
 
-  test('creates a build-idea task when buildItNow is true', async () => {
+  test('creates an expedite-idea task when expedite is true', async () => {
     const fileSystem = createFileSystem()
-    const result = await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    const result = await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Progress Broadcasting',
       description: 'Allow agents to broadcast progress via WebSocket.',
-      buildItNow: true,
+      expedite: true,
     })
 
     expect(result.filePath).toBe(
-      '/project/.dust/tasks/decompose-idea-progress-broadcasting.md'
+      '/project/.dust/tasks/expedite-idea-progress-broadcasting.md'
     )
     const content = fileSystem.writtenFiles.get(result.filePath) as string
-    expect(content).toContain(`# ${BUILD_IDEA_PREFIX}Progress Broadcasting`)
+    expect(content).toContain(`# ${EXPEDITE_IDEA_PREFIX}Progress Broadcasting`)
     expect(content).toContain('Research this idea briefly')
     expect(content).toContain('implement directly and commit')
     expect(content).toContain(
@@ -373,12 +373,12 @@ describe('createCaptureIdeaTask', () => {
     expect(content).not.toContain('create an idea file')
   })
 
-  test('creates a capture-idea task when buildItNow is false', async () => {
+  test('creates a capture-idea task when expedite is false', async () => {
     const fileSystem = createFileSystem()
-    const result = await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    const result = await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Progress Broadcasting',
       description: 'Allow agents to broadcast progress via WebSocket.',
-      buildItNow: false,
+      expedite: false,
     })
 
     expect(result.filePath).toBe(
@@ -387,7 +387,7 @@ describe('createCaptureIdeaTask', () => {
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain(`# ${CAPTURE_IDEA_PREFIX}Progress Broadcasting`)
     expect(content).toContain('create one or more idea files')
-    expect(content).not.toContain(BUILD_IDEA_PREFIX)
+    expect(content).not.toContain(EXPEDITE_IDEA_PREFIX)
   })
 })
 
@@ -765,9 +765,9 @@ describe('generated tasks pass lint rules', () => {
     expect(lintTaskFile(result.filePath, content)).toEqual([])
   })
 
-  test('createCaptureIdeaTask produces a valid task file', async () => {
+  test('createIdeaTask produces a valid task file', async () => {
     const fileSystem = createFileSystem()
-    const result = await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    const result = await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Progress Broadcasting',
       description: 'Allow agents to broadcast progress via WebSocket.',
     })
@@ -775,12 +775,12 @@ describe('generated tasks pass lint rules', () => {
     expect(lintTaskFile(result.filePath, content)).toEqual([])
   })
 
-  test('createCaptureIdeaTask with buildItNow produces a valid task file', async () => {
+  test('createIdeaTask with expedite produces a valid task file', async () => {
     const fileSystem = createFileSystem()
-    const result = await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    const result = await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Progress Broadcasting',
       description: 'Allow agents to broadcast progress via WebSocket.',
-      buildItNow: true,
+      expedite: true,
     })
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(lintTaskFile(result.filePath, content)).toEqual([])
@@ -788,7 +788,7 @@ describe('generated tasks pass lint rules', () => {
 })
 
 describe('CAPTURE_IDEA_PREFIX', () => {
-  test('matches the prefix used by createCaptureIdeaTask', () => {
+  test('matches the prefix used by createIdeaTask', () => {
     expect(CAPTURE_IDEA_PREFIX).toBe('Add Idea: ')
   })
 })
@@ -833,9 +833,9 @@ describe('findAllCaptureIdeaTasks', () => {
     expect(result).toEqual([])
   })
 
-  test('finds capture-idea tasks created by createCaptureIdeaTask', async () => {
+  test('finds capture-idea tasks created by createIdeaTask', async () => {
     const fileSystem = createFileSystem()
-    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Progress Broadcasting',
       description: 'Allow agents to broadcast progress via WebSocket.',
     })
@@ -850,11 +850,11 @@ describe('findAllCaptureIdeaTasks', () => {
 
   test('returns multiple capture-idea tasks sorted by filename', async () => {
     const fileSystem = createFileSystem()
-    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Progress Broadcasting',
       description: 'WebSocket-based progress.',
     })
-    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Auto Linting',
       description: 'Lint on save.',
     })
@@ -868,38 +868,38 @@ describe('findAllCaptureIdeaTasks', () => {
     ])
   })
 
-  test('finds decompose-idea tasks created by createCaptureIdeaTask with buildItNow', async () => {
+  test('finds expedite-idea tasks created by createIdeaTask with expedite', async () => {
     const fileSystem = createFileSystem()
-    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Progress Broadcasting',
       description: 'Allow agents to broadcast progress via WebSocket.',
-      buildItNow: true,
+      expedite: true,
     })
     const result = await findAllCaptureIdeaTasks(fileSystem, '/project/.dust')
     expect(result).toEqual([
       {
-        taskSlug: 'decompose-idea-progress-broadcasting',
+        taskSlug: 'expedite-idea-progress-broadcasting',
         ideaTitle: 'Progress Broadcasting',
       },
     ])
   })
 
-  test('finds both add-idea and decompose-idea tasks', async () => {
+  test('finds both add-idea and expedite-idea tasks', async () => {
     const fileSystem = createFileSystem()
-    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Auto Linting',
       description: 'Lint on save.',
     })
-    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Progress Broadcasting',
       description: 'WebSocket-based progress.',
-      buildItNow: true,
+      expedite: true,
     })
     const result = await findAllCaptureIdeaTasks(fileSystem, '/project/.dust')
     expect(result).toEqual([
       { taskSlug: 'add-idea-auto-linting', ideaTitle: 'Auto Linting' },
       {
-        taskSlug: 'decompose-idea-progress-broadcasting',
+        taskSlug: 'expedite-idea-progress-broadcasting',
         ideaTitle: 'Progress Broadcasting',
       },
     ])
@@ -912,7 +912,7 @@ describe('findAllCaptureIdeaTasks', () => {
       '/project/.dust',
       'progress-broadcasting'
     )
-    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Auto Linting',
       description: 'Lint on save.',
     })
@@ -934,10 +934,10 @@ describe('findAllCaptureIdeaTasks', () => {
         },
       },
     })
-    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Auto Linting',
       description: 'Lint on save.',
-      buildItNow: true,
+      expedite: true,
     })
     await decomposeIdea(fileSystem, '/project/.dust', {
       ideaSlug: 'progress-broadcasting',
@@ -946,7 +946,7 @@ describe('findAllCaptureIdeaTasks', () => {
     const result = await findAllCaptureIdeaTasks(fileSystem, '/project/.dust')
     expect(result).toEqual([
       {
-        taskSlug: 'decompose-idea-auto-linting',
+        taskSlug: 'expedite-idea-auto-linting',
         ideaTitle: 'Auto Linting',
       },
     ])
@@ -1025,7 +1025,7 @@ describe('parseCaptureIdeaTask', () => {
 
   test('extracts title and description from new-format capture-idea tasks', async () => {
     const fileSystem = createFileSystem()
-    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Progress Broadcasting',
       description: 'Allow agents to broadcast progress via WebSocket.',
     })
@@ -1037,26 +1037,26 @@ describe('parseCaptureIdeaTask', () => {
     expect(result).toEqual({
       ideaTitle: 'Progress Broadcasting',
       ideaDescription: 'Allow agents to broadcast progress via WebSocket.',
-      buildItNow: false,
+      expedite: false,
     })
   })
 
-  test('returns buildItNow true for Decompose Idea tasks', async () => {
+  test('returns expedite true for Expedite Idea tasks', async () => {
     const fileSystem = createFileSystem()
-    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Progress Broadcasting',
       description: 'Allow agents to broadcast progress via WebSocket.',
-      buildItNow: true,
+      expedite: true,
     })
     const result = await parseCaptureIdeaTask(
       fileSystem,
       '/project/.dust',
-      'decompose-idea-progress-broadcasting'
+      'expedite-idea-progress-broadcasting'
     )
     expect(result).toEqual({
       ideaTitle: 'Progress Broadcasting',
       ideaDescription: 'Allow agents to broadcast progress via WebSocket.',
-      buildItNow: true,
+      expedite: true,
     })
   })
 
@@ -1071,7 +1071,7 @@ And a code block:
 \`\`\`typescript
 const x = 1;
 \`\`\``
-    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Complex Idea',
       description: multilineDescription,
     })
@@ -1083,7 +1083,7 @@ const x = 1;
     expect(result).toEqual({
       ideaTitle: 'Complex Idea',
       ideaDescription: multilineDescription,
-      buildItNow: false,
+      expedite: false,
     })
   })
 })
@@ -1114,22 +1114,22 @@ describe('findAllWorkflowTasks', () => {
     expect(result.workflowTasksByIdeaSlug.size).toBe(0)
   })
 
-  test('finds capture idea tasks (add-idea and decompose-idea without section)', async () => {
+  test('finds capture idea tasks (add-idea and expedite-idea)', async () => {
     const fileSystem = createFileSystem()
-    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Auto Linting',
       description: 'Lint on save.',
     })
-    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'Progress Broadcasting',
       description: 'WebSocket-based progress.',
-      buildItNow: true,
+      expedite: true,
     })
     const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
     expect(result.captureIdeaTasks).toEqual([
       { taskSlug: 'add-idea-auto-linting', ideaTitle: 'Auto Linting' },
       {
-        taskSlug: 'decompose-idea-progress-broadcasting',
+        taskSlug: 'expedite-idea-progress-broadcasting',
         ideaTitle: 'Progress Broadcasting',
       },
     ])
@@ -1173,7 +1173,7 @@ describe('findAllWorkflowTasks', () => {
         },
       },
     })
-    await createCaptureIdeaTask(fileSystem, '/project/.dust', {
+    await createIdeaTask(fileSystem, '/project/.dust', {
       title: 'New Idea',
       description: 'A new idea.',
     })

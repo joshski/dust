@@ -16,7 +16,7 @@ import {
   type AllWorkflowTasks,
   CAPTURE_IDEA_PREFIX,
   type CreateIdeaTransitionTaskResult,
-  createCaptureIdeaTask as createCaptureIdeaTaskImpl,
+  createIdeaTask as createIdeaTaskImpl,
   createRefineIdeaTask as createRefineIdeaTaskImpl,
   createShelveIdeaTask as createShelveIdeaTaskImpl,
   type DecomposeIdeaOptions,
@@ -76,10 +76,10 @@ export interface ArtifactsRepository {
     ideaSlug: string
     description?: string
   }): Promise<CreateIdeaTransitionTaskResult>
-  createCaptureIdeaTask(options: {
+  createIdeaTask(options: {
     title: string
     description: string
-    buildItNow?: boolean
+    expedite?: boolean
   }): Promise<CreateIdeaTransitionTaskResult>
   findWorkflowTaskForIdea(options: {
     ideaSlug: string
@@ -188,12 +188,12 @@ export function buildArtifactsRepository(
       )
     },
 
-    async createCaptureIdeaTask(options: {
+    async createIdeaTask(options: {
       title: string
       description: string
-      buildItNow?: boolean
+      expedite?: boolean
     }): Promise<CreateIdeaTransitionTaskResult> {
-      return createCaptureIdeaTaskImpl(fileSystem, dustPath, options)
+      return createIdeaTaskImpl(fileSystem, dustPath, options)
     },
 
     async findWorkflowTaskForIdea(options: {

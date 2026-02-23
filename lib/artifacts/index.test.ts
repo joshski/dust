@@ -210,12 +210,12 @@ describe('buildArtifactsRepository', () => {
     })
   })
 
-  describe('createCaptureIdeaTask', () => {
+  describe('createIdeaTask', () => {
     test('creates a capture-idea task', async () => {
       const fileSystem = createFileSystem()
       const repository = buildArtifactsRepository(fileSystem, '/project/.dust')
 
-      const result = await repository.createCaptureIdeaTask({
+      const result = await repository.createIdeaTask({
         title: 'New Feature',
         description: 'A new feature to implement.',
       })
@@ -227,21 +227,21 @@ describe('buildArtifactsRepository', () => {
       expect(content).toContain('# Add Idea: New Feature')
     })
 
-    test('creates a build-idea task when buildItNow is true', async () => {
+    test('creates an expedite-idea task when expedite is true', async () => {
       const fileSystem = createFileSystem()
       const repository = buildArtifactsRepository(fileSystem, '/project/.dust')
 
-      const result = await repository.createCaptureIdeaTask({
+      const result = await repository.createIdeaTask({
         title: 'New Feature',
         description: 'A new feature to implement.',
-        buildItNow: true,
+        expedite: true,
       })
 
       expect(result.filePath).toBe(
-        '/project/.dust/tasks/decompose-idea-new-feature.md'
+        '/project/.dust/tasks/expedite-idea-new-feature.md'
       )
       const content = fileSystem.writtenFiles.get(result.filePath) as string
-      expect(content).toContain('# Decompose Idea: New Feature')
+      expect(content).toContain('# Expedite Idea: New Feature')
     })
   })
 
@@ -293,7 +293,7 @@ describe('buildArtifactsRepository', () => {
       const fileSystem = createFileSystem()
       const repository = buildArtifactsRepository(fileSystem, '/project/.dust')
 
-      await repository.createCaptureIdeaTask({
+      await repository.createIdeaTask({
         title: 'New Feature',
         description: 'A new feature to implement.',
       })
@@ -305,7 +305,7 @@ describe('buildArtifactsRepository', () => {
       expect(result).toEqual({
         ideaTitle: 'New Feature',
         ideaDescription: 'A new feature to implement.',
-        buildItNow: false,
+        expedite: false,
       })
     })
   })
