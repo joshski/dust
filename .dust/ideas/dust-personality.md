@@ -1,10 +1,14 @@
 # Dust Personality
 
-Give dust a configurable "personality" or tone of voice that shapes how it communicates with users.
+Give dust a configurable "personality" or tone of voice that shapes how it communicates.
 
 ## Context
 
-Working with dust involves reading many messages throughout a session: agent greetings, help text, task listings, error messages, and status updates. Currently, these messages are functional but neutral. The agent greeting says "🤖 Hello ${agentName}, welcome to dust!" and help text announces "✨ dust - Flow state for AI coding agents."
+Dust personality manifests in two distinct dimensions:
+
+**Agent-facing**: CLI output that agents read — greetings, help text, status messages, and error output. The agent greeting says "🤖 Hello ${agentName}, welcome to dust!" and help text announces "✨ dust - Flow state for AI coding agents."
+
+**Human-facing**: The artifacts themselves — principles, facts, ideas, and tasks. These are what humans primarily read and write. The tone of artifact templates, example content, and scaffold text shapes how a team's dust directory feels.
 
 Since developers might work with dust all day, the character of these interactions matters. A tool's personality affects user experience in subtle ways - it can make mundane tasks feel more engaging or help establish a team's culture around AI-assisted development.
 
@@ -20,6 +24,17 @@ User-facing messages flow through several places:
 - **Error messages**: Various commands produce failure messages
 
 Each location uses emojis (🤖, ✨, 🎯, 📋, 💡) and consistent but neutral phrasing.
+
+### Human-Facing Artifact Personality
+
+When `dust init` creates a new repository, it scaffolds example artifacts. When `dust new task` creates a task, it generates a template. These templates and examples establish a voice:
+
+- **Principle templates**: How are guiding values expressed? Formal statements or conversational explanations?
+- **Task templates**: How are work items described? Bullet-point checklists or narrative descriptions?
+- **Fact templates**: How is system state documented? Technical reference or explanatory prose?
+- **Idea templates**: How are proposals framed? Problem-focused or solution-focused?
+
+The current templates use a neutral, documentation-style voice. Teams might prefer different approaches: some want terse technical notes, others want expressive prose that captures intent and context.
 
 ### Configuration Entry Point
 
@@ -150,3 +165,26 @@ Make the default personality distinctive and memorable, reflecting dust's nature
 
 Pros: Stronger product identity; differentiation from generic tooling
 Cons: Subjective; may not suit all users; harder to get right
+
+### Should artifact templates reflect personality settings?
+
+#### CLI output only
+
+Personality settings only affect CLI output (agent greetings, help text, status messages). Artifact templates remain neutral and consistent across all installations.
+
+Pros: Artifacts are portable between teams; simpler implementation; artifacts focus on content not style
+Cons: Personality feels incomplete; the most-read content (artifacts) doesn't reflect the configured voice
+
+#### Artifacts follow personality
+
+When `dust new task` runs, the generated template matches the configured personality. A "minimal" personality produces terse templates; a "friendly" personality produces warmer prose.
+
+Pros: Consistent voice throughout the tool; artifacts feel cohesive with CLI experience
+Cons: Existing artifacts won't match new ones if personality changes; harder to maintain template variants
+
+#### Artifacts have separate style guide
+
+A separate `artifactStyle` setting controls artifact templates independently from CLI personality. Teams might want minimal CLI output but expressive artifacts, or vice versa.
+
+Pros: Maximum flexibility; respects that artifact authorship is different from reading CLI output
+Cons: Configuration complexity; two personality dimensions to reason about
