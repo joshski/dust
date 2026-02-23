@@ -21,38 +21,6 @@ export interface ParsedCaptureIdeaTask {
   expedite: boolean
 }
 
-export async function findAllCaptureIdeaTasks(
-  fileSystem: ReadableFileSystem,
-  dustPath: string
-): Promise<IdeaInProgress[]> {
-  const tasksPath = `${dustPath}/tasks`
-  if (!fileSystem.exists(tasksPath)) return []
-
-  const files = await fileSystem.readdir(tasksPath)
-  const results: IdeaInProgress[] = []
-
-  for (const file of files.filter(f => f.endsWith('.md')).sort()) {
-    const content = await fileSystem.readFile(`${tasksPath}/${file}`)
-    const titleMatch = content.match(/^#\s+(.+)$/m)
-    if (!titleMatch) continue
-
-    const title = titleMatch[1].trim()
-    if (title.startsWith(CAPTURE_IDEA_PREFIX)) {
-      results.push({
-        taskSlug: file.replace(/\.md$/, ''),
-        ideaTitle: title.slice(CAPTURE_IDEA_PREFIX.length),
-      })
-    } else if (title.startsWith(EXPEDITE_IDEA_PREFIX)) {
-      results.push({
-        taskSlug: file.replace(/\.md$/, ''),
-        ideaTitle: title.slice(EXPEDITE_IDEA_PREFIX.length),
-      })
-    }
-  }
-
-  return results
-}
-
 /**
  * Converts a markdown title to the expected filename using deterministic rules:
  * 1. Convert to lowercase

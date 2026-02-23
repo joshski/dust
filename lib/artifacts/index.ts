@@ -21,7 +21,6 @@ import {
   createShelveIdeaTask as createShelveIdeaTaskImpl,
   type DecomposeIdeaOptions,
   decomposeIdea as decomposeIdeaImpl,
-  findAllCaptureIdeaTasks,
   findAllWorkflowTasks,
   findWorkflowTaskForIdea as findWorkflowTaskForIdeaImpl,
   type IdeaInProgress,
@@ -48,12 +47,7 @@ export type {
 }
 
 // Re-export constants and standalone functions
-export {
-  CAPTURE_IDEA_PREFIX,
-  findAllCaptureIdeaTasks,
-  findAllWorkflowTasks,
-  parseOpenQuestions,
-}
+export { CAPTURE_IDEA_PREFIX, findAllWorkflowTasks, parseOpenQuestions }
 export type { IdeaInProgress }
 
 export interface ArtifactsRepository {
