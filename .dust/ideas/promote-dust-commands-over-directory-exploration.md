@@ -19,7 +19,6 @@ However, several task templates still direct agents to review raw artifact direc
 2. **Decompose Idea tasks** (workflow-tasks.ts:368): "Review `.dust/principles/` to link relevant principles and `.dust/facts/` for design decisions that should inform the task."
 3. **Expedite Idea tasks** (workflow-tasks.ts:421): "Review `.dust/principles/` and `.dust/facts/` for relevant context."
 4. **Add Idea tasks** (workflow-tasks.ts:447): "Review `.dust/principles/` and `.dust/facts/` for relevant context."
-5. **Stock audits** (stock-audits.ts): Several audits reference reading individual fact or principle files directly
 
 ## Proposed Change
 
@@ -49,12 +48,47 @@ The `{bin}` template variable resolves to the configured dust command (defaultin
 ### Files to update
 
 - `lib/artifacts/workflow-tasks.ts` - Refine, Decompose, Expedite, and Add Idea task templates
-- `lib/audits/stock-audits.ts` - Audit templates that reference `.dust/facts/` or `.dust/principles/`
+
+### Implementation approach
+
+The workflow-tasks.ts file writes task files via `createIdeaTransitionTask`. Currently templates are static strings. To support `{bin}` interpolation:
+
+1. Add `DustSettings` as a parameter to `createRefineIdeaTask`, `decomposeIdea`, `createShelveIdeaTask`, and `createIdeaTask`
+2. Replace directory path references with `${settings.dustCommand}` in template literals
+3. Update call sites to pass settings (primarily `lib/cli/commands/refine.ts`, `lib/cli/commands/decompose.ts`, etc.)
+
+This follows the same pattern used in `lib/cli/commands/focus.ts` and `lib/cli/commands/agent.ts`.
+
+### Out of scope
+
+Stock audits in `lib/audits/stock-audits.ts` have a separate concern: they are exported via the `@joshski/dust/audits` package entry point and consumed by downstream applications that may not have filesystem access to detect the appropriate dust command. This case is addressed by the separate [Audit Template Interpolation](./audit-template-interpolation.md) idea.
 
 ### Considerations
 
-Some references may be intentional. For example:
-- "Read each fact file in `.dust/facts/`" in `factsVerification()` is an action item, not guidance
-- Links to specific principles in Definition of Done items (e.g., "links to relevant principles from .dust/principles/") describe where files should be created, not what to review
+Some references to `.dust/` directories are intentional and should NOT be changed:
+- Definition of Done items describing where files should be created (e.g., "links to relevant principles from .dust/principles/")
+- Action items that instruct agents to read individual files for verification
 
-The change should only apply to guidance sections that tell agents what to read for context, not to action items that describe file locations for creating or modifying content.
+The change should only apply to guidance sections that tell agents what to read for context.
+
+## Open Questions
+
+### Should the idea commands be included?
+
+#### Include ideas command
+
+The current proposal focuses on `principles` and `facts` commands, but the templates also mention reviewing ideas (in ideasHint). Change references like "Review existing ideas in `./.dust/ideas/`" to "Run `{bin} ideas`" for consistency.
+
+#### Exclude ideas command
+
+The ideas references are often about creating files in that directory, not reviewing existing content. Keep directory paths for creation targets.
+
+### Should task templates also suggest `dust tasks`?
+
+#### Add tasks command
+
+Some task templates mention reviewing existing tasks or the task backlog. Include `{bin} tasks` in templates that currently mention reviewing `.dust/tasks/`.
+
+#### Keep task directory references
+
+Task file references are usually about creating or modifying specific task files, not reviewing the list.
