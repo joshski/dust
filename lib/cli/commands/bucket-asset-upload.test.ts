@@ -363,13 +363,15 @@ describe('bucketAssetUpload', () => {
     let capturedUrl: string | undefined
     let capturedContentType: string | undefined
     let capturedBytes: Uint8Array | undefined
+    let capturedFileName: string | undefined
 
     const uploadDeps = createMockUploadDeps({
       readFileBytes: async () => new Uint8Array([1, 2, 3, 4]),
-      uploadFile: async (url, _token, bytes, contentType) => {
+      uploadFile: async (url, _token, bytes, contentType, fileName) => {
         capturedUrl = url
         capturedBytes = bytes
         capturedContentType = contentType
+        capturedFileName = fileName
         return { url: 'https://dustbucket.com/assets/uploaded123' }
       },
     })
@@ -383,6 +385,7 @@ describe('bucketAssetUpload', () => {
     )
     expect(capturedContentType).toBe('image/png')
     expect(capturedBytes).toEqual(new Uint8Array([1, 2, 3, 4]))
+    expect(capturedFileName).toBe('image.png')
     expect(context.stdoutLines).toContain(
       'https://dustbucket.com/assets/uploaded123'
     )

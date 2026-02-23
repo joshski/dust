@@ -65,7 +65,8 @@ export interface UploadDependencies {
     url: string,
     token: string,
     fileBytes: Uint8Array,
-    contentType: string
+    contentType: string,
+    fileName: string
   ) => Promise<{ url: string }>
 }
 
@@ -107,15 +108,21 @@ function createDefaultUploadDependencies(): UploadDependencies {
       url: string,
       token: string,
       fileBytes: Uint8Array,
-      contentType: string
+      contentType: string,
+      fileName: string
     ) => {
+      const formData = new FormData()
+      formData.append(
+        'file',
+        new Blob([fileBytes.buffer as ArrayBuffer], { type: contentType }),
+        fileName
+      )
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': contentType,
         },
-        body: new Blob([fileBytes as unknown as ArrayBuffer]),
+        body: formData,
       })
       if (!response.ok) {
         const text = await response.text()
@@ -238,6 +245,7 @@ export async function bucketAssetUpload(
   // Read file and upload
   const fileBytes = await uploadDeps.readFileBytes(filePath)
   const contentType = getContentType(filePath)
+  const fileName = filePath.split('/').pop()!
   const uploadUrl = `${getDustbucketHost()}/api/assets?repositoryId=${encodeURIComponent(repositoryId)}`
 
   try {
@@ -245,7 +253,8 @@ export async function bucketAssetUpload(
       uploadUrl,
       token,
       fileBytes,
-      contentType
+      contentType,
+      fileName
     )
     context.stdout(result.url)
     return { exitCode: 0 }
