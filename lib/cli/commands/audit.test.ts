@@ -219,7 +219,7 @@ describe('audit command', () => {
   test('loadStockAudits loads audits from markdown files', () => {
     const audits = loadStockAudits()
     expect(audits).toBeInstanceOf(Array)
-    expect(audits.length).toBe(15)
+    expect(audits.length).toBe(16)
 
     const names = audits.map(a => a.name)
     expect(names).toContain('agent-developer-experience')
@@ -229,6 +229,7 @@ describe('audit command', () => {
     expect(names).toContain('dead-code')
     expect(names).toContain('error-handling')
     expect(names).toContain('facts-verification')
+    expect(names).toContain('global-state')
     expect(names).toContain('ideas-from-commits')
     expect(names).toContain('ideas-from-principles')
     expect(names).toContain('performance-review')
@@ -250,6 +251,7 @@ describe('audit command', () => {
     // component-reuse references the reasonably-dry principle to help agents avoid over-extraction
     // coverage-exclusions references decoupling and test coverage principles
     // error-handling references actionable-errors, debugging-tooling, stop-the-line principles
+    // global-state references dependency-injection, decoupled-code, test-isolation principles
     // refactoring-opportunities references boy scout rule, make the change easy, etc.
     // ubiquitous-language references naming principles that are universally applicable
     const auditsWithPrinciples = [
@@ -257,6 +259,7 @@ describe('audit command', () => {
       'coverage-exclusions',
       'data-access-review',
       'error-handling',
+      'global-state',
       'refactoring-opportunities',
       'ubiquitous-language',
     ]
