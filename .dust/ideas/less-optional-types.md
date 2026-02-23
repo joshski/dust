@@ -24,21 +24,6 @@ interface CheckResult {
 
 However, in `runSingleCheck` (lines 67-76), `durationMs`, `timedOut`, and `timeoutSeconds` are always assigned. The optionality forces consumers to handle `undefined` cases that cannot occur.
 
-### Repository Interface Inconsistency
-
-In `lib/bucket/repository.ts:45-50`, the `Repository` interface has optional `id`:
-
-```typescript
-export interface Repository {
-  name: string
-  gitUrl: string
-  url?: string
-  id?: number
-}
-```
-
-But `RepositoryListItem` in `lib/bucket/server-messages.ts` extends `Repository` and makes `id` required. This creates an inconsistency: if a repository comes from the server, it always has an `id`, but the base type doesn't reflect this.
-
 ### RepositoryState - Lifecycle-Dependent Fields
 
 In `lib/bucket/repository.ts:52-62`:
@@ -75,24 +60,8 @@ Unnecessary optionality:
 
 This idea is a specific subset of [Increase Type Safety](increase-type-safety.md), which covers broader typing concerns like tool input typing and error handling assertions. This idea focuses specifically on reducing unnecessary optionality.
 
-## Open Questions
+## Scope
 
-### How should lifecycle-dependent fields be typed?
+The remaining actionable item is making `durationMs`, `timedOut`, and `timeoutSeconds` required in `CheckResult`. This is a small, focused change with clear benefits.
 
-#### Use distinct types for each state
-
-Define `IdleRepositoryState` and `ActiveRepositoryState` with appropriate required fields. Use a discriminated union based on a status field like `agentStatus`. This makes the type system accurately reflect state transitions (e.g., `wakeUp` is only present when a loop is running), but adds complexity and requires refactoring existing code.
-
-#### Keep optional fields with documented invariants
-
-Keep the current approach where optional fields are set/unset during operation. Document in comments when each field is guaranteed present. This is simpler but relies on convention rather than type enforcement.
-
-### How should related types with different guarantees be structured?
-
-#### Create separate types for each context
-
-Define `Repository` (from Git URL parsing, no id) and `ServerRepository` (from server, has id). Types that work with server data use `ServerRepository`. This accurately reflects the data sources but adds type proliferation.
-
-#### Make commonly-present fields required in the base type
-
-Make `id` required in `Repository`. Call sites that don't have an id would need to provide a sentinel value or use a different type. This simplifies consuming code but may not fit all use cases.
+The `RepositoryState` lifecycle fields and `IterationOptions` defaults are correctly modeled—optional fields are appropriate for both cases.
