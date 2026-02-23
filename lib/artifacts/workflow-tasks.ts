@@ -8,7 +8,7 @@ export const IDEA_TRANSITION_PREFIXES = [
 ]
 
 export const CAPTURE_IDEA_PREFIX = 'Add Idea: '
-export const BUILD_IDEA_PREFIX = 'Build Idea: '
+export const BUILD_IDEA_PREFIX = 'Decompose Idea: '
 
 export interface IdeaInProgress {
   taskSlug: string

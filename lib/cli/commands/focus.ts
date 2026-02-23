@@ -19,7 +19,7 @@ export function buildImplementationInstructions(
   const steps: string[] = []
   let step = 1
 
-  // Build Idea tasks have no associated idea file since the idea content lives inline in the task
+  // Decompose Idea tasks have no associated idea file since the idea content lives inline in the task
   const hasIdeaFile = !taskTitle?.startsWith(BUILD_IDEA_PREFIX)
 
   steps.push(`Note: Do NOT run \`${bin} agent\`.`, '')

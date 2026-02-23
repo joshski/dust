@@ -348,7 +348,7 @@ describe('createCaptureIdeaTask', () => {
     })
 
     expect(result.filePath).toBe(
-      '/project/.dust/tasks/build-idea-progress-broadcasting.md'
+      '/project/.dust/tasks/decompose-idea-progress-broadcasting.md'
     )
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain(`# ${BUILD_IDEA_PREFIX}Progress Broadcasting`)
@@ -867,7 +867,7 @@ describe('findAllCaptureIdeaTasks', () => {
     ])
   })
 
-  test('finds build-idea tasks created by createCaptureIdeaTask with buildItNow', async () => {
+  test('finds decompose-idea tasks created by createCaptureIdeaTask with buildItNow', async () => {
     const fileSystem = createFileSystem()
     await createCaptureIdeaTask(fileSystem, '/project/.dust', {
       title: 'Progress Broadcasting',
@@ -877,13 +877,13 @@ describe('findAllCaptureIdeaTasks', () => {
     const result = await findAllCaptureIdeaTasks(fileSystem, '/project/.dust')
     expect(result).toEqual([
       {
-        taskSlug: 'build-idea-progress-broadcasting',
+        taskSlug: 'decompose-idea-progress-broadcasting',
         ideaTitle: 'Progress Broadcasting',
       },
     ])
   })
 
-  test('finds both add-idea and build-idea tasks', async () => {
+  test('finds both add-idea and decompose-idea tasks', async () => {
     const fileSystem = createFileSystem()
     await createCaptureIdeaTask(fileSystem, '/project/.dust', {
       title: 'Auto Linting',
@@ -898,7 +898,7 @@ describe('findAllCaptureIdeaTasks', () => {
     expect(result).toEqual([
       { taskSlug: 'add-idea-auto-linting', ideaTitle: 'Auto Linting' },
       {
-        taskSlug: 'build-idea-progress-broadcasting',
+        taskSlug: 'decompose-idea-progress-broadcasting',
         ideaTitle: 'Progress Broadcasting',
       },
     ])
@@ -1010,7 +1010,7 @@ describe('parseCaptureIdeaTask', () => {
     })
   })
 
-  test('returns buildItNow true for Build Idea tasks', async () => {
+  test('returns buildItNow true for Decompose Idea tasks', async () => {
     const fileSystem = createFileSystem()
     await createCaptureIdeaTask(fileSystem, '/project/.dust', {
       title: 'Progress Broadcasting',
@@ -1020,7 +1020,7 @@ describe('parseCaptureIdeaTask', () => {
     const result = await parseCaptureIdeaTask(
       fileSystem,
       '/project/.dust',
-      'build-idea-progress-broadcasting'
+      'decompose-idea-progress-broadcasting'
     )
     expect(result).toEqual({
       ideaTitle: 'Progress Broadcasting',

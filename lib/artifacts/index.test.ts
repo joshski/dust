@@ -238,10 +238,10 @@ describe('buildArtifactsRepository', () => {
       })
 
       expect(result.filePath).toBe(
-        '/project/.dust/tasks/build-idea-new-feature.md'
+        '/project/.dust/tasks/decompose-idea-new-feature.md'
       )
       const content = fileSystem.writtenFiles.get(result.filePath) as string
-      expect(content).toContain('# Build Idea: New Feature')
+      expect(content).toContain('# Decompose Idea: New Feature')
     })
   })
 

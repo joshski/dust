@@ -63,7 +63,7 @@ export function templateVariables(
   options?: { hasIdeaFile?: boolean }
 ): TemplateVars {
   const agent = detectAgent(env)
-  // Default hasIdeaFile to true - only Build Idea tasks have no idea file
+  // Default hasIdeaFile to true - only Decompose Idea tasks have no idea file
   const hasIdeaFile = options?.hasIdeaFile ?? true
   return {
     bin: settings.dustCommand,
@@ -91,7 +91,7 @@ export async function templateVariablesWithInstructions(
     fileSystem,
     agent.type
   )
-  // Default hasIdeaFile to true - only Build Idea tasks have no idea file
+  // Default hasIdeaFile to true - only Decompose Idea tasks have no idea file
   const hasIdeaFile = options?.hasIdeaFile ?? true
   return {
     bin: settings.dustCommand,

@@ -105,11 +105,11 @@ describe('buildImplementationInstructions', () => {
     expect(result).toContain('Deletion of the idea file that spawned this task')
   })
 
-  test('omits idea file deletion instruction for Build Idea tasks', () => {
+  test('omits idea file deletion instruction for Decompose Idea tasks', () => {
     const result = buildImplementationInstructions(
       'dust',
       false,
-      'Build Idea: Add login feature'
+      'Decompose Idea: Add login feature'
     )
 
     expect(result).not.toContain(
