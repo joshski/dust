@@ -163,8 +163,8 @@ function defaultSetupResize(
 /* v8 ignore start - thin wrapper around process stdout */
 function defaultGetTerminalSize(): { width: number; height: number } {
   return {
-    width: process.stdout.columns ?? 80,
-    height: process.stdout.rows ?? 24,
+    width: process.stdout.columns || 80,
+    height: process.stdout.rows || 24,
   }
 }
 /* v8 ignore stop */

@@ -77,8 +77,10 @@ describe('truncateLine', () => {
   })
 
   it('truncates and adds ellipsis when longer than max width', () => {
-    expect(truncateLine('hello world', 5)).toBe(`hell…${ANSI.RESET}`)
-    expect(truncateLine('abcdef', 3)).toBe(`ab…${ANSI.RESET}`)
+    expect(truncateLine('hello world', 5)).toBe(
+      `he${CHARS.ellipsis}${ANSI.RESET}`
+    )
+    expect(truncateLine('abcdef', 5)).toBe(`ab${CHARS.ellipsis}${ANSI.RESET}`)
   })
 
   it('preserves ANSI codes while truncating', () => {
@@ -119,8 +121,8 @@ describe('truncateLine', () => {
     // Text: ANSI-coded "a" then "bcdef" plain text - truncation happens in post-loop
     const text = `${ANSI.FG_RED}a${ANSI.RESET}bcdef`
     const result = truncateLine(text, 4)
-    expect(visibleLength(result)).toBe(4) // "abc…"
-    expect(result).toContain('…')
+    expect(visibleLength(result)).toBe(4) // "a..."
+    expect(result).toContain(CHARS.ellipsis)
   })
 })
 
@@ -791,7 +793,7 @@ describe('renderSeparator', () => {
   it('renders a horizontal line of specified width', () => {
     const sep = renderSeparator(10)
 
-    expect(sep).toBe('──────────')
+    expect(sep).toBe(CHARS.hline.repeat(10))
     expect(sep.length).toBe(10)
   })
 })
@@ -940,7 +942,7 @@ describe('renderFrame', () => {
     expect(frame).toContain('repo1')
     expect(frame).toContain('select')
     expect(frame).toContain('quit')
-    expect(frame).toContain('─')
+    expect(frame).toContain(CHARS.hline)
   })
 
   it('shows connected host in header', () => {
@@ -970,7 +972,7 @@ describe('renderFrame', () => {
     const frame = renderFrame(state)
 
     expect(frame).toContain('more')
-    expect(frame).toContain('↓')
+    expect(frame).toContain(CHARS.scroll_down)
   })
 
   it('renders single repository view without repo prefix', () => {

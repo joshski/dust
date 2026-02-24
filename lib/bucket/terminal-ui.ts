@@ -8,42 +8,16 @@
 import type { LogBuffer, LogLine } from './log-buffer'
 import { getLogLines } from './log-buffer'
 
-/* v8 ignore start - module-level locale detection only runs once at import */
-/**
- * Detect whether the terminal supports Unicode output
- * by checking locale environment variables.
- */
-function supportsUnicode(): boolean {
-  const lang = (
-    process.env.LC_ALL ||
-    process.env.LC_CTYPE ||
-    process.env.LANG ||
-    ''
-  ).toUpperCase()
-  return lang.includes('UTF-8') || lang.includes('UTF8')
+/** Characters used in the TUI — uses only widely available glyphs. */
+export const CHARS = {
+  dot: '*',
+  sparkle: '',
+  ellipsis: '...',
+  hline: '-',
+  arrows_lr: '<->',
+  arrows_ud: 'up/dn',
+  scroll_down: 'v',
 }
-
-/** Characters used in the TUI, with ASCII fallbacks. */
-export const CHARS = supportsUnicode()
-  ? {
-      dot: '●',
-      sparkle: '✨ ',
-      ellipsis: '…',
-      hline: '─',
-      arrows_lr: '←→',
-      arrows_ud: '↑↓',
-      scroll_down: '↓',
-    }
-  : {
-      dot: '*',
-      sparkle: '',
-      ellipsis: '...',
-      hline: '-',
-      arrows_lr: '<->',
-      arrows_ud: 'up/dn',
-      scroll_down: 'v',
-    }
-/* v8 ignore stop */
 
 // ANSI escape codes
 export const ANSI = {
@@ -130,7 +104,7 @@ export function truncateLine(text: string, maxWidth: number): string {
     // Add visible characters before this ANSI code
     const textBefore = text.slice(lastIndex, match.index)
     for (const char of textBefore) {
-      if (visibleCount >= maxWidth - 1) {
+      if (visibleCount >= maxWidth - CHARS.ellipsis.length) {
         result += CHARS.ellipsis
         return result + ANSI.RESET
       }
@@ -145,7 +119,7 @@ export function truncateLine(text: string, maxWidth: number): string {
   // Add remaining text after the last ANSI code (or all text if no ANSI codes)
   const remaining = text.slice(lastIndex)
   for (const char of remaining) {
-    if (visibleCount >= maxWidth - 1) {
+    if (visibleCount >= maxWidth - CHARS.ellipsis.length) {
       result += CHARS.ellipsis
       return result + ANSI.RESET
     }
@@ -484,7 +458,7 @@ export function renderHelpLine(): string {
  * Render a horizontal separator line.
  */
 export function renderSeparator(width: number): string {
-  return CHARS.hline.repeat(width)
+  return CHARS.hline.repeat(Math.max(0, width))
 }
 
 /**

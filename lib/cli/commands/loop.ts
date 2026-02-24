@@ -228,6 +228,7 @@ export async function gitPull(
     const proc = spawn('git', ['pull'], {
       cwd,
       stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
     })
 
     let stderr = ''
