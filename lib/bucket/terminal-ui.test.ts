@@ -8,6 +8,7 @@ import {
 import {
   ANSI,
   addRepository,
+  CHARS,
   createTerminalUIState,
   enterAlternateScreen,
   exitAlternateScreen,
@@ -696,9 +697,9 @@ describe('renderTabs', () => {
     const rows = renderTabs(state)
     const allText = rows.join('')
 
-    expect(allText).toContain('●')
+    expect(allText).toContain(CHARS.dot)
     // Dot should appear before repo name
-    const dotIndex = allText.indexOf('●')
+    const dotIndex = allText.indexOf(CHARS.dot)
     const repoIndex = allText.indexOf('repo1')
     expect(dotIndex).toBeLessThan(repoIndex)
   })
@@ -712,7 +713,7 @@ describe('renderTabs', () => {
     const allText = rows.join('')
 
     // Dot should be styled with DIM
-    expect(allText).toContain(`${ANSI.DIM}●`)
+    expect(allText).toContain(`${ANSI.DIM}${CHARS.dot}`)
   })
 
   it('shows dim dot when agent status is undefined', () => {
@@ -725,7 +726,7 @@ describe('renderTabs', () => {
     const allText = rows.join('')
 
     // Dot should default to DIM when status is undefined
-    expect(allText).toContain(`${ANSI.DIM}●`)
+    expect(allText).toContain(`${ANSI.DIM}${CHARS.dot}`)
   })
 
   it('shows green dot for busy status', () => {
@@ -737,7 +738,7 @@ describe('renderTabs', () => {
     const allText = rows.join('')
 
     // Dot should be styled with FG_GREEN
-    expect(allText).toContain(`${ANSI.FG_GREEN}●`)
+    expect(allText).toContain(`${ANSI.FG_GREEN}${CHARS.dot}`)
   })
 
   it('does not show dot on the All tab', () => {
@@ -748,7 +749,7 @@ describe('renderTabs', () => {
 
     // "All" tab should not have a dot
     const allTabText = rows[0].split('|')[0] // Get just the "All" tab portion
-    expect(allTabText).not.toContain('●')
+    expect(allTabText).not.toContain(CHARS.dot)
   })
 
   it('accounts for dot width in tab wrapping calculation', () => {
@@ -771,8 +772,8 @@ describe('renderHelpLine', () => {
   it('contains key bindings', () => {
     const help = renderHelpLine()
 
-    expect(help).toContain('←→')
-    expect(help).toContain('↑↓')
+    expect(help).toContain(CHARS.arrows_lr)
+    expect(help).toContain(CHARS.arrows_ud)
     expect(help).toContain('q')
     expect(help).toContain('select')
     expect(help).toContain('scroll')
@@ -934,7 +935,7 @@ describe('renderFrame', () => {
 
     const frame = renderFrame(state)
 
-    expect(frame).toContain('✨ dust bucket')
+    expect(frame).toContain(`${CHARS.sparkle}dust bucket`)
     expect(frame).toContain('All')
     expect(frame).toContain('repo1')
     expect(frame).toContain('select')
@@ -949,7 +950,7 @@ describe('renderFrame', () => {
 
     const frame = renderFrame(state)
 
-    expect(frame).toContain('✨ dust bucket')
+    expect(frame).toContain(`${CHARS.sparkle}dust bucket`)
     expect(frame).toContain('connected to dustbucket.com')
   })
 

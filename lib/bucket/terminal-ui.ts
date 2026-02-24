@@ -8,6 +8,43 @@
 import type { LogBuffer, LogLine } from './log-buffer'
 import { getLogLines } from './log-buffer'
 
+/* v8 ignore start - module-level locale detection only runs once at import */
+/**
+ * Detect whether the terminal supports Unicode output
+ * by checking locale environment variables.
+ */
+function supportsUnicode(): boolean {
+  const lang = (
+    process.env.LC_ALL ||
+    process.env.LC_CTYPE ||
+    process.env.LANG ||
+    ''
+  ).toUpperCase()
+  return lang.includes('UTF-8') || lang.includes('UTF8')
+}
+
+/** Characters used in the TUI, with ASCII fallbacks. */
+export const CHARS = supportsUnicode()
+  ? {
+      dot: '●',
+      sparkle: '✨ ',
+      ellipsis: '…',
+      hline: '─',
+      arrows_lr: '←→',
+      arrows_ud: '↑↓',
+      scroll_down: '↓',
+    }
+  : {
+      dot: '*',
+      sparkle: '',
+      ellipsis: '...',
+      hline: '-',
+      arrows_lr: '<->',
+      arrows_ud: 'up/dn',
+      scroll_down: 'v',
+    }
+/* v8 ignore stop */
+
 // ANSI escape codes
 export const ANSI = {
   // Cursor control
@@ -94,7 +131,7 @@ export function truncateLine(text: string, maxWidth: number): string {
     const textBefore = text.slice(lastIndex, match.index)
     for (const char of textBefore) {
       if (visibleCount >= maxWidth - 1) {
-        result += '…'
+        result += CHARS.ellipsis
         return result + ANSI.RESET
       }
       result += char
@@ -109,7 +146,7 @@ export function truncateLine(text: string, maxWidth: number): string {
   const remaining = text.slice(lastIndex)
   for (const char of remaining) {
     if (visibleCount >= maxWidth - 1) {
-      result += '…'
+      result += CHARS.ellipsis
       return result + ANSI.RESET
     }
     result += char
@@ -288,7 +325,7 @@ export function getTabRowCount(state: TerminalUIState): number {
   // " All " = 5 visible chars
   const tabWidths: number[] = [5]
   for (const name of state.repositories) {
-    tabWidths.push(name.length + 4) // " ● name " (dot + space + name + surrounding spaces)
+    tabWidths.push(name.length + 2 + CHARS.dot.length + 1) // " <dot> name " (space + dot + space + name + space)
   }
 
   let rows = 1
@@ -403,8 +440,8 @@ export function renderTabs(state: TerminalUIState): string[] {
     const color = getRepoColor(name, i)
     const agentStatus = state.agentStatuses.get(name) ?? 'idle'
     const dotColor = agentStatus === 'busy' ? ANSI.FG_GREEN : ANSI.DIM
-    const dot = `${dotColor}●${ANSI.RESET}`
-    const width = name.length + 4 // " ● name " (space + dot + space + name + space = 3 + name.length + 1)
+    const dot = `${dotColor}${CHARS.dot}${ANSI.RESET}`
+    const width = name.length + 2 + CHARS.dot.length + 1 // " <dot> name " (space + dot + space + name + space)
     if (i === state.selectedIndex) {
       tabs.push({
         text: ` ${dot}${color} ${ANSI.INVERSE}${name}${ANSI.RESET} `,
@@ -440,14 +477,14 @@ export function renderTabs(state: TerminalUIState): string[] {
  * Render the help line.
  */
 export function renderHelpLine(): string {
-  return `${ANSI.DIM}[←→] select  [↑↓] scroll  [PgUp/PgDn] page  [g/G] top/bottom  [o] open  [q] quit${ANSI.RESET}`
+  return `${ANSI.DIM}[${CHARS.arrows_lr}] select  [${CHARS.arrows_ud}] scroll  [PgUp/PgDn] page  [g/G] top/bottom  [o] open  [q] quit${ANSI.RESET}`
 }
 
 /**
  * Render a horizontal separator line.
  */
 export function renderSeparator(width: number): string {
-  return '─'.repeat(width)
+  return CHARS.hline.repeat(width)
 }
 
 /**
@@ -503,7 +540,7 @@ export function renderFrame(state: TerminalUIState): string {
   const hostLabel = state.connectedHost
     ? ` ${ANSI.DIM}[connected to ${state.connectedHost}]${ANSI.RESET}`
     : ''
-  lines.push(`${ANSI.BOLD}✨ dust bucket${ANSI.RESET}${hostLabel}`)
+  lines.push(`${ANSI.BOLD}${CHARS.sparkle}dust bucket${ANSI.RESET}${hostLabel}`)
 
   // Line 2+: Repository tabs (may span multiple rows)
   const tabRows = renderTabs(state)
@@ -549,7 +586,7 @@ export function renderFrame(state: TerminalUIState): string {
 
   // Add scroll indicator if scrolled up
   if (state.scrollOffset > 0) {
-    const indicator = `${ANSI.DIM}↓ ${state.scrollOffset} more${ANSI.RESET}`
+    const indicator = `${ANSI.DIM}${CHARS.scroll_down} ${state.scrollOffset} more${ANSI.RESET}`
     // Replace last line with scroll indicator
     lines[lines.length - 1] = indicator
   }
