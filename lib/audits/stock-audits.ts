@@ -688,6 +688,66 @@ function repositoryContext(): string {
   `
 }
 
+function slowTests(): string {
+  return dedent`
+    # Slow Tests
+
+    Identify slow-running tests that impact feedback loop speed.
+
+    ${ideasHint}
+
+    ## Scope
+
+    Focus on these areas:
+
+    1. **Test execution times** - Identify tests that exceed a reasonable duration threshold (e.g., 100ms for unit tests, 1s for integration tests)
+    2. **I/O-bound tests** - Tests that perform actual file system, network, or database operations
+    3. **Sleep/delay usage** - Tests using \`setTimeout\`, \`sleep\`, or similar timing functions
+    4. **Missing mocks** - Tests that make real HTTP requests or database calls instead of using stubs
+    5. **Setup overhead** - Expensive \`beforeEach\`/\`beforeAll\` setup that could be optimized or shared
+    6. **Serial test execution** - Tests that could run in parallel but are forced to run serially
+
+    ## Analysis Steps
+
+    1. Run the test suite with timing output: \`npm test -- --reporter=verbose\` or equivalent
+    2. Identify tests taking longer than the threshold (100ms+ for unit, 1s+ for integration)
+    3. Search for \`setTimeout\`, \`sleep\`, \`delay\`, and similar timing patterns in test files
+    4. Look for real I/O: \`fetch\`, \`axios\`, database clients, file system operations without mocks
+    5. Review \`beforeEach\`/\`beforeAll\` blocks for expensive operations
+    6. Check test configuration for parallelization settings
+
+    ## Output
+
+    For each slow test identified, provide:
+    - **Test name** - The describe/it block name
+    - **File path** - Location of the test
+    - **Duration** - How long the test takes (if measurable)
+    - **Cause** - Why the test is slow (I/O, sleep, setup, etc.)
+    - **Suggestion** - Specific optimization (mock the API, use fake timers, share setup, etc.)
+
+    ## Principles
+
+    - [Fast Feedback Loops](../principles/fast-feedback-loops.md) - Tests should run quickly for tight iteration cycles
+    - [Fast Feedback](../principles/fast-feedback.md) - Slow tests discourage frequent validation
+    - [Keep Unit Tests Pure](../principles/keep-unit-tests-pure.md) - Pure tests are faster and more reliable
+    - [Stubs Over Mocks](../principles/stubs-over-mocks.md) - Use stubs to avoid slow real dependencies
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - [ ] Ran test suite with timing information
+    - [ ] Listed tests exceeding duration thresholds (100ms unit, 1s integration)
+    - [ ] Identified tests using sleep/setTimeout/delay patterns
+    - [ ] Found tests with unmocked I/O (network, database, file system)
+    - [ ] Reviewed beforeEach/beforeAll for optimization opportunities
+    - [ ] Checked test parallelization configuration
+    - [ ] Proposed ideas for optimizing the slowest tests
+  `
+}
+
 function ubiquitousLanguage(): string {
   return dedent`
     # Ubiquitous Language
@@ -757,6 +817,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'refactoring-opportunities': refactoringOpportunities,
   'repository-context': repositoryContext,
   'security-review': securityReview,
+  'slow-tests': slowTests,
   'stale-ideas': staleIdeas,
   'test-coverage': testCoverage,
   'ubiquitous-language': ubiquitousLanguage,

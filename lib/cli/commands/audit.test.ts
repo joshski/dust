@@ -219,7 +219,7 @@ describe('audit command', () => {
   test('loadStockAudits loads audits from markdown files', () => {
     const audits = loadStockAudits()
     expect(audits).toBeInstanceOf(Array)
-    expect(audits.length).toBe(17)
+    expect(audits.length).toBe(18)
 
     const names = audits.map(a => a.name)
     expect(names).toContain('agent-developer-experience')
@@ -261,6 +261,7 @@ describe('audit command', () => {
       'error-handling',
       'global-state',
       'refactoring-opportunities',
+      'slow-tests',
       'ubiquitous-language',
     ]
     const audits = loadStockAudits()
