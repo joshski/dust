@@ -100,9 +100,7 @@ describe('loopCodex', () => {
       if (!(e instanceof LoopBreaker)) throw e
     }
 
-    expect(context.stdoutLines.join('\n')).toContain(
-      '🔄 Starting dust loop codex'
-    )
+    expect(context.stdoutLines.join('\n')).toContain('Starting dust loop codex')
   })
 
   test('emits agent-session-started with agentType codex', async () => {

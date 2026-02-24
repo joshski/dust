@@ -1066,16 +1066,16 @@ describe('formatLoopEvent', () => {
 
   test('returns string for other event types', () => {
     expect(formatLoopEvent({ type: 'loop.syncing' })).toBe(
-      '🌍 Syncing with remote'
+      'Syncing with remote'
     )
     expect(formatLoopEvent({ type: 'loop.started', maxIterations: 5 })).toBe(
-      '🔄 Starting dust loop claude (max 5 iterations)...'
+      'Starting dust loop claude (max 5 iterations)...'
     )
   })
 
   test('returns no_tasks message without trailing newline', () => {
     const result = formatLoopEvent({ type: 'loop.no_tasks' })
-    expect(result).toBe('😴 No tasks available. Sleeping...')
+    expect(result).toBe('No tasks available. Sleeping...')
   })
 })
 
@@ -1137,7 +1137,7 @@ describe('loopClaude', () => {
     }
 
     expect(context.stdoutLines.join('\n')).toContain(
-      '🔄 Starting dust loop claude (max 3 iterations)'
+      'Starting dust loop claude (max 3 iterations)'
     )
     expect(context.stdoutLines.join('\n')).toContain('Ctrl+C')
   })
@@ -1210,9 +1210,7 @@ describe('loopClaude', () => {
     expect(dotsLineIndex).toBeGreaterThanOrEqual(0)
     expect(context.stdoutLines).not.toContain('.')
     expect(context.stdoutLines[dotsLineIndex + 1]).toBe('')
-    expect(context.stdoutLines[dotsLineIndex + 2]).toBe(
-      '🌍 Syncing with remote'
-    )
+    expect(context.stdoutLines[dotsLineIndex + 2]).toBe('Syncing with remote')
   })
 
   test('falls back to line output when stdoutInline is unavailable', async () => {
@@ -1313,7 +1311,7 @@ describe('loopClaude', () => {
     expect(runCount).toBe(3)
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain(
-      '🏁 Reached max iterations (3)'
+      'Reached max iterations (3)'
     )
   })
 

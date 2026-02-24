@@ -110,25 +110,25 @@ export type LoopEmitFn = (event: LoopEvent) => void
 export function formatLoopEvent(event: LoopEvent): string | null {
   switch (event.type) {
     case 'loop.warning':
-      return '⚠️  WARNING: This command skips all permission checks. Only use in a sandbox environment!'
+      return 'WARNING: This command skips all permission checks. Only use in a sandbox environment!'
     case 'loop.started': {
       const agent = event.agentType ?? 'claude'
-      return `🔄 Starting dust loop ${agent} (max ${event.maxIterations} iterations)...`
+      return `Starting dust loop ${agent} (max ${event.maxIterations} iterations)...`
     }
     case 'loop.syncing':
-      return '🌍 Syncing with remote'
+      return 'Syncing with remote'
     case 'loop.sync_skipped':
       return `Note: git pull skipped (${event.reason})`
     case 'loop.checking_tasks':
       return null
     case 'loop.no_tasks':
-      return '😴 No tasks available. Sleeping...'
+      return 'No tasks available. Sleeping...'
     case 'loop.tasks_found':
-      return '✨ Found a task. Going to work!\n'
+      return 'Found a task. Going to work!\n'
     case 'loop.iteration_complete':
-      return `📋 Completed iteration ${event.iteration}/${event.maxIterations}`
+      return `Completed iteration ${event.iteration}/${event.maxIterations}`
     case 'loop.ended':
-      return `🏁 Reached max iterations (${event.maxIterations}). Exiting.`
+      return `Reached max iterations (${event.maxIterations}). Exiting.`
   }
 }
 
