@@ -29,6 +29,10 @@ export interface EventMessage {
   timestamp: string
   sessionId: string
   repository: string
+  // TODO: Make repoId required once dustbucket exposes an endpoint for
+  // dust to resolve a GitHub URL / owner+repo pair to a stable repoId.
+  // At that point we can stop sending `repository` (full name) entirely.
+  repoId?: number
   agentSessionId?: string
   event: AgentSessionEvent
 }

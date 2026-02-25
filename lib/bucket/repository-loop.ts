@@ -78,6 +78,7 @@ export function buildEventMessage(parameters: {
   sequence: number
   sessionId: string
   repository: string
+  repoId?: number
   event: AgentSessionEvent
   agentSessionId?: string
 }): EventMessage {
@@ -87,6 +88,9 @@ export function buildEventMessage(parameters: {
     sessionId: parameters.sessionId,
     repository: parameters.repository,
     event: parameters.event,
+  }
+  if (parameters.repoId !== undefined) {
+    msg.repoId = parameters.repoId
   }
   if (parameters.agentSessionId) {
     msg.agentSessionId = parameters.agentSessionId
@@ -225,6 +229,7 @@ export async function runRepositoryLoop(
           sequence,
           sessionId,
           repository: repoName,
+          repoId: repoState.repository.id,
           event,
           agentSessionId,
         })
