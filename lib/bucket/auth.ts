@@ -6,8 +6,10 @@ const CREDENTIALS_FILE = 'credentials.json'
 const AUTH_TIMEOUT_MS = 120_000
 const DEFAULT_DUSTBUCKET_HOST = 'https://dustbucket.com'
 
-export function getDustbucketHost(): string {
-  return process.env.DUST_BUCKET_HOST || DEFAULT_DUSTBUCKET_HOST
+export function getDustbucketHost(
+  env: NodeJS.ProcessEnv = process.env
+): string {
+  return env.DUST_BUCKET_HOST || DEFAULT_DUSTBUCKET_HOST
 }
 
 export interface AuthDependencies {

@@ -37,14 +37,16 @@ const NO_COLORS: Colors = {
 /**
  * Determines whether colors should be disabled based on environment.
  */
-export function shouldDisableColors(): boolean {
+export function shouldDisableColors(
+  env: NodeJS.ProcessEnv = process.env
+): boolean {
   // NO_COLOR standard (https://no-color.org)
-  if (process.env.NO_COLOR !== undefined) {
+  if (env.NO_COLOR !== undefined) {
     return true
   }
 
   // TERM=dumb indicates a dumb terminal without color support
-  if (process.env.TERM === 'dumb') {
+  if (env.TERM === 'dumb') {
     return true
   }
 
