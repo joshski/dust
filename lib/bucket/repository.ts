@@ -98,7 +98,6 @@ export function startRepositoryLoop(
     sendEvent,
     sessionId
   )
-    /* v8 ignore start - defensive handler for unexpected loop errors */
     .catch(error => {
       const message = error instanceof Error ? error.message : String(error)
       log(`loop crashed for ${repoState.repository.name}: ${message}`)
@@ -107,7 +106,6 @@ export function startRepositoryLoop(
         createLogLine(`Repository loop crashed: ${message}`, 'stderr')
       )
     })
-    /* v8 ignore stop */
     .finally(() => {
       log(`loop finished for ${repoState.repository.name}`)
       repoState.loopPromise = null

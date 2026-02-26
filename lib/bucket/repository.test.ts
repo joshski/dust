@@ -869,6 +869,90 @@ describe('startRepositoryLoop', () => {
 
     expect(repoState.loopPromise).toBeNull()
   })
+
+  test('crash handler logs error when runRepositoryLoop rejects', async () => {
+    const baseFileSystem = createFileSystemEmulator()
+    // Create a fileSystem that throws on exists() to cause runRepositoryLoop
+    // to crash before entering its internal try/catch
+    const crashingFileSystem = {
+      ...baseFileSystem,
+      exists: () => {
+        throw new Error('FileSystem crashed')
+      },
+    }
+
+    const repoState: RepositoryState = {
+      repository: {
+        name: 'crash-repo',
+        gitUrl: 'crash-repo',
+        url: 'https://example.com/crash-repo',
+        id: 1,
+      },
+      path: '/tmp/crash-repo',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle',
+    }
+
+    const repoDeps = createRepositoryDependencies({
+      fileSystem: crashingFileSystem,
+    })
+
+    startRepositoryLoop(repoState, repoDeps)
+
+    // Wait for the promise chain to settle
+    await repoState.loopPromise
+
+    // The crash handler should have logged the error to the log buffer
+    const logLines = getLogLines(repoState.logBuffer)
+    expect(
+      logLines.some(
+        l => l.stream === 'stderr' && l.text.includes('Repository loop crashed')
+      )
+    ).toBe(true)
+    expect(logLines.some(l => l.text.includes('FileSystem crashed'))).toBe(true)
+  })
+
+  test('crash handler handles non-Error thrown values', async () => {
+    const baseFileSystem = createFileSystemEmulator()
+    // Create a fileSystem that throws a string to exercise the String(error) branch
+    const crashingFileSystem = {
+      ...baseFileSystem,
+      exists: () => {
+        throw 'String error thrown'
+      },
+    }
+
+    const repoState: RepositoryState = {
+      repository: {
+        name: 'string-crash-repo',
+        gitUrl: 'string-crash-repo',
+        url: 'https://example.com/string-crash-repo',
+        id: 1,
+      },
+      path: '/tmp/string-crash-repo',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle',
+    }
+
+    const repoDeps = createRepositoryDependencies({
+      fileSystem: crashingFileSystem,
+    })
+
+    startRepositoryLoop(repoState, repoDeps)
+
+    // Wait for the promise chain to settle
+    await repoState.loopPromise
+
+    // The crash handler should have logged the string error to the log buffer
+    const logLines = getLogLines(repoState.logBuffer)
+    expect(logLines.some(l => l.text.includes('String error thrown'))).toBe(
+      true
+    )
+  })
 })
 
 describe('handleRepositoryList', () => {
