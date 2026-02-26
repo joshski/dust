@@ -84,6 +84,7 @@ describe('detectInstallCommand', () => {
     restoreEnv()
   })
 
+  // JavaScript ecosystem
   test('returns bun install when bun.lockb exists', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'bun.lockb': '' },
@@ -105,18 +106,6 @@ describe('detectInstallCommand', () => {
     expect(detectInstallCommand('/project', fileSystem)).toBe('npm install')
   })
 
-  test('returns bun install when BUN_INSTALL env var is set and no lockfiles', () => {
-    stubEnv('BUN_INSTALL', '/home/user/.bun')
-    const fileSystem = createFileSystemEmulator()
-    expect(detectInstallCommand('/project', fileSystem)).toBe('bun install')
-  })
-
-  test('returns npm install as default when no lockfiles and no BUN_INSTALL', () => {
-    stubEnv('BUN_INSTALL', '')
-    const fileSystem = createFileSystemEmulator()
-    expect(detectInstallCommand('/project', fileSystem)).toBe('npm install')
-  })
-
   test('prioritizes bun.lockb over pnpm-lock.yaml', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -127,12 +116,107 @@ describe('detectInstallCommand', () => {
     expect(detectInstallCommand('/project', fileSystem)).toBe('bun install')
   })
 
-  test('prioritizes lockfiles over BUN_INSTALL env var', () => {
-    stubEnv('BUN_INSTALL', '/home/user/.bun')
+  // Ruby ecosystem
+  test('returns bundle install when Gemfile.lock exists', () => {
     const fileSystem = createFileSystemEmulator({
-      project: { 'package-lock.json': '' },
+      project: { 'Gemfile.lock': '' },
     })
-    expect(detectInstallCommand('/project', fileSystem)).toBe('npm install')
+    expect(detectInstallCommand('/project', fileSystem)).toBe('bundle install')
+  })
+
+  // Python ecosystem
+  test('returns poetry install when poetry.lock exists', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { 'poetry.lock': '' },
+    })
+    expect(detectInstallCommand('/project', fileSystem)).toBe('poetry install')
+  })
+
+  test('returns pipenv install when Pipfile.lock exists', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { 'Pipfile.lock': '' },
+    })
+    expect(detectInstallCommand('/project', fileSystem)).toBe('pipenv install')
+  })
+
+  test('returns pip install -r requirements.txt when requirements.txt exists', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { 'requirements.txt': '' },
+    })
+    expect(detectInstallCommand('/project', fileSystem)).toBe(
+      'pip install -r requirements.txt'
+    )
+  })
+
+  test('prioritizes poetry.lock over Pipfile.lock', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        'poetry.lock': '',
+        'Pipfile.lock': '',
+      },
+    })
+    expect(detectInstallCommand('/project', fileSystem)).toBe('poetry install')
+  })
+
+  // Go ecosystem
+  test('returns go mod download when go.sum exists', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { 'go.sum': '' },
+    })
+    expect(detectInstallCommand('/project', fileSystem)).toBe('go mod download')
+  })
+
+  // Rust ecosystem
+  test('returns cargo build when Cargo.lock exists', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { 'Cargo.lock': '' },
+    })
+    expect(detectInstallCommand('/project', fileSystem)).toBe('cargo build')
+  })
+
+  // PHP ecosystem
+  test('returns composer install when composer.lock exists', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { 'composer.lock': '' },
+    })
+    expect(detectInstallCommand('/project', fileSystem)).toBe(
+      'composer install'
+    )
+  })
+
+  // Elixir ecosystem
+  test('returns mix deps.get when mix.lock exists', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { 'mix.lock': '' },
+    })
+    expect(detectInstallCommand('/project', fileSystem)).toBe('mix deps.get')
+  })
+
+  // No lockfile case
+  test('returns null when no lockfiles exist', () => {
+    const fileSystem = createFileSystemEmulator()
+    expect(detectInstallCommand('/project', fileSystem)).toBeNull()
+  })
+
+  // Multi-ecosystem case
+  test('returns null when multiple ecosystems are detected', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        'package-lock.json': '',
+        'Gemfile.lock': '',
+      },
+    })
+    expect(detectInstallCommand('/project', fileSystem)).toBeNull()
+  })
+
+  test('returns null when JS and Python ecosystems are detected', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        'bun.lockb': '',
+        'requirements.txt': '',
+      },
+    })
+    expect(detectInstallCommand('/project', fileSystem)).toBeNull()
   })
 })
 
@@ -239,7 +323,20 @@ describe('loadSettings', () => {
     const settings = await loadSettings('/project', fileSystem)
 
     expect(settings.dustCommand).toBe('npx dust')
+    expect(settings.installCommand).toBeUndefined()
     expect(settings.eventsUrl).toBeUndefined()
+  })
+
+  test('auto-detects installCommand when no config file exists and lockfile found', async () => {
+    stubEnv('BUN_INSTALL', '')
+    stubEnv('DUST_EVENTS_URL', '')
+    const fileSystem = createFileSystemEmulator({
+      project: { 'Gemfile.lock': '' },
+    })
+    const settings = await loadSettings('/project', fileSystem)
+
+    expect(settings.dustCommand).toBe('npx dust')
+    expect(settings.installCommand).toBe('bundle install')
   })
 
   test('readFile throws ENOENT for non-existent files', async () => {
@@ -273,7 +370,25 @@ describe('loadSettings', () => {
     const settings = await loadSettings('/project', fileSystem)
 
     expect(settings.dustCommand).toBe('npx dust')
+    expect(settings.installCommand).toBeUndefined()
     expect(settings.eventsUrl).toBeUndefined()
+  })
+
+  test('auto-detects installCommand when config file is invalid JSON and lockfile found', async () => {
+    stubEnv('BUN_INSTALL', '')
+    stubEnv('DUST_EVENTS_URL', '')
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: { 'settings.json': 'not valid json' },
+        },
+        'go.sum': '',
+      },
+    })
+    const settings = await loadSettings('/project', fileSystem)
+
+    expect(settings.dustCommand).toBe('npx dust')
+    expect(settings.installCommand).toBe('go mod download')
   })
 
   test('auto-detects dustCommand when not set in settings', async () => {
@@ -316,6 +431,19 @@ describe('loadSettings', () => {
     const settings = await loadSettings('/project', fileSystem)
 
     expect(settings.installCommand).toBe('bun install')
+  })
+
+  test('installCommand is undefined when settings.json exists but no lockfile detected', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: { 'settings.json': '{}' },
+        },
+      },
+    })
+    const settings = await loadSettings('/project', fileSystem)
+
+    expect(settings.installCommand).toBeUndefined()
   })
 
   test('uses explicit installCommand over auto-detection', async () => {

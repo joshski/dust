@@ -198,7 +198,6 @@ export function validateSettingsJson(content: string): SettingsViolation[] {
 
 const DEFAULT_SETTINGS: DustSettings = {
   dustCommand: 'npx dust',
-  installCommand: 'npm install',
 }
 
 /**
@@ -229,32 +228,67 @@ export function detectDustCommand(
   return 'npx dust'
 }
 
+// Lockfile definitions grouped by ecosystem
+const LOCKFILE_COMMANDS: Array<{
+  file: string
+  command: string
+  ecosystem: string
+}> = [
+  // JavaScript
+  { file: 'bun.lockb', command: 'bun install', ecosystem: 'js' },
+  { file: 'pnpm-lock.yaml', command: 'pnpm install', ecosystem: 'js' },
+  { file: 'package-lock.json', command: 'npm install', ecosystem: 'js' },
+  // Ruby
+  { file: 'Gemfile.lock', command: 'bundle install', ecosystem: 'ruby' },
+  // Python
+  { file: 'poetry.lock', command: 'poetry install', ecosystem: 'python' },
+  { file: 'Pipfile.lock', command: 'pipenv install', ecosystem: 'python' },
+  {
+    file: 'requirements.txt',
+    command: 'pip install -r requirements.txt',
+    ecosystem: 'python',
+  },
+  // Go
+  { file: 'go.sum', command: 'go mod download', ecosystem: 'go' },
+  // Rust
+  { file: 'Cargo.lock', command: 'cargo build', ecosystem: 'rust' },
+  // PHP
+  { file: 'composer.lock', command: 'composer install', ecosystem: 'php' },
+  // Elixir
+  { file: 'mix.lock', command: 'mix deps.get', ecosystem: 'elixir' },
+]
+
 /**
- * Detects the appropriate install command based on lockfiles and environment.
- * Priority:
- * 1. bun.lockb exists → bun install
- * 2. pnpm-lock.yaml exists → pnpm install
- * 3. package-lock.json exists → npm install
- * 4. No lockfile + BUN_INSTALL env var set → bun install
- * 5. Default → npm install
+ * Detects the appropriate install command based on lockfiles.
+ * Returns null when:
+ * - No recognized lockfile is found
+ * - Multiple ecosystems are detected (requires explicit configuration)
+ *
+ * Priority within each ecosystem follows the order in LOCKFILE_COMMANDS.
  */
 export function detectInstallCommand(
   cwd: string,
   fileSystem: ReadableFileSystem
-): string {
-  if (fileSystem.exists(join(cwd, 'bun.lockb'))) {
-    return 'bun install'
+): string | null {
+  const foundEcosystems = new Set<string>()
+  let firstCommand: string | null = null
+
+  for (const { file, command, ecosystem } of LOCKFILE_COMMANDS) {
+    if (fileSystem.exists(join(cwd, file))) {
+      if (firstCommand === null) {
+        firstCommand = command
+      }
+      foundEcosystems.add(ecosystem)
+    }
   }
-  if (fileSystem.exists(join(cwd, 'pnpm-lock.yaml'))) {
-    return 'pnpm install'
+
+  // Multiple ecosystems detected - require explicit configuration
+  if (foundEcosystems.size > 1) {
+    return null
   }
-  if (fileSystem.exists(join(cwd, 'package-lock.json'))) {
-    return 'npm install'
-  }
-  if (process.env.BUN_INSTALL) {
-    return 'bun install'
-  }
-  return 'npm install'
+
+  // Return the first matching command, or null if no lockfile found
+  return firstCommand
 }
 
 /**
@@ -312,7 +346,10 @@ export async function loadSettings(
   if (!fileSystem.exists(settingsPath)) {
     const result: DustSettings = {
       dustCommand: detectDustCommand(cwd, fileSystem),
-      installCommand: detectInstallCommand(cwd, fileSystem),
+    }
+    const installCommand = detectInstallCommand(cwd, fileSystem)
+    if (installCommand !== null) {
+      result.installCommand = installCommand
     }
     // Override eventsUrl with env var if set
     if (process.env.DUST_EVENTS_URL) {
@@ -337,7 +374,12 @@ export async function loadSettings(
     }
     // Auto-detect installCommand if not explicitly set
     if (!parsed.installCommand) {
-      result.installCommand = detectInstallCommand(cwd, fileSystem)
+      const installCommand = detectInstallCommand(cwd, fileSystem)
+      if (installCommand !== null) {
+        result.installCommand = installCommand
+      } else {
+        delete result.installCommand
+      }
     }
     // Override eventsUrl with env var if set
     if (process.env.DUST_EVENTS_URL) {
@@ -347,7 +389,10 @@ export async function loadSettings(
   } catch {
     const result: DustSettings = {
       dustCommand: detectDustCommand(cwd, fileSystem),
-      installCommand: detectInstallCommand(cwd, fileSystem),
+    }
+    const installCommand = detectInstallCommand(cwd, fileSystem)
+    if (installCommand !== null) {
+      result.installCommand = installCommand
     }
     // Override eventsUrl with env var if set
     if (process.env.DUST_EVENTS_URL) {

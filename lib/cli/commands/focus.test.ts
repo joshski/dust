@@ -122,4 +122,30 @@ describe('buildImplementationInstructions', () => {
 
     expect(result).toContain('Deletion of the idea file that spawned this task')
   })
+
+  test('includes install step when installCommand is provided', () => {
+    const result = buildImplementationInstructions(
+      'dust',
+      false,
+      'Add feature',
+      undefined,
+      'bun install'
+    )
+
+    expect(result).toContain('1. Run `bun install` to install dependencies')
+    expect(result).toContain('2. Run `dust check`')
+  })
+
+  test('omits install step when installCommand is undefined', () => {
+    const result = buildImplementationInstructions(
+      'dust',
+      false,
+      'Add feature',
+      undefined,
+      undefined
+    )
+
+    expect(result).not.toContain('install dependencies')
+    expect(result).toContain('1. Run `dust check`')
+  })
 })

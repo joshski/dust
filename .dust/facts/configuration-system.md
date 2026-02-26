@@ -16,7 +16,17 @@ The command used to invoke dust in agent instructions. Auto-detected based on lo
 
 ### installCommand
 
-The command used to install dependencies. Auto-detected based on lockfiles if not specified (bun.lockb → `bun install`, pnpm-lock.yaml → `pnpm install`, package-lock.json → `npm install`).
+The command used to install dependencies. Auto-detected based on lockfiles if not specified:
+
+- **JavaScript**: bun.lockb → `bun install`, pnpm-lock.yaml → `pnpm install`, package-lock.json → `npm install`
+- **Ruby**: Gemfile.lock → `bundle install`
+- **Python**: poetry.lock → `poetry install`, Pipfile.lock → `pipenv install`, requirements.txt → `pip install -r requirements.txt`
+- **Go**: go.sum → `go mod download`
+- **Rust**: Cargo.lock → `cargo build`
+- **PHP**: composer.lock → `composer install`
+- **Elixir**: mix.lock → `mix deps.get`
+
+Returns `null` (omits install step) when no lockfile is found or when multiple ecosystems are detected.
 
 ```json
 {
