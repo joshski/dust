@@ -14,7 +14,9 @@ import { manageGitHooks, templateVariables } from './agent-shared'
 export function buildImplementationInstructions(
   bin: string,
   hooksInstalled: boolean,
-  taskTitle?: string
+  taskTitle?: string,
+  taskPath?: string,
+  installCommand?: string
 ): string {
   const steps: string[] = []
   let step = 1
@@ -23,6 +25,11 @@ export function buildImplementationInstructions(
   const hasIdeaFile = !taskTitle?.startsWith(EXPEDITE_IDEA_PREFIX)
 
   steps.push(`Note: Do NOT run \`${bin} agent\`.`, '')
+
+  if (installCommand) {
+    steps.push(`${step}. Run \`${installCommand}\` to install dependencies`)
+    step++
+  }
 
   steps.push(
     `${step}. Run \`${bin} check\` to verify the project is in a good state`
@@ -41,10 +48,14 @@ export function buildImplementationInstructions(
     ? `   Use this exact commit message: "${taskTitle}". Do not add any prefix.`
     : '   Use the task title as the commit message. Do not add prefixes like "Complete task:" - use the title directly.'
 
+  const deleteTaskLine = taskPath
+    ? `   - Deletion of the completed task file (\`${taskPath}\`)`
+    : '   - Deletion of the completed task file'
+
   const commitItems = [
     '   - All implementation changes',
-    '   - Deletion of the completed task file',
-    '   - Updates to any facts that changed',
+    deleteTaskLine,
+    `   - Updates to any facts that changed (run \`${bin} facts\` if needed)`,
   ]
 
   if (hasIdeaFile) {

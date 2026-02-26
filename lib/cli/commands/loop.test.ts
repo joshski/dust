@@ -593,15 +593,13 @@ describe('runOneIteration', () => {
 
     await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
     expect(capturedPrompt).toContain(
-      'Run `bun install` to install dependencies'
+      'Implement the task at `.dust/tasks/task.md`'
     )
     expect(capturedPrompt).toContain('Do the thing.')
+    expect(capturedPrompt).toContain('`bun install` to install dependencies')
     expect(capturedPrompt).toContain('`bunx dust check`')
     expect(capturedPrompt).toContain(
-      'contents of the task file `.dust/tasks/task.md`'
-    )
-    expect(capturedPrompt).toContain(
-      'delete the task file `.dust/tasks/task.md`'
+      'Deletion of the completed task file (`.dust/tasks/task.md`)'
     )
     // Should include skip guidance but not routing commands
     expect(capturedPrompt).toContain('Do NOT run `bunx dust agent`')
@@ -626,9 +624,7 @@ describe('runOneIteration', () => {
     const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
     await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
-    expect(capturedPrompt).toContain(
-      'Run `npm install` to install dependencies'
-    )
+    expect(capturedPrompt).toContain('`npm install` to install dependencies')
     expect(capturedPrompt).toContain('`dust check`')
   })
 
@@ -956,7 +952,7 @@ describe('runOneIteration', () => {
     }
     expect(startedEvent).toBeDefined()
     expect(startedEvent.prompt).toContain(
-      'Run `bun install` to install dependencies'
+      '`bun install` to install dependencies'
     )
     expect(startedEvent.prompt).toContain('`bunx dust check`')
     expect(startedEvent.agentType).toBe('claude')

@@ -377,19 +377,17 @@ Make sure the repository is in a clean state and synced with remote before finis
   const instructions = buildImplementationInstructions(
     dustCommand,
     hooksInstalled,
-    task.title ?? undefined
+    task.title ?? undefined,
+    task.path,
+    installCommand
   )
-  const prompt = `Run \`${installCommand}\` to install dependencies, then implement the following task.
-
-The following is the contents of the task file \`${task.path}\`:
+  const prompt = `Implement the task at \`${task.path}\`:
 
 ----------
 ${taskContent}
 ----------
 
-When the task is complete, delete the task file \`${task.path}\`.
-
-## Instructions
+## How to implement the task
 
 ${instructions}`
 
