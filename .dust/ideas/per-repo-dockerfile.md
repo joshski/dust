@@ -22,21 +22,44 @@ This is simpler than the original docker-compose concept. Docker-compose was des
 1. Include `docker compose` commands in its setup instructions for the agent
 2. Use a future service-orchestration feature (see original idea scope below)
 
+## How dust currently runs agents
+
+Currently, `dust loop claude` and `dust bucket` run Claude Code directly on the host machine:
+
+1. They invoke `claude` via `spawn('claude', [...args])`
+2. Claude Code requires authentication (Anthropic API key or Claude Pro subscription) configured in `~/.claude/`
+3. Git operations require credentials for pushing commits (SSH keys or credential helpers)
+4. The agent runs with `--dangerously-skip-permissions` to work autonomously
+
+Running agents in Docker containers would require these credentials to be available inside the container.
+
 ## Possible implementation
 
 1. On `dust loop` or `dust bucket` startup, check if `.dust/Dockerfile` exists in the repository
 2. If present, build the image (or use a cached build) with a deterministic tag (e.g., `dust-<repo-hash>`)
 3. Mount the repository into the container and run the agent iteration inside it
-4. The Dockerfile can extend a base dust image or start from scratch
+4. Pass credentials securely into the container (see open question below)
+5. The Dockerfile can extend a base dust image or start from scratch
 
 Example `.dust/Dockerfile`:
 ```dockerfile
 FROM node:20-slim
-RUN apt-get update && apt-get install -y git
-# Agent will be mounted and run here
+RUN apt-get update && apt-get install -y git curl
+RUN npm install -g @anthropic-ai/claude-code
+# Credentials mounted at runtime, not baked into image
 ```
 
 ## Open Questions
+
+### How should agent credentials be provided to the container?
+
+#### Mount host credential directories
+
+Mount `~/.claude/` and `~/.ssh/` (or `~/.gitconfig`) as read-only volumes into the container. Simple to implement but tightly couples the container to the host's credential setup. Credentials must not be baked into the image.
+
+#### Environment variables
+
+Pass `ANTHROPIC_API_KEY` and use HTTPS git URLs with tokens. More portable but requires users to configure tokens separately from their normal credential setup.
 
 ### Where should the Dockerfile live?
 
