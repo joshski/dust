@@ -1,12 +1,13 @@
 import { describe, expect, test } from 'vitest'
 import type { AgentSessionEvent } from '../agent-events'
 import { createLogBuffer, getLogLines } from './log-buffer'
-import type { RepositoryState } from './repository'
+import type { RepositoryDependencies, RepositoryState } from './repository'
 import {
   buildEventMessage,
   createLogCallbacks,
   createWakeUpHandler,
   flushAndLogMultiLine,
+  runRepositoryLoop,
 } from './repository-loop'
 
 describe('createLogCallbacks', () => {
@@ -232,5 +233,67 @@ describe('createWakeUpHandler', () => {
     handler()
 
     expect(resolved).toBe(false)
+  })
+})
+
+describe('runRepositoryLoop', () => {
+  function createTestRepoState(): RepositoryState {
+    return {
+      repository: {
+        name: 'test-repo',
+        gitUrl: 'git@example.com:test/repo.git',
+        url: 'https://example.com/test/repo',
+        id: 1,
+      },
+      path: '/tmp/test-repo',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle',
+    }
+  }
+
+  test('logs error and continues when runOneIteration throws', async () => {
+    const repoState = createTestRepoState()
+    let sleepCallCount = 0
+
+    // Spawn throws synchronously, causing gitPull (called by runOneIteration) to throw
+    const throwingSpawn = () => {
+      throw new Error('Unexpected spawn failure')
+    }
+
+    const repoDeps: RepositoryDependencies = {
+      spawn: throwingSpawn as RepositoryDependencies['spawn'],
+      run: async () => {},
+      fileSystem: {
+        exists: () => false,
+        readFile: async () => '',
+        readdir: async () => [],
+        isDirectory: () => false,
+        writeFile: async () => {},
+        mkdir: async () => {},
+        chmod: async () => {},
+        getFileCreationTime: () => 0,
+        rename: async () => {},
+      },
+      sleep: async () => {
+        sleepCallCount++
+        // Stop the loop after the error handler's sleep
+        if (sleepCallCount >= 1) {
+          repoState.stopRequested = true
+        }
+      },
+      getReposDir: () => '/tmp/repos',
+    }
+
+    await runRepositoryLoop(repoState, repoDeps)
+
+    const lines = getLogLines(repoState.logBuffer)
+    const errorLine = lines.find(
+      l => l.stream === 'stderr' && l.text.includes('Loop error:')
+    )
+    expect(errorLine).toBeDefined()
+    expect(errorLine?.text).toContain('Unexpected spawn failure')
+    expect(sleepCallCount).toBeGreaterThanOrEqual(1)
   })
 })

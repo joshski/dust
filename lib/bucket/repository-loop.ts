@@ -269,7 +269,6 @@ export async function runRepositoryLoop(
           },
         }
       )
-      /* v8 ignore start - defensive error handler for unexpected errors */
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
       log(`iteration error for ${repoName}: ${msg}`)
@@ -285,7 +284,6 @@ export async function runRepositoryLoop(
         repoState.cancelCurrentIteration = undefined
       }
     }
-    /* v8 ignore stop */
 
     if (result === 'no_tasks') {
       // Check if a task-available signal arrived while we were busy
