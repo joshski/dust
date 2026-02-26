@@ -182,9 +182,7 @@ export async function validatePatch(
     try {
       const existingFiles = await overlayFs.readdir(principlesPath)
       for (const file of existingFiles) {
-        /* v8 ignore start - guard: readdir may include non-md entries */
         if (!file.endsWith('.md')) continue
-        /* v8 ignore stop */
         const filePath = `${principlesPath}/${file}`
         const content = await overlayFs.readFile(filePath)
         allRelationships.push(extractPrincipleRelationships(filePath, content))

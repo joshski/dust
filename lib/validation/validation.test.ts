@@ -290,6 +290,31 @@ describe('validatePatch', () => {
     expect(result.valid).toBe(true)
   })
 
+  test('non-md files in principles directory are ignored during hierarchy validation', async () => {
+    // Test that non-.md files in the principles directory don't cause errors
+    // during principle hierarchy validation (the guard clause at line 185-187
+    // in validatePatch filters these out from relationship extraction)
+    const fileSystem = makeFs({
+      'principles/notes.txt': 'some notes',
+      'principles/parent.md':
+        '# Parent\n\nThis is the parent.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
+    })
+    const result = await validatePatch(fileSystem, dustPath, {
+      files: {
+        'principles/child.md':
+          '# Child\n\nThis is the child.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
+      },
+    })
+    // The non-.md file generates a lint violation but doesn't crash the validation
+    expect(result.violations).toEqual([
+      {
+        file: '/project/.dust/principles/notes.txt',
+        message: 'Non-markdown file "notes.txt" found in content directory',
+      },
+    ])
+    expect(result.valid).toBe(false)
+  })
+
   test('missing opening sentence in content file', async () => {
     const fileSystem = makeFs()
     const result = await validatePatch(fileSystem, dustPath, {
