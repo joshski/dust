@@ -639,3 +639,232 @@ describe('buildReadOnlyArtifactsRepository', () => {
     expect(tasks).toEqual([])
   })
 })
+
+describe('buildTaskGraph', () => {
+  test('returns empty graph when no tasks exist', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { '.dust': {} },
+    })
+    const repository = buildArtifactsRepository(fileSystem, '/project/.dust')
+
+    const graph = await repository.buildTaskGraph()
+
+    expect(graph.nodes).toEqual([])
+    expect(graph.edges).toEqual([])
+  })
+
+  test('builds graph with task nodes and blocking edges', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: {
+            'setup-ci.md': `# Setup CI
+
+Configure continuous integration.
+
+## Principles
+
+(none)
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- [ ] CI is configured
+`,
+            'add-tests.md': `# Add Tests
+
+Add unit tests.
+
+## Principles
+
+(none)
+
+## Blocked By
+
+- [Setup CI](setup-ci.md)
+
+## Definition of Done
+
+- [ ] Tests are added
+`,
+            'deploy.md': `# Deploy
+
+Deploy the application.
+
+## Principles
+
+(none)
+
+## Blocked By
+
+- [Setup CI](setup-ci.md)
+- [Add Tests](add-tests.md)
+
+## Definition of Done
+
+- [ ] Application is deployed
+`,
+          },
+        },
+      },
+    })
+    const repository = buildArtifactsRepository(fileSystem, '/project/.dust')
+
+    const graph = await repository.buildTaskGraph()
+
+    expect(graph.nodes).toHaveLength(3)
+    expect(graph.nodes.map(n => n.task.slug).sort()).toEqual([
+      'add-tests',
+      'deploy',
+      'setup-ci',
+    ])
+    expect(graph.nodes.every(n => n.workflowType === null)).toBe(true)
+
+    expect(graph.edges).toHaveLength(3)
+    expect(graph.edges).toContainEqual({ from: 'setup-ci', to: 'add-tests' })
+    expect(graph.edges).toContainEqual({ from: 'setup-ci', to: 'deploy' })
+    expect(graph.edges).toContainEqual({ from: 'add-tests', to: 'deploy' })
+  })
+
+  test('includes workflow type for workflow tasks', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'new-feature.md': '# New Feature\n\nA new feature to implement.',
+          },
+          tasks: {
+            'refine-idea-new-feature.md': `# Refine Idea: New Feature
+
+Refine this idea.
+
+## Refines Idea
+
+- [New Feature](../ideas/new-feature.md)
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- [ ] Idea is refined
+`,
+            'regular-task.md': `# Regular Task
+
+A regular non-workflow task.
+
+## Principles
+
+(none)
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- [ ] Task is done
+`,
+          },
+        },
+      },
+    })
+    const repository = buildArtifactsRepository(fileSystem, '/project/.dust')
+
+    const graph = await repository.buildTaskGraph()
+
+    expect(graph.nodes).toHaveLength(2)
+
+    const refineNode = graph.nodes.find(
+      n => n.task.slug === 'refine-idea-new-feature'
+    )
+    expect(refineNode?.workflowType).toBe('refine')
+
+    const regularNode = graph.nodes.find(n => n.task.slug === 'regular-task')
+    expect(regularNode?.workflowType).toBeNull()
+  })
+
+  test('read-only repository builds task graph with edges and workflow types', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea\n\nAn idea.',
+          },
+          tasks: {
+            'first-task.md': `# First Task
+
+Do something first.
+
+## Principles
+
+(none)
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- [ ] Done
+`,
+            'second-task.md': `# Second Task
+
+Do something second.
+
+## Principles
+
+(none)
+
+## Blocked By
+
+- [First Task](first-task.md)
+
+## Definition of Done
+
+- [ ] Done
+`,
+            'decompose-idea-my-idea.md': `# Decompose Idea: My Idea
+
+Decompose this idea.
+
+## Decomposes Idea
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- [ ] Tasks created
+`,
+          },
+        },
+      },
+    })
+    const repository = buildReadOnlyArtifactsRepository(
+      fileSystem,
+      '/project/.dust'
+    )
+
+    const graph = await repository.buildTaskGraph()
+
+    expect(graph.nodes).toHaveLength(3)
+
+    const decomposeNode = graph.nodes.find(
+      n => n.task.slug === 'decompose-idea-my-idea'
+    )
+    expect(decomposeNode?.workflowType).toBe('decompose-idea')
+
+    expect(graph.edges).toContainEqual({
+      from: 'first-task',
+      to: 'second-task',
+    })
+  })
+})
