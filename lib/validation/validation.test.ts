@@ -367,6 +367,31 @@ describe('validatePatch', () => {
     ).rejects.toThrow('EACCES: permission denied')
   })
 
+  test('re-throws non-ENOENT errors when reading principle file during cross-file validation', async () => {
+    const permissionError = new Error('EACCES: permission denied')
+    ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+    const fileSystem = makeFs({
+      'principles/existing.md':
+        '# Existing\n\nThis principle exists.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
+    })
+    const originalReadFile = fileSystem.readFile.bind(fileSystem)
+    fileSystem.readFile = async (path: string) => {
+      if (path === `${dustPath}/principles/existing.md`) {
+        throw permissionError
+      }
+      return originalReadFile(path)
+    }
+
+    await expect(
+      validatePatch(fileSystem, dustPath, {
+        files: {
+          'principles/new.md':
+            '# New Principle\n\nThis is new.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
+        },
+      })
+    ).rejects.toThrow('EACCES: permission denied')
+  })
+
   test('handles ENOENT when reading principle file during cross-file validation', async () => {
     const enoentError = new Error('ENOENT: no such file')
     ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
@@ -375,17 +400,9 @@ describe('validatePatch', () => {
         '# Existing\n\nThis principle exists.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
     })
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
-    let existingMdCallCount = 0
     fileSystem.readFile = async (path: string) => {
-      // Throw ENOENT when reading the existing principle file during cross-file validation
-      // (simulating the file being deleted between readdir and readFile)
       if (path === `${dustPath}/principles/existing.md`) {
-        existingMdCallCount++
-        // First call is from validateContentDirectoryFiles context, let it succeed
-        // Second call is from the cross-file principle validation, throw ENOENT
-        if (existingMdCallCount > 1) {
-          throw enoentError
-        }
+        throw enoentError
       }
       return originalReadFile(path)
     }
