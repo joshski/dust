@@ -158,4 +158,34 @@ describe('createOverlayFileSystem', () => {
       expect(overlay.isDirectory('dir')).toBe(false)
     })
   })
+
+  describe('error handling', () => {
+    test('readdir re-throws non-ENOENT errors from base', async () => {
+      const permissionError = new Error('EACCES: permission denied')
+      ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+      const base = createFileSystemEmulator({}, { '/a/existing.md': 'content' })
+      base.readdir = async () => {
+        throw permissionError
+      }
+      const overlay = createOverlayFileSystem(base, new Map())
+      await expect(overlay.readdir('/a')).rejects.toThrow(
+        'EACCES: permission denied'
+      )
+    })
+
+    test('readdir handles ENOENT from base gracefully', async () => {
+      const enoentError = new Error('ENOENT: no such file')
+      ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
+      const base = createFileSystemEmulator({})
+      base.readdir = async () => {
+        throw enoentError
+      }
+      const overlay = createOverlayFileSystem(
+        base,
+        new Map([['/a/new.md', 'content']])
+      )
+      const entries = await overlay.readdir('/a')
+      expect(entries).toContain('new.md')
+    })
+  })
 })

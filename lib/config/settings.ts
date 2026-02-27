@@ -386,18 +386,21 @@ export async function loadSettings(
       result.eventsUrl = process.env.DUST_EVENTS_URL
     }
     return result
-  } catch {
-    const result: DustSettings = {
-      dustCommand: detectDustCommand(cwd, fileSystem),
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      const result: DustSettings = {
+        dustCommand: detectDustCommand(cwd, fileSystem),
+      }
+      const installCommand = detectInstallCommand(cwd, fileSystem)
+      if (installCommand !== null) {
+        result.installCommand = installCommand
+      }
+      // Override eventsUrl with env var if set
+      if (process.env.DUST_EVENTS_URL) {
+        result.eventsUrl = process.env.DUST_EVENTS_URL
+      }
+      return result
     }
-    const installCommand = detectInstallCommand(cwd, fileSystem)
-    if (installCommand !== null) {
-      result.installCommand = installCommand
-    }
-    // Override eventsUrl with env var if set
-    if (process.env.DUST_EVENTS_URL) {
-      result.eventsUrl = process.env.DUST_EVENTS_URL
-    }
-    return result
+    throw error
   }
 }

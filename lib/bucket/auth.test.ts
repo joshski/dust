@@ -28,12 +28,13 @@ describe('loadStoredToken', () => {
     expect(token).toBeNull()
   })
 
-  test('returns null when file contains invalid JSON', async () => {
+  test('throws when file contains invalid JSON', async () => {
     const fileSystem = createFileSystemEmulator({
       home: { '.dust': { 'credentials.json': 'not json' } },
     })
-    const token = await loadStoredToken(fileSystem, '/home')
-    expect(token).toBeNull()
+    await expect(loadStoredToken(fileSystem, '/home')).rejects.toThrow(
+      SyntaxError
+    )
   })
 
   test('returns null when token field is not a string', async () => {
@@ -50,6 +51,18 @@ describe('loadStoredToken', () => {
     })
     const token = await loadStoredToken(fileSystem, '/home')
     expect(token).toBeNull()
+  })
+
+  test('re-throws unexpected filesystem errors', async () => {
+    const permissionError = new Error('EACCES: permission denied')
+    ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+    const fileSystem = createFileSystemEmulator()
+    fileSystem.readFile = async () => {
+      throw permissionError
+    }
+    await expect(loadStoredToken(fileSystem, '/home')).rejects.toThrow(
+      'EACCES: permission denied'
+    )
   })
 })
 
@@ -83,6 +96,28 @@ describe('clearToken', () => {
   test('does not throw when file does not exist', async () => {
     const fileSystem = createFileSystemEmulator()
     await expect(clearToken(fileSystem, '/home')).resolves.toBeUndefined()
+  })
+
+  test('does not throw when writeFile throws ENOENT', async () => {
+    const enoentError = new Error('ENOENT: no such file')
+    ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
+    const fileSystem = createFileSystemEmulator()
+    fileSystem.writeFile = async () => {
+      throw enoentError
+    }
+    await expect(clearToken(fileSystem, '/home')).resolves.toBeUndefined()
+  })
+
+  test('re-throws unexpected filesystem errors', async () => {
+    const permissionError = new Error('EACCES: permission denied')
+    ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+    const fileSystem = createFileSystemEmulator()
+    fileSystem.writeFile = async () => {
+      throw permissionError
+    }
+    await expect(clearToken(fileSystem, '/home')).rejects.toThrow(
+      'EACCES: permission denied'
+    )
   })
 })
 

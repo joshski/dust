@@ -37,8 +37,11 @@ export async function loadStoredToken(
     const content = await fileSystem.readFile(path)
     const data = JSON.parse(content)
     return typeof data.token === 'string' ? data.token : null
-  } catch {
-    return null
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null
+    }
+    throw error
   }
 }
 
@@ -62,8 +65,12 @@ export async function clearToken(
   const path = credentialsPath(homeDir)
   try {
     await fileSystem.writeFile(path, '{}')
-  } catch {
-    // If file doesn't exist, nothing to clear
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      // If file doesn't exist, nothing to clear
+      return
+    }
+    throw error
   }
 }
 

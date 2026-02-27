@@ -51,8 +51,11 @@ export async function loadAgentInstructions(
   try {
     const content = await fileSystem.readFile(instructionsPath)
     return content.trim()
-  } catch {
-    return ''
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return ''
+    }
+    throw error
   }
 }
 

@@ -357,7 +357,7 @@ describe('loadSettings', () => {
     expect(settings.dustCommand).toBe('bin/dust')
   })
 
-  test('returns auto-detected dustCommand when config file is invalid JSON', async () => {
+  test('throws when config file is invalid JSON', async () => {
     stubEnv('BUN_INSTALL', '')
     stubEnv('DUST_EVENTS_URL', '')
     const fileSystem = createFileSystemEmulator({
@@ -367,14 +367,13 @@ describe('loadSettings', () => {
         },
       },
     })
-    const settings = await loadSettings('/project', fileSystem)
 
-    expect(settings.dustCommand).toBe('npx dust')
-    expect(settings.installCommand).toBeUndefined()
-    expect(settings.eventsUrl).toBeUndefined()
+    await expect(loadSettings('/project', fileSystem)).rejects.toThrow(
+      SyntaxError
+    )
   })
 
-  test('auto-detects installCommand when config file is invalid JSON and lockfile found', async () => {
+  test('throws when config file is invalid JSON even with lockfile', async () => {
     stubEnv('BUN_INSTALL', '')
     stubEnv('DUST_EVENTS_URL', '')
     const fileSystem = createFileSystemEmulator({
@@ -385,10 +384,10 @@ describe('loadSettings', () => {
         'go.sum': '',
       },
     })
-    const settings = await loadSettings('/project', fileSystem)
 
-    expect(settings.dustCommand).toBe('npx dust')
-    expect(settings.installCommand).toBe('go mod download')
+    await expect(loadSettings('/project', fileSystem)).rejects.toThrow(
+      SyntaxError
+    )
   })
 
   test('auto-detects dustCommand when not set in settings', async () => {
@@ -532,7 +531,7 @@ describe('loadSettings', () => {
     expect(settings.eventsUrl).toBeUndefined()
   })
 
-  test('DUST_EVENTS_URL env var works when settings.json is invalid JSON', async () => {
+  test('throws when settings.json is invalid JSON even with DUST_EVENTS_URL env var', async () => {
     stubEnv('DUST_EVENTS_URL', 'https://env.example.com/events')
     stubEnv('BUN_INSTALL', '')
     const fileSystem = createFileSystemEmulator({
@@ -542,9 +541,78 @@ describe('loadSettings', () => {
         },
       },
     })
-    const settings = await loadSettings('/project', fileSystem)
 
+    await expect(loadSettings('/project', fileSystem)).rejects.toThrow(
+      SyntaxError
+    )
+  })
+
+  test('re-throws unexpected filesystem errors', async () => {
+    stubEnv('BUN_INSTALL', '')
+    stubEnv('DUST_EVENTS_URL', '')
+    const permissionError = new Error('EACCES: permission denied')
+    ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: { 'settings.json': '{}' },
+        },
+      },
+    })
+    fileSystem.readFile = async () => {
+      throw permissionError
+    }
+
+    await expect(loadSettings('/project', fileSystem)).rejects.toThrow(
+      'EACCES: permission denied'
+    )
+  })
+
+  test('returns defaults when readFile throws ENOENT after exists check', async () => {
+    // Race condition case: file exists when checked but deleted before read
+    stubEnv('BUN_INSTALL', '')
+    stubEnv('DUST_EVENTS_URL', 'https://env.example.com/events')
+    const enoentError = new Error('ENOENT: no such file')
+    ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: { 'settings.json': '{}' },
+        },
+        'bun.lockb': '',
+      },
+    })
+    fileSystem.readFile = async () => {
+      throw enoentError
+    }
+
+    const settings = await loadSettings('/project', fileSystem)
+    expect(settings.dustCommand).toBe('bunx dust')
+    expect(settings.installCommand).toBe('bun install')
     expect(settings.eventsUrl).toBe('https://env.example.com/events')
+  })
+
+  test('returns defaults without optional properties when ENOENT and no lockfile', async () => {
+    // Test the false branches: no lockfile detected and no DUST_EVENTS_URL
+    stubEnv('BUN_INSTALL', '')
+    stubEnv('DUST_EVENTS_URL', '')
+    const enoentError = new Error('ENOENT: no such file')
+    ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: { 'settings.json': '{}' },
+        },
+      },
+    })
+    fileSystem.readFile = async () => {
+      throw enoentError
+    }
+
+    const settings = await loadSettings('/project', fileSystem)
+    expect(settings.dustCommand).toBe('npx dust')
+    expect(settings.installCommand).toBeUndefined()
+    expect(settings.eventsUrl).toBeUndefined()
   })
 
   test('normalizes string entries in checks array to CheckConfig objects', async () => {

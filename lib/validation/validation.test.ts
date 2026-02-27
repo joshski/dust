@@ -335,6 +335,72 @@ describe('validatePatch', () => {
     const result: ValidationResult = { valid: true, violations: [] }
     expect(result.valid).toBe(true)
   })
+
+  test('re-throws non-ENOENT errors when reading principles directory for cross-file validation', async () => {
+    const permissionError = new Error('EACCES: permission denied')
+    ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+    const fileSystem = makeFs({
+      'principles/existing.md':
+        '# Existing\n\nThis principle exists.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
+    })
+    const originalReaddir = fileSystem.readdir.bind(fileSystem)
+    let principlesCallCount = 0
+    fileSystem.readdir = async (path: string) => {
+      if (path === `${dustPath}/principles`) {
+        principlesCallCount++
+        // First call is from validateContentDirectoryFiles, let it succeed
+        // Second call is from the cross-file principle validation, throw there
+        if (principlesCallCount > 1) {
+          throw permissionError
+        }
+      }
+      return originalReaddir(path)
+    }
+
+    await expect(
+      validatePatch(fileSystem, dustPath, {
+        files: {
+          'principles/new.md':
+            '# New Principle\n\nThis is new.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
+        },
+      })
+    ).rejects.toThrow('EACCES: permission denied')
+  })
+
+  test('handles ENOENT when reading principle file during cross-file validation', async () => {
+    const enoentError = new Error('ENOENT: no such file')
+    ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
+    const fileSystem = makeFs({
+      'principles/existing.md':
+        '# Existing\n\nThis principle exists.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
+    })
+    const originalReadFile = fileSystem.readFile.bind(fileSystem)
+    let existingMdCallCount = 0
+    fileSystem.readFile = async (path: string) => {
+      // Throw ENOENT when reading the existing principle file during cross-file validation
+      // (simulating the file being deleted between readdir and readFile)
+      if (path === `${dustPath}/principles/existing.md`) {
+        existingMdCallCount++
+        // First call is from validateContentDirectoryFiles context, let it succeed
+        // Second call is from the cross-file principle validation, throw ENOENT
+        if (existingMdCallCount > 1) {
+          throw enoentError
+        }
+      }
+      return originalReadFile(path)
+    }
+
+    // Should complete without error - ENOENT is expected for missing file
+    const result = await validatePatch(fileSystem, dustPath, {
+      files: {
+        'principles/new.md':
+          '# New Principle\n\nThis is new.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
+      },
+    })
+    // The ENOENT path was exercised - even if there are other violations,
+    // the error should not have been thrown
+    expect(result).toBeDefined()
+  })
 })
 
 describe('createOverlayFileSystem', () => {
@@ -393,5 +459,33 @@ describe('createOverlayFileSystem', () => {
     expect(entries).toContain('existing.md')
     expect(entries).toContain('new.md')
     expect(entries).not.toContain('other.md')
+  })
+
+  test('readdir re-throws non-ENOENT errors from base', async () => {
+    const permissionError = new Error('EACCES: permission denied')
+    ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+    const base = createFileSystemEmulator({}, { '/a/existing.md': 'content' })
+    base.readdir = async () => {
+      throw permissionError
+    }
+    const overlay = createOverlayFileSystem(base, new Map())
+    await expect(overlay.readdir('/a')).rejects.toThrow(
+      'EACCES: permission denied'
+    )
+  })
+
+  test('readdir handles ENOENT from base gracefully', async () => {
+    const enoentError = new Error('ENOENT: no such file')
+    ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
+    const base = createFileSystemEmulator({})
+    base.readdir = async () => {
+      throw enoentError
+    }
+    const overlay = createOverlayFileSystem(
+      base,
+      new Map([['/a/new.md', 'content']])
+    )
+    const entries = await overlay.readdir('/a')
+    expect(entries).toContain('new.md')
   })
 })

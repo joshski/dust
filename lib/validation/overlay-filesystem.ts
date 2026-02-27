@@ -67,7 +67,10 @@ export function createOverlayFileSystem(
             entries.add(entry)
           }
         }
-      } catch {
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          throw error
+        }
         // Base directory may not exist
       }
 

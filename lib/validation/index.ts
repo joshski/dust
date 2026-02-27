@@ -187,7 +187,10 @@ export async function validatePatch(
         const content = await overlayFs.readFile(filePath)
         allRelationships.push(extractPrincipleRelationships(filePath, content))
       }
-    } catch {
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        throw error
+      }
       // principles directory may not exist
     }
 

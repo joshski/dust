@@ -171,13 +171,39 @@ describe('loadAgentInstructions', () => {
     )
   })
 
-  test('returns empty string on read error', async () => {
+  test('throws on non-ENOENT read error', async () => {
+    const permissionError = new Error(
+      'Permission denied'
+    ) as NodeJS.ErrnoException
+    permissionError.code = 'EACCES'
     const fileSystem: FileSystem = {
       exists: () => true,
       isDirectory: () => false,
       getFileCreationTime: () => 0,
       readFile: async () => {
-        throw new Error('Permission denied')
+        throw permissionError
+      },
+      writeFile: async () => {},
+      mkdir: async () => {},
+      readdir: async () => [],
+      chmod: async () => {},
+      rename: async () => {},
+    }
+    await expect(
+      loadAgentInstructions('/project', fileSystem, 'claude-code-web')
+    ).rejects.toThrow('Permission denied')
+  })
+
+  test('returns empty string when file not found with ENOENT after exists check', async () => {
+    // Race condition case: file exists when checked but not when read
+    const enoentError = new Error('File not found') as NodeJS.ErrnoException
+    enoentError.code = 'ENOENT'
+    const fileSystem: FileSystem = {
+      exists: () => true,
+      isDirectory: () => false,
+      getFileCreationTime: () => 0,
+      readFile: async () => {
+        throw enoentError
       },
       writeFile: async () => {},
       mkdir: async () => {},
