@@ -34,7 +34,7 @@ The `from` field is the blocker slug, `to` is the blocked slug.
 
 ## Blocked By
 
-- [Export Task Type](./export-task-type.md)
+(none)
 
 ## Definition of Done
 

@@ -11,6 +11,9 @@ export type { AgentSessionEvent, EventMessage } from './agent-events'
 // Ideas
 export type { Idea, IdeaOpenQuestion, IdeaOption } from './artifacts/ideas'
 
+// Tasks
+export type { Task } from './artifacts/tasks'
+
 // Workflow tasks
 export type {
   CreateIdeaTransitionTaskResult,

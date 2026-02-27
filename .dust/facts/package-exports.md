@@ -9,7 +9,7 @@ The `@joshski/dust` package exposes ten entry points for downstream consumers.
 Public type definitions for the event protocol, workflow tasks, idea structures, and bucket repository contracts. Types-only export with no runtime code.
 
 ```typescript
-import type { DustEvent, WorkflowTask, Idea, Repository } from "@joshski/dust/types";
+import type { DustEvent, WorkflowTask, Idea, Task, Repository } from "@joshski/dust/types";
 ```
 
 ### @joshski/dust/logging
