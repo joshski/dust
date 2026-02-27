@@ -1,6 +1,9 @@
 import { spawn as nodeSpawn } from 'node:child_process'
 import { createInterface as nodeCreateInterface } from 'node:readline'
 import type { RawEvent, SpawnOptions } from '../claude/types'
+import { createLogger } from '../logging'
+
+const debug = createLogger('dust.codex.spawn-codex')
 
 export interface EventSourceDependencies {
   spawn: typeof nodeSpawn
@@ -74,7 +77,7 @@ export async function* spawnCodex(
       try {
         yield JSON.parse(line) as RawEvent
       } catch {
-        // Skip malformed JSON lines
+        debug('Skipping malformed JSON line: %s', line.slice(0, 200))
       }
     }
     await closePromise

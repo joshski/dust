@@ -1,6 +1,9 @@
 import { spawn as nodeSpawn } from 'node:child_process'
 import { createInterface as nodeCreateInterface } from 'node:readline'
+import { createLogger } from '../logging'
 import type { RawEvent, SpawnOptions } from './types'
+
+const debug = createLogger('dust.claude.spawn-claude-code')
 
 export interface EventSourceDependencies {
   spawn: typeof nodeSpawn
@@ -110,7 +113,7 @@ export async function* spawnClaudeCode(
       try {
         yield JSON.parse(line) as RawEvent
       } catch {
-        // Skip malformed JSON lines
+        debug('Skipping malformed JSON line: %s', line.slice(0, 200))
       }
     }
     await closePromise
