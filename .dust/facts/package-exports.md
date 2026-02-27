@@ -1,6 +1,6 @@
 # Package Exports
 
-The `@joshski/dust` package exposes eight entry points for downstream consumers.
+The `@joshski/dust` package exposes ten entry points for downstream consumers.
 
 ## Available Exports
 
@@ -63,6 +63,16 @@ Type definitions for the file system abstraction used throughout dust.
 import type { FileSystem, ReadableFileSystem } from "@joshski/dust/filesystem";
 ```
 
+### @joshski/dust/filesystem/emulator
+
+In-memory file system emulator for testing.
+
+```typescript
+import { createEmulatorFileSystem } from "@joshski/dust/filesystem/emulator";
+
+const fileSystem = createEmulatorFileSystem({ '/path/to/file.txt': 'content' });
+```
+
 ### @joshski/dust/istanbul/minimal-reporter
 
 Custom Istanbul coverage reporter that shows incomplete coverage with line-level gap details.
@@ -94,6 +104,24 @@ Or reference rules directly in biome.json:
   "plugins": ["./node_modules/@joshski/dust/biome/dust-no-abbreviated-names.grit"]
 }
 ```
+
+### @joshski/dust/validation
+
+API for validating proposed artifact changes before applying them.
+
+```typescript
+import { validatePatch } from "@joshski/dust/validation";
+
+const result = await validatePatch(fileSystem, dustPath, {
+  files: {
+    'facts/my-fact.md': '# My Fact\n\nContent here.',
+    'facts/old-fact.md': null, // delete
+  },
+});
+// result: { valid: boolean, violations: Violation[] }
+```
+
+See [Patch Validation](./patch-validation.md) for detailed API documentation.
 
 ## Related Facts
 

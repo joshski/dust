@@ -56,13 +56,13 @@ interface RepositoryListMessage {
 interface RepositoryListItem {
   name: string       // Repository display name
   gitUrl: string     // Git clone URL
-  url?: string       // Web URL for the repository (optional)
-  id?: string        // Server-side repository ID (optional)
-  hasTask?: boolean  // True if a task is waiting (optional)
+  url: string        // Web URL for the repository
+  id: number         // Server-side repository ID
+  hasTask: boolean   // True if a task is waiting
 }
 ```
 
-Required fields: `name`, `gitUrl`. Optional fields: `url`, `id`, `hasTask`.
+All fields are required.
 
 On receiving this message, clients:
 
