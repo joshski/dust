@@ -27,7 +27,6 @@ This preserves the current behavior of continuing cleanup even when loops fail, 
 
 ## Related Ideas
 
-- [Review error handling](review-error-handling.md) - documents this and other error handling issues
 - [Establish consistent error handling](establish-consistent-error-handling.md) - error handling conventions
 
 ## Related Principles
