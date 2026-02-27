@@ -32,13 +32,17 @@ This aligns with the [Stop the Line](../principles/stop-the-line.md) principle: 
 
 The loop already has a pattern for handling pre-task issues: when `git pull` fails, it spawns Claude with a special "resolve git conflict" prompt (`loop.ts:283-313`). The same pattern could be applied for failed checks.
 
-## Implementation Considerations
+## Proposed Design
 
-The check could be run:
+### Iteration Lifecycle
 
-- **Before picking a task**: After git pull succeeds, run checks. If they fail, spawn a "fix checks" agent session. Only proceed to task selection if checks pass.
+Each loop iteration follows this sequence:
 
-- **As part of the iteration result**: Add a new result type like `'checks_failed'` alongside `'no_tasks'`, `'ran_claude'`, etc. This would count as a productive iteration.
+1. **Git pull** — sync with remote
+2. **Install dependencies** — run `bun install` (or equivalent) so checks can run
+3. **Run `dust check`** — pre-flight checks before spawning an agent
+4. **If checks pass** → pick a task, spawn agent with normal implementation instructions
+5. **If checks fail** → spawn agent with "fix the checks" prompt including the full check output
 
 The agent prompt for fixing checks should include:
 
@@ -46,54 +50,75 @@ The agent prompt for fixing checks should include:
 - Instructions similar to the existing git conflict resolution prompt
 - A directive to commit and push the fix before finishing
 
-If pre-flight checks succeed, the agent no longer needs to run them. The instruction "Run `dust check` to verify the project is in a good state" could be removed from `buildImplementationInstructions` when checks were already verified. This would require passing context about whether pre-flight checks ran.
+### Agent Instructions Change
+
+Since the loop infrastructure now handles dependency installation and pre-flight checks, these steps are removed from `buildImplementationInstructions`. Agents start in a ready-to-work state:
+
+- **Remove** the "install dependencies" step
+- **Remove** the "run `dust check`" step
+- The pre-commit hook still catches anything the agent breaks during implementation
+
+For non-loop usage (e.g., interactive `dust focus`), the instructions remain unchanged since there's no loop infrastructure running checks.
+
+### Blocking Repositories on Persistent Check Failures
+
+In bucket mode, the server tracks consecutive check failures per repository. The mechanism:
+
+1. Client sends a `checks-failed` event when pre-flight checks fail
+2. Server increments a per-repository consecutive failure counter
+3. After N consecutive failures (2-3), the server blocks the repository — stops sending `task-available` and sets `hasTask: false`
+4. A blocked repository can be surfaced via a `blocked` field on `RepositoryListItem` (e.g., `blocked?: 'checks_failed'`) so the client can log why it's idle
+5. **Unblocking**: When the server receives a webhook (push event) for a blocked repo, it clears the blocked state and sends a fresh `task-available`
+
+The counter resets to 0 on any successful iteration (checks pass, real work happens). This prevents burning iterations on a repo where agents repeatedly fail to fix the same problem.
+
+In standalone loop mode (`dust loop claude`), the same counter logic applies locally — after N consecutive check-fix failures, the loop exits with a clear error message indicating human intervention is needed.
+
+### Pre-Agent Lifecycle Events
+
+The loop emits events for each step before spawning an agent, giving the server full visibility into the iteration pipeline:
+
+| Event Type | When Sent |
+|------------|-----------|
+| `iteration-started` | Beginning of a loop iteration |
+| `git-pull-started` | Starting git pull |
+| `git-pull-completed` | Git pull succeeded |
+| `git-pull-failed` | Git pull failed (includes error output) |
+| `install-started` | Starting dependency install |
+| `install-completed` | Install succeeded |
+| `install-failed` | Install failed (includes error output) |
+| `checks-started` | Starting `dust check` |
+| `checks-passed` | All checks passed |
+| `checks-failed` | Checks failed (includes check output) |
+
+These events use the existing [Dust Event Protocol](../facts/dust-event-protocol.md) and are sent over the same WebSocket connection. The `checks-failed` event is what the server uses to increment the consecutive failure counter for repository blocking.
+
+### Bucket Protocol Changes
+
+The [Bucket Protocol](../facts/bucket-protocol.md) gains:
+
+- **New events**: The pre-agent lifecycle events listed above, sent as client-to-server events
+- **Extended `RepositoryListItem`**: Optional `blocked?: string` field indicating why a repository is blocked (e.g., `'checks_failed'`). Clients skip agent loops for blocked repos and log the reason.
+- **No new message types needed**: Unblocking reuses existing `task-available` messages triggered by push webhooks
 
 ## Open Questions
 
 ### Should checks be run synchronously before task selection, or as a parallel probe?
 
-#### Run checks synchronously before task selection
+#### Run checks synchronously before task selection (recommended)
 
-Run `dust check` after git pull succeeds. If checks fail, the iteration becomes a "fix checks" session. This is simpler and ensures checks are always green before any task work begins.
+Run `dust check` after dependency install succeeds. If checks fail, the iteration becomes a "fix checks" session. This is simpler and ensures checks are always green before any task work begins.
 
 #### Run checks in parallel with task selection
 
 Start `dust check` and `findUnblockedTasks` concurrently. If checks fail, abort task selection and do "fix checks" instead. This saves time when checks pass (the common case) but adds complexity.
 
-### What if the agent fails to fix the checks?
-
-#### Treat like any other iteration failure
-
-The iteration completes with `claude_error` or similar. The next iteration will run checks again, fail again, and try to fix again. Eventually hits the max iterations limit.
-
-#### Add check-specific retry limits
-
-Track consecutive check failures separately. After N failures to fix checks, take a different action: abort the loop, notify externally, or create a blocking task.
-
-#### Require human intervention
-
-After one or more failed check-fix attempts, stop the loop/repository and wait for human intervention rather than burning iterations. This is more conservative but safer for persistent issues.
-
-### Should this also remove the check step from agent instructions?
-
-#### Yes, remove redundant check instruction
-
-If the loop verifies checks pass before assigning a task, telling the agent to run checks again is redundant. Remove step 1 from `buildImplementationInstructions` and adjust step numbering.
-
-#### No, keep the instruction as a safety net
-
-Agents might make changes that break checks during implementation. Keeping the instruction reminds them to verify before committing. The pre-commit hook handles this if installed, but not all setups have hooks.
-
-#### Make it conditional
-
-Pass a flag to `buildImplementationInstructions` indicating whether pre-flight checks ran. If they did, omit the instruction. If they didn't (e.g., interactive usage via `dust focus`), keep it.
-
 ### Should bucket mode and standalone loop mode behave the same?
 
-#### Yes, identical behavior
+#### Yes, identical behavior (recommended)
 
-Both modes run pre-flight checks and spawn fix agents the same way. This is simpler to implement and reason about.
+Both modes run pre-flight checks and spawn fix agents the same way. The only difference is that bucket mode reports to the server (which handles blocking), while standalone mode tracks failures locally.
 
 #### Bucket mode adds repository-level tracking
 
-In bucket mode, track check failures per repository. If one repository consistently fails checks while others are fine, consider disabling that repository specifically. The server could be notified via a `bucket.checks_failed` event.
+In bucket mode, track check failures per repository with additional server-side logic. If one repository consistently fails checks while others are fine, consider disabling that repository specifically.
