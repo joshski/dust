@@ -734,7 +734,12 @@ export async function shutdown(
     .map(rs => rs.loopPromise)
     .filter((p): p is Promise<void> => p !== null)
 
-  await Promise.all(loopPromises.map(p => p.catch(() => {})))
+  const results = await Promise.allSettled(loopPromises)
+  for (const result of results) {
+    if (result.status === 'rejected') {
+      context.stderr(`Repository loop failed: ${result.reason}`)
+    }
+  }
 
   // Clean up all repository directories
   for (const repoState of state.repositories.values()) {
