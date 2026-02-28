@@ -531,6 +531,18 @@ describe('buildArtifactsRepository', () => {
 })
 
 describe('buildReadOnlyArtifactsRepository', () => {
+  test('artifactPath returns the path for an artifact', () => {
+    const fileSystem = createFileSystem()
+    const repository = buildReadOnlyArtifactsRepository(
+      fileSystem,
+      '/project/.dust'
+    )
+
+    expect(repository.artifactPath('ideas', 'my-idea')).toBe(
+      '/project/.dust/ideas/my-idea.md'
+    )
+  })
+
   test('provides read-only methods for ideas', async () => {
     const fileSystem = createFileSystem()
     const repository = buildReadOnlyArtifactsRepository(
