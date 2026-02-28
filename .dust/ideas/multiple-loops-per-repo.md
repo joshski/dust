@@ -27,7 +27,7 @@ Running multiple loops per repository would:
 - **Utilize available compute**: If the dustbucket server has capacity, multiple agents could work on the same repository simultaneously
 - **Match task characteristics**: Research tasks are naturally parallel; they don't conflict with each other or with most implementation tasks
 
-This relates to the [Multi-repo fleet orchestration](multi-repo-fleet-orchestration.md) idea but operates at a different level: that idea is about managing multiple repositories, while this is about parallelism within a single repository.
+This operates at the level of parallelism within a single repository, distinct from multi-repository orchestration concerns.
 
 ## Implementation Considerations
 
