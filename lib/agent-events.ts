@@ -51,6 +51,41 @@ export function rawEventToAgentEvent(
   return { type: 'claude-event', rawEvent }
 }
 
+const DEFAULT_HEARTBEAT_INTERVAL_MS = 5000
+
+/**
+ * Create a heartbeat throttler that limits agent-session-activity events
+ * to at most once per interval (default: 5 seconds).
+ *
+ * The returned callback converts raw Claude events to AgentSessionEvents,
+ * throttling stream_event heartbeats while forwarding all other events.
+ */
+export function createHeartbeatThrottler(
+  onAgentEvent: (event: AgentSessionEvent) => void,
+  options?: { intervalMs?: number; now?: () => number }
+): (rawEvent: Record<string, unknown>) => void {
+  const intervalMs = options?.intervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS
+  const now = options?.now ?? Date.now
+  let lastHeartbeatTime: number | undefined
+
+  return (rawEvent: Record<string, unknown>) => {
+    const event = rawEventToAgentEvent(rawEvent)
+
+    if (event.type === 'agent-session-activity') {
+      const currentTime = now()
+      if (
+        lastHeartbeatTime !== undefined &&
+        currentTime - lastHeartbeatTime < intervalMs
+      ) {
+        return // Throttle: skip this heartbeat
+      }
+      lastHeartbeatTime = currentTime
+    }
+
+    onAgentEvent(event)
+  }
+}
+
 /**
  * Format an AgentSessionEvent for console output.
  * Returns null for events that should not be displayed.

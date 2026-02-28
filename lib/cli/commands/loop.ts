@@ -20,9 +20,9 @@ import { spawn as nodeSpawn } from 'node:child_process'
 import os from 'node:os'
 import {
   type AgentSessionEvent,
+  createHeartbeatThrottler,
   type EventMessage,
   formatAgentEvent,
-  rawEventToAgentEvent,
 } from '../../agent-events'
 import { run as claudeRun } from '../../claude/run'
 import { createLogger, enableFileLogs } from '../../logging'
@@ -501,9 +501,7 @@ export async function loopClaude(
   // Build iteration options
   const iterationOptions: IterationOptions = { hooksInstalled }
   if (eventsUrl) {
-    iterationOptions.onRawEvent = (rawEvent: Record<string, unknown>) => {
-      onAgentEvent(rawEventToAgentEvent(rawEvent))
-    }
+    iterationOptions.onRawEvent = createHeartbeatThrottler(onAgentEvent)
   }
 
   while (completedIterations < maxIterations) {

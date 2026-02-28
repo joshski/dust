@@ -6,7 +6,7 @@
  */
 
 import type { AgentSessionEvent, EventMessage } from '../agent-events'
-import { formatAgentEvent, rawEventToAgentEvent } from '../agent-events'
+import { createHeartbeatThrottler, formatAgentEvent } from '../agent-events'
 import {
   type run as claudeRun,
   defaultRunnerDependencies,
@@ -264,9 +264,7 @@ export async function runRepositoryLoop(
           hooksInstalled,
           signal: abortController.signal,
           repositoryId: repoState.repository.id.toString(),
-          onRawEvent: (rawEvent: Record<string, unknown>) => {
-            onAgentEvent(rawEventToAgentEvent(rawEvent))
-          },
+          onRawEvent: createHeartbeatThrottler(onAgentEvent),
         }
       )
     } catch (error) {
