@@ -278,3 +278,148 @@ describe('next command', () => {
     expect(alphaIndex).toBeLessThan(middleIndex)
   })
 })
+
+describe('next command event emission', () => {
+  test('emits tasks-listed event with unblocked tasks', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: {
+            'first-task.md': '# First Task',
+            'second-task.md': '# Second Task',
+          },
+        },
+      },
+    })
+
+    await next(createDependencies(context, fileSystem))
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'tasks-listed',
+      tasks: [
+        {
+          path: '.dust/tasks/first-task.md',
+          title: 'First Task',
+          blockedBy: [],
+        },
+        {
+          path: '.dust/tasks/second-task.md',
+          title: 'Second Task',
+          blockedBy: [],
+        },
+      ],
+    })
+  })
+
+  test('emits tasks-listed event with filename as title when no heading exists', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: {
+            'no-title-task.md': 'This task has no heading',
+          },
+        },
+      },
+    })
+
+    await next(createDependencies(context, fileSystem))
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'tasks-listed',
+      tasks: [
+        {
+          path: '.dust/tasks/no-title-task.md',
+          title: 'no-title-task',
+          blockedBy: [],
+        },
+      ],
+    })
+  })
+
+  test('emits empty tasks-listed event when no tasks exist', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: {},
+        },
+      },
+    })
+
+    await next(createDependencies(context, fileSystem))
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'tasks-listed',
+      tasks: [],
+    })
+  })
+
+  test('does not emit tasks-listed event when .dust directory is missing', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator()
+
+    await next(createDependencies(context, fileSystem))
+
+    expect(context.emittedEvents).toHaveLength(0)
+  })
+
+  test('only includes unblocked tasks in event', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: {
+            'blocked-task.md':
+              '# Blocked Task\n\n## Blocked By\n\n- [Blocker](blocker-task.md)',
+            'blocker-task.md': '# Blocker Task\n\nDo first.',
+          },
+        },
+      },
+    })
+
+    await next(createDependencies(context, fileSystem))
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'tasks-listed',
+      tasks: [
+        {
+          path: '.dust/tasks/blocker-task.md',
+          title: 'Blocker Task',
+          blockedBy: [],
+        },
+      ],
+    })
+  })
+
+  test('event matches rendered output', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: {
+            'my-task.md': '# My Task\n\nDo this thing.',
+          },
+        },
+      },
+    })
+
+    await next(createDependencies(context, fileSystem))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('# My Task')
+    expect(output).toContain('.dust/tasks/my-task.md')
+
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'tasks-listed',
+      tasks: [
+        { path: '.dust/tasks/my-task.md', title: 'My Task', blockedBy: [] },
+      ],
+    })
+  })
+})

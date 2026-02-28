@@ -22,6 +22,10 @@ export type CommandEvent =
       type: 'principles-listed'
       principles: Array<{ path: string; title: string }>
     }
+  | {
+      type: 'tasks-listed'
+      tasks: Array<{ path: string; title: string; blockedBy: string[] }>
+    }
 
 /**
  * Wire format for command events, following the same pattern as EventMessage.

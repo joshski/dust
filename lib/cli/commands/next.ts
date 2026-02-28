@@ -161,10 +161,27 @@ export async function next(
   }
 
   if (result.tasks.length === 0) {
+    context.emitEvent?.({
+      type: 'tasks-listed',
+      tasks: [],
+    })
     return { exitCode: 0 }
   }
 
   printTaskList(context, result.tasks)
+
+  context.emitEvent?.({
+    type: 'tasks-listed',
+    tasks: result.tasks.map(task => {
+      const parts = task.path.split('/')
+      const filename = parts[parts.length - 1]
+      return {
+        path: task.path,
+        title: task.title ?? filename.replace('.md', ''),
+        blockedBy: [],
+      }
+    }),
+  })
 
   return { exitCode: 0 }
 }
