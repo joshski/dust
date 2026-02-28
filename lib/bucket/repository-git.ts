@@ -28,7 +28,11 @@ export async function cloneRepository(
   return new Promise(resolve => {
     const proc = spawn('git', ['clone', repository.gitUrl, targetPath], {
       stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+      env: {
+        ...process.env,
+        GIT_TERMINAL_PROMPT: '0',
+        GIT_SSH_COMMAND: 'ssh -o StrictHostKeyChecking=accept-new',
+      },
     })
 
     let stderr = ''
