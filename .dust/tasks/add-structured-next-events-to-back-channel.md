@@ -39,7 +39,7 @@ The event includes the task path (relative to repo root), title, and any blocker
 
 ## Blocked By
 
-- [Add structured check events to back channel](add-structured-check-events-to-back-channel.md)
+(none)
 
 ## Definition of Done
 

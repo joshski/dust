@@ -45,6 +45,8 @@ export interface ProcessPrimitives {
   exit: (code: number) => void
 }
 
+import type { CommandEvent } from '../command-events'
+
 /**
  * Console primitives required for the entry point
  */
@@ -52,6 +54,7 @@ export interface ConsolePrimitives {
   log: (message: string) => void
   write?: (message: string) => void
   error: (message: string) => void
+  emitEvent?: (event: CommandEvent) => void
 }
 
 /**
@@ -118,6 +121,7 @@ export async function wireEntry(
       stdout: consolePrimitives.log,
       stdoutInline: consolePrimitives.write,
       stderr: consolePrimitives.error,
+      emitEvent: consolePrimitives.emitEvent,
     },
     fileSystem,
     glob,

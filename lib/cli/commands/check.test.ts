@@ -1017,6 +1017,212 @@ describe('check command --serial flag', () => {
   })
 })
 
+describe('check command event emission', () => {
+  test('emits check-started and check-passed for passing checks', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [
+        { name: 'lint', command: 'npm run lint' },
+        { name: 'test', command: 'npm test' },
+      ],
+    }
+    const fileSystem = createFileSystemEmulator()
+    const bufferedRunner = createMockBufferedRunner({
+      'npm run lint': { exitCode: 0, output: '' },
+      'npm test': { exitCode: 0, output: '' },
+    })
+
+    await check(
+      createDependencies(context, fileSystem, settings),
+      bufferedRunner
+    )
+
+    // Check that events were emitted (order may vary due to parallel execution)
+    const startedEvents = context.emittedEvents.filter(
+      e => e.type === 'check-started'
+    )
+    const passedEvents = context.emittedEvents.filter(
+      e => e.type === 'check-passed'
+    )
+
+    expect(startedEvents).toHaveLength(2)
+    expect(passedEvents).toHaveLength(2)
+    expect(startedEvents.map(e => e.name).sort()).toEqual(['lint', 'test'])
+    expect(passedEvents.map(e => e.name).sort()).toEqual(['lint', 'test'])
+  })
+
+  test('emits check-started and check-failed for failing checks', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [{ name: 'test', command: 'npm test' }],
+    }
+    const fileSystem = createFileSystemEmulator()
+    const bufferedRunner = createMockBufferedRunner({
+      'npm test': { exitCode: 1, output: 'Test failed: expected 1 to equal 2' },
+    })
+
+    await check(
+      createDependencies(context, fileSystem, settings),
+      bufferedRunner
+    )
+
+    expect(context.emittedEvents).toContainEqual({
+      type: 'check-started',
+      name: 'test',
+    })
+    expect(context.emittedEvents).toContainEqual(
+      expect.objectContaining({
+        type: 'check-failed',
+        name: 'test',
+        output: 'Test failed: expected 1 to equal 2',
+      })
+    )
+  })
+
+  test('emits events for built-in lint check', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [{ name: 'biome', command: 'npm run lint' }],
+    }
+    const fileSystem = createFileSystemEmulator({
+      project: { '.dust': {} },
+    })
+    fileSystem.readFile = async () =>
+      '# Test\n## Principles\n## Blocked By\n## Definition of Done'
+    const bufferedRunner = createMockBufferedRunner({
+      'npm run lint': { exitCode: 0, output: '' },
+    })
+
+    await check(
+      createDependencies(context, fileSystem, settings),
+      bufferedRunner
+    )
+
+    // Should have events for both built-in lint and configured biome check
+    const startedEvents = context.emittedEvents.filter(
+      e => e.type === 'check-started'
+    )
+    expect(startedEvents.map(e => e.name).sort()).toEqual(['biome', 'lint'])
+  })
+
+  test('check-passed includes durationMs', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [{ name: 'fast', command: 'fast-cmd' }],
+    }
+    const fileSystem = createFileSystemEmulator()
+    const bufferedRunner = createMockBufferedRunner({
+      'fast-cmd': { exitCode: 0, output: '' },
+    })
+
+    await check(
+      createDependencies(context, fileSystem, settings),
+      bufferedRunner
+    )
+
+    const passedEvent = context.emittedEvents.find(
+      e => e.type === 'check-passed'
+    )
+    expect(passedEvent).toBeDefined()
+    expect(passedEvent).toHaveProperty('durationMs')
+    expect(typeof (passedEvent as { durationMs: number }).durationMs).toBe(
+      'number'
+    )
+  })
+
+  test('check-failed includes durationMs and optional output', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [{ name: 'failing', command: 'fail-cmd' }],
+    }
+    const fileSystem = createFileSystemEmulator()
+    const bufferedRunner = createMockBufferedRunner({
+      'fail-cmd': { exitCode: 1, output: 'Error message' },
+    })
+
+    await check(
+      createDependencies(context, fileSystem, settings),
+      bufferedRunner
+    )
+
+    const failedEvent = context.emittedEvents.find(
+      e => e.type === 'check-failed'
+    )
+    expect(failedEvent).toBeDefined()
+    expect(failedEvent).toMatchObject({
+      type: 'check-failed',
+      name: 'failing',
+      output: 'Error message',
+    })
+    expect(typeof (failedEvent as { durationMs: number }).durationMs).toBe(
+      'number'
+    )
+  })
+
+  test('check-failed omits output when empty', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [{ name: 'silent-fail', command: 'silent-cmd' }],
+    }
+    const fileSystem = createFileSystemEmulator()
+    const bufferedRunner = createMockBufferedRunner({
+      'silent-cmd': { exitCode: 1, output: '' },
+    })
+
+    await check(
+      createDependencies(context, fileSystem, settings),
+      bufferedRunner
+    )
+
+    const failedEvent = context.emittedEvents.find(
+      e => e.type === 'check-failed'
+    )
+    expect(failedEvent).toBeDefined()
+    expect(failedEvent).toMatchObject({
+      type: 'check-failed',
+      name: 'silent-fail',
+    })
+    // Output should not be present when it's empty
+    expect(failedEvent).not.toHaveProperty('output')
+  })
+
+  test('emits events in serial mode', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [
+        { name: 'first', command: 'cmd1' },
+        { name: 'second', command: 'cmd2' },
+      ],
+    }
+    const fileSystem = createFileSystemEmulator()
+    const bufferedRunner = createMockBufferedRunner({
+      cmd1: { exitCode: 0, output: '' },
+      cmd2: { exitCode: 1, output: 'failed' },
+    })
+
+    await check(
+      createDependencies(context, fileSystem, settings, ['--serial']),
+      bufferedRunner
+    )
+
+    // In serial mode, events should be in order
+    const eventTypes = context.emittedEvents.map(e => `${e.type}:${e.name}`)
+    expect(eventTypes).toEqual([
+      'check-started:first',
+      'check-passed:first',
+      'check-started:second',
+      'check-failed:second',
+    ])
+  })
+})
+
 describe('truncateOutput', () => {
   test('does not truncate output shorter than 500 lines', () => {
     const lines = Array.from({ length: 100 }, (_, i) => `line ${i + 1}`)

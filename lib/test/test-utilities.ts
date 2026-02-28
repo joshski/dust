@@ -12,6 +12,7 @@ import type {
   CommandDependencies,
   DustSettings,
 } from '../cli/types'
+import type { CommandEvent } from '../command-events'
 import { createFileSystemEmulator } from '../filesystem/emulator'
 
 export {
@@ -149,14 +150,16 @@ export function restoreEnv(): void {
 interface ContextEmulator extends CommandContext {
   stdoutLines: string[]
   stderrLines: string[]
+  emittedEvents: CommandEvent[]
 }
 
 /**
- * Creates a context emulator that captures stdout/stderr output
+ * Creates a context emulator that captures stdout/stderr output and emitted events
  */
 export function createContextEmulator(cwd = '/project'): ContextEmulator {
   const stdoutLines: string[] = []
   const stderrLines: string[] = []
+  const emittedEvents: CommandEvent[] = []
   let stdoutInlineBuffer = ''
   return {
     cwd,
@@ -171,8 +174,10 @@ export function createContextEmulator(cwd = '/project'): ContextEmulator {
       stdoutInlineBuffer += msg
     },
     stderr: (msg: string) => stderrLines.push(msg),
+    emitEvent: (event: CommandEvent) => emittedEvents.push(event),
     stdoutLines,
     stderrLines,
+    emittedEvents,
   }
 }
 

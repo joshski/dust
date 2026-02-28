@@ -2,6 +2,7 @@
  * Common types for CLI commands
  */
 
+import type { CommandEvent } from '../command-events'
 import type { FileSystem, GlobScanner } from '../filesystem/types'
 
 export type {
@@ -15,6 +16,7 @@ export interface CommandContext {
   stdout: (message: string) => void
   stdoutInline?: (message: string) => void
   stderr: (message: string) => void
+  emitEvent?: (event: CommandEvent) => void
 }
 
 export interface CommandResult {

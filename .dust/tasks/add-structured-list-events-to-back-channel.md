@@ -43,7 +43,7 @@ Update:
 
 ## Blocked By
 
-- [Add structured check events to back channel](add-structured-check-events-to-back-channel.md)
+(none)
 
 ## Definition of Done
 

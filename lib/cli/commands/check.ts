@@ -51,10 +51,12 @@ interface CheckResult {
 async function runSingleCheck(
   check: CheckConfig,
   cwd: string,
-  runner: ShellRunner
+  runner: ShellRunner,
+  emitEvent?: CommandContext['emitEvent']
 ): Promise<CheckResult> {
   const timeoutMs = check.timeoutMilliseconds ?? DEFAULT_CHECK_TIMEOUT_MS
   log(`running check ${check.name}: ${check.command}`)
+  emitEvent?.({ type: 'check-started', name: check.name })
   const startTime = Date.now()
   const result = await runner.run(check.command, cwd, timeoutMs)
   const durationMs = Date.now() - startTime
@@ -64,6 +66,17 @@ async function runSingleCheck(
       ? 'passed'
       : 'failed'
   log(`check ${check.name} ${status} (${durationMs}ms)`)
+  if (result.exitCode === 0) {
+    emitEvent?.({ type: 'check-passed', name: check.name, durationMs })
+  } else {
+    const failedEvent: Parameters<NonNullable<typeof emitEvent>>[0] = {
+      type: 'check-failed',
+      name: check.name,
+      durationMs,
+    }
+    if (result.output) failedEvent.output = result.output
+    emitEvent?.(failedEvent)
+  }
   return {
     name: check.name,
     command: check.command,
@@ -79,26 +92,31 @@ async function runSingleCheck(
 async function runConfiguredChecks(
   checks: CheckConfig[],
   cwd: string,
-  runner: ShellRunner
+  runner: ShellRunner,
+  emitEvent?: CommandContext['emitEvent']
 ): Promise<CheckResult[]> {
-  const promises = checks.map(check => runSingleCheck(check, cwd, runner))
+  const promises = checks.map(check =>
+    runSingleCheck(check, cwd, runner, emitEvent)
+  )
   return Promise.all(promises)
 }
 
 async function runConfiguredChecksSerially(
   checks: CheckConfig[],
   cwd: string,
-  runner: ShellRunner
+  runner: ShellRunner,
+  emitEvent?: CommandContext['emitEvent']
 ): Promise<CheckResult[]> {
   const results: CheckResult[] = []
   for (const check of checks) {
-    results.push(await runSingleCheck(check, cwd, runner))
+    results.push(await runSingleCheck(check, cwd, runner, emitEvent))
   }
   return results
 }
 
 async function runValidationCheck(
-  dependencies: CommandDependencies
+  dependencies: CommandDependencies,
+  emitEvent?: CommandContext['emitEvent']
 ): Promise<CheckResult> {
   const outputLines: string[] = []
   const bufferedContext: CommandContext = {
@@ -108,6 +126,7 @@ async function runValidationCheck(
   }
 
   log('running built-in check: dust lint')
+  emitEvent?.({ type: 'check-started', name: 'lint' })
   const startTime = Date.now()
   const result = await lintMarkdown({
     ...dependencies,
@@ -117,12 +136,26 @@ async function runValidationCheck(
   const durationMs = Date.now() - startTime
   const lintStatus = result.exitCode === 0 ? 'passed' : 'failed'
   log(`built-in check dust lint ${lintStatus} (${durationMs}ms)`)
+  const output = outputLines.join('\n')
+  if (result.exitCode === 0) {
+    emitEvent?.({ type: 'check-passed', name: 'lint', durationMs })
+  } else {
+    const failedEvent: Parameters<NonNullable<typeof emitEvent>>[0] = {
+      type: 'check-failed',
+      name: 'lint',
+      durationMs,
+    }
+    /* v8 ignore start - defensive guard: lint always produces output on failure */
+    if (output) failedEvent.output = output
+    /* v8 ignore stop */
+    emitEvent?.(failedEvent)
+  }
 
   return {
     name: 'lint',
     command: 'dust lint',
     exitCode: result.exitCode,
-    output: outputLines.join('\n'),
+    output,
     isBuiltIn: true,
     durationMs,
     timedOut: false,
@@ -220,13 +253,14 @@ export async function check(
     const results: CheckResult[] = []
 
     if (hasDustDir) {
-      results.push(await runValidationCheck(dependencies))
+      results.push(await runValidationCheck(dependencies, context.emitEvent))
     }
 
     const configuredResults = await runConfiguredChecksSerially(
       settings.checks,
       context.cwd,
-      shellRunner
+      shellRunner,
+      context.emitEvent
     )
     results.push(...configuredResults)
 
@@ -239,12 +273,17 @@ export async function check(
 
   // Add validation check if .dust directory exists
   if (hasDustDir) {
-    checkPromises.push(runValidationCheck(dependencies))
+    checkPromises.push(runValidationCheck(dependencies, context.emitEvent))
   }
 
   // Add configured checks
   checkPromises.push(
-    runConfiguredChecks(settings.checks, context.cwd, shellRunner)
+    runConfiguredChecks(
+      settings.checks,
+      context.cwd,
+      shellRunner,
+      context.emitEvent
+    )
   )
 
   const promiseResults = await Promise.all(checkPromises)
