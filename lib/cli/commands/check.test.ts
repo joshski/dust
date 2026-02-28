@@ -1213,7 +1213,9 @@ describe('check command event emission', () => {
     )
 
     // In serial mode, events should be in order
-    const eventTypes = context.emittedEvents.map(e => `${e.type}:${e.name}`)
+    const eventTypes = context.emittedEvents.map(e =>
+      'name' in e ? `${e.type}:${e.name}` : e.type
+    )
     expect(eventTypes).toEqual([
       'check-started:first',
       'check-passed:first',

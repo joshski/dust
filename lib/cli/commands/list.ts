@@ -3,6 +3,7 @@
  */
 
 import { basename } from 'node:path'
+import { findAllWorkflowTasks } from '../../artifacts/workflow-tasks'
 import {
   extractPrincipleRelationships,
   type PrincipleRelationships,
@@ -17,6 +18,21 @@ import type {
   CommandResult,
   ReadableFileSystem,
 } from '../types'
+
+type IdeaStatus = 'draft' | 'refining' | 'decomposing' | 'shelving'
+
+function workflowTypeToStatus(
+  type: 'refine' | 'decompose-idea' | 'shelve'
+): IdeaStatus {
+  switch (type) {
+    case 'refine':
+      return 'refining'
+    case 'decompose-idea':
+      return 'decomposing'
+    case 'shelve':
+      return 'shelving'
+  }
+}
 
 const VALID_TYPES = ['tasks', 'ideas', 'principles', 'facts'] as const
 type ListType = (typeof VALID_TYPES)[number]
@@ -143,6 +159,12 @@ export async function list(
 
   const specificTypeRequested = commandArguments.length > 0
 
+  // Pre-fetch workflow tasks if we're listing ideas (to determine status)
+  const workflowTasks =
+    typesToList.includes('ideas') && fileSystem.exists(dustPath)
+      ? await findAllWorkflowTasks(fileSystem, dustPath)
+      : null
+
   for (const type of typesToList) {
     const dirPath = `${dustPath}/${type}`
 
@@ -158,6 +180,14 @@ export async function list(
         context.stdout('')
         context.stdout(`No ${type} found.`)
         context.stdout('')
+      }
+      // Emit empty events for requested types
+      if (type === 'facts') {
+        context.emitEvent?.({ type: 'facts-listed', facts: [] })
+      } else if (type === 'ideas') {
+        context.emitEvent?.({ type: 'ideas-listed', ideas: [] })
+      } else if (type === 'principles') {
+        context.emitEvent?.({ type: 'principles-listed', principles: [] })
       }
       continue
     }
@@ -177,19 +207,37 @@ export async function list(
       }
     }
 
+    // Collect artifact data for events
+    const collectedItems: Array<{
+      path: string
+      title: string
+      status?: string
+    }> = []
+
     for (const file of mdFiles) {
       const filePath = `${dirPath}/${file}`
       const content = await fileSystem.readFile(filePath)
       const title = extractTitle(content)
       const openingSentence = extractOpeningSentence(content)
       const relativePath = `.dust/${type}/${file}`
+      const slug = file.replace('.md', '')
+
+      // Collect for event emission
+      const displayTitle = title || slug
+      if (type === 'ideas') {
+        const workflowTask = workflowTasks?.workflowTasksByIdeaSlug.get(slug)
+        const status: IdeaStatus = workflowTask
+          ? workflowTypeToStatus(workflowTask.type)
+          : 'draft'
+        collectedItems.push({ path: relativePath, title: displayTitle, status })
+      } else if (type === 'facts' || type === 'principles') {
+        collectedItems.push({ path: relativePath, title: displayTitle })
+      }
 
       if (title) {
         context.stdout(`${colors.bold}# ${title}${colors.reset}`)
       } else {
-        context.stdout(
-          `${colors.bold}# ${file.replace('.md', '')}${colors.reset}`
-        )
+        context.stdout(`${colors.bold}# ${slug}${colors.reset}`)
       }
 
       if (openingSentence) {
@@ -198,6 +246,29 @@ export async function list(
 
       context.stdout(`${colors.cyan}→ ${relativePath}${colors.reset}`)
       context.stdout('')
+    }
+
+    // Emit events after processing each type
+    if (type === 'facts') {
+      context.emitEvent?.({
+        type: 'facts-listed',
+        facts: collectedItems.map(i => ({ path: i.path, title: i.title })),
+      })
+    } else if (type === 'ideas') {
+      context.emitEvent?.({
+        type: 'ideas-listed',
+        ideas: collectedItems.map(i => ({
+          path: i.path,
+          title: i.title,
+          /* v8 ignore next - status is always set for ideas, fallback is defensive */
+          status: i.status ?? 'draft',
+        })),
+      })
+    } else if (type === 'principles') {
+      context.emitEvent?.({
+        type: 'principles-listed',
+        principles: collectedItems.map(i => ({ path: i.path, title: i.title })),
+      })
     }
   }
 

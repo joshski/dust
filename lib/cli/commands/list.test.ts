@@ -490,3 +490,297 @@ This principle has a parent that does not exist.
     expect(output).not.toContain('Hierarchy:')
   })
 })
+
+describe('list command event emission', () => {
+  test('emits facts-listed event when listing facts', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          facts: {
+            'first-fact.md': '# First Fact',
+            'second-fact.md': '# Second Fact',
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['facts']))
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'facts-listed',
+      facts: [
+        { path: '.dust/facts/first-fact.md', title: 'First Fact' },
+        { path: '.dust/facts/second-fact.md', title: 'Second Fact' },
+      ],
+    })
+  })
+
+  test('emits ideas-listed event with draft status when no workflow task exists', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea',
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['ideas']))
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'ideas-listed',
+      ideas: [
+        { path: '.dust/ideas/my-idea.md', title: 'My Idea', status: 'draft' },
+      ],
+    })
+  })
+
+  test('emits ideas-listed event with refining status when refine task exists', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea',
+          },
+          tasks: {
+            'refine-idea-my-idea.md': `# Refine Idea: My Idea
+
+Refine this idea.
+
+## Refines Idea
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- [ ] Done
+`,
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['ideas']))
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'ideas-listed',
+      ideas: [
+        {
+          path: '.dust/ideas/my-idea.md',
+          title: 'My Idea',
+          status: 'refining',
+        },
+      ],
+    })
+  })
+
+  test('emits ideas-listed event with decomposing status when decompose task exists', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea',
+          },
+          tasks: {
+            'decompose-idea-my-idea.md': `# Decompose Idea: My Idea
+
+Decompose this idea.
+
+## Decomposes Idea
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- [ ] Done
+`,
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['ideas']))
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'ideas-listed',
+      ideas: [
+        {
+          path: '.dust/ideas/my-idea.md',
+          title: 'My Idea',
+          status: 'decomposing',
+        },
+      ],
+    })
+  })
+
+  test('emits ideas-listed event with shelving status when shelve task exists', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea',
+          },
+          tasks: {
+            'shelve-idea-my-idea.md': `# Shelve Idea: My Idea
+
+Shelve this idea.
+
+## Shelves Idea
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- [ ] Done
+`,
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['ideas']))
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'ideas-listed',
+      ideas: [
+        {
+          path: '.dust/ideas/my-idea.md',
+          title: 'My Idea',
+          status: 'shelving',
+        },
+      ],
+    })
+  })
+
+  test('emits principles-listed event when listing principles', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'first-principle.md': '# First Principle',
+            'second-principle.md': '# Second Principle',
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['principles']))
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'principles-listed',
+      principles: [
+        {
+          path: '.dust/principles/first-principle.md',
+          title: 'First Principle',
+        },
+        {
+          path: '.dust/principles/second-principle.md',
+          title: 'Second Principle',
+        },
+      ],
+    })
+  })
+
+  test('emits empty facts-listed event when no facts exist', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          facts: {},
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['facts']))
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'facts-listed',
+      facts: [],
+    })
+  })
+
+  test('emits empty ideas-listed event when no ideas exist', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['ideas']))
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'ideas-listed',
+      ideas: [],
+    })
+  })
+
+  test('emits empty principles-listed event when no principles exist', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {},
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['principles']))
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'principles-listed',
+      principles: [],
+    })
+  })
+
+  test('uses filename as title when no heading exists', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          facts: {
+            'my-fact.md': 'No heading here, just content.',
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['facts']))
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'facts-listed',
+      facts: [{ path: '.dust/facts/my-fact.md', title: 'my-fact' }],
+    })
+  })
+})

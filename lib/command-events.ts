@@ -7,12 +7,21 @@
  */
 
 /**
- * Events emitted by the `dust check` command.
+ * Events emitted by dust commands.
  */
 export type CommandEvent =
   | { type: 'check-started'; name: string }
   | { type: 'check-passed'; name: string; durationMs: number }
   | { type: 'check-failed'; name: string; durationMs: number; output?: string }
+  | { type: 'facts-listed'; facts: Array<{ path: string; title: string }> }
+  | {
+      type: 'ideas-listed'
+      ideas: Array<{ path: string; title: string; status: string }>
+    }
+  | {
+      type: 'principles-listed'
+      principles: Array<{ path: string; title: string }>
+    }
 
 /**
  * Wire format for command events, following the same pattern as EventMessage.
