@@ -62,7 +62,10 @@ export interface TaskGraph {
 export { CAPTURE_IDEA_PREFIX, findAllWorkflowTasks, parseOpenQuestions }
 export type { IdeaInProgress }
 
+export type ArtifactType = 'ideas' | 'tasks' | 'principles' | 'facts'
+
 export interface ArtifactsRepository {
+  artifactPath(type: ArtifactType, slug: string): string
   parseIdea(options: { slug: string }): Promise<Idea>
   listIdeas(): Promise<string[]>
   parsePrinciple(options: { slug: string }): Promise<Principle>
@@ -104,6 +107,10 @@ export function buildArtifactsRepository(
   dustPath: string
 ): ArtifactsRepository {
   return {
+    artifactPath(type: ArtifactType, slug: string): string {
+      return `${dustPath}/${type}/${slug}.md`
+    },
+
     async parseIdea(options: { slug: string }): Promise<Idea> {
       return parseIdeaImpl(fileSystem, dustPath, options.slug)
     },
@@ -263,6 +270,7 @@ export function buildReadOnlyArtifactsRepository(
   dustPath: string
 ): Pick<
   ArtifactsRepository,
+  | 'artifactPath'
   | 'parseIdea'
   | 'listIdeas'
   | 'parsePrinciple'
@@ -276,6 +284,10 @@ export function buildReadOnlyArtifactsRepository(
   | 'buildTaskGraph'
 > {
   return {
+    artifactPath(type: ArtifactType, slug: string): string {
+      return `${dustPath}/${type}/${slug}.md`
+    },
+
     async parseIdea(options: { slug: string }): Promise<Idea> {
       return parseIdeaImpl(fileSystem, dustPath, options.slug)
     },

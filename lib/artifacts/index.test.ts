@@ -86,6 +86,20 @@ This section tests the h1 break logic.
 }
 
 describe('buildArtifactsRepository', () => {
+  describe('artifactPath', () => {
+    test('returns the path for an artifact', () => {
+      const fileSystem = createFileSystem()
+      const repository = buildArtifactsRepository(fileSystem, '/project/.dust')
+
+      expect(repository.artifactPath('ideas', 'my-idea')).toBe(
+        '/project/.dust/ideas/my-idea.md'
+      )
+      expect(repository.artifactPath('tasks', 'my-task')).toBe(
+        '/project/.dust/tasks/my-task.md'
+      )
+    })
+  })
+
   describe('parseIdea', () => {
     test('parses an idea by slug', async () => {
       const fileSystem = createFileSystem()

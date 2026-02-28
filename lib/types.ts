@@ -10,7 +10,7 @@ export type { AgentSessionEvent, EventMessage } from './agent-events'
 
 // Ideas
 export type { Idea, IdeaOpenQuestion, IdeaOption } from './artifacts/ideas'
-export type { TaskGraph, TaskGraphNode } from './artifacts/index'
+export type { ArtifactType, TaskGraph, TaskGraphNode } from './artifacts/index'
 // Tasks
 export type { Task } from './artifacts/tasks'
 
