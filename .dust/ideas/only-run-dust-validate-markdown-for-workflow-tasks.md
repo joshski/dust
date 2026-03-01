@@ -7,11 +7,12 @@ When an agent works on a workflow task, run `dust lint` instead of `dust check` 
 Workflow tasks manage the dust planning system itself rather than implementing code changes. They include:
 
 - **Add Idea:** tasks (`CAPTURE_IDEA_PREFIX`) - Research and create a new idea file
+- **Expedite Idea:** tasks (`EXPEDITE_IDEA_PREFIX`) - Research briefly and implement directly if straightforward
 - **Refine Idea:** tasks - Research and refine an existing idea
 - **Decompose Idea:** tasks - Break an idea into concrete implementation tasks
 - **Shelve Idea:** tasks - Archive and remove an idea
 
-These task types are already identified by their title prefixes in `lib/workflow-tasks.ts`:
+These task types are already identified by their title prefixes in `lib/artifacts/workflow-tasks.ts`:
 
 ```typescript
 export const IDEA_TRANSITION_PREFIXES = [
@@ -21,6 +22,7 @@ export const IDEA_TRANSITION_PREFIXES = [
 ]
 
 export const CAPTURE_IDEA_PREFIX = 'Add Idea: '
+export const EXPEDITE_IDEA_PREFIX = 'Expedite Idea: '
 ```
 
 ## Motivation
@@ -55,59 +57,33 @@ Create a utility function (or enhance existing ones) to detect workflow tasks by
 ```typescript
 function isWorkflowTask(taskTitle: string): boolean {
   return IDEA_TRANSITION_PREFIXES.some(p => taskTitle.startsWith(p)) ||
-         taskTitle.startsWith(CAPTURE_IDEA_PREFIX)
+         taskTitle.startsWith(CAPTURE_IDEA_PREFIX) ||
+         taskTitle.startsWith(EXPEDITE_IDEA_PREFIX)
 }
 ```
 
-## Open Questions
+## Resolved Questions
 
 ### Where should the workflow task detection logic live?
 
-#### Option A: In `lib/workflow-tasks.ts` (Recommended)
+**Decision:** In `lib/artifacts/workflow-tasks.ts`
 
-Co-located with existing prefix constants and workflow task functions. This keeps all workflow task logic together and the prefixes (`IDEA_TRANSITION_PREFIXES`, `CAPTURE_IDEA_PREFIX`) are already defined there. The existing `WORKFLOW_TASK_TYPES` array already maps types to prefixes, making this a natural extension.
-
-**Recommendation:** This is the cleanest approach. CLI commands already import from this module for prefix constants.
-
-#### Option B: In a new utility module
-
-If the detection will be used in many places across different layers (CLI commands, hooks, templates), a dedicated module might provide better separation of concerns. However, this is likely over-engineering for a simple prefix check.
+Co-located with existing prefix constants and workflow task functions. This keeps all workflow task logic together and the prefixes (`IDEA_TRANSITION_PREFIXES`, `CAPTURE_IDEA_PREFIX`, `EXPEDITE_IDEA_PREFIX`) are already defined there. CLI commands already import from this module for prefix constants.
 
 ### How should the pre-push hook determine the task type?
 
-#### Option A: Analyze changes for `.dust/`-only pattern (Recommended)
+**Decision:** Analyze changes for `.dust/`-only pattern
 
-The pre-push hook needs to know if the commit is a workflow task completion to decide whether to run the full check or just markdown validation. If all committed changes are within `.dust/`, run `dust lint` instead of `dust check`. This leverages the existing `analyzeChangesForTaskOnlyPattern()` function in `pre-push.ts` but extends it to check for `.dust/`-only changes (not just task-only additions).
+If all committed changes are within `.dust/`, run `dust lint` instead of `dust check`. This leverages the existing `analyzeChangesForTaskOnlyPattern()` function in `pre-push.ts` but extends it to check for `.dust/`-only changes (not just task-only additions).
 
 **Pros:** Simple, no extra I/O, works with any `.dust/`-only commit
-**Cons:** May skip full checks for a non-workflow task that only touched `.dust/` files
-
-#### Option B: Check deleted task file prefix
-
-Parse the deleted task file from the commit and verify it starts with a workflow task prefix. This is more precise but requires reading the deleted file content from git.
-
-**Pros:** More accurate detection
-**Cons:** More complex, requires git show to read deleted file content
-
-#### Option C: Combine both approaches
-
-Require both conditions: changes are `.dust/`-only AND a deleted task file has a workflow prefix. This is the most precise but also most complex.
+**Cons:** May skip full checks for a non-workflow task that only touched `.dust/` files (acceptable tradeoff since `.dust/` changes shouldn't affect code quality)
 
 ### What about mixed commits with both `.dust/` and code changes?
 
-#### Option A: Run full check for any non-`.dust/` changes (Recommended)
+**Decision:** Run full check for any non-`.dust/` changes
 
-Any code changes trigger full validation. This aligns with the "stop the line" principle and keeps validation behavior predictable. Agents would naturally separate workflow and code changes into different commits.
-
-**Rationale:** Workflow tasks should only touch `.dust/` files. If an agent is modifying both `.dust/` and code, they're either doing multiple tasks or making implementation changes that warrant full validation.
-
-#### Option B: Run lint plus code linting only
-
-Skip tests but still lint any code that was changed. This is a middle ground but complicates the validation logic and may not catch issues that tests would find.
-
-#### Option C: Block the commit with a warning
-
-Warn the agent that they should separate workflow and code changes into different commits. This enforces cleaner commit boundaries but may be too strict for cases where updating a fact about code is legitimate.
+Any code changes trigger full validation. This aligns with the "stop the line" principle and keeps validation behavior predictable. Workflow tasks should only touch `.dust/` files. If an agent is modifying both `.dust/` and code, they're either doing multiple tasks or making implementation changes that warrant full validation.
 
 ## Principle Alignment
 
@@ -121,7 +97,7 @@ This idea supports:
 
 Key files to modify:
 
-1. **`lib/workflow-tasks.ts`** - Add `isWorkflowTask(taskTitle: string): boolean` helper
+1. **`lib/artifacts/workflow-tasks.ts`** - Add `isWorkflowTask(taskTitle: string): boolean` helper
 2. **`lib/cli/commands/focus.ts`** - Detect workflow tasks and provide tailored instructions
 3. **`lib/cli/commands/pre-push.ts`** - Add `.dust/`-only detection, conditionally call `lintMarkdown` instead of `check`
 
