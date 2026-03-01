@@ -17,8 +17,7 @@ export default defineConfig({
         // v8 does not honor `/* v8 ignore */` comments for function-level metrics
         // on anonymous functions inside async callbacks. These files use inline
         // ignores for line/statement coverage but must be excluded for 100%
-        // function coverage until v8 fixes this limitation.
-        // See: https://github.com/AntonyZ89/vitest-coverage-report/issues/27
+        // function coverage. This is a v8 coverage provider limitation.
         'lib/bucket/repository-loop.ts',
         'lib/cli/commands/bucket.ts',
       ],
