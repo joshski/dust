@@ -21,7 +21,7 @@ The bucket service (`dustbucket.com`) already provides a WebSocket-based event s
 
 3. **If a token is available**, send events without prompting.
 
-4. **Event delivery** is HTTP POST to `{DUST_BUCKET_HOST}/events` (or similar bucket service endpoint) with the token in the `Authorization: Bearer <token>` header. The existing `EventMessage` wire format is reused.
+4. **Event delivery** uses a WebSocket connection to the bucket service (same transport as `dust bucket`). This also enables the server to push `task-available` signals, so `dust loop` can sleep indefinitely between iterations instead of polling on a fixed interval.
 
 5. **Remove `DUST_EVENTS_URL` env var and `eventsUrl` settings** — the bucket service replaces this mechanism. This includes:
    - `settings.eventsUrl` field and `validateDustEventsUrl()` in `lib/config/settings.ts`
@@ -29,12 +29,37 @@ The bucket service (`dustbucket.com`) already provides a WebSocket-based event s
    - `PostEventFn` / `defaultPostEvent` / `createWireEventSender` in `lib/cli/commands/loop.ts` (replaced by bucket-aware sender)
    - References in the `dust-event-protocol.md` fact file and the `configuration-system.md` fact file
 
+### Shared WebSocket infrastructure
+
+`dust bucket` already implements WebSocket connection management in `lib/cli/commands/bucket.ts`: `connectWebSocket()` handles connect, reconnect with exponential backoff, and message dispatch. This logic is currently interleaved with bucket-specific state (`BucketState`, TUI, repository management).
+
+To share the WebSocket transport between `dust loop` and `dust bucket`, extract a reusable connection manager into `lib/bucket/connection.ts` (or similar) that handles:
+
+- **Connect with auth** — `WebSocketLike` creation with `Authorization: Bearer` header
+- **Reconnect with backoff** — exponential backoff from 1s to 30s (currently hardcoded in `bucket.ts` as `INITIAL_RECONNECT_DELAY_MS` / `MAX_RECONNECT_DELAY_MS`)
+- **Send events** — `createEventMessageSender()` already exists in `lib/bucket/events.ts` and is transport-agnostic (takes `() => WebSocketLike | null`)
+- **Receive messages** — dispatch parsed server messages to a callback; `dust loop` only needs `task-available`, while `dust bucket` also handles `repository-list`
+
+The extracted interface might look like:
+
+```ts
+interface BucketConnection {
+  sendEvent: SendEventFn
+  onMessage: (handler: (msg: ServerMessage) => void) => void
+  close: () => void
+}
+```
+
+`dust bucket` would use this plus its TUI/repository orchestration on top. `dust loop` would use it with a simpler message handler that just wakes the loop on `task-available`.
+
 ### Relevant code
 
 - `lib/cli/commands/loop.ts` — `loopClaude()`, `createWireEventSender()`, `createDefaultDependencies()`; currently reads `settings.eventsUrl` to decide whether to send events
-- `lib/config/settings.ts` — `eventsUrl` setting, `validateDustEventsUrl()`, `DUST_EVENTS_URL` overrides
+- `lib/cli/commands/bucket.ts` — `connectWebSocket()`, `waitForConnection()`, `resolveToken()`, reconnect logic; candidates for extraction
+- `lib/bucket/events.ts` — `createEventMessageSender()`, `WebSocketLike`, `SendEventFn`; already reusable
+- `lib/bucket/server-messages.ts` — `parseServerMessage()`, `ServerMessage` types; already reusable
 - `lib/bucket/auth.ts` — `loadStoredToken()`, `storeToken()`, `authenticate()`, `getDustbucketHost()`
-- `lib/cli/commands/bucket.ts` — `resolveToken()` — the token resolution pattern to reuse
+- `lib/config/settings.ts` — `eventsUrl` setting, `validateDustEventsUrl()`, `DUST_EVENTS_URL` overrides (to be removed)
 - `lib/bucket/terminal-ui.ts` — existing hand-rolled ANSI terminal UI (tabs, key input, status dots); a simpler menu component would follow the same pattern (no external library)
 
 ### Principles alignment
@@ -45,26 +70,6 @@ The bucket service (`dustbucket.com`) already provides a WebSocket-based event s
 - [Minimal Dependencies](../principles/minimal-dependencies.md) — no new library; terminal menu uses raw ANSI codes
 
 ## Open Questions
-
-### Should `dust loop` send events via HTTP POST or WebSocket?
-
-#### Use HTTP POST
-
-HTTP POST keeps delivery logic simple and aligns with the existing `defaultPostEvent` shape, but requires a defined bucket API endpoint.
-
-#### Use WebSocket
-
-WebSocket reuses the bucket transport model but adds connection lifecycle management to `dust loop`.
-
-### Does `dustbucket.com` already expose an authenticated HTTP endpoint for events?
-
-#### Endpoint already exists
-
-If the endpoint already exists, confirm the exact URL and auth contract and wire `dust loop` directly to it.
-
-#### Endpoint must be added server-side
-
-If no endpoint exists today, add one and define the target URL format before changing `dust loop`.
 
 ### How should `dust loop` behave when stdin is not a TTY?
 
@@ -106,12 +111,3 @@ Warn on `eventsUrl`/`DUST_EVENTS_URL` usage for one or more releases before remo
 
 Do a clean cut if current usage is low and migration complexity outweighs backward compatibility.
 
-### What HTTP path should the bucket host use for events?
-
-#### Use `/events`
-
-Short and direct endpoint that matches the single-purpose event ingest use case.
-
-#### Use `/api/events` or `/agent/events`
-
-More explicit namespacing that may fit existing server route conventions.
