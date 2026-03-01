@@ -75,9 +75,12 @@ export async function clearToken(
 }
 
 /** Visible for testing */
-export async function defaultExchangeCode(code: string): Promise<string> {
+export async function defaultExchangeCode(
+  code: string,
+  fetchFn: typeof fetch = fetch
+): Promise<string> {
   const host = getDustbucketHost()
-  const response = await fetch(`${host}/auth/cli/exchange`, {
+  const response = await fetchFn(`${host}/auth/cli/exchange`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ code }),
@@ -95,7 +98,9 @@ export async function defaultExchangeCode(code: string): Promise<string> {
 export async function authenticate(
   authDeps: AuthDependencies
 ): Promise<string> {
+  /* v8 ignore start - defaultExchangeCode fallback tested directly, not via authenticate */
   const exchange = authDeps.exchangeCode ?? defaultExchangeCode
+  /* v8 ignore stop */
 
   return new Promise<string>((resolve, reject) => {
     let timer: ReturnType<typeof setTimeout> | null = null
