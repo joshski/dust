@@ -203,7 +203,7 @@ const DEFAULT_SETTINGS: DustSettings = {
 /**
  * Detects the appropriate dust command based on lockfiles and environment.
  * Priority:
- * 1. bun.lockb exists → bunx dust
+ * 1. bun.lock or bun.lockb exists → bunx dust
  * 2. pnpm-lock.yaml exists → pnpx dust
  * 3. package-lock.json exists → npx dust
  * 4. No lockfile + BUN_INSTALL env var set → bunx dust
@@ -213,7 +213,10 @@ export function detectDustCommand(
   cwd: string,
   fileSystem: ReadableFileSystem
 ): string {
-  if (fileSystem.exists(join(cwd, 'bun.lockb'))) {
+  if (
+    fileSystem.exists(join(cwd, 'bun.lock')) ||
+    fileSystem.exists(join(cwd, 'bun.lockb'))
+  ) {
     return 'bunx dust'
   }
   if (fileSystem.exists(join(cwd, 'pnpm-lock.yaml'))) {
@@ -235,6 +238,7 @@ const LOCKFILE_COMMANDS: Array<{
   ecosystem: string
 }> = [
   // JavaScript
+  { file: 'bun.lock', command: 'bun install', ecosystem: 'js' },
   { file: 'bun.lockb', command: 'bun install', ecosystem: 'js' },
   { file: 'pnpm-lock.yaml', command: 'pnpm install', ecosystem: 'js' },
   { file: 'package-lock.json', command: 'npm install', ecosystem: 'js' },

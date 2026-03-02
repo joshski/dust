@@ -17,6 +17,13 @@ describe('detectDustCommand', () => {
     restoreEnv()
   })
 
+  test('returns bunx dust when bun.lock exists', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { 'bun.lock': '' },
+    })
+    expect(detectDustCommand('/project', fileSystem)).toBe('bunx dust')
+  })
+
   test('returns bunx dust when bun.lockb exists', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'bun.lockb': '' },
@@ -50,7 +57,17 @@ describe('detectDustCommand', () => {
     expect(detectDustCommand('/project', fileSystem)).toBe('npx dust')
   })
 
-  test('prioritizes bun.lockb over pnpm-lock.yaml', () => {
+  test('prioritizes bun.lock over bun.lockb', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        'bun.lock': '',
+        'bun.lockb': '',
+      },
+    })
+    expect(detectDustCommand('/project', fileSystem)).toBe('bunx dust')
+  })
+
+  test('prioritizes bun lockfiles over pnpm-lock.yaml', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         'bun.lockb': '',
@@ -85,6 +102,13 @@ describe('detectInstallCommand', () => {
   })
 
   // JavaScript ecosystem
+  test('returns bun install when bun.lock exists', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: { 'bun.lock': '' },
+    })
+    expect(detectInstallCommand('/project', fileSystem)).toBe('bun install')
+  })
+
   test('returns bun install when bun.lockb exists', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'bun.lockb': '' },
@@ -106,7 +130,17 @@ describe('detectInstallCommand', () => {
     expect(detectInstallCommand('/project', fileSystem)).toBe('npm install')
   })
 
-  test('prioritizes bun.lockb over pnpm-lock.yaml', () => {
+  test('prioritizes bun.lock over bun.lockb', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        'bun.lock': '',
+        'bun.lockb': '',
+      },
+    })
+    expect(detectInstallCommand('/project', fileSystem)).toBe('bun install')
+  })
+
+  test('prioritizes bun lockfiles over pnpm-lock.yaml', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         'bun.lockb': '',

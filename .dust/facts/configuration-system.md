@@ -6,7 +6,7 @@ Dust uses a JSON configuration file at `.dust/config/settings.json` to customize
 
 ### dustCommand
 
-The command used to invoke dust in agent instructions. Auto-detected based on lockfiles if not specified (bun.lockb → `bunx dust`, pnpm-lock.yaml → `pnpx dust`, package-lock.json → `npx dust`).
+The command used to invoke dust in agent instructions. Auto-detected based on lockfiles if not specified (bun.lock or bun.lockb → `bunx dust`, pnpm-lock.yaml → `pnpx dust`, package-lock.json → `npx dust`).
 
 ```json
 {
@@ -18,7 +18,7 @@ The command used to invoke dust in agent instructions. Auto-detected based on lo
 
 The command used to install dependencies. Auto-detected based on lockfiles if not specified:
 
-- **JavaScript**: bun.lockb → `bun install`, pnpm-lock.yaml → `pnpm install`, package-lock.json → `npm install`
+- **JavaScript**: bun.lock or bun.lockb → `bun install`, pnpm-lock.yaml → `pnpm install`, package-lock.json → `npm install`
 - **Ruby**: Gemfile.lock → `bundle install`
 - **Python**: poetry.lock → `poetry install`, Pipfile.lock → `pipenv install`, requirements.txt → `pip install -r requirements.txt`
 - **Go**: go.sum → `go mod download`
