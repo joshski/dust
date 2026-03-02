@@ -1,6 +1,6 @@
 # Use agentProvider from bucket protocol
 
-The dustbucket server sends `agentProvider` (either `'claude'` or `'codex'`) per repository in the `repository-list` message, but dust currently ignores it. The bucket worker should use this field to determine which coding agent to run for each repository.
+Dustbucket sends `agentProvider` per repository in `repository-list` but dust ignores it. The bucket worker should use this field to select the coding agent (claude vs codex) for each repository.
 
 ## Changes
 
