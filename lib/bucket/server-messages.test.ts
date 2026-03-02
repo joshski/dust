@@ -88,6 +88,56 @@ describe('parseServerMessage', () => {
       })
     })
 
+    it('parses gitSshUrl when present', () => {
+      const data = {
+        type: 'repository-list',
+        repositories: [
+          {
+            name: 'ssh-repo',
+            gitUrl: 'https://github.com/user/ssh-repo.git',
+            gitSshUrl: 'git@github.com:user/ssh-repo.git',
+            url: 'https://github.com/user/ssh-repo',
+            id: 555,
+            hasTask: false,
+          },
+        ],
+      }
+      const result = parseServerMessage(data)
+      expect(result).toEqual({
+        type: 'repository-list',
+        repositories: [
+          {
+            name: 'ssh-repo',
+            gitUrl: 'https://github.com/user/ssh-repo.git',
+            gitSshUrl: 'git@github.com:user/ssh-repo.git',
+            url: 'https://github.com/user/ssh-repo',
+            id: 555,
+            hasTask: false,
+          },
+        ],
+      })
+    })
+
+    it('omits gitSshUrl when absent', () => {
+      const data = {
+        type: 'repository-list',
+        repositories: [
+          {
+            name: 'https-only-repo',
+            gitUrl: 'https://github.com/user/https-only.git',
+            url: 'https://github.com/user/https-only',
+            id: 556,
+            hasTask: true,
+          },
+        ],
+      }
+      const result = parseServerMessage(data)
+      // Verify the key is not present (not just undefined)
+      const repo = (result as { repositories: { gitSshUrl?: string }[] })
+        .repositories[0]
+      expect('gitSshUrl' in repo).toBe(false)
+    })
+
     it('parses agentProvider when present', () => {
       const data = {
         type: 'repository-list',

@@ -58,6 +58,9 @@ export function parseServerMessage(data: unknown): ServerMessage | null {
         url: repo.url,
         hasTask: repo.hasTask,
       }
+      if (typeof repo.gitSshUrl === 'string') {
+        item.gitSshUrl = repo.gitSshUrl
+      }
       if (typeof repo.agentProvider === 'string') {
         item.agentProvider = repo.agentProvider
       }

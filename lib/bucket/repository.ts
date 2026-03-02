@@ -45,6 +45,7 @@ const log = createLogger('dust:bucket:repository')
 export interface Repository {
   name: string
   gitUrl: string
+  gitSshUrl?: string
   url: string
   id: number
   agentProvider?: string

@@ -17,16 +17,15 @@ export function getRepoPath(repoName: string, reposDir: string): string {
 }
 
 /**
- * Clone a repository to a temporary directory.
+ * Clone a repository using a specific URL.
  */
-export async function cloneRepository(
-  repository: { name: string; gitUrl: string },
+function cloneWithUrl(
+  url: string,
   targetPath: string,
-  spawn: typeof nodeSpawn,
-  context: CommandDependencies['context']
-): Promise<boolean> {
+  spawn: typeof nodeSpawn
+): Promise<{ success: boolean; stderr: string }> {
   return new Promise(resolve => {
-    const proc = spawn('git', ['clone', repository.gitUrl, targetPath], {
+    const proc = spawn('git', ['clone', url, targetPath], {
       stdio: ['ignore', 'pipe', 'pipe'],
       env: {
         ...process.env,
@@ -41,19 +40,51 @@ export async function cloneRepository(
     })
 
     proc.on('close', code => {
-      if (code === 0) {
-        resolve(true)
-      } else {
-        context.stderr(`Failed to clone ${repository.name}: ${stderr.trim()}`)
-        resolve(false)
-      }
+      resolve({ success: code === 0, stderr: stderr.trim() })
     })
 
     proc.on('error', error => {
-      context.stderr(`Failed to clone ${repository.name}: ${error.message}`)
-      resolve(false)
+      resolve({ success: false, stderr: error.message })
     })
   })
+}
+
+/**
+ * Clone a repository to a temporary directory.
+ * Tries HTTPS first, falls back to SSH if available and HTTPS fails.
+ */
+export async function cloneRepository(
+  repository: { name: string; gitUrl: string; gitSshUrl?: string },
+  targetPath: string,
+  spawn: typeof nodeSpawn,
+  context: CommandDependencies['context']
+): Promise<boolean> {
+  const httpsResult = await cloneWithUrl(repository.gitUrl, targetPath, spawn)
+
+  if (httpsResult.success) {
+    return true
+  }
+
+  if (repository.gitSshUrl) {
+    context.stderr(
+      `HTTPS clone failed for ${repository.name}, trying SSH: ${httpsResult.stderr}`
+    )
+    const sshResult = await cloneWithUrl(
+      repository.gitSshUrl,
+      targetPath,
+      spawn
+    )
+    if (sshResult.success) {
+      return true
+    }
+    context.stderr(
+      `Failed to clone ${repository.name} via SSH: ${sshResult.stderr}`
+    )
+    return false
+  }
+
+  context.stderr(`Failed to clone ${repository.name}: ${httpsResult.stderr}`)
+  return false
 }
 
 /**

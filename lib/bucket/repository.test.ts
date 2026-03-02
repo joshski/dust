@@ -277,6 +277,125 @@ describe('cloneRepository', () => {
     expect(result).toBe(false)
     expect(context.stderrLines.join('\n')).toContain('spawn failed')
   })
+
+  test('falls back to SSH when HTTPS clone fails', async () => {
+    const { spawn, calls, processes } = createMockSpawn()
+    const context = createContextEmulator()
+    const repo: Repository = {
+      name: 'test-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+      gitSshUrl: 'git@github.com:user/repo.git',
+      url: 'https://example.com/test-repo',
+      id: 4,
+    }
+
+    const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
+
+    // Fail the HTTPS clone
+    const httpsProc = processes.get(
+      'git clone https://github.com/user/repo.git /tmp/test-repo'
+    )
+    const httpsStderr = (httpsProc as EventEmitter & { stderr: EventEmitter })
+      .stderr
+    httpsStderr?.emit('data', 'authentication failed')
+    httpsProc?.emit('close', 128)
+
+    // Wait for SSH clone to be spawned
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    // Succeed the SSH clone
+    const sshProc = processes.get(
+      'git clone git@github.com:user/repo.git /tmp/test-repo'
+    )
+    sshProc?.emit('close', 0)
+
+    const result = await promise
+    expect(result).toBe(true)
+    expect(calls.length).toBe(2)
+    expect(calls[0].spawnArguments).toEqual([
+      'clone',
+      'https://github.com/user/repo.git',
+      '/tmp/test-repo',
+    ])
+    expect(calls[1].spawnArguments).toEqual([
+      'clone',
+      'git@github.com:user/repo.git',
+      '/tmp/test-repo',
+    ])
+    expect(context.stderrLines.join('\n')).toContain(
+      'HTTPS clone failed for test-repo, trying SSH'
+    )
+  })
+
+  test('reports SSH failure when both HTTPS and SSH fail', async () => {
+    const { spawn, processes } = createMockSpawn()
+    const context = createContextEmulator()
+    const repo: Repository = {
+      name: 'test-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+      gitSshUrl: 'git@github.com:user/repo.git',
+      url: 'https://example.com/test-repo',
+      id: 5,
+    }
+
+    const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
+
+    // Fail the HTTPS clone
+    const httpsProc = processes.get(
+      'git clone https://github.com/user/repo.git /tmp/test-repo'
+    )
+    const httpsStderr = (httpsProc as EventEmitter & { stderr: EventEmitter })
+      .stderr
+    httpsStderr?.emit('data', 'authentication failed')
+    httpsProc?.emit('close', 128)
+
+    // Wait for SSH clone to be spawned
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    // Fail the SSH clone
+    const sshProc = processes.get(
+      'git clone git@github.com:user/repo.git /tmp/test-repo'
+    )
+    const sshStderr = (sshProc as EventEmitter & { stderr: EventEmitter })
+      .stderr
+    sshStderr?.emit('data', 'Permission denied (publickey)')
+    sshProc?.emit('close', 128)
+
+    const result = await promise
+    expect(result).toBe(false)
+    expect(context.stderrLines.join('\n')).toContain(
+      'Failed to clone test-repo via SSH'
+    )
+  })
+
+  test('does not attempt SSH fallback when gitSshUrl is not provided', async () => {
+    const { spawn, calls, processes } = createMockSpawn()
+    const context = createContextEmulator()
+    const repo: Repository = {
+      name: 'test-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+      url: 'https://example.com/test-repo',
+      id: 6,
+    }
+
+    const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
+
+    // Fail the HTTPS clone
+    const httpsProc = processes.get(
+      'git clone https://github.com/user/repo.git /tmp/test-repo'
+    )
+    const httpsStderr = (httpsProc as EventEmitter & { stderr: EventEmitter })
+      .stderr
+    httpsStderr?.emit('data', 'authentication failed')
+    httpsProc?.emit('close', 128)
+
+    const result = await promise
+    expect(result).toBe(false)
+    expect(calls.length).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain(
+      'Failed to clone test-repo: authentication failed'
+    )
+  })
 })
 
 describe('removeRepository', () => {
