@@ -1,13 +1,23 @@
 import { describe, expect, test } from 'vitest'
 import type { AgentSessionEvent } from '../agent-events'
+import type { RunnerDependencies } from '../claude/run'
+import type { SendEventFn } from './events'
 import { createLogBuffer, getLogLines } from './log-buffer'
 import type { RepositoryDependencies, RepositoryState } from './repository'
 import {
   buildEventMessage,
+  createAgentEventHandler,
+  createBufferRun,
+  createBufferStdoutSink,
+  createCancelHandler,
   createLogCallbacks,
+  createLoopEventHandler,
   createWakeUpHandler,
   flushAndLogMultiLine,
+  type LoopState,
+  noOpPostEvent,
   runRepositoryLoop,
+  setupFallbackTimeout,
 } from './repository-loop'
 
 describe('createLogCallbacks', () => {
@@ -236,6 +246,267 @@ describe('createWakeUpHandler', () => {
   })
 })
 
+describe('createBufferStdoutSink', () => {
+  test('write buffers partial lines', () => {
+    const buffer = createLogBuffer()
+    const loopState: LoopState = {
+      partialLine: '',
+      sequence: 0,
+      agentSessionId: undefined,
+    }
+    const sink = createBufferStdoutSink(loopState, buffer)
+
+    sink.write('hello')
+
+    expect(getLogLines(buffer)).toHaveLength(0)
+    expect(loopState.partialLine).toBe('hello')
+  })
+
+  test('write flushes complete lines', () => {
+    const buffer = createLogBuffer()
+    const loopState: LoopState = {
+      partialLine: '',
+      sequence: 0,
+      agentSessionId: undefined,
+    }
+    const sink = createBufferStdoutSink(loopState, buffer)
+
+    sink.write('line1\nline2\npartial')
+
+    const lines = getLogLines(buffer)
+    expect(lines).toHaveLength(2)
+    expect(lines.map(l => l.text)).toEqual(['line1', 'line2'])
+    expect(loopState.partialLine).toBe('partial')
+  })
+
+  test('line flushes partial and logs multi-line text', () => {
+    const buffer = createLogBuffer()
+    const loopState: LoopState = {
+      partialLine: 'pending',
+      sequence: 0,
+      agentSessionId: undefined,
+    }
+    const sink = createBufferStdoutSink(loopState, buffer)
+
+    sink.line('content')
+
+    const lines = getLogLines(buffer)
+    expect(lines).toHaveLength(2)
+    expect(lines[0].text).toBe('pending')
+    expect(lines[1].text).toBe('content')
+    expect(loopState.partialLine).toBe('')
+  })
+})
+
+describe('createBufferRun', () => {
+  test('delegates to run with bufferSinkDeps', async () => {
+    let runCalledWith: unknown[] = []
+    const mockRun: RepositoryDependencies['run'] = async (...arguments_) => {
+      runCalledWith = arguments_
+    }
+    const mockDeps = {} as RunnerDependencies
+    const bufferRun = createBufferRun(mockRun, mockDeps)
+
+    await bufferRun('prompt', {} as Parameters<typeof bufferRun>[1])
+
+    expect(runCalledWith).toEqual(['prompt', {}, mockDeps])
+  })
+})
+
+describe('noOpPostEvent', () => {
+  test('returns a resolved promise', async () => {
+    await expect(noOpPostEvent()).resolves.toBeUndefined()
+  })
+})
+
+describe('createLoopEventHandler', () => {
+  test('logs formatted loop events', () => {
+    const buffer = createLogBuffer()
+    const handler = createLoopEventHandler(buffer)
+
+    handler({ type: 'loop.started', maxIterations: 1 })
+
+    const lines = getLogLines(buffer)
+    expect(lines.length).toBeGreaterThan(0)
+  })
+})
+
+describe('createAgentEventHandler', () => {
+  function createMinimalRepoState(): RepositoryState {
+    return {
+      repository: {
+        name: 'test',
+        gitUrl: 'test',
+        url: 'https://example.com/test',
+        id: 1,
+      },
+      path: '/test',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle',
+    }
+  }
+
+  test('sets agentStatus to busy on session-started', () => {
+    const repoState = createMinimalRepoState()
+    const loopState: LoopState = {
+      partialLine: '',
+      sequence: 0,
+      agentSessionId: undefined,
+    }
+    const handler = createAgentEventHandler({
+      repoState,
+      repoName: 'test',
+      loopState,
+    })
+
+    handler({
+      type: 'agent-session-started',
+      title: 'T',
+      prompt: 'p',
+      agentType: 'claude',
+      purpose: 'test',
+      machineName: 'm',
+      cwd: '/',
+      platform: 'darwin',
+      dustVersion: '1',
+      runtimeVersion: '1',
+    })
+
+    expect(repoState.agentStatus).toBe('busy')
+  })
+
+  test('sets agentStatus to idle on session-ended', () => {
+    const repoState = createMinimalRepoState()
+    repoState.agentStatus = 'busy'
+    const loopState: LoopState = {
+      partialLine: '',
+      sequence: 0,
+      agentSessionId: undefined,
+    }
+    const handler = createAgentEventHandler({
+      repoState,
+      repoName: 'test',
+      loopState,
+    })
+
+    handler({ type: 'agent-session-ended', success: true })
+
+    expect(repoState.agentStatus).toBe('idle')
+  })
+
+  test('sends event when sendEvent and sessionId provided', () => {
+    const repoState = createMinimalRepoState()
+    const loopState: LoopState = {
+      partialLine: '',
+      sequence: 0,
+      agentSessionId: 'agent-1',
+    }
+    const sentEvents: unknown[] = []
+    const sendEvent: SendEventFn = event => {
+      sentEvents.push(event)
+    }
+    const handler = createAgentEventHandler({
+      repoState,
+      sendEvent,
+      sessionId: 'session-1',
+      repoName: 'test',
+      loopState,
+    })
+
+    handler({ type: 'agent-session-activity' })
+
+    expect(sentEvents).toHaveLength(1)
+    expect(loopState.sequence).toBe(1)
+    const message = sentEvents[0] as ReturnType<typeof buildEventMessage>
+    expect(message.sessionId).toBe('session-1')
+    expect(message.repository).toBe('test')
+    expect(message.agentSessionId).toBe('agent-1')
+  })
+
+  test('does not send event when sendEvent is undefined', () => {
+    const repoState = createMinimalRepoState()
+    const loopState: LoopState = {
+      partialLine: '',
+      sequence: 0,
+      agentSessionId: undefined,
+    }
+    const handler = createAgentEventHandler({
+      repoState,
+      repoName: 'test',
+      loopState,
+    })
+
+    // Should not throw
+    handler({ type: 'agent-session-activity' })
+
+    expect(loopState.sequence).toBe(0)
+  })
+})
+
+describe('createCancelHandler', () => {
+  test('aborts the controller when called', () => {
+    const controller = new AbortController()
+    const cancel = createCancelHandler(controller)
+
+    cancel()
+
+    expect(controller.signal.aborted).toBe(true)
+  })
+})
+
+describe('setupFallbackTimeout', () => {
+  function createMinimalRepoState(): RepositoryState {
+    return {
+      repository: {
+        name: 'test',
+        gitUrl: 'test',
+        url: 'https://example.com/test',
+        id: 1,
+      },
+      path: '/test',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle',
+    }
+  }
+
+  test('resolves when handler is still active after timeout', async () => {
+    const repoState = createMinimalRepoState()
+    let resolved = false
+    const resolve = () => {
+      resolved = true
+    }
+    const handler = () => {}
+    repoState.wakeUp = handler
+    const sleep = () => Promise.resolve()
+
+    setupFallbackTimeout(repoState, sleep, resolve, handler)
+    await new Promise(r => setTimeout(r, 0))
+
+    expect(resolved).toBe(true)
+    expect(repoState.wakeUp).toBeUndefined()
+  })
+
+  test('does not resolve when a newer handler replaces the current one', async () => {
+    const repoState = createMinimalRepoState()
+    let resolved = false
+    const resolve = () => {
+      resolved = true
+    }
+    const handler = () => {}
+    repoState.wakeUp = () => {} // Different handler
+    const sleep = () => Promise.resolve()
+
+    setupFallbackTimeout(repoState, sleep, resolve, handler)
+    await new Promise(r => setTimeout(r, 0))
+
+    expect(resolved).toBe(false)
+  })
+})
+
 describe('runRepositoryLoop', () => {
   function createTestRepoState(): RepositoryState {
     return {
@@ -295,5 +566,92 @@ describe('runRepositoryLoop', () => {
     expect(errorLine).toBeDefined()
     expect(errorLine?.text).toContain('Unexpected spawn failure')
     expect(sleepCallCount).toBeGreaterThanOrEqual(1)
+  })
+
+  test('handles non-Error thrown values with String()', async () => {
+    const repoState = createTestRepoState()
+    let sleepCallCount = 0
+
+    const throwingSpawn = () => {
+      throw 'string error' // eslint-disable-line no-throw-literal
+    }
+
+    const repoDeps: RepositoryDependencies = {
+      spawn: throwingSpawn as RepositoryDependencies['spawn'],
+      run: async () => {},
+      fileSystem: {
+        exists: () => false,
+        readFile: async () => '',
+        readdir: async () => [],
+        isDirectory: () => false,
+        writeFile: async () => {},
+        mkdir: async () => {},
+        chmod: async () => {},
+        getFileCreationTime: () => 0,
+        rename: async () => {},
+      },
+      sleep: async () => {
+        sleepCallCount++
+        if (sleepCallCount >= 1) {
+          repoState.stopRequested = true
+        }
+      },
+      getReposDir: () => '/tmp/repos',
+    }
+
+    await runRepositoryLoop(repoState, repoDeps)
+
+    const lines = getLogLines(repoState.logBuffer)
+    const errorLine = lines.find(
+      l => l.stream === 'stderr' && l.text.includes('Loop error:')
+    )
+    expect(errorLine).toBeDefined()
+    expect(errorLine?.text).toContain('string error')
+  })
+
+  test('does not clear cancelCurrentIteration if replaced during iteration', async () => {
+    const repoState = createTestRepoState()
+    let sleepCallCount = 0
+    const replacementCancel = () => {}
+
+    const throwingSpawn = (() => {
+      let callCount = 0
+      return () => {
+        callCount++
+        // On the first call, replace cancelCurrentIteration before throwing
+        if (callCount === 1) {
+          repoState.cancelCurrentIteration = replacementCancel
+        }
+        throw new Error('fail')
+      }
+    })()
+
+    const repoDeps: RepositoryDependencies = {
+      spawn: throwingSpawn as RepositoryDependencies['spawn'],
+      run: async () => {},
+      fileSystem: {
+        exists: () => false,
+        readFile: async () => '',
+        readdir: async () => [],
+        isDirectory: () => false,
+        writeFile: async () => {},
+        mkdir: async () => {},
+        chmod: async () => {},
+        getFileCreationTime: () => 0,
+        rename: async () => {},
+      },
+      sleep: async () => {
+        sleepCallCount++
+        if (sleepCallCount >= 1) {
+          repoState.stopRequested = true
+        }
+      },
+      getReposDir: () => '/tmp/repos',
+    }
+
+    await runRepositoryLoop(repoState, repoDeps)
+
+    // The replacement cancel should still be in place
+    expect(repoState.cancelCurrentIteration).toBe(replacementCancel)
   })
 })

@@ -12,6 +12,7 @@ import {
   defaultRunnerDependencies,
   type RunnerDependencies,
 } from '../claude/run'
+import type { OutputSink } from '../claude/types'
 import { manageGitHooks } from '../cli/commands/agent-shared'
 import {
   formatLoopEvent,
@@ -121,15 +122,138 @@ export function createWakeUpHandler(
  * Create a no-op glob scanner for CommandDependencies.
  * The `next` command only uses fileSystem, not globScanner.
  */
-/* v8 ignore start - simple stub function */
 function createNoOpGlobScanner() {
   return {
-    scan: async function* () {
+    scan: async function* noOpScan() {
       // no-op
     },
   }
 }
-/* v8 ignore stop */
+
+/** Mutable state shared across loop iteration callbacks. */
+export interface LoopState {
+  partialLine: string
+  sequence: number
+  agentSessionId: string | undefined
+}
+
+/**
+ * Create an OutputSink that buffers stdout and logs complete lines.
+ */
+export function createBufferStdoutSink(
+  loopState: LoopState,
+  logBuffer: LogBuffer
+): OutputSink {
+  return {
+    write(text: string) {
+      loopState.partialLine += text
+      const lines = loopState.partialLine.split('\n')
+      // All complete lines get flushed; last segment is the pending partial
+      for (let i = 0; i < lines.length - 1; i++) {
+        appendLogLine(logBuffer, createLogLine(lines[i], 'stdout'))
+      }
+      loopState.partialLine = lines[lines.length - 1]
+    },
+    line(text: string) {
+      loopState.partialLine = flushAndLogMultiLine(
+        loopState.partialLine,
+        text,
+        logBuffer
+      )
+    },
+  }
+}
+
+/**
+ * Create a run function that redirects Claude output to a log buffer.
+ */
+export function createBufferRun(
+  run: RepositoryDependencies['run'],
+  bufferSinkDeps: RunnerDependencies
+): typeof claudeRun {
+  return (prompt, options) => run(prompt, options, bufferSinkDeps)
+}
+
+/** No-op postEvent for LoopDependencies. */
+export async function noOpPostEvent() {}
+
+/**
+ * Create a handler that logs formatted loop events to a log buffer.
+ */
+export function createLoopEventHandler(logBuffer: LogBuffer): LoopEmitFn {
+  return function onLoopEvent(event: LoopEvent) {
+    const formatted = formatLoopEvent(event)
+    if (formatted !== null) {
+      appendLogLine(logBuffer, createLogLine(formatted, 'stdout'))
+    }
+  }
+}
+
+/**
+ * Create a handler that logs formatted agent events and sends them over WebSocket.
+ */
+export function createAgentEventHandler(parameters: {
+  repoState: RepositoryState
+  sendEvent?: SendEventFn
+  sessionId?: string
+  repoName: string
+  loopState: LoopState
+}): SendAgentEventFn {
+  const { repoState, sendEvent, sessionId, repoName, loopState } = parameters
+  return function onAgentEvent(event: AgentSessionEvent) {
+    if (event.type === 'agent-session-started') {
+      repoState.agentStatus = 'busy'
+    } else if (event.type === 'agent-session-ended') {
+      repoState.agentStatus = 'idle'
+    }
+
+    const formatted = formatAgentEvent(event)
+    if (formatted !== null) {
+      appendLogLine(repoState.logBuffer, createLogLine(formatted, 'stdout'))
+    }
+
+    if (sendEvent && sessionId) {
+      loopState.sequence++
+      sendEvent(
+        buildEventMessage({
+          sequence: loopState.sequence,
+          sessionId,
+          repository: repoName,
+          repoId: repoState.repository.id,
+          event,
+          agentSessionId: loopState.agentSessionId,
+        })
+      )
+    }
+  }
+}
+
+/**
+ * Create a cancel handler that aborts the given controller.
+ */
+export function createCancelHandler(
+  abortController: AbortController
+): () => void {
+  return abortController.abort.bind(abortController)
+}
+
+/**
+ * Set up the fallback timeout for the no-tasks wait.
+ * Resolves the wait if this exact handler is still active after the timeout.
+ */
+export function setupFallbackTimeout(
+  repoState: RepositoryState,
+  sleep: RepositoryDependencies['sleep'],
+  resolve: () => void,
+  wakeUpForThisWait: () => void
+): void {
+  sleep(FALLBACK_TIMEOUT_MS).then(function onFallbackTimeout() {
+    if (repoState.wakeUp === wakeUpForThisWait) {
+      repoState.wakeUp = undefined
+      resolve()
+    }
+  })
+}
 
 /**
  * Run the async loop for a single repository.
@@ -146,15 +270,13 @@ export async function runRepositoryLoop(
   // Build CommandDependencies for runOneIteration
   const settings = await loadSettings(repoState.path, fileSystem)
   const logCallbacks = createLogCallbacks(repoState.logBuffer)
-  /* v8 ignore start - callback internals not tracked by v8 */
   const commandDeps: CommandDependencies = {
     arguments: [],
     context: {
       cwd: repoState.path,
-      stdout: (msg: string) => logCallbacks.stdout(msg),
-      stderr: (msg: string) => logCallbacks.stderr(msg),
+      stdout: logCallbacks.stdout,
+      stderr: logCallbacks.stderr,
     },
-    /* v8 ignore stop */
     fileSystem,
     globScanner: createNoOpGlobScanner(),
     settings,
@@ -162,96 +284,44 @@ export async function runRepositoryLoop(
 
   // Wrap run to redirect Claude output to the repo's log buffer
   // instead of writing directly to process.stdout
-  let partialLine = ''
+  const loopState: LoopState = {
+    partialLine: '',
+    sequence: 0,
+    agentSessionId: undefined,
+  }
   const bufferSinkDeps: RunnerDependencies = {
     ...defaultRunnerDependencies,
-    createStdoutSink: () => ({
-      write: (text: string) => {
-        partialLine += text
-        const lines = partialLine.split('\n')
-        // All complete lines get flushed; last segment is the pending partial
-        for (let i = 0; i < lines.length - 1; i++) {
-          appendLogLine(repoState.logBuffer, createLogLine(lines[i], 'stdout'))
-        }
-        partialLine = lines[lines.length - 1]
-      },
-      /* v8 ignore start - callback internals not tracked by v8 */
-      line: (text: string) => {
-        partialLine = flushAndLogMultiLine(
-          partialLine,
-          text,
-          repoState.logBuffer
-        )
-      },
-      /* v8 ignore stop */
-    }),
+    createStdoutSink: () =>
+      createBufferStdoutSink(loopState, repoState.logBuffer),
   }
-  const bufferRun: typeof claudeRun = (prompt, options) =>
-    run(prompt, options, bufferSinkDeps)
+  const bufferRun = createBufferRun(run, bufferSinkDeps)
 
   const loopDeps: LoopDependencies = {
     spawn,
     run: bufferRun,
     sleep,
-    postEvent: async () => {},
+    postEvent: noOpPostEvent,
   }
 
-  // Track agent session ID per iteration
-  let agentSessionId: string | undefined
-  let sequence = 0
+  const onLoopEvent = createLoopEventHandler(repoState.logBuffer)
 
-  // Log formatted loop events to the repo's log buffer
-  const onLoopEvent: LoopEmitFn = (event: LoopEvent) => {
-    const formatted = formatLoopEvent(event)
-    if (formatted !== null) {
-      appendLogLine(repoState.logBuffer, createLogLine(formatted, 'stdout'))
-    }
-  }
-
-  // Log formatted agent events and send over WebSocket
-  const onAgentEvent: SendAgentEventFn = (event: AgentSessionEvent) => {
-    if (event.type === 'agent-session-started') {
-      repoState.agentStatus = 'busy'
-    } else if (event.type === 'agent-session-ended') {
-      repoState.agentStatus = 'idle'
-    }
-
-    const formatted = formatAgentEvent(event)
-    if (formatted !== null) {
-      appendLogLine(repoState.logBuffer, createLogLine(formatted, 'stdout'))
-    }
-
-    /* v8 ignore start - callback internals not tracked by v8 */
-    if (sendEvent && sessionId) {
-      sequence++
-      sendEvent(
-        buildEventMessage({
-          sequence,
-          sessionId,
-          repository: repoName,
-          repoId: repoState.repository.id,
-          event,
-          agentSessionId,
-        })
-      )
-    }
-    /* v8 ignore stop */
-  }
+  const onAgentEvent = createAgentEventHandler({
+    repoState,
+    sendEvent,
+    sessionId,
+    repoName,
+    loopState,
+  })
 
   // Install git hooks before starting iterations
   const hooksInstalled = await manageGitHooks(commandDeps)
 
-  const logLine = (msg: string) =>
-    appendLogLine(repoState.logBuffer, createLogLine(msg, 'stdout'))
-
   log(`loop started for ${repoName} at ${repoState.path}`)
 
   while (!repoState.stopRequested) {
-    agentSessionId = crypto.randomUUID()
+    loopState.agentSessionId = crypto.randomUUID()
     const abortController = new AbortController()
-    const cancelCurrentIteration = () => {
-      abortController.abort()
-    }
+    const cancelCurrentIteration = createCancelHandler(abortController)
     repoState.cancelCurrentIteration = cancelCurrentIteration
     let result: Awaited<ReturnType<typeof runOneIteration>>
     try {
@@ -288,26 +358,26 @@ export async function runRepositoryLoop(
       if (repoState.taskAvailablePending) {
         repoState.taskAvailablePending = false
         log(`${repoName}: task signal received during iteration, rechecking`)
-        logLine('Task signal received during iteration, rechecking...')
+        appendLogLine(
+          repoState.logBuffer,
+          createLogLine(
+            'Task signal received during iteration, rechecking...',
+            'stdout'
+          )
+        )
         continue
       }
 
       log(`${repoName}: no tasks available, waiting`)
-      logLine('Waiting for tasks...')
-      /* v8 ignore start - callback internals not tracked by v8 */
-      await new Promise<void>(resolve => {
+      appendLogLine(
+        repoState.logBuffer,
+        createLogLine('Waiting for tasks...', 'stdout')
+      )
+      await new Promise<void>(function waitForTasks(resolve) {
         const wakeUpForThisWait = createWakeUpHandler(repoState, resolve)
         repoState.wakeUp = wakeUpForThisWait
-        /* v8 ignore stop */
         // Fallback timeout so the loop isn't stuck forever if no signal arrives
-        sleep(FALLBACK_TIMEOUT_MS).then(() => {
-          // Only resolve if this exact wait is still active. Older timeout
-          // callbacks must not clobber a newer wait's wakeUp handler.
-          if (repoState.wakeUp === wakeUpForThisWait) {
-            repoState.wakeUp = undefined
-            resolve()
-          }
-        })
+        setupFallbackTimeout(repoState, sleep, resolve, wakeUpForThisWait)
       })
     }
   }

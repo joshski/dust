@@ -18,7 +18,6 @@ export default defineConfig({
         // on anonymous functions inside async callbacks. These files use inline
         // ignores for line/statement coverage but must be excluded for 100%
         // function coverage. This is a v8 coverage provider limitation.
-        'lib/bucket/repository-loop.ts',
         'lib/cli/commands/bucket.ts',
       ],
       reporter: [
