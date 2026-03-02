@@ -65,7 +65,7 @@ This limits blast radius but requires dustbucket.com server changes.
 
 Use container isolation (Docker, gVisor, Firecracker) to run agents without access to `~/.dust/`. The bucket daemon would run outside the sandbox and proxy events on behalf of agents.
 
-This is the approach contemplated in [Autonomous Agents Need Sandboxes](../facts/autonomous-agents-need-sandboxes.md) and [per-repo Dockerfile](per-repo-dockerfile.md).
+This is the approach contemplated in [Autonomous Agents Need Sandboxes](../facts/autonomous-agents-need-sandboxes.md) and the per-repo Dockerfile task.
 
 ### Server-side authentication proxy
 
