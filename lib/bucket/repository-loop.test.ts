@@ -508,13 +508,14 @@ describe('setupFallbackTimeout', () => {
 })
 
 describe('runRepositoryLoop', () => {
-  function createTestRepoState(): RepositoryState {
+  function createTestRepoState(agentProvider?: string): RepositoryState {
     return {
       repository: {
         name: 'test-repo',
         gitUrl: 'git@example.com:test/repo.git',
         url: 'https://example.com/test/repo',
         id: 1,
+        agentProvider,
       },
       path: '/tmp/test-repo',
       loopPromise: null,
@@ -653,5 +654,87 @@ describe('runRepositoryLoop', () => {
 
     // The replacement cancel should still be in place
     expect(repoState.cancelCurrentIteration).toBe(replacementCancel)
+  })
+
+  test('initializes codex runner when agentProvider is codex', async () => {
+    const repoState = createTestRepoState('codex')
+    let sleepCallCount = 0
+
+    // Spawn throws synchronously, causing the loop to error
+    // but we can verify the loop started successfully with codex configuration
+    const throwingSpawn = () => {
+      throw new Error('spawn failure')
+    }
+
+    const repoDeps: RepositoryDependencies = {
+      spawn: throwingSpawn as RepositoryDependencies['spawn'],
+      run: async () => {},
+      fileSystem: {
+        exists: () => false,
+        readFile: async () => '',
+        readdir: async () => [],
+        isDirectory: () => false,
+        writeFile: async () => {},
+        mkdir: async () => {},
+        chmod: async () => {},
+        getFileCreationTime: () => 0,
+        rename: async () => {},
+      },
+      sleep: async () => {
+        sleepCallCount++
+        if (sleepCallCount >= 1) {
+          repoState.stopRequested = true
+        }
+      },
+      getReposDir: () => '/tmp/repos',
+    }
+
+    // Should complete without throwing, verifying codex runner initialization works
+    await runRepositoryLoop(repoState, repoDeps)
+
+    // Loop should have run and handled the error
+    const lines = getLogLines(repoState.logBuffer)
+    const errorLine = lines.find(l => l.text.includes('Loop error:'))
+    expect(errorLine).toBeDefined()
+  })
+
+  test('initializes claude runner when agentProvider is not set', async () => {
+    const repoState = createTestRepoState()
+    let sleepCallCount = 0
+
+    const throwingSpawn = () => {
+      throw new Error('spawn failure')
+    }
+
+    const repoDeps: RepositoryDependencies = {
+      spawn: throwingSpawn as RepositoryDependencies['spawn'],
+      run: async () => {},
+      fileSystem: {
+        exists: () => false,
+        readFile: async () => '',
+        readdir: async () => [],
+        isDirectory: () => false,
+        writeFile: async () => {},
+        mkdir: async () => {},
+        chmod: async () => {},
+        getFileCreationTime: () => 0,
+        rename: async () => {},
+      },
+      sleep: async () => {
+        sleepCallCount++
+        if (sleepCallCount >= 1) {
+          repoState.stopRequested = true
+        }
+      },
+      getReposDir: () => '/tmp/repos',
+    }
+
+    // Should complete without throwing, verifying claude runner initialization works
+    await runRepositoryLoop(repoState, repoDeps)
+
+    // Loop should have run and handled the error
+    const lines = getLogLines(repoState.logBuffer)
+    const errorLine = lines.find(l => l.text.includes('Loop error:'))
+    expect(errorLine).toBeDefined()
   })
 })

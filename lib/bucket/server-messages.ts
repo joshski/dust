@@ -51,13 +51,17 @@ export function parseServerMessage(data: unknown): ServerMessage | null {
       ) {
         return null
       }
-      repositories.push({
+      const item: RepositoryListItem = {
         id: repo.id,
         name: repo.name,
         gitUrl: repo.gitUrl,
         url: repo.url,
         hasTask: repo.hasTask,
-      })
+      }
+      if (typeof repo.agentProvider === 'string') {
+        item.agentProvider = repo.agentProvider
+      }
+      repositories.push(item)
     }
     return { type: 'repository-list', repositories }
   }

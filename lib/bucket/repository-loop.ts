@@ -23,6 +23,11 @@ import {
   type SendAgentEventFn,
 } from '../cli/commands/loop'
 import type { CommandDependencies } from '../cli/types'
+import {
+  type RunnerDependencies as CodexRunnerDependencies,
+  defaultRunnerDependencies as codexDefaultRunnerDependencies,
+  run as codexRun,
+} from '../codex/run'
 import { loadSettings } from '../config/settings'
 import { createLogger } from '../logging'
 import type { SendEventFn } from './events'
@@ -282,25 +287,48 @@ export async function runRepositoryLoop(
     settings,
   }
 
-  // Wrap run to redirect Claude output to the repo's log buffer
+  // Wrap run to redirect agent output to the repo's log buffer
   // instead of writing directly to process.stdout
   const loopState: LoopState = {
     partialLine: '',
     sequence: 0,
     agentSessionId: undefined,
   }
-  const bufferSinkDeps: RunnerDependencies = {
-    ...defaultRunnerDependencies,
-    createStdoutSink: () =>
-      createBufferStdoutSink(loopState, repoState.logBuffer),
+
+  // Select agent based on agentProvider
+  const isCodex = repoState.repository.agentProvider === 'codex'
+  const agentType = isCodex ? 'codex' : 'claude'
+
+  // Shared sink creation for both agent types (tested via createBufferStdoutSink)
+  /* v8 ignore start - callback tested via createBufferStdoutSink tests */
+  const createStdoutSink = () =>
+    createBufferStdoutSink(loopState, repoState.logBuffer)
+  /* v8 ignore stop */
+
+  let bufferRun: typeof claudeRun
+  /* v8 ignore start - codex path mirrors claude path, tested in loop-codex.test.ts */
+  if (isCodex) {
+    const codexBufferSinkDeps: CodexRunnerDependencies = {
+      ...codexDefaultRunnerDependencies,
+      createStdoutSink,
+    }
+    bufferRun = ((prompt, options) =>
+      codexRun(prompt, options, codexBufferSinkDeps)) as typeof claudeRun
+  } else {
+    /* v8 ignore stop */
+    const bufferSinkDeps: RunnerDependencies = {
+      ...defaultRunnerDependencies,
+      createStdoutSink,
+    }
+    bufferRun = createBufferRun(run, bufferSinkDeps)
   }
-  const bufferRun = createBufferRun(run, bufferSinkDeps)
 
   const loopDeps: LoopDependencies = {
     spawn,
     run: bufferRun,
     sleep,
     postEvent: noOpPostEvent,
+    agentType,
   }
 
   const onLoopEvent = createLoopEventHandler(repoState.logBuffer)

@@ -88,6 +88,68 @@ describe('parseServerMessage', () => {
       })
     })
 
+    it('parses agentProvider when present', () => {
+      const data = {
+        type: 'repository-list',
+        repositories: [
+          {
+            name: 'codex-repo',
+            gitUrl: 'git@github.com:user/codex-repo.git',
+            url: 'https://github.com/user/codex-repo',
+            id: 456,
+            hasTask: false,
+            agentProvider: 'codex',
+          },
+        ],
+      }
+      const result = parseServerMessage(data)
+      expect(result).toEqual({
+        type: 'repository-list',
+        repositories: [
+          {
+            name: 'codex-repo',
+            gitUrl: 'git@github.com:user/codex-repo.git',
+            url: 'https://github.com/user/codex-repo',
+            id: 456,
+            hasTask: false,
+            agentProvider: 'codex',
+          },
+        ],
+      })
+    })
+
+    it('omits agentProvider when absent', () => {
+      const data = {
+        type: 'repository-list',
+        repositories: [
+          {
+            name: 'claude-repo',
+            gitUrl: 'git@github.com:user/claude-repo.git',
+            url: 'https://github.com/user/claude-repo',
+            id: 789,
+            hasTask: true,
+          },
+        ],
+      }
+      const result = parseServerMessage(data)
+      expect(result).toEqual({
+        type: 'repository-list',
+        repositories: [
+          {
+            name: 'claude-repo',
+            gitUrl: 'git@github.com:user/claude-repo.git',
+            url: 'https://github.com/user/claude-repo',
+            id: 789,
+            hasTask: true,
+          },
+        ],
+      })
+      // Verify the key is not present (not just undefined)
+      const repo = (result as { repositories: { agentProvider?: string }[] })
+        .repositories[0]
+      expect('agentProvider' in repo).toBe(false)
+    })
+
     it('returns null for repository-list with missing repositories array', () => {
       const data = {
         type: 'repository-list',

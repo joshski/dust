@@ -47,6 +47,7 @@ export interface Repository {
   gitUrl: string
   url: string
   id: number
+  agentProvider?: string
 }
 
 export interface RepositoryState {
