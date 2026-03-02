@@ -1748,6 +1748,9 @@ describe('loopClaude', () => {
   })
 
   test('detects Docker mode when .dust/Dockerfile exists', async () => {
+    const originalToken = process.env.CLAUDE_CODE_OAUTH_TOKEN
+    process.env.CLAUDE_CODE_OAUTH_TOKEN = 'test-token'
+
     const dependencies = createDependencies({
       project: {
         '.dust': {
@@ -1779,6 +1782,44 @@ describe('loopClaude', () => {
     expect(context.stdoutLines.join('\n')).toContain(
       'Docker image dust-agent-project ready'
     )
+
+    if (originalToken === undefined) delete process.env.CLAUDE_CODE_OAUTH_TOKEN
+    else process.env.CLAUDE_CODE_OAUTH_TOKEN = originalToken
+  })
+
+  test('returns error when CLAUDE_CODE_OAUTH_TOKEN is not set in Docker mode', async () => {
+    const originalToken = process.env.CLAUDE_CODE_OAUTH_TOKEN
+    delete process.env.CLAUDE_CODE_OAUTH_TOKEN
+
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          Dockerfile: 'FROM node:20',
+          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+        },
+      },
+    })
+    dependencies.arguments = ['1']
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const loopDeps = createLoopDeps({
+      run: async () => {},
+      dockerDeps: {
+        existsSync: (p: string) =>
+          p === '/project/.dust/Dockerfile' || p.includes('.gitconfig'),
+        homedir: () => '/home/user',
+        spawn: createMockSpawn(0),
+      },
+    })
+
+    const result = await loopClaude(dependencies, loopDeps)
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('CLAUDE_CODE_OAUTH_TOKEN')
+
+    if (originalToken === undefined) delete process.env.CLAUDE_CODE_OAUTH_TOKEN
+    else process.env.CLAUDE_CODE_OAUTH_TOKEN = originalToken
   })
 
   test('returns error when Docker not available', async () => {

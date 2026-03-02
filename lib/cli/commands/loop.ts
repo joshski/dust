@@ -581,6 +581,13 @@ export async function loopClaude(
       homeDir,
       hasGitconfig: existsSync(path.join(homeDir, '.gitconfig')),
     }
+
+    if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) {
+      context.stderr(
+        'Docker mode requires CLAUDE_CODE_OAUTH_TOKEN. Run `claude setup-token` and export the token.'
+      )
+      return { exitCode: 1 }
+    }
   } else {
     log('no .dust/Dockerfile found, running without Docker')
   }

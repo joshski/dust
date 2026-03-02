@@ -396,6 +396,18 @@ export async function runRepositoryLoop(
           hasGitconfig: dockerDeps.existsSync(path.join(homeDir, '.gitconfig')),
         }
         log(`Docker config ready: ${JSON.stringify(dockerConfig)}`)
+
+        if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) {
+          log('CLAUDE_CODE_OAUTH_TOKEN is not set, cannot run in Docker mode')
+          appendLogLine(
+            repoState.logBuffer,
+            createLogLine(
+              'Docker mode requires CLAUDE_CODE_OAUTH_TOKEN. Run `claude setup-token` and export the token.',
+              'stderr'
+            )
+          )
+          return
+        }
       }
     }
   } else {
