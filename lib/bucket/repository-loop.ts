@@ -5,6 +5,9 @@
  * for a single repository.
  */
 
+import { existsSync as fsExistsSync } from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import type { AgentSessionEvent, EventMessage } from '../agent-events'
 import { createHeartbeatThrottler, formatAgentEvent } from '../agent-events'
 import {
@@ -12,7 +15,7 @@ import {
   defaultRunnerDependencies,
   type RunnerDependencies,
 } from '../claude/run'
-import type { OutputSink } from '../claude/types'
+import type { DockerSpawnConfig, OutputSink } from '../claude/types'
 import { manageGitHooks } from '../cli/commands/agent-shared'
 import {
   formatLoopEvent,
@@ -29,6 +32,12 @@ import {
   run as codexRun,
 } from '../codex/run'
 import { loadSettings } from '../config/settings'
+import {
+  buildDockerImage,
+  generateImageTag,
+  hasDockerfile,
+  isDockerAvailable,
+} from '../docker/docker-agent'
 import { createLogger } from '../logging'
 import type { SendEventFn } from './events'
 import { appendLogLine, createLogLine, type LogBuffer } from './log-buffer'
@@ -344,6 +353,55 @@ export async function runRepositoryLoop(
   // Install git hooks before starting iterations
   const hooksInstalled = await manageGitHooks(commandDeps)
 
+  // Check for Docker mode (.dust/Dockerfile)
+  let dockerConfig: DockerSpawnConfig | undefined
+  const dockerDeps = {
+    spawn: repoDeps.dockerDeps?.spawn ?? spawn,
+    homedir: repoDeps.dockerDeps?.homedir ?? os.homedir,
+    existsSync: repoDeps.dockerDeps?.existsSync ?? fsExistsSync,
+  }
+
+  log(`checking for .dust/Dockerfile in ${repoState.path}`)
+  if (hasDockerfile(repoState.path, dockerDeps)) {
+    const imageTag = generateImageTag(repoState.path)
+    log(`Dockerfile found, image tag: ${imageTag}`)
+    onLoopEvent({ type: 'loop.docker_detected', imageTag })
+
+    if (!(await isDockerAvailable(dockerDeps))) {
+      log('Docker not available')
+      appendLogLine(
+        repoState.logBuffer,
+        createLogLine(
+          'Docker not available. Install Docker or remove .dust/Dockerfile.',
+          'stderr'
+        )
+      )
+    } else {
+      onLoopEvent({ type: 'loop.docker_building', imageTag })
+      const buildResult = await buildDockerImage(
+        { repoPath: repoState.path, imageTag },
+        dockerDeps
+      )
+
+      if (!buildResult.success) {
+        onLoopEvent({ type: 'loop.docker_error', error: buildResult.error })
+        log(`Docker build failed: ${buildResult.error}`)
+      } else {
+        onLoopEvent({ type: 'loop.docker_built', imageTag })
+        const homeDir = dockerDeps.homedir()
+        dockerConfig = {
+          imageTag,
+          repoPath: repoState.path,
+          homeDir,
+          hasGitconfig: dockerDeps.existsSync(path.join(homeDir, '.gitconfig')),
+        }
+        log(`Docker config ready: ${JSON.stringify(dockerConfig)}`)
+      }
+    }
+  } else {
+    log('no .dust/Dockerfile found, running without Docker')
+  }
+
   log(`loop started for ${repoName} at ${repoState.path}`)
 
   while (!repoState.stopRequested) {
@@ -363,6 +421,7 @@ export async function runRepositoryLoop(
           signal: abortController.signal,
           repositoryId: repoState.repository.id.toString(),
           onRawEvent: createHeartbeatThrottler(onAgentEvent),
+          docker: dockerConfig,
         }
       )
     } catch (error) {

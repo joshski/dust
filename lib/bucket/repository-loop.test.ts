@@ -737,4 +737,189 @@ describe('runRepositoryLoop', () => {
     const errorLine = lines.find(l => l.text.includes('Loop error:'))
     expect(errorLine).toBeDefined()
   })
+
+  test('detects Dockerfile and builds docker image', async () => {
+    const repoState = createTestRepoState()
+    let sleepCallCount = 0
+    let dockerBuildCalled = false
+
+    const repoDeps: RepositoryDependencies = {
+      spawn: ((cmd: string, spawnArgs: string[]) => {
+        if (cmd === 'docker' && spawnArgs[0] === '--version') {
+          const proc = {
+            on(event: string, listener: (code: number) => void) {
+              if (event === 'close') setTimeout(() => listener(0), 0)
+              return proc
+            },
+            stdout: { on: () => {} },
+            stderr: { on: () => {} },
+          }
+          return proc
+        }
+        if (cmd === 'docker' && spawnArgs[0] === 'build') {
+          dockerBuildCalled = true
+          const proc = {
+            on(event: string, listener: (code: number) => void) {
+              if (event === 'close') setTimeout(() => listener(0), 0)
+              return proc
+            },
+            stdout: { on: () => {} },
+            stderr: { on: () => {} },
+          }
+          return proc
+        }
+        // git pull / other spawns - throw to stop the loop
+        throw new Error('spawn failure')
+      }) as unknown as RepositoryDependencies['spawn'],
+      run: async () => {},
+      fileSystem: {
+        exists: () => false,
+        readFile: async () => '',
+        readdir: async () => [],
+        isDirectory: () => false,
+        writeFile: async () => {},
+        mkdir: async () => {},
+        chmod: async () => {},
+        getFileCreationTime: () => 0,
+        rename: async () => {},
+      },
+      sleep: async () => {
+        sleepCallCount++
+        if (sleepCallCount >= 1) {
+          repoState.stopRequested = true
+        }
+      },
+      getReposDir: () => '/tmp/repos',
+      dockerDeps: {
+        existsSync: (p: string) => p.includes('.dust/Dockerfile'),
+        homedir: () => '/home/test',
+      },
+    }
+
+    await runRepositoryLoop(repoState, repoDeps)
+
+    expect(dockerBuildCalled).toBe(true)
+    const lines = getLogLines(repoState.logBuffer)
+    const dockerDetected = lines.find(l =>
+      l.text.includes('Docker mode: found .dust/Dockerfile')
+    )
+    expect(dockerDetected).toBeDefined()
+    const dockerReady = lines.find(l => l.text.includes('ready'))
+    expect(dockerReady).toBeDefined()
+  })
+
+  test('logs warning when Dockerfile found but Docker not available', async () => {
+    const repoState = createTestRepoState()
+    let sleepCallCount = 0
+
+    const repoDeps: RepositoryDependencies = {
+      spawn: ((cmd: string, spawnArgs: string[]) => {
+        if (cmd === 'docker' && spawnArgs[0] === '--version') {
+          const proc = {
+            on(event: string, listener: (code: number) => void) {
+              if (event === 'close') setTimeout(() => listener(1), 0)
+              return proc
+            },
+            stdout: { on: () => {} },
+            stderr: { on: () => {} },
+          }
+          return proc
+        }
+        throw new Error('spawn failure')
+      }) as unknown as RepositoryDependencies['spawn'],
+      run: async () => {},
+      fileSystem: {
+        exists: () => false,
+        readFile: async () => '',
+        readdir: async () => [],
+        isDirectory: () => false,
+        writeFile: async () => {},
+        mkdir: async () => {},
+        chmod: async () => {},
+        getFileCreationTime: () => 0,
+        rename: async () => {},
+      },
+      sleep: async () => {
+        sleepCallCount++
+        if (sleepCallCount >= 1) {
+          repoState.stopRequested = true
+        }
+      },
+      getReposDir: () => '/tmp/repos',
+      dockerDeps: {
+        existsSync: (p: string) => p.includes('.dust/Dockerfile'),
+        homedir: () => '/home/test',
+      },
+    }
+
+    await runRepositoryLoop(repoState, repoDeps)
+
+    const lines = getLogLines(repoState.logBuffer)
+    const dockerNotAvailable = lines.find(l =>
+      l.text.includes('Docker not available')
+    )
+    expect(dockerNotAvailable).toBeDefined()
+  })
+
+  test('logs error when Docker build fails', async () => {
+    const repoState = createTestRepoState()
+    let sleepCallCount = 0
+
+    const repoDeps: RepositoryDependencies = {
+      spawn: ((cmd: string, spawnArgs: string[]) => {
+        if (cmd === 'docker' && spawnArgs[0] === '--version') {
+          const proc = {
+            on(event: string, listener: (code: number) => void) {
+              if (event === 'close') setTimeout(() => listener(0), 0)
+              return proc
+            },
+            stdout: { on: () => {} },
+            stderr: { on: () => {} },
+          }
+          return proc
+        }
+        if (cmd === 'docker' && spawnArgs[0] === 'build') {
+          const proc = {
+            on(event: string, listener: (code: number) => void) {
+              if (event === 'close') setTimeout(() => listener(1), 0)
+              return proc
+            },
+            stdout: { on: () => {} },
+            stderr: { on: () => {} },
+          }
+          return proc
+        }
+        throw new Error('spawn failure')
+      }) as unknown as RepositoryDependencies['spawn'],
+      run: async () => {},
+      fileSystem: {
+        exists: () => false,
+        readFile: async () => '',
+        readdir: async () => [],
+        isDirectory: () => false,
+        writeFile: async () => {},
+        mkdir: async () => {},
+        chmod: async () => {},
+        getFileCreationTime: () => 0,
+        rename: async () => {},
+      },
+      sleep: async () => {
+        sleepCallCount++
+        if (sleepCallCount >= 1) {
+          repoState.stopRequested = true
+        }
+      },
+      getReposDir: () => '/tmp/repos',
+      dockerDeps: {
+        existsSync: (p: string) => p.includes('.dust/Dockerfile'),
+        homedir: () => '/home/test',
+      },
+    }
+
+    await runRepositoryLoop(repoState, repoDeps)
+
+    const lines = getLogLines(repoState.logBuffer)
+    const dockerError = lines.find(l => l.text.includes('Docker error:'))
+    expect(dockerError).toBeDefined()
+  })
 })

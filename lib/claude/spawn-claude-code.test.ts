@@ -436,9 +436,15 @@ describe('spawnClaudeCode', () => {
     expect(capturedArgs).toContain('--rm')
     expect(capturedArgs).toContain('-i')
     expect(capturedArgs).toContain('/home/user/project:/workspace')
-    expect(capturedArgs).toContain('/home/user/.claude:/root/.claude:ro')
-    expect(capturedArgs).toContain('/home/user/.ssh:/root/.ssh:ro')
-    expect(capturedArgs).toContain('/home/user/.gitconfig:/root/.gitconfig:ro')
+    expect(capturedArgs).toContain('/home/user/.claude:/home/user/.claude')
+    expect(capturedArgs).toContain(
+      '/home/user/.claude.json:/home/user/.claude.json'
+    )
+    expect(capturedArgs).toContain('/home/user/.ssh:/home/user/.ssh:ro')
+    expect(capturedArgs).toContain('HOME=/home/user')
+    expect(capturedArgs).toContain(
+      '/home/user/.gitconfig:/home/user/.gitconfig:ro'
+    )
     expect(capturedArgs).toContain('dust-agent-test')
     expect(capturedArgs).toContain('claude')
     expect(capturedArgs).toContain('-p')
@@ -529,5 +535,58 @@ describe('spawnClaudeCode', () => {
     expect(capturedArgs).toContain('-e')
     expect(capturedArgs).toContain('DUST_UNATTENDED=1')
     expect(capturedArgs).toContain('MY_VAR=value')
+  })
+
+  test('passes through CLAUDE_CODE_OAUTH_TOKEN and OPENAI_API_KEY from process.env', async () => {
+    const originalClaude = process.env.CLAUDE_CODE_OAUTH_TOKEN
+    const originalOpenai = process.env.OPENAI_API_KEY
+    process.env.CLAUDE_CODE_OAUTH_TOKEN = 'test-oauth-token'
+    process.env.OPENAI_API_KEY = 'test-openai-key'
+
+    let capturedArgs: string[] | undefined
+
+    const dependencies: EventSourceDependencies = {
+      spawn: ((_cmd: string, spawnArgs: string[]) => {
+        capturedArgs = spawnArgs
+        return {
+          stdout: {},
+          stderr: { on: () => {} },
+          on(event: string, listener: EventListener) {
+            if (event === 'close') setTimeout(() => listener(0), 0)
+            return this
+          },
+        }
+      }) as unknown as typeof spawn,
+      createInterface: (() => ({
+        close: () => {},
+        async *[Symbol.asyncIterator]() {
+          // no lines
+        },
+      })) as unknown as typeof createInterface,
+    }
+
+    for await (const _ of spawnClaudeCode(
+      'test prompt',
+      {
+        docker: {
+          imageTag: 'dust-agent-test',
+          repoPath: '/home/user/project',
+          homeDir: '/home/user',
+          hasGitconfig: false,
+        },
+      },
+      dependencies
+    )) {
+      // consume
+    }
+
+    expect(capturedArgs).toContain('CLAUDE_CODE_OAUTH_TOKEN=test-oauth-token')
+    expect(capturedArgs).toContain('OPENAI_API_KEY=test-openai-key')
+
+    // Restore
+    if (originalClaude === undefined) delete process.env.CLAUDE_CODE_OAUTH_TOKEN
+    else process.env.CLAUDE_CODE_OAUTH_TOKEN = originalClaude
+    if (originalOpenai === undefined) delete process.env.OPENAI_API_KEY
+    else process.env.OPENAI_API_KEY = originalOpenai
   })
 })

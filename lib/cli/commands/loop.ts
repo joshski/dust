@@ -544,8 +544,10 @@ export async function loopClaude(
     existsSync: loopDependencies.dockerDeps?.existsSync ?? existsSync,
   }
 
+  log(`checking for .dust/Dockerfile in ${context.cwd}`)
   if (hasDockerfile(context.cwd, dockerDeps)) {
     const imageTag = generateImageTag(context.cwd)
+    log(`Dockerfile found, image tag: ${imageTag}`)
     onLoopEvent({ type: 'loop.docker_detected', imageTag })
 
     // Verify Docker is available
@@ -579,6 +581,8 @@ export async function loopClaude(
       homeDir,
       hasGitconfig: existsSync(path.join(homeDir, '.gitconfig')),
     }
+  } else {
+    log('no .dust/Dockerfile found, running without Docker')
   }
 
   log(`starting loop, maxIterations=${maxIterations}, sessionId=${sessionId}`)

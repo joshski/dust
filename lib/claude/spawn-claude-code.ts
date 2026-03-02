@@ -33,24 +33,37 @@ function buildDockerRunArguments(
     // Set working directory
     '-w',
     '/workspace',
-    // Mount credential directories read-only
+    // Mount .claude read-write so Claude Code can refresh OAuth tokens
     '-v',
-    `${docker.homeDir}/.claude:/root/.claude:ro`,
+    `${docker.homeDir}/.claude:/home/user/.claude`,
+    // Mount .claude.json for Claude Code configuration
     '-v',
-    `${docker.homeDir}/.ssh:/root/.ssh:ro`,
+    `${docker.homeDir}/.claude.json:/home/user/.claude.json`,
+    '-v',
+    `${docker.homeDir}/.ssh:/home/user/.ssh:ro`,
+    // Set HOME so Claude Code finds its config files
+    '-e',
+    'HOME=/home/user',
   ]
 
   // Mount .gitconfig if it exists
   if (docker.hasGitconfig) {
     dockerArguments.push(
       '-v',
-      `${docker.homeDir}/.gitconfig:/root/.gitconfig:ro`
+      `${docker.homeDir}/.gitconfig:/home/user/.gitconfig:ro`
     )
   }
 
   // Pass through environment variables
   for (const [key, value] of Object.entries(env)) {
     dockerArguments.push('-e', `${key}=${value}`)
+  }
+
+  // Pass through agent auth tokens if set in the host environment
+  for (const key of ['CLAUDE_CODE_OAUTH_TOKEN', 'OPENAI_API_KEY']) {
+    if (process.env[key] && !(key in env)) {
+      dockerArguments.push('-e', `${key}=${process.env[key]}`)
+    }
   }
 
   // Add image tag and claude command with arguments

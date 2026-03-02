@@ -10,6 +10,7 @@ import { homedir } from 'node:os'
 import { dirname } from 'node:path'
 import { run as claudeRun } from '../claude/run'
 import type { CommandDependencies, FileSystem } from '../cli/types'
+import type { DockerDependencies } from '../docker/docker-agent'
 import { createLogger } from '../logging'
 import {
   type BucketEmitFn,
@@ -81,6 +82,8 @@ export interface RepositoryDependencies {
   fileSystem: FileSystem
   sleep: (ms: number) => Promise<void>
   getReposDir: () => string
+  /** Optional overrides for Docker dependency functions (for testing) */
+  dockerDeps?: Partial<DockerDependencies>
 }
 
 /**
