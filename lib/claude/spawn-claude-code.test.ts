@@ -390,4 +390,144 @@ describe('spawnClaudeCode', () => {
     }
     expect(killCallCount).toBe(0)
   })
+
+  test('spawns docker when docker config is provided', async () => {
+    let capturedCommand: string | undefined
+    let capturedArgs: string[] | undefined
+
+    const dependencies: EventSourceDependencies = {
+      spawn: ((cmd: string, spawnArgs: string[]) => {
+        capturedCommand = cmd
+        capturedArgs = spawnArgs
+        return {
+          stdout: {},
+          stderr: { on: () => {} },
+          on(event: string, listener: EventListener) {
+            if (event === 'close') setTimeout(() => listener(0), 0)
+            return this
+          },
+        }
+      }) as unknown as typeof spawn,
+      createInterface: (() => ({
+        close: () => {},
+        async *[Symbol.asyncIterator]() {
+          // no lines
+        },
+      })) as unknown as typeof createInterface,
+    }
+
+    for await (const _ of spawnClaudeCode(
+      'test prompt',
+      {
+        docker: {
+          imageTag: 'dust-agent-test',
+          repoPath: '/home/user/project',
+          homeDir: '/home/user',
+          hasGitconfig: true,
+        },
+      },
+      dependencies
+    )) {
+      // consume
+    }
+
+    expect(capturedCommand).toBe('docker')
+    expect(capturedArgs).toContain('run')
+    expect(capturedArgs).toContain('--rm')
+    expect(capturedArgs).toContain('-i')
+    expect(capturedArgs).toContain('/home/user/project:/workspace')
+    expect(capturedArgs).toContain('/home/user/.claude:/root/.claude:ro')
+    expect(capturedArgs).toContain('/home/user/.ssh:/root/.ssh:ro')
+    expect(capturedArgs).toContain('/home/user/.gitconfig:/root/.gitconfig:ro')
+    expect(capturedArgs).toContain('dust-agent-test')
+    expect(capturedArgs).toContain('claude')
+    expect(capturedArgs).toContain('-p')
+    expect(capturedArgs).toContain('test prompt')
+  })
+
+  test('spawns docker without gitconfig mount when hasGitconfig is false', async () => {
+    let capturedArgs: string[] | undefined
+
+    const dependencies: EventSourceDependencies = {
+      spawn: ((_cmd: string, spawnArgs: string[]) => {
+        capturedArgs = spawnArgs
+        return {
+          stdout: {},
+          stderr: { on: () => {} },
+          on(event: string, listener: EventListener) {
+            if (event === 'close') setTimeout(() => listener(0), 0)
+            return this
+          },
+        }
+      }) as unknown as typeof spawn,
+      createInterface: (() => ({
+        close: () => {},
+        async *[Symbol.asyncIterator]() {
+          // no lines
+        },
+      })) as unknown as typeof createInterface,
+    }
+
+    for await (const _ of spawnClaudeCode(
+      'test prompt',
+      {
+        docker: {
+          imageTag: 'dust-agent-test',
+          repoPath: '/home/user/project',
+          homeDir: '/home/user',
+          hasGitconfig: false,
+        },
+      },
+      dependencies
+    )) {
+      // consume
+    }
+
+    const gitconfigMount = capturedArgs?.find(arg => arg.includes('.gitconfig'))
+    expect(gitconfigMount).toBeUndefined()
+  })
+
+  test('passes environment variables to docker container', async () => {
+    let capturedArgs: string[] | undefined
+
+    const dependencies: EventSourceDependencies = {
+      spawn: ((_cmd: string, spawnArgs: string[]) => {
+        capturedArgs = spawnArgs
+        return {
+          stdout: {},
+          stderr: { on: () => {} },
+          on(event: string, listener: EventListener) {
+            if (event === 'close') setTimeout(() => listener(0), 0)
+            return this
+          },
+        }
+      }) as unknown as typeof spawn,
+      createInterface: (() => ({
+        close: () => {},
+        async *[Symbol.asyncIterator]() {
+          // no lines
+        },
+      })) as unknown as typeof createInterface,
+    }
+
+    for await (const _ of spawnClaudeCode(
+      'test prompt',
+      {
+        docker: {
+          imageTag: 'dust-agent-test',
+          repoPath: '/home/user/project',
+          homeDir: '/home/user',
+          hasGitconfig: false,
+        },
+        env: { DUST_UNATTENDED: '1', MY_VAR: 'value' },
+      },
+      dependencies
+    )) {
+      // consume
+    }
+
+    expect(capturedArgs).toContain('-e')
+    expect(capturedArgs).toContain('DUST_UNATTENDED=1')
+    expect(capturedArgs).toContain('MY_VAR=value')
+  })
 })

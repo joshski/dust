@@ -48,6 +48,17 @@ export interface OutputSink {
   line(text: string): void
 }
 
+export interface DockerSpawnConfig {
+  /** Docker image tag to use */
+  imageTag: string
+  /** Path to the repository (used for volume mounts) */
+  repoPath: string
+  /** Home directory for credential mounts */
+  homeDir: string
+  /** Whether .gitconfig exists (for optional mount) */
+  hasGitconfig: boolean
+}
+
 export interface SpawnOptions {
   cwd?: string
   allowedTools?: string[]
@@ -58,6 +69,8 @@ export interface SpawnOptions {
   dangerouslySkipPermissions?: boolean
   env?: Record<string, string>
   signal?: AbortSignal
+  /** When set, spawn claude inside a Docker container */
+  docker?: DockerSpawnConfig
 }
 
 export type RawEventCallback = (event: RawEvent) => void

@@ -17,7 +17,9 @@
  */
 
 import { spawn as nodeSpawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import os from 'node:os'
+import path from 'node:path'
 import {
   type AgentSessionEvent,
   createHeartbeatThrottler,
@@ -25,6 +27,14 @@ import {
   formatAgentEvent,
 } from '../../agent-events'
 import { run as claudeRun } from '../../claude/run'
+import type { DockerSpawnConfig } from '../../claude/types'
+import {
+  buildDockerImage,
+  type DockerDependencies,
+  generateImageTag,
+  hasDockerfile,
+  isDockerAvailable,
+} from '../../docker/docker-agent'
 import { createLogger, enableFileLogs } from '../../logging'
 import { buildUnattendedEnv, isUnattended } from '../../session'
 import { DUST_VERSION } from '../../version'
@@ -92,6 +102,26 @@ export interface LoopEndedEvent {
   maxIterations: number
 }
 
+export interface LoopDockerDetectedEvent {
+  type: 'loop.docker_detected'
+  imageTag: string
+}
+
+export interface LoopDockerBuildingEvent {
+  type: 'loop.docker_building'
+  imageTag: string
+}
+
+export interface LoopDockerBuiltEvent {
+  type: 'loop.docker_built'
+  imageTag: string
+}
+
+export interface LoopDockerErrorEvent {
+  type: 'loop.docker_error'
+  error: string
+}
+
 export type LoopEvent =
   | LoopWarningEvent
   | LoopStartedEvent
@@ -102,6 +132,10 @@ export type LoopEvent =
   | LoopTasksFoundEvent
   | LoopIterationCompleteEvent
   | LoopEndedEvent
+  | LoopDockerDetectedEvent
+  | LoopDockerBuildingEvent
+  | LoopDockerBuiltEvent
+  | LoopDockerErrorEvent
 
 export type LoopEmitFn = (event: LoopEvent) => void
 
@@ -129,6 +163,14 @@ export function formatLoopEvent(event: LoopEvent): string | null {
       return `Completed iteration ${event.iteration}/${event.maxIterations}`
     case 'loop.ended':
       return `Reached max iterations (${event.maxIterations}). Exiting.`
+    case 'loop.docker_detected':
+      return `Docker mode: found .dust/Dockerfile (image: ${event.imageTag})`
+    case 'loop.docker_building':
+      return `Building Docker image ${event.imageTag}...`
+    case 'loop.docker_built':
+      return `Docker image ${event.imageTag} ready`
+    case 'loop.docker_error':
+      return `Docker error: ${event.error}`
   }
 }
 
@@ -141,6 +183,8 @@ export interface LoopDependencies {
   postEvent: PostEventFn
   agentType?: string
   fetch?: typeof fetch
+  /** Optional overrides for Docker dependency functions (for testing) */
+  dockerDeps?: Partial<DockerDependencies>
 }
 
 export function createPostEvent(fetchFn: typeof fetch): PostEventFn {
@@ -276,6 +320,8 @@ interface IterationOptions {
   signal?: AbortSignal
   logger?: LogFn
   repositoryId?: string
+  /** Docker spawn config when running in Docker mode */
+  docker?: DockerSpawnConfig
 }
 
 export async function runOneIteration(
@@ -295,6 +341,7 @@ export async function runOneIteration(
     signal,
     logger = log,
     repositoryId,
+    docker,
   } = options
   const baseEnv = buildUnattendedEnv({ repositoryId })
 
@@ -337,6 +384,7 @@ Make sure the repository is in a clean state and synced with remote before finis
           dangerouslySkipPermissions: true,
           env: baseEnv,
           signal,
+          docker,
         },
         onRawEvent,
       })
@@ -406,6 +454,7 @@ ${instructions}`
         dangerouslySkipPermissions: true,
         env: baseEnv,
         signal,
+        docker,
       },
       onRawEvent,
     })
@@ -487,6 +536,51 @@ export async function loopClaude(
   // Install git hooks before starting iterations
   const hooksInstalled = await manageGitHooks(dependencies)
 
+  // Check for Docker mode (.dust/Dockerfile)
+  let dockerConfig: DockerSpawnConfig | undefined
+  const dockerDeps: DockerDependencies = {
+    spawn: loopDependencies.dockerDeps?.spawn ?? loopDependencies.spawn,
+    homedir: loopDependencies.dockerDeps?.homedir ?? os.homedir,
+    existsSync: loopDependencies.dockerDeps?.existsSync ?? existsSync,
+  }
+
+  if (hasDockerfile(context.cwd, dockerDeps)) {
+    const imageTag = generateImageTag(context.cwd)
+    onLoopEvent({ type: 'loop.docker_detected', imageTag })
+
+    // Verify Docker is available
+    if (!(await isDockerAvailable(dockerDeps))) {
+      context.stderr(
+        'Docker not available. Install Docker or remove .dust/Dockerfile to run without Docker.'
+      )
+      return { exitCode: 1 }
+    }
+
+    // Build the Docker image
+    onLoopEvent({ type: 'loop.docker_building', imageTag })
+    const buildResult = await buildDockerImage(
+      { repoPath: context.cwd, imageTag },
+      dockerDeps
+    )
+
+    if (!buildResult.success) {
+      onLoopEvent({ type: 'loop.docker_error', error: buildResult.error })
+      context.stderr(buildResult.error)
+      return { exitCode: 1 }
+    }
+
+    onLoopEvent({ type: 'loop.docker_built', imageTag })
+
+    // Configure Docker spawn
+    const homeDir = os.homedir()
+    dockerConfig = {
+      imageTag,
+      repoPath: context.cwd,
+      homeDir,
+      hasGitconfig: existsSync(path.join(homeDir, '.gitconfig')),
+    }
+  }
+
   log(`starting loop, maxIterations=${maxIterations}, sessionId=${sessionId}`)
   onLoopEvent({ type: 'loop.warning' })
   onLoopEvent({
@@ -499,7 +593,10 @@ export async function loopClaude(
 
   let completedIterations = 0
   // Build iteration options
-  const iterationOptions: IterationOptions = { hooksInstalled }
+  const iterationOptions: IterationOptions = {
+    hooksInstalled,
+    docker: dockerConfig,
+  }
   if (eventsUrl) {
     iterationOptions.onRawEvent = createHeartbeatThrottler(onAgentEvent)
   }

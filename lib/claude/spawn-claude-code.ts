@@ -1,7 +1,7 @@
 import { spawn as nodeSpawn } from 'node:child_process'
 import { createInterface as nodeCreateInterface } from 'node:readline'
 import { createLogger } from '../logging'
-import type { RawEvent, SpawnOptions } from './types'
+import type { DockerSpawnConfig, RawEvent, SpawnOptions } from './types'
 
 const debug = createLogger('dust.claude.spawn-claude-code')
 
@@ -13,6 +13,52 @@ export interface EventSourceDependencies {
 export const defaultDependencies: EventSourceDependencies = {
   spawn: nodeSpawn,
   createInterface: nodeCreateInterface,
+}
+
+/**
+ * Build docker run arguments for spawning claude in a container.
+ */
+function buildDockerRunArguments(
+  docker: DockerSpawnConfig,
+  claudeArguments: string[],
+  env: Record<string, string>
+): string[] {
+  const dockerArguments: string[] = [
+    'run',
+    '--rm',
+    '-i',
+    // Mount the repository at /workspace
+    '-v',
+    `${docker.repoPath}:/workspace`,
+    // Set working directory
+    '-w',
+    '/workspace',
+    // Mount credential directories read-only
+    '-v',
+    `${docker.homeDir}/.claude:/root/.claude:ro`,
+    '-v',
+    `${docker.homeDir}/.ssh:/root/.ssh:ro`,
+  ]
+
+  // Mount .gitconfig if it exists
+  if (docker.hasGitconfig) {
+    dockerArguments.push(
+      '-v',
+      `${docker.homeDir}/.gitconfig:/root/.gitconfig:ro`
+    )
+  }
+
+  // Pass through environment variables
+  for (const [key, value] of Object.entries(env)) {
+    dockerArguments.push('-e', `${key}=${value}`)
+  }
+
+  // Add image tag and claude command with arguments
+  dockerArguments.push(docker.imageTag)
+  dockerArguments.push('claude')
+  dockerArguments.push(...claudeArguments)
+
+  return dockerArguments
 }
 
 export async function* spawnClaudeCode(
@@ -30,6 +76,7 @@ export async function* spawnClaudeCode(
     dangerouslySkipPermissions,
     env,
     signal,
+    docker,
   } = options
 
   const claudeArguments = [
@@ -60,11 +107,23 @@ export async function* spawnClaudeCode(
     claudeArguments.push('--dangerously-skip-permissions')
   }
 
-  const proc = dependencies.spawn('claude', claudeArguments, {
-    cwd,
-    stdio: ['ignore', 'pipe', 'pipe'],
-    env: { ...process.env, ...env },
-  })
+  // Spawn either directly or via Docker
+  const mergedEnv = { ...process.env, ...env }
+  const proc = docker
+    ? dependencies.spawn(
+        'docker',
+        buildDockerRunArguments(docker, claudeArguments, env ?? {}),
+        {
+          cwd,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: mergedEnv,
+        }
+      )
+    : dependencies.spawn('claude', claudeArguments, {
+        cwd,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: mergedEnv,
+      })
 
   if (!proc.stdout) {
     throw new Error('Failed to get stdout from claude process')

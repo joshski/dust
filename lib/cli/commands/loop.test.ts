@@ -1073,6 +1073,33 @@ describe('formatLoopEvent', () => {
     const result = formatLoopEvent({ type: 'loop.no_tasks' })
     expect(result).toBe('No tasks available. Sleeping...')
   })
+
+  test('formats Docker events correctly', () => {
+    expect(
+      formatLoopEvent({
+        type: 'loop.docker_detected',
+        imageTag: 'dust-agent-test',
+      })
+    ).toBe('Docker mode: found .dust/Dockerfile (image: dust-agent-test)')
+
+    expect(
+      formatLoopEvent({
+        type: 'loop.docker_building',
+        imageTag: 'dust-agent-test',
+      })
+    ).toBe('Building Docker image dust-agent-test...')
+
+    expect(
+      formatLoopEvent({
+        type: 'loop.docker_built',
+        imageTag: 'dust-agent-test',
+      })
+    ).toBe('Docker image dust-agent-test ready')
+
+    expect(
+      formatLoopEvent({ type: 'loop.docker_error', error: 'Build failed' })
+    ).toBe('Docker error: Build failed')
+  })
 })
 
 describe('parseMaxIterations', () => {
@@ -1718,6 +1745,114 @@ describe('loopClaude', () => {
     // Verify raw events are NOT output to console (formatAgentEvent returns null)
     expect(context.stdoutLines.join('\n')).not.toContain('text_delta')
     expect(context.stdoutLines.join('\n')).not.toContain('raw_event')
+  })
+
+  test('detects Docker mode when .dust/Dockerfile exists', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          Dockerfile: 'FROM node:20',
+          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+        },
+      },
+    })
+    dependencies.arguments = ['1']
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const loopDeps = createLoopDeps({
+      run: async () => {},
+      dockerDeps: {
+        existsSync: (p: string) =>
+          p === '/project/.dust/Dockerfile' || p.includes('.gitconfig'),
+        homedir: () => '/home/user',
+        spawn: createMockSpawn(0),
+      },
+    })
+
+    await loopClaude(dependencies, loopDeps)
+
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Docker mode: found .dust/Dockerfile'
+    )
+    expect(context.stdoutLines.join('\n')).toContain('Building Docker image')
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Docker image dust-agent-project ready'
+    )
+  })
+
+  test('returns error when Docker not available', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          Dockerfile: 'FROM node:20',
+        },
+      },
+    })
+    dependencies.arguments = ['1']
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const loopDeps = createLoopDeps({
+      dockerDeps: {
+        existsSync: (p: string) => p === '/project/.dust/Dockerfile',
+        homedir: () => '/home/user',
+        spawn: createMockSpawn(1), // Docker --version fails
+      },
+    })
+
+    const result = await loopClaude(dependencies, loopDeps)
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('Docker not available')
+  })
+
+  test('returns error when Docker build fails', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          Dockerfile: 'FROM node:20',
+        },
+      },
+    })
+    dependencies.arguments = ['1']
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    let dockerCallCount = 0
+    const loopDeps = createLoopDeps({
+      dockerDeps: {
+        existsSync: (p: string) => p === '/project/.dust/Dockerfile',
+        homedir: () => '/home/user',
+        spawn: (() => {
+          dockerCallCount++
+          // First call is docker --version (success), second is docker build (fail)
+          if (dockerCallCount === 1) {
+            return createMockChildProcess(0)
+          }
+          const proc = new EventEmitter() as EventEmitter & {
+            stdout: EventEmitter | null
+            stderr: EventEmitter
+          }
+          proc.stdout = null
+          proc.stderr = new EventEmitter()
+          setTimeout(() => {
+            proc.stderr.emit(
+              'data',
+              Buffer.from('Build error: invalid Dockerfile')
+            )
+            proc.emit('close', 1)
+          }, 0)
+          return proc as unknown as ChildProcess
+        }) as LoopDependencies['spawn'],
+      },
+    })
+
+    const result = await loopClaude(dependencies, loopDeps)
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stdoutLines.join('\n')).toContain('Docker error:')
+    expect(context.stderrLines.join('\n')).toContain('Docker build failed')
   })
 })
 
