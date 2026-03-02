@@ -54,15 +54,16 @@ interface RepositoryListMessage {
 }
 
 interface RepositoryListItem {
-  name: string       // Repository display name
-  gitUrl: string     // Git clone URL
-  url: string        // Web URL for the repository
-  id: number         // Server-side repository ID
-  hasTask: boolean   // True if a task is waiting
+  name: string          // Repository display name
+  gitUrl: string        // Git clone URL
+  url: string           // Web URL for the repository
+  id: number            // Server-side repository ID
+  hasTask: boolean      // True if a task is waiting
+  agentProvider?: string // Agent to use: 'claude' (default) or 'codex'
 }
 ```
 
-All fields are required.
+Required fields: `name`, `gitUrl`, `url`, `id`, `hasTask`. Optional: `agentProvider`.
 
 On receiving this message, clients:
 
