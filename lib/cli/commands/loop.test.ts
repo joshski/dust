@@ -607,7 +607,7 @@ describe('runOneIteration', () => {
     expect(capturedPrompt).not.toContain('run the matching command')
   })
 
-  test('uses default install command when not set in settings', async () => {
+  test('omits install step when installCommand is not set in settings', async () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
@@ -624,7 +624,7 @@ describe('runOneIteration', () => {
     const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
     await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
-    expect(capturedPrompt).toContain('`npm install` to install dependencies')
+    expect(capturedPrompt).not.toContain('install')
     expect(capturedPrompt).toContain('`dust check`')
   })
 

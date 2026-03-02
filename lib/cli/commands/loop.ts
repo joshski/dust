@@ -421,7 +421,7 @@ Make sure the repository is in a clean state and synced with remote before finis
   const taskContent = await dependencies.fileSystem.readFile(
     `${dependencies.context.cwd}/${task.path}`
   )
-  const { dustCommand, installCommand = 'npm install' } = dependencies.settings
+  const { dustCommand, installCommand } = dependencies.settings
   const instructions = buildImplementationInstructions(
     dustCommand,
     hooksInstalled,
