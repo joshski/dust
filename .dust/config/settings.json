@@ -2,6 +2,13 @@
   "dustCommand": "bin/dust",
   "checks": [
     {
+      "name": "disallowed files",
+      "command": "bash scripts/lint/disallowed-files.sh",
+      "hints": [
+        "Check scripts/lint/disallowed-files.sh for the list of disallowed files"
+      ]
+    },
+    {
       "name": "unused code (knip)",
       "command": "bunx knip",
       "hints": [
