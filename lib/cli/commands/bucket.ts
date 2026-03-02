@@ -637,13 +637,17 @@ export function connectWebSocket(
         logMessage(state, context, useTUI, '  (empty)')
       } else {
         for (const r of repos) {
-          const attrs: string[] = []
-          attrs.push(`name=${r.name}`)
-          attrs.push(`id=${r.id}`)
-          attrs.push(`gitUrl=${r.gitUrl}`)
-          attrs.push(`url=${r.url}`)
-          attrs.push(`hasTask=${r.hasTask}`)
-          logMessage(state, context, useTUI, `  - ${attrs.join(', ')}`)
+          logMessage(state, context, useTUI, `  - name=${r.name}`)
+          logMessage(state, context, useTUI, `    id=${r.id}`)
+          logMessage(state, context, useTUI, `    gitUrl=${r.gitUrl}`)
+          logMessage(
+            state,
+            context,
+            useTUI,
+            `    gitSshUrl=${r.gitSshUrl ?? '(none)'}`
+          )
+          logMessage(state, context, useTUI, `    url=${r.url}`)
+          logMessage(state, context, useTUI, `    hasTask=${r.hasTask}`)
         }
       }
       // Eagerly add repos to UI so tabs appear before cloning finishes

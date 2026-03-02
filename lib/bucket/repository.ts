@@ -152,6 +152,10 @@ export function parseRepository(data: unknown): Repository | null {
       return {
         name: repositoryData.name,
         gitUrl: repositoryData.gitUrl,
+        gitSshUrl:
+          typeof repositoryData.gitSshUrl === 'string'
+            ? repositoryData.gitSshUrl
+            : undefined,
         url: repositoryData.url,
         id: repositoryData.id,
       }

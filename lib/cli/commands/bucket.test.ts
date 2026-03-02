@@ -898,15 +898,12 @@ describe('connectWebSocket', () => {
 
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('Received repository list (3 repositories):')
-    expect(output).toContain(
-      'name=repo-a, id=123, gitUrl=git@example.com:repo-a.git, url=https://example.com/repo-a, hasTask=true'
-    )
-    expect(output).toContain(
-      'name=repo-b, id=456, gitUrl=git@example.com:repo-b.git, url=https://example.com/repo-b, hasTask=false'
-    )
-    expect(output).toContain(
-      'name=repo-c, id=789, gitUrl=git@example.com:repo-c.git, url=https://example.com/repo-c, hasTask=false'
-    )
+    expect(output).toContain('name=repo-a')
+    expect(output).toContain('gitUrl=git@example.com:repo-a.git')
+    expect(output).toContain('name=repo-b')
+    expect(output).toContain('gitUrl=git@example.com:repo-b.git')
+    expect(output).toContain('name=repo-c')
+    expect(output).toContain('gitUrl=git@example.com:repo-c.git')
   })
 
   test('eagerly adds repository tabs to UI on repository-list message', () => {

@@ -137,6 +137,24 @@ describe('parseRepository', () => {
     expect(repo).toEqual({
       name: 'my-repo',
       gitUrl: 'https://github.com/user/repo.git',
+      gitSshUrl: undefined,
+      url: 'https://example.com/my-repo',
+      id: 123,
+    })
+  })
+
+  test('parses object with gitSshUrl', () => {
+    const repo = parseRepository({
+      name: 'my-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+      gitSshUrl: 'git@github.com:user/repo.git',
+      url: 'https://example.com/my-repo',
+      id: 123,
+    })
+    expect(repo).toEqual({
+      name: 'my-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+      gitSshUrl: 'git@github.com:user/repo.git',
       url: 'https://example.com/my-repo',
       id: 123,
     })
