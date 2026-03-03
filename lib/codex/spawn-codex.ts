@@ -55,6 +55,8 @@ export async function* spawnCodex(
     })
     proc.on('error', reject)
   })
+  // Prevent unhandled rejection if generator is abandoned before closePromise is awaited
+  closePromise.catch(() => {})
 
   const abortHandler = () => {
     if (!proc.killed) {

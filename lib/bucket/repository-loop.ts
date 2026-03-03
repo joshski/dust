@@ -30,6 +30,7 @@ import {
   defaultRunnerDependencies as codexDefaultRunnerDependencies,
   run as codexRun,
 } from '../codex/run'
+import { defaultDependencies as codexSpawnDefaultDependencies } from '../codex/spawn-codex'
 import { loadSettings } from '../config/settings'
 import { prepareDockerConfig } from '../docker/docker-agent'
 import { createLogger } from '../logging'
@@ -391,6 +392,17 @@ export async function runRepositoryLoop(
     if (isCodex) {
       const codexBufferSinkDeps: CodexRunnerDependencies = {
         ...codexDefaultRunnerDependencies,
+        spawnCodex: (prompt, options = {}) => {
+          const spawnDeps = {
+            ...codexSpawnDefaultDependencies,
+            spawn,
+          }
+          return codexDefaultRunnerDependencies.spawnCodex(
+            prompt,
+            options,
+            spawnDeps
+          )
+        },
         createStdoutSink,
       }
       bufferRun = createCodexBufferRun(codexRun, codexBufferSinkDeps)
