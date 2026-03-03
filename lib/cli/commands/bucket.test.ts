@@ -28,6 +28,8 @@ import {
   createKeypressHandler,
   createTUIContext,
   getWebSocketUrl,
+  handleRepositoryListError,
+  handleRepositoryListSuccess,
   logMessage,
   setupTUI,
   shutdown,
@@ -2268,5 +2270,179 @@ describe('syncTUI', () => {
     syncTUI(state)
 
     expect(state.ui.repositories).toContain('system')
+  })
+})
+
+describe('handleRepositoryListSuccess', () => {
+  test('calls syncTUI', () => {
+    const state = createInitialState()
+    const dependencies = createDependencies()
+    const repos = [
+      {
+        name: 'repo1',
+        id: 1,
+        gitUrl: 'git@example.com:user/repo1.git',
+        url: 'https://example.com/repo1',
+        hasTask: false,
+      },
+    ]
+    const repoState: RepositoryState = {
+      repository: repos[0],
+      path: '/tmp/repo1',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle',
+    }
+    state.repositories.set('repo1', repoState)
+
+    const repoDeps = {
+      spawn: (() => {}) as unknown as BucketDependencies['spawn'],
+      run: async () => {},
+      fileSystem: dependencies.fileSystem,
+      sleep: async () => {},
+      getReposDir: () => '/tmp',
+    }
+
+    handleRepositoryListSuccess(
+      state,
+      repos,
+      repoDeps,
+      dependencies.context,
+      false
+    )
+
+    expect(state.ui.repositories).toContain('repo1')
+    expect(state.logBuffers.get('repo1')).toBe(repoState.logBuffer)
+  })
+
+  test('wakes repos that have tasks waiting', () => {
+    const state = createInitialState()
+    const dependencies = createDependencies()
+    let wokenUp = false
+    const repos = [
+      {
+        name: 'repo1',
+        id: 1,
+        gitUrl: 'git@example.com:user/repo1.git',
+        url: 'https://example.com/repo1',
+        hasTask: true,
+      },
+    ]
+    const repoState: RepositoryState = {
+      repository: repos[0],
+      path: '/tmp/repo1',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle',
+      wakeUp: () => {
+        wokenUp = true
+      },
+    }
+    state.repositories.set('repo1', repoState)
+
+    const repoDeps = {
+      spawn: (() => {}) as unknown as BucketDependencies['spawn'],
+      run: async () => {},
+      fileSystem: dependencies.fileSystem,
+      sleep: async () => {},
+      getReposDir: () => '/tmp',
+    }
+
+    handleRepositoryListSuccess(
+      state,
+      repos,
+      repoDeps,
+      dependencies.context,
+      false
+    )
+
+    expect(wokenUp).toBe(true)
+  })
+
+  test('does not wake repos without tasks', () => {
+    const state = createInitialState()
+    const dependencies = createDependencies()
+    let wokenUp = false
+    const repos = [
+      {
+        name: 'repo1',
+        id: 1,
+        gitUrl: 'git@example.com:user/repo1.git',
+        url: 'https://example.com/repo1',
+        hasTask: false,
+      },
+    ]
+    const repoState: RepositoryState = {
+      repository: repos[0],
+      path: '/tmp/repo1',
+      loopPromise: null,
+      stopRequested: false,
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle',
+      wakeUp: () => {
+        wokenUp = true
+      },
+    }
+    state.repositories.set('repo1', repoState)
+
+    const repoDeps = {
+      spawn: (() => {}) as unknown as BucketDependencies['spawn'],
+      run: async () => {},
+      fileSystem: dependencies.fileSystem,
+      sleep: async () => {},
+      getReposDir: () => '/tmp',
+    }
+
+    handleRepositoryListSuccess(
+      state,
+      repos,
+      repoDeps,
+      dependencies.context,
+      false
+    )
+
+    expect(wokenUp).toBe(false)
+  })
+})
+
+describe('handleRepositoryListError', () => {
+  test('logs error message to stderr', () => {
+    const state = createInitialState()
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+
+    handleRepositoryListError(
+      state,
+      dependencies.context,
+      false,
+      new Error('Clone failed')
+    )
+
+    expect(context.stderrLines.join('\n')).toContain(
+      'Failed to handle repository list: Clone failed'
+    )
+  })
+
+  test('logs error to system buffer in TUI mode', () => {
+    const state = createInitialState()
+    const dependencies = createDependencies()
+
+    handleRepositoryListError(
+      state,
+      dependencies.context,
+      true,
+      new Error('Clone failed')
+    )
+
+    const systemBuffer = state.logBuffers.get('system')
+    expect(systemBuffer).toBeDefined()
+    const lines = getLogLines(systemBuffer as LogBuffer)
+    const errorLine = lines.find(l => l.stream === 'stderr')
+    expect(errorLine?.text).toContain('Failed to handle repository list')
+    expect(errorLine?.text).toContain('Clone failed')
   })
 })

@@ -441,6 +441,47 @@ export function syncTUI(state: BucketState): void {
 }
 
 /**
+ * Handle successful completion of repository list processing.
+ * Syncs TUI state and wakes repos that have tasks waiting.
+ */
+export function handleRepositoryListSuccess(
+  state: BucketState,
+  repos: RepositoryListItem[],
+  repoDeps: RepositoryDependencies,
+  context: CommandDependencies['context'],
+  useTUI: boolean
+): void {
+  syncTUI(state)
+  for (const repoData of repos) {
+    if (repoData.hasTask) {
+      const repoState = state.repositories.get(repoData.name)
+      if (repoState) {
+        signalTaskAvailable(repoState, state, repoDeps, context, useTUI)
+      }
+    }
+  }
+}
+
+/**
+ * Handle error during repository list processing.
+ * Logs the error message to the appropriate output.
+ */
+export function handleRepositoryListError(
+  state: BucketState,
+  context: CommandDependencies['context'],
+  useTUI: boolean,
+  error: Error
+): void {
+  logMessage(
+    state,
+    context,
+    useTUI,
+    `Failed to handle repository list: ${error.message}`,
+    'stderr'
+  )
+}
+
+/**
  * Log a message to the appropriate output.
  * In TUI mode, appends to the system log buffer (visible under "All").
  * In non-TUI mode, writes to context stdout/stderr.
@@ -669,36 +710,13 @@ function executeEffects(
         )
         const repoContext = createTUIContext(state, context, useTUI)
         const repos = effect.repositories
-        /* v8 ignore start - async callback internals not tracked by v8 */
         handleRepositoryListFromRepo(repos, state, repoDeps, repoContext)
-          .then(() => {
-            syncTUI(state)
-            // Wake repos that already have tasks waiting
-            for (const repoData of repos) {
-              if (repoData.hasTask) {
-                const repoState = state.repositories.get(repoData.name)
-                if (repoState) {
-                  signalTaskAvailable(
-                    repoState,
-                    state,
-                    repoDeps,
-                    context,
-                    useTUI
-                  )
-                }
-              }
-            }
-          })
-          .catch(error => {
-            logMessage(
-              state,
-              context,
-              useTUI,
-              `Failed to handle repository list: ${error.message}`,
-              'stderr'
-            )
-          })
-        /* v8 ignore stop */
+          .then(() =>
+            handleRepositoryListSuccess(state, repos, repoDeps, context, useTUI)
+          )
+          .catch((error: Error) =>
+            handleRepositoryListError(state, context, useTUI, error)
+          )
         break
       }
 

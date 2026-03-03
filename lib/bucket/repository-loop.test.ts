@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from 'vitest'
 import type { AgentSessionEvent } from '../agent-events'
 import type { RunnerDependencies } from '../claude/run'
+import type { RunnerDependencies as CodexRunnerDependencies } from '../codex/run'
 import { restoreEnv, stubEnv } from '../test/test-utilities'
 import type { SendEventFn } from './events'
 import { createLogBuffer, getLogLines } from './log-buffer'
@@ -11,6 +12,7 @@ import {
   createBufferRun,
   createBufferStdoutSink,
   createCancelHandler,
+  createCodexBufferRun,
   createLogCallbacks,
   createLoopEventHandler,
   createStdoutSinkFactory,
@@ -328,6 +330,24 @@ describe('createBufferRun', () => {
     }
     const mockDeps = {} as RunnerDependencies
     const bufferRun = createBufferRun(mockRun, mockDeps)
+
+    await bufferRun('prompt', {} as Parameters<typeof bufferRun>[1])
+
+    expect(runCalledWith).toEqual(['prompt', {}, mockDeps])
+  })
+})
+
+describe('createCodexBufferRun', () => {
+  test('delegates to run with codexBufferSinkDeps', async () => {
+    let runCalledWith: unknown[] = []
+    const mockRun = async (...arguments_: unknown[]) => {
+      runCalledWith = arguments_
+    }
+    const mockDeps = {} as CodexRunnerDependencies
+    const bufferRun = createCodexBufferRun(
+      mockRun as unknown as typeof import('../codex/run').run,
+      mockDeps
+    )
 
     await bufferRun('prompt', {} as Parameters<typeof bufferRun>[1])
 

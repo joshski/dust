@@ -15,9 +15,8 @@ export default defineConfig({
         'lib/version.ts',
         'lib/test/**',
         // v8 does not honor `/* v8 ignore */` comments for function-level metrics
-        // on anonymous functions inside async callbacks. These files use inline
-        // ignores for line/statement coverage but must be excluded for 100%
-        // function coverage. This is a v8 coverage provider limitation.
+        // on native wrapper functions. This file uses inline ignores for
+        // line/statement coverage but must be excluded for 100% function coverage.
         'lib/cli/commands/bucket.ts',
       ],
       reporter: [

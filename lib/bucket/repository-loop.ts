@@ -200,6 +200,17 @@ export function createBufferRun(
   return (prompt, options) => run(prompt, options, bufferSinkDeps)
 }
 
+/**
+ * Create a run function that redirects Codex output to a log buffer.
+ */
+export function createCodexBufferRun(
+  run: typeof codexRun,
+  codexBufferSinkDeps: CodexRunnerDependencies
+): typeof claudeRun {
+  return ((prompt, options) =>
+    run(prompt, options, codexBufferSinkDeps)) as typeof claudeRun
+}
+
 /** No-op postEvent for LoopDependencies. */
 export async function noOpPostEvent() {}
 
@@ -330,16 +341,13 @@ export async function runRepositoryLoop(
   )
 
   let bufferRun: typeof claudeRun
-  /* v8 ignore start - codex path mirrors claude path, tested in loop-codex.test.ts */
   if (isCodex) {
     const codexBufferSinkDeps: CodexRunnerDependencies = {
       ...codexDefaultRunnerDependencies,
       createStdoutSink,
     }
-    bufferRun = ((prompt, options) =>
-      codexRun(prompt, options, codexBufferSinkDeps)) as typeof claudeRun
+    bufferRun = createCodexBufferRun(codexRun, codexBufferSinkDeps)
   } else {
-    /* v8 ignore stop */
     const bufferSinkDeps: RunnerDependencies = {
       ...defaultRunnerDependencies,
       createStdoutSink,
