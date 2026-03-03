@@ -56,6 +56,7 @@ interface RepositoryListMessage {
 interface RepositoryListItem {
   name: string          // Repository display name
   gitUrl: string        // Git clone URL
+  gitSshUrl?: string    // SSH clone URL (used when available)
   url: string           // Web URL for the repository
   id: number            // Server-side repository ID
   hasTask: boolean      // True if a task is waiting
@@ -63,7 +64,7 @@ interface RepositoryListItem {
 }
 ```
 
-Required fields: `name`, `gitUrl`, `url`, `id`, `hasTask`. Optional: `agentProvider`.
+Required fields: `name`, `gitUrl`, `url`, `id`, `hasTask`. Optional: `gitSshUrl`, `agentProvider`.
 
 On receiving this message, clients:
 

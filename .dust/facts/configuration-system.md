@@ -48,7 +48,10 @@ An array of quality gate checks run by `dust check`. Each check has a `name` and
 }
 ```
 
-Each check can optionally include a `hints` array with helpful suggestions shown when the check fails:
+Each check can optionally include:
+
+- `hints` — an array of helpful suggestions shown when the check fails
+- `timeoutMilliseconds` — override the default timeout (120000ms) for this check
 
 ```json
 {
@@ -56,7 +59,8 @@ Each check can optionally include a `hints` array with helpful suggestions shown
     {
       "name": "lint",
       "command": "npm run lint",
-      "hints": ["Run 'npm run lint:fix' to auto-fix issues"]
+      "hints": ["Run 'npm run lint:fix' to auto-fix issues"],
+      "timeoutMilliseconds": 60000
     }
   ]
 }
