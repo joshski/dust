@@ -1,6 +1,6 @@
 # Bucket: Functional Core, Imperative Shell
 
-Restructure `lib/cli/commands/bucket.ts` to separate pure logic from side-effectful wiring, reducing the need for `v8 ignore` blocks and making business logic directly testable.
+Restructure `lib/cli/commands/bucket.ts` to separate pure logic from side-effectful wiring. This reduces `v8 ignore` blocks and makes business logic directly testable.
 
 ## Context
 
@@ -77,14 +77,30 @@ function executeEffects(effects: Effect[], deps: BucketDependencies): void {
 
 ### Should state be immutable?
 
-Using immutable state (`{ ...state, reconnectDelay: newDelay }`) makes tests cleaner and prevents accidental mutation, but adds allocation overhead in a hot render loop (100ms interval). Could use immutable for message handling and mutable for UI state.
+#### Immutable state for message handling only
 
-### How to handle the `BucketState.repositories` Map?
+Use immutable state (`{ ...state, reconnectDelay: newDelay }`) for message-handling pure functions where it makes tests cleaner. Keep mutable state for the UI render path (100ms interval) to avoid allocation overhead.
 
-The `Map<string, RepositoryState>` is deeply mutable. Options:
-- Keep it mutable but treat it as owned by the shell, with pure functions returning instructions to modify it
-- Replace with a plain object for the pure core's view of state
+#### Fully mutable state
 
-### Should `syncTUI` and `syncAgentStatuses` be effects or direct mutations?
+Keep all state mutable as it is today. Pure functions mutate state in place and return only the effects list. Simpler migration but loses some testability benefits.
 
-These are called on every render frame (100ms). Making them effects would be architecturally clean but adds overhead. Pragmatic approach: keep render-path mutations direct, only model message-handling as pure functions + effects.
+### How should the pure core view repository state?
+
+#### Plain object projection
+
+The pure core receives a plain object snapshot of repository state. The shell owns the `Map<string, RepositoryState>` and builds projections before calling pure functions.
+
+#### Effects-only approach
+
+Pure functions never read repository state directly. They return effects like `{ type: 'startLoop', repo }` and the shell checks whether the loop is already running.
+
+### Should render-path syncs be modeled as effects?
+
+#### Keep render-path mutations direct
+
+`syncTUI` and `syncAgentStatuses` run every 100ms. Keep them as direct mutations in the shell to avoid effect allocation overhead. Only model message-handling as pure functions + effects.
+
+#### Model everything as effects
+
+All state changes go through the effect system for consistency. Accept the minor overhead since the effect objects are small and short-lived.
