@@ -435,7 +435,7 @@ export async function runRepositoryLoop(
           hooksInstalled,
           signal: abortController.signal,
           repositoryId: repoState.repository.id.toString(),
-          onRawEvent: createHeartbeatThrottler(onAgentEvent),
+          onRawEvent: createHeartbeatThrottler(onAgentEvent, agentType),
           docker: dockerConfig,
         }
       )

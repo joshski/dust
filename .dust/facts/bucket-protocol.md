@@ -104,7 +104,7 @@ Event types sent by clients:
 | `agent-session-started` | Agent begins working on a task |
 | `agent-session-ended` | Agent completes or fails |
 | `agent-session-activity` | Heartbeat during agent work |
-| `claude-event` | Raw Claude streaming events |
+| `agent-event` | Raw agent streaming events (with `provider` field) |
 
 ## Expected Server Behavior
 

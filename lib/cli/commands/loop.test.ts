@@ -1732,9 +1732,9 @@ describe('loopClaude', () => {
 
     await loopClaude(dependencies, loopDeps)
 
-    // Verify raw events were posted as claude-event type
+    // Verify raw events were posted as agent-event type
     const claudeEvents = postedEvents.filter(
-      e => e.payload.event.type === 'claude-event'
+      e => e.payload.event.type === 'agent-event'
     )
     expect(claudeEvents.length).toBe(1)
     expect(
@@ -1973,7 +1973,7 @@ describe('integration: HTTP event posting', () => {
       // Yield to I/O until events arrive (including raw events)
       const hasExpectedEvents = () =>
         receivedEvents.some(e => e.event.type === 'agent-session-ended') &&
-        receivedEvents.some(e => e.event.type === 'claude-event')
+        receivedEvents.some(e => e.event.type === 'agent-event')
       for (let i = 0; i < 100 && !hasExpectedEvents(); i++) {
         await new Promise(resolve => setTimeout(resolve, 5))
       }
@@ -1990,9 +1990,9 @@ describe('integration: HTTP event posting', () => {
       )
       expect(firstEvent.event.type).toBeDefined()
 
-      // Verify claude-event was received
+      // Verify agent-event was received
       const claudeEvent = receivedEvents.find(
-        e => e.event.type === 'claude-event'
+        e => e.event.type === 'agent-event'
       )
       expect(claudeEvent).toBeDefined()
       expect(

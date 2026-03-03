@@ -609,7 +609,10 @@ export async function loopClaude(
     docker: dockerConfig,
   }
   if (eventsUrl) {
-    iterationOptions.onRawEvent = createHeartbeatThrottler(onAgentEvent)
+    iterationOptions.onRawEvent = createHeartbeatThrottler(
+      onAgentEvent,
+      loopDependencies.agentType ?? 'claude'
+    )
   }
 
   while (completedIterations < maxIterations) {

@@ -57,7 +57,7 @@ type AgentSessionEvent =
     }
   | { type: 'agent-session-ended'; success: boolean; error?: string }
   | { type: 'agent-session-activity' }
-  | { type: 'claude-event'; rawEvent: Record<string, unknown> }
+  | { type: 'agent-event'; provider: string; rawEvent: Record<string, unknown> }
 ```
 
 | Type | Fields | Description |
@@ -65,7 +65,7 @@ type AgentSessionEvent =
 | `agent-session-started` | `title: string`, `prompt: string`, `agentType: string`, `purpose: string`, `machineName: string`, `cwd: string`, `platform: string`, `dustVersion: string`, `runtimeVersion: string` | An agent run has started. Title is the task name or a description like "Resolving git conflict". Prompt is the full prompt sent to the agent. AgentType identifies the agent (e.g., `'claude'`). Purpose describes the reason (e.g., `'task'` or `'git-conflict'`). MachineName is the hostname. Cwd is the working directory. Platform is OS name and version (e.g., `'darwin 24.1.0'`). DustVersion is the dust CLI version. RuntimeVersion is the Node/Bun version (e.g., `'v22.0.0'`). |
 | `agent-session-ended` | `success: boolean`, `error?: string` | An agent run has ended |
 | `agent-session-activity` | - | Heartbeat indicating the agent is active (not stored) |
-| `claude-event` | `rawEvent: object` | Raw Claude streaming event |
+| `agent-event` | `provider: string`, `rawEvent: object` | Raw agent streaming event with provider identifier |
 
 ### Local-only events
 
@@ -81,7 +81,7 @@ The `rawEventToAgentEvent()` function in `lib/agent-events.ts` converts raw Clau
 | Raw Event | Wire Event | Notes |
 |-----------|------------|-------|
 | `rawEvent.type === 'stream_event'` | `agent-session-activity` | Heartbeat, not stored |
-| Any other raw event | `claude-event` | Forwarded with full rawEvent payload |
+| Any other raw event | `agent-event` | Forwarded with provider and full rawEvent payload |
 
 Agent session lifecycle events (`agent-session-started`, `agent-session-ended`) are emitted directly by `runOneIteration` — they are not derived from raw events.
 
@@ -134,7 +134,7 @@ Agent session ended (error):
 }
 ```
 
-Claude event (raw streaming):
+Agent event (raw streaming):
 ```json
 {
   "sequence": 3,
@@ -143,7 +143,8 @@ Claude event (raw streaming):
   "repository": "my-repo",
   "agentSessionId": "abc123",
   "event": {
-    "type": "claude-event",
+    "type": "agent-event",
+    "provider": "claude",
     "rawEvent": {
       "type": "assistant",
       "message": {
@@ -154,7 +155,7 @@ Claude event (raw streaming):
 }
 ```
 
-**Note:** `claude-event` payloads are high-volume (many events per response) and contain response content. `agent-session-activity` events are heartbeats and are not stored.
+**Note:** `agent-event` payloads are high-volume (many events per response) and contain response content. `agent-session-activity` events are heartbeats and are not stored.
 
 ## Delivery Semantics
 

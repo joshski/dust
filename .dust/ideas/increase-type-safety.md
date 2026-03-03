@@ -23,7 +23,7 @@ This pattern is common in Node.js code because `catch` blocks receive `unknown`.
 
 ### Raw Event Typing
 
-`RawEvent = Record<string, unknown>` in `lib/claude/types.ts:1` is the entry point for all Claude streaming events. The `AgentSessionEvent` union in `lib/agent-events.ts` also uses `Record<string, unknown>` for the `rawEvent` payload in `claude-event` variants.
+`RawEvent = Record<string, unknown>` in `lib/claude/types.ts:1` is the entry point for all Claude streaming events. The `AgentSessionEvent` union in `lib/agent-events.ts` also uses `Record<string, unknown>` for the `rawEvent` payload in `agent-event` variants.
 
 Events are parsed from JSON lines without validation. A more type-safe approach would use a parser that validates the shape at runtime and returns typed results.
 

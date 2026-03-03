@@ -7,20 +7,31 @@ import {
 
 describe('rawEventToAgentEvent', () => {
   test('converts stream_event to agent-session-activity', () => {
-    const result = rawEventToAgentEvent({ type: 'stream_event', data: {} })
+    const result = rawEventToAgentEvent(
+      { type: 'stream_event', data: {} },
+      'claude'
+    )
     expect(result).toEqual({ type: 'agent-session-activity' })
   })
 
-  test('forwards other events as claude-event', () => {
+  test('forwards other events as agent-event', () => {
     const rawEvent = { type: 'message', content: 'hello' }
-    const result = rawEventToAgentEvent(rawEvent)
-    expect(result).toEqual({ type: 'claude-event', rawEvent })
+    const result = rawEventToAgentEvent(rawEvent, 'claude')
+    expect(result).toEqual({
+      type: 'agent-event',
+      provider: 'claude',
+      rawEvent,
+    })
   })
 
-  test('forwards events without type as claude-event', () => {
+  test('forwards events without type as agent-event', () => {
     const rawEvent = { data: 'something' }
-    const result = rawEventToAgentEvent(rawEvent)
-    expect(result).toEqual({ type: 'claude-event', rawEvent })
+    const result = rawEventToAgentEvent(rawEvent, 'claude')
+    expect(result).toEqual({
+      type: 'agent-event',
+      provider: 'claude',
+      rawEvent,
+    })
   })
 })
 
@@ -79,9 +90,10 @@ describe('formatAgentEvent', () => {
     expect(result).toBeNull()
   })
 
-  test('returns null for claude-event', () => {
+  test('returns null for agent-event', () => {
     const result = formatAgentEvent({
-      type: 'claude-event',
+      type: 'agent-event',
+      provider: 'claude',
       rawEvent: { data: 'test' },
     })
     expect(result).toBeNull()
@@ -91,7 +103,7 @@ describe('formatAgentEvent', () => {
 describe('createHeartbeatThrottler', () => {
   test('sends first heartbeat immediately', () => {
     const events: unknown[] = []
-    const throttler = createHeartbeatThrottler(e => events.push(e), {
+    const throttler = createHeartbeatThrottler(e => events.push(e), 'claude', {
       intervalMs: 5000,
       now: () => 0,
     })
@@ -104,7 +116,7 @@ describe('createHeartbeatThrottler', () => {
   test('suppresses heartbeats within interval', () => {
     const events: unknown[] = []
     let currentTime = 0
-    const throttler = createHeartbeatThrottler(e => events.push(e), {
+    const throttler = createHeartbeatThrottler(e => events.push(e), 'claude', {
       intervalMs: 5000,
       now: () => currentTime,
     })
@@ -121,7 +133,7 @@ describe('createHeartbeatThrottler', () => {
   test('sends heartbeat again after interval expires', () => {
     const events: unknown[] = []
     let currentTime = 0
-    const throttler = createHeartbeatThrottler(e => events.push(e), {
+    const throttler = createHeartbeatThrottler(e => events.push(e), 'claude', {
       intervalMs: 5000,
       now: () => currentTime,
     })
@@ -139,7 +151,7 @@ describe('createHeartbeatThrottler', () => {
   test('forwards non-stream events without throttling', () => {
     const events: unknown[] = []
     let currentTime = 0
-    const throttler = createHeartbeatThrottler(e => events.push(e), {
+    const throttler = createHeartbeatThrottler(e => events.push(e), 'claude', {
       intervalMs: 5000,
       now: () => currentTime,
     })
@@ -150,35 +162,39 @@ describe('createHeartbeatThrottler', () => {
     throttler(messageEvent)
 
     expect(events).toEqual([
-      { type: 'claude-event', rawEvent: messageEvent },
-      { type: 'claude-event', rawEvent: messageEvent },
+      { type: 'agent-event', provider: 'claude', rawEvent: messageEvent },
+      { type: 'agent-event', provider: 'claude', rawEvent: messageEvent },
     ])
   })
 
   test('non-stream events do not reset heartbeat timer', () => {
     const events: unknown[] = []
     let currentTime = 0
-    const throttler = createHeartbeatThrottler(e => events.push(e), {
+    const throttler = createHeartbeatThrottler(e => events.push(e), 'claude', {
       intervalMs: 5000,
       now: () => currentTime,
     })
 
     throttler({ type: 'stream_event' }) // t=0, heartbeat sent
     currentTime = 3000
-    throttler({ type: 'message', content: 'hello' }) // t=3000, claude-event
+    throttler({ type: 'message', content: 'hello' }) // t=3000, agent-event
     currentTime = 4000
     throttler({ type: 'stream_event' }) // t=4000, heartbeat suppressed (only 4s since last)
 
     expect(events).toEqual([
       { type: 'agent-session-activity' },
-      { type: 'claude-event', rawEvent: { type: 'message', content: 'hello' } },
+      {
+        type: 'agent-event',
+        provider: 'claude',
+        rawEvent: { type: 'message', content: 'hello' },
+      },
     ])
   })
 
   test('uses default interval of 5000ms', () => {
     const events: unknown[] = []
     let currentTime = 0
-    const throttler = createHeartbeatThrottler(e => events.push(e), {
+    const throttler = createHeartbeatThrottler(e => events.push(e), 'claude', {
       now: () => currentTime,
     })
 

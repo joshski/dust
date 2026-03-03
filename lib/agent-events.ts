@@ -21,7 +21,7 @@ export type AgentSessionEvent =
     }
   | { type: 'agent-session-ended'; success: boolean; error?: string }
   | { type: 'agent-session-activity' }
-  | { type: 'claude-event'; rawEvent: Record<string, unknown> }
+  | { type: 'agent-event'; provider: string; rawEvent: Record<string, unknown> }
 
 // Unified wire format for both HTTP and WebSocket paths
 export interface EventMessage {
@@ -38,17 +38,18 @@ export interface EventMessage {
 }
 
 /**
- * Convert a raw Claude streaming event to an AgentSessionEvent.
+ * Convert a raw agent streaming event to an AgentSessionEvent.
  * stream_event types become activity heartbeats; everything else
- * is forwarded as a claude-event.
+ * is forwarded as an agent-event with provider info.
  */
 export function rawEventToAgentEvent(
-  rawEvent: Record<string, unknown>
+  rawEvent: Record<string, unknown>,
+  provider: string
 ): AgentSessionEvent {
   if (typeof rawEvent.type === 'string' && rawEvent.type === 'stream_event') {
     return { type: 'agent-session-activity' }
   }
-  return { type: 'claude-event', rawEvent }
+  return { type: 'agent-event', provider, rawEvent }
 }
 
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 5000
@@ -57,11 +58,12 @@ const DEFAULT_HEARTBEAT_INTERVAL_MS = 5000
  * Create a heartbeat throttler that limits agent-session-activity events
  * to at most once per interval (default: 5 seconds).
  *
- * The returned callback converts raw Claude events to AgentSessionEvents,
+ * The returned callback converts raw agent events to AgentSessionEvents,
  * throttling stream_event heartbeats while forwarding all other events.
  */
 export function createHeartbeatThrottler(
   onAgentEvent: (event: AgentSessionEvent) => void,
+  provider: string,
   options?: { intervalMs?: number; now?: () => number }
 ): (rawEvent: Record<string, unknown>) => void {
   const intervalMs = options?.intervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS
@@ -69,7 +71,7 @@ export function createHeartbeatThrottler(
   let lastHeartbeatTime: number | undefined
 
   return (rawEvent: Record<string, unknown>) => {
-    const event = rawEventToAgentEvent(rawEvent)
+    const event = rawEventToAgentEvent(rawEvent, provider)
 
     if (event.type === 'agent-session-activity') {
       const currentTime = now()
@@ -106,7 +108,7 @@ export function formatAgentEvent(event: AgentSessionEvent): string | null {
         ? '🤖 Agent session ended (success)'
         : `🤖 Agent session ended (error: ${event.error})`
     case 'agent-session-activity':
-    case 'claude-event':
+    case 'agent-event':
       return null
   }
 }
