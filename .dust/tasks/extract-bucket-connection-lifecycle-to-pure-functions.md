@@ -36,7 +36,7 @@ This logic is interleaved with side effects (setTimeout, logging) making it hard
 
 ## Blocked By
 
-- [Extract bucket message handling to pure functions](extract-bucket-message-handling-to-pure-functions.md)
+(none)
 
 ## Definition of Done
 

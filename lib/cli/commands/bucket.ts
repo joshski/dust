@@ -30,6 +30,13 @@ import {
 } from '../../bucket/auth'
 import { createLocalServer, openBrowser } from '../../bucket/auth-server'
 import {
+  type Effect,
+  handleInvalidMessageFormat,
+  handleMessageParseError,
+  handleServerMessage,
+  type MessageHandlerState,
+} from '../../bucket/bucket-state'
+import {
   type BucketEmitFn,
   createEventMessageSender,
   formatBucketEvent,
@@ -601,103 +608,132 @@ export function connectWebSocket(
     try {
       rawData = JSON.parse(event.data)
     } catch {
-      logMessage(
+      const result = handleMessageParseError(event.data)
+      executeEffects(result.effects, {
         state,
         context,
         useTUI,
-        `Failed to parse WebSocket message: ${event.data}`,
-        'stderr'
-      )
+        bucketDependencies,
+        fileSystem,
+      })
       return
     }
 
     const message = parseServerMessage(rawData)
     if (!message) {
-      logMessage(
+      const result = handleInvalidMessageFormat(event.data)
+      executeEffects(result.effects, {
         state,
         context,
         useTUI,
-        `Invalid WebSocket message format: ${event.data}`,
-        'stderr'
-      )
+        bucketDependencies,
+        fileSystem,
+      })
       return
     }
 
-    log(`ws message: ${message.type}`)
+    // Build plain-object projection of state for pure handler
+    const handlerState: MessageHandlerState = {
+      repositoryNames: Array.from(state.repositories.keys()),
+    }
 
-    if (message.type === 'repository-list') {
-      const repos = message.repositories
-      logMessage(
-        state,
-        context,
-        useTUI,
-        `Received repository list (${repos.length} repositories):`
-      )
-      if (repos.length === 0) {
-        logMessage(state, context, useTUI, '  (empty)')
-      } else {
-        for (const r of repos) {
-          logMessage(state, context, useTUI, `  - name=${r.name}`)
-          logMessage(state, context, useTUI, `    id=${r.id}`)
-          logMessage(state, context, useTUI, `    gitUrl=${r.gitUrl}`)
-          logMessage(
-            state,
-            context,
-            useTUI,
-            `    gitSshUrl=${r.gitSshUrl ?? '(none)'}`
-          )
-          logMessage(state, context, useTUI, `    url=${r.url}`)
-          logMessage(state, context, useTUI, `    hasTask=${r.hasTask}`)
-        }
-      }
-      // Eagerly add repos to UI so tabs appear before cloning finishes
-      syncUIWithRepoList(state, repos)
-      const repoDeps = toRepositoryDependencies(bucketDependencies, fileSystem)
-      const repoContext = createTUIContext(state, context, useTUI)
-      /* v8 ignore start - async callback internals not tracked by v8 */
-      handleRepositoryListFromRepo(repos, state, repoDeps, repoContext)
-        .then(() => {
-          syncTUI(state)
-          // Wake repos that already have tasks waiting
-          for (const repoData of repos) {
-            if (repoData.hasTask) {
-              const repoState = state.repositories.get(repoData.name)
-              if (repoState) {
-                signalTaskAvailable(repoState, state, repoDeps, context, useTUI)
+    const result = handleServerMessage(handlerState, message)
+    executeEffects(result.effects, {
+      state,
+      context,
+      useTUI,
+      bucketDependencies,
+      fileSystem,
+    })
+  }
+}
+
+/**
+ * Dependencies needed to execute effects from pure message handlers.
+ */
+interface EffectExecutionDeps {
+  state: BucketState
+  context: CommandDependencies['context']
+  useTUI: boolean
+  bucketDependencies: BucketDependencies
+  fileSystem: FileSystem
+}
+
+/**
+ * Execute effects returned by pure message handlers.
+ * This is the "imperative shell" that interprets effect descriptions.
+ */
+function executeEffects(
+  effects: Effect[],
+  dependencies: EffectExecutionDeps
+): void {
+  const { state, context, useTUI, bucketDependencies, fileSystem } =
+    dependencies
+
+  for (const effect of effects) {
+    switch (effect.type) {
+      case 'log':
+        logMessage(state, context, useTUI, effect.message, effect.stream)
+        break
+
+      case 'debugLog':
+        log(effect.message)
+        break
+
+      case 'syncUI':
+        syncUIWithRepoList(state, effect.repositories)
+        break
+
+      case 'handleRepositoryList': {
+        const repoDeps = toRepositoryDependencies(
+          bucketDependencies,
+          fileSystem
+        )
+        const repoContext = createTUIContext(state, context, useTUI)
+        const repos = effect.repositories
+        /* v8 ignore start - async callback internals not tracked by v8 */
+        handleRepositoryListFromRepo(repos, state, repoDeps, repoContext)
+          .then(() => {
+            syncTUI(state)
+            // Wake repos that already have tasks waiting
+            for (const repoData of repos) {
+              if (repoData.hasTask) {
+                const repoState = state.repositories.get(repoData.name)
+                if (repoState) {
+                  signalTaskAvailable(
+                    repoState,
+                    state,
+                    repoDeps,
+                    context,
+                    useTUI
+                  )
+                }
               }
             }
-          }
-        })
-        .catch(error => {
-          logMessage(
-            state,
-            context,
-            useTUI,
-            `Failed to handle repository list: ${error.message}`,
-            'stderr'
-          )
-        })
-      /* v8 ignore stop */
-    } else if (message.type === 'task-available') {
-      const repoName = message.repository
-      const repoDeps = toRepositoryDependencies(bucketDependencies, fileSystem)
-      logMessage(
-        state,
-        context,
-        useTUI,
-        `Received task-available for ${repoName}`
-      )
-      const repoState = state.repositories.get(repoName)
-      if (repoState) {
-        signalTaskAvailable(repoState, state, repoDeps, context, useTUI)
-      } else {
-        logMessage(
-          state,
-          context,
-          useTUI,
-          `No repository state found for ${repoName}`,
-          'stderr'
+          })
+          .catch(error => {
+            logMessage(
+              state,
+              context,
+              useTUI,
+              `Failed to handle repository list: ${error.message}`,
+              'stderr'
+            )
+          })
+        /* v8 ignore stop */
+        break
+      }
+
+      case 'signalTaskAvailable': {
+        const repoDeps = toRepositoryDependencies(
+          bucketDependencies,
+          fileSystem
         )
+        const repoState = state.repositories.get(effect.repositoryName)
+        if (repoState) {
+          signalTaskAvailable(repoState, state, repoDeps, context, useTUI)
+        }
+        break
       }
     }
   }

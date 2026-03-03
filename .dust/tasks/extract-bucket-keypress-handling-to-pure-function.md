@@ -33,7 +33,7 @@ This can be made more testable by returning effects instead of executing them in
 
 ## Blocked By
 
-- [Extract bucket message handling to pure functions](extract-bucket-message-handling-to-pure-functions.md)
+(none)
 
 ## Definition of Done
 
