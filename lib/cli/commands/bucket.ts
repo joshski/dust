@@ -109,89 +109,6 @@ export interface BucketDependencies {
   auth: AuthDependencies
 }
 
-/* v8 ignore start - thin wrapper around native WebSocket */
-function defaultCreateWebSocket(url: string, token: string): WebSocketLike {
-  const ws = new WebSocket(url, {
-    // @ts-expect-error - Bun's WebSocket accepts headers option
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-  return ws as unknown as WebSocketLike
-}
-/* v8 ignore stop */
-
-/* v8 ignore start - thin wrapper around process stdin */
-function defaultSetupKeypress(onKey: (key: string) => void): () => void {
-  const stdin = process.stdin
-  if (!stdin.isTTY) {
-    return () => {}
-  }
-
-  stdin.setRawMode(true)
-  stdin.resume()
-  stdin.setEncoding('utf8')
-
-  const handler = (key: string) => {
-    onKey(key)
-  }
-
-  stdin.on('data', handler)
-
-  return () => {
-    stdin.removeListener('data', handler)
-    stdin.setRawMode(false)
-    stdin.pause()
-  }
-}
-/* v8 ignore stop */
-
-/* v8 ignore start - thin wrapper around process signals */
-function defaultSetupSignals(onSignal: () => void): () => void {
-  const handler = () => onSignal()
-
-  process.on('SIGINT', handler)
-  process.on('SIGTERM', handler)
-
-  return () => {
-    process.removeListener('SIGINT', handler)
-    process.removeListener('SIGTERM', handler)
-  }
-}
-/* v8 ignore stop */
-
-/* v8 ignore start - thin wrapper around process stdout resize */
-function defaultSetupResize(
-  onResize: (width: number, height: number) => void
-): () => void {
-  const handler = () => {
-    const { columns, rows } = process.stdout
-    onResize(columns ?? 80, rows ?? 24)
-  }
-
-  process.stdout.on('resize', handler)
-
-  return () => {
-    process.stdout.removeListener('resize', handler)
-  }
-}
-/* v8 ignore stop */
-
-/* v8 ignore start - thin wrapper around process stdout */
-function defaultGetTerminalSize(): { width: number; height: number } {
-  return {
-    width: process.stdout.columns || 80,
-    height: process.stdout.rows || 24,
-  }
-}
-/* v8 ignore stop */
-
-/* v8 ignore start - thin wrapper around process stdout */
-function defaultWriteStdout(data: string): void {
-  process.stdout.write(data)
-}
-/* v8 ignore stop */
-
 /**
  * Dependencies for createAuthFileSystem - allows injection of low-level fs operations
  */
@@ -250,7 +167,78 @@ export function createAuthFileSystem(
   }
 }
 
-/* v8 ignore start - thin wrapper around native functions */
+/* v8 ignore start - native wrappers: WebSocket, stdin, signals, resize, stdout */
+function defaultCreateWebSocket(url: string, token: string): WebSocketLike {
+  const ws = new WebSocket(url, {
+    // @ts-expect-error - Bun's WebSocket accepts headers option
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  })
+  return ws as unknown as WebSocketLike
+}
+
+function defaultSetupKeypress(onKey: (key: string) => void): () => void {
+  const stdin = process.stdin
+  if (!stdin.isTTY) {
+    return () => {}
+  }
+
+  stdin.setRawMode(true)
+  stdin.resume()
+  stdin.setEncoding('utf8')
+
+  const handler = (key: string) => {
+    onKey(key)
+  }
+
+  stdin.on('data', handler)
+
+  return () => {
+    stdin.removeListener('data', handler)
+    stdin.setRawMode(false)
+    stdin.pause()
+  }
+}
+
+function defaultSetupSignals(onSignal: () => void): () => void {
+  const handler = () => onSignal()
+
+  process.on('SIGINT', handler)
+  process.on('SIGTERM', handler)
+
+  return () => {
+    process.removeListener('SIGINT', handler)
+    process.removeListener('SIGTERM', handler)
+  }
+}
+
+function defaultSetupResize(
+  onResize: (width: number, height: number) => void
+): () => void {
+  const handler = () => {
+    const { columns, rows } = process.stdout
+    onResize(columns ?? 80, rows ?? 24)
+  }
+
+  process.stdout.on('resize', handler)
+
+  return () => {
+    process.stdout.removeListener('resize', handler)
+  }
+}
+
+function defaultGetTerminalSize(): { width: number; height: number } {
+  return {
+    width: process.stdout.columns || 80,
+    height: process.stdout.rows || 24,
+  }
+}
+
+function defaultWriteStdout(data: string): void {
+  process.stdout.write(data)
+}
+
 export function createDefaultBucketDependencies(): BucketDependencies {
   const authFileSystem = createAuthFileSystem({
     accessSync,
