@@ -30,11 +30,16 @@ import {
 } from '../../bucket/auth'
 import { createLocalServer, openBrowser } from '../../bucket/auth-server'
 import {
+  type ConnectionLifecycleState,
   type Effect,
+  handleClose,
+  handleError,
   handleInvalidMessageFormat,
   handleKeypress,
   handleMessageParseError,
+  handleOpen,
   handleServerMessage,
+  INITIAL_RECONNECT_DELAY_MS,
   type KeypressHandlerState,
   type MessageHandlerState,
 } from '../../bucket/bucket-state'
@@ -89,8 +94,6 @@ import type { CommandDependencies, CommandResult, FileSystem } from '../types'
 const log = createLogger('dust:cli:commands:bucket')
 
 const DEFAULT_DUSTBUCKET_WS_URL = 'wss://dustbucket.com/agent/connect'
-const INITIAL_RECONNECT_DELAY_MS = 1000
-const MAX_RECONNECT_DELAY_MS = 30000
 
 export interface BucketDependencies {
   spawn: typeof nodeSpawn
@@ -541,13 +544,17 @@ export function connectWebSocket(
 
     ws.onopen = () => {
       state.emit({ type: 'bucket.connected' })
-      logMessage(
-        state,
-        context,
-        useTUI,
-        formatBucketEvent({ type: 'bucket.connected' })
+      const lifecycleState: ConnectionLifecycleState = {
+        reconnectDelay: state.reconnectDelay,
+        shuttingDown: state.shuttingDown,
+      }
+      const result = handleOpen(lifecycleState)
+      state.reconnectDelay = result.state.reconnectDelay
+      executeLifecycleEffects(
+        result.effects,
+        { state, context, useTUI, bucketDependencies, fileSystem },
+        token
       )
-      state.reconnectDelay = INITIAL_RECONNECT_DELAY_MS
     }
   }
 
@@ -558,55 +565,31 @@ export function connectWebSocket(
       reason: event.reason || 'none',
     }
     state.emit(disconnectEvent)
-    logMessage(state, context, useTUI, formatBucketEvent(disconnectEvent))
     state.ws = null
 
-    // Don't reconnect if the server replaced us with a newer connection from
-    // the same user — reconnecting would just cause another replacement loop.
-    if (event.code === 4000) {
-      logMessage(
-        state,
-        context,
-        useTUI,
-        'Another connection replaced this one. Not reconnecting.'
-      )
-      return
+    const lifecycleState: ConnectionLifecycleState = {
+      reconnectDelay: state.reconnectDelay,
+      shuttingDown: state.shuttingDown,
     }
-
-    // Schedule reconnection
-    if (!state.shuttingDown) {
-      logMessage(
-        state,
-        context,
-        useTUI,
-        `Reconnecting in ${state.reconnectDelay / 1000} seconds...`
-      )
-      state.reconnectTimer = setTimeout(() => {
-        connectWebSocket(
-          token,
-          state,
-          bucketDependencies,
-          context,
-          fileSystem,
-          useTUI
-        )
-      }, state.reconnectDelay)
-
-      // Exponential backoff
-      state.reconnectDelay = Math.min(
-        state.reconnectDelay * 2,
-        MAX_RECONNECT_DELAY_MS
-      )
-    }
+    const result = handleClose(lifecycleState, event.code, event.reason || '')
+    state.reconnectDelay = result.state.reconnectDelay
+    executeLifecycleEffects(
+      result.effects,
+      { state, context, useTUI, bucketDependencies, fileSystem },
+      token
+    )
   }
 
   ws.onerror = error => {
-    logMessage(
-      state,
-      context,
-      useTUI,
-      `WebSocket error: ${error.message}`,
-      'stderr'
+    const lifecycleState: ConnectionLifecycleState = {
+      reconnectDelay: state.reconnectDelay,
+      shuttingDown: state.shuttingDown,
+    }
+    const result = handleError(lifecycleState, error.message)
+    executeLifecycleEffects(
+      result.effects,
+      { state, context, useTUI, bucketDependencies, fileSystem },
+      token
     )
   }
 
@@ -742,6 +725,44 @@ function executeEffects(
         }
         break
       }
+
+      case 'scheduleReconnect':
+        // Requires token to be available - this is handled by connectWebSocket wrapper
+        break
+    }
+  }
+}
+
+/**
+ * Execute lifecycle effects, including scheduleReconnect which needs access to
+ * the token and can schedule a reconnection.
+ */
+function executeLifecycleEffects(
+  effects: Effect[],
+  dependencies: EffectExecutionDeps,
+  token: string
+): void {
+  const { state, context, useTUI, bucketDependencies, fileSystem } =
+    dependencies
+
+  for (const effect of effects) {
+    switch (effect.type) {
+      case 'log':
+        logMessage(state, context, useTUI, effect.message, effect.stream)
+        break
+
+      case 'scheduleReconnect':
+        state.reconnectTimer = setTimeout(() => {
+          connectWebSocket(
+            token,
+            state,
+            bucketDependencies,
+            context,
+            fileSystem,
+            useTUI
+          )
+        }, effect.delayMs)
+        break
     }
   }
 }

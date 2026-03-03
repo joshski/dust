@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import {
+  type ConnectionLifecycleState,
   type Effect,
+  handleClose,
+  handleError,
   handleInvalidMessageFormat,
   handleKeypress,
   handleMessageParseError,
+  handleOpen,
   handleServerMessage,
+  INITIAL_RECONNECT_DELAY_MS,
   type KeypressHandlerState,
+  MAX_RECONNECT_DELAY_MS,
   type MessageHandlerResult,
   type MessageHandlerState,
 } from './bucket-state'
@@ -505,6 +511,228 @@ describe('bucket-state', () => {
 
         expect(result.effects).toHaveLength(0)
       })
+    })
+  })
+
+  describe('handleClose', () => {
+    function createConnectionState(
+      overrides: Partial<ConnectionLifecycleState> = {}
+    ): ConnectionLifecycleState {
+      return {
+        reconnectDelay: INITIAL_RECONNECT_DELAY_MS,
+        shuttingDown: false,
+        ...overrides,
+      }
+    }
+
+    it('logs disconnection with code and reason', () => {
+      const state = createConnectionState()
+
+      const result = handleClose(state, 1006, 'Connection lost')
+
+      const logEffects = result.effects.filter(e => e.type === 'log')
+      expect(logEffects[0]).toEqual({
+        type: 'log',
+        message: 'bucket.disconnected code=1006 reason=Connection lost',
+        stream: 'stdout',
+      })
+    })
+
+    it('logs "none" when reason is empty', () => {
+      const state = createConnectionState()
+
+      const result = handleClose(state, 1006, '')
+
+      const logEffects = result.effects.filter(e => e.type === 'log')
+      expect(logEffects[0]).toEqual({
+        type: 'log',
+        message: 'bucket.disconnected code=1006 reason=none',
+        stream: 'stdout',
+      })
+    })
+
+    describe('code 4000 (replaced by another connection)', () => {
+      it('does not schedule reconnection', () => {
+        const state = createConnectionState()
+
+        const result = handleClose(state, 4000, 'Replaced')
+
+        const reconnectEffect = result.effects.find(
+          e => e.type === 'scheduleReconnect'
+        )
+        expect(reconnectEffect).toBeUndefined()
+      })
+
+      it('logs that another connection replaced this one', () => {
+        const state = createConnectionState()
+
+        const result = handleClose(state, 4000, 'Replaced')
+
+        const logMessages = result.effects
+          .filter(e => e.type === 'log')
+          .map(e => (e.type === 'log' ? e.message : ''))
+        expect(logMessages).toContain(
+          'Another connection replaced this one. Not reconnecting.'
+        )
+      })
+
+      it('does not modify state', () => {
+        const state = createConnectionState({ reconnectDelay: 5000 })
+
+        const result = handleClose(state, 4000, 'Replaced')
+
+        expect(result.state.reconnectDelay).toBe(5000)
+      })
+    })
+
+    describe('normal disconnection (not code 4000)', () => {
+      it('schedules reconnection with current delay', () => {
+        const state = createConnectionState({ reconnectDelay: 2000 })
+
+        const result = handleClose(state, 1006, 'Lost')
+
+        const reconnectEffect = result.effects.find(
+          e => e.type === 'scheduleReconnect'
+        )
+        expect(reconnectEffect).toEqual({
+          type: 'scheduleReconnect',
+          delayMs: 2000,
+        })
+      })
+
+      it('logs reconnection delay in seconds', () => {
+        const state = createConnectionState({ reconnectDelay: 4000 })
+
+        const result = handleClose(state, 1006, 'Lost')
+
+        const logMessages = result.effects
+          .filter(e => e.type === 'log')
+          .map(e => (e.type === 'log' ? e.message : ''))
+        expect(logMessages).toContain('Reconnecting in 4 seconds...')
+      })
+
+      it('doubles the reconnect delay for next attempt', () => {
+        const state = createConnectionState({ reconnectDelay: 1000 })
+
+        const result = handleClose(state, 1006, 'Lost')
+
+        expect(result.state.reconnectDelay).toBe(2000)
+      })
+
+      it('caps reconnect delay at MAX_RECONNECT_DELAY_MS', () => {
+        const state = createConnectionState({ reconnectDelay: 20000 })
+
+        const result = handleClose(state, 1006, 'Lost')
+
+        expect(result.state.reconnectDelay).toBe(MAX_RECONNECT_DELAY_MS)
+      })
+
+      it('stays at max when already at max', () => {
+        const state = createConnectionState({
+          reconnectDelay: MAX_RECONNECT_DELAY_MS,
+        })
+
+        const result = handleClose(state, 1006, 'Lost')
+
+        expect(result.state.reconnectDelay).toBe(MAX_RECONNECT_DELAY_MS)
+      })
+    })
+
+    describe('when shutting down', () => {
+      it('does not schedule reconnection', () => {
+        const state = createConnectionState({ shuttingDown: true })
+
+        const result = handleClose(state, 1006, 'Lost')
+
+        const reconnectEffect = result.effects.find(
+          e => e.type === 'scheduleReconnect'
+        )
+        expect(reconnectEffect).toBeUndefined()
+      })
+
+      it('does not log reconnection message', () => {
+        const state = createConnectionState({ shuttingDown: true })
+
+        const result = handleClose(state, 1006, 'Lost')
+
+        const logMessages = result.effects
+          .filter(e => e.type === 'log')
+          .map(e => (e.type === 'log' ? e.message : ''))
+        expect(logMessages).not.toContain(
+          expect.stringContaining('Reconnecting')
+        )
+      })
+    })
+  })
+
+  describe('handleError', () => {
+    it('returns log effect to stderr with error message', () => {
+      const state: ConnectionLifecycleState = {
+        reconnectDelay: 1000,
+        shuttingDown: false,
+      }
+
+      const result = handleError(state, 'Connection refused')
+
+      expect(result.effects).toEqual([
+        {
+          type: 'log',
+          message: 'WebSocket error: Connection refused',
+          stream: 'stderr',
+        },
+      ])
+    })
+
+    it('does not modify state', () => {
+      const state: ConnectionLifecycleState = {
+        reconnectDelay: 5000,
+        shuttingDown: true,
+      }
+
+      const result = handleError(state, 'Error')
+
+      expect(result.state).toEqual(state)
+    })
+  })
+
+  describe('handleOpen', () => {
+    it('resets reconnect delay to initial value', () => {
+      const state: ConnectionLifecycleState = {
+        reconnectDelay: 16000,
+        shuttingDown: false,
+      }
+
+      const result = handleOpen(state)
+
+      expect(result.state.reconnectDelay).toBe(INITIAL_RECONNECT_DELAY_MS)
+    })
+
+    it('logs connected status', () => {
+      const state: ConnectionLifecycleState = {
+        reconnectDelay: 1000,
+        shuttingDown: false,
+      }
+
+      const result = handleOpen(state)
+
+      expect(result.effects).toEqual([
+        {
+          type: 'log',
+          message: 'bucket.connected',
+          stream: 'stdout',
+        },
+      ])
+    })
+
+    it('preserves shuttingDown state', () => {
+      const state: ConnectionLifecycleState = {
+        reconnectDelay: 8000,
+        shuttingDown: true,
+      }
+
+      const result = handleOpen(state)
+
+      expect(result.state.shuttingDown).toBe(true)
     })
   })
 })

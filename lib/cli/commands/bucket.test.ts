@@ -597,7 +597,7 @@ describe('connectWebSocket', () => {
     ws.onopen?.()
 
     expect(state.reconnectDelay).toBe(1000)
-    expect(context.stdoutLines.join('\n')).toContain('Connected to dustbucket')
+    expect(context.stdoutLines.join('\n')).toContain('bucket.connected')
   })
 
   test('uses pre-connected WebSocket when connectedWs is provided', () => {
@@ -658,7 +658,7 @@ describe('connectWebSocket', () => {
 
     ws.onclose?.({ code: 1000, reason: '' })
 
-    expect(context.stdoutLines.join('\n')).toContain('reason: none')
+    expect(context.stdoutLines.join('\n')).toContain('reason=none')
 
     if (state.reconnectTimer) clearTimeout(state.reconnectTimer)
   })
@@ -686,8 +686,10 @@ describe('connectWebSocket', () => {
 
     ws.onclose?.({ code: 1006, reason: 'Connection lost' })
 
-    expect(context.stdoutLines.join('\n')).toContain('Disconnected')
-    expect(context.stdoutLines.join('\n')).toContain('Reconnecting in 1 second')
+    expect(context.stdoutLines.join('\n')).toContain('bucket.disconnected')
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Reconnecting in 1 seconds'
+    )
     expect(state.reconnectTimer).not.toBeNull()
     expect(state.reconnectDelay).toBe(2000)
 

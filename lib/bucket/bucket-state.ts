@@ -89,6 +89,14 @@ export interface ScrollEffect {
 }
 
 /**
+ * ScheduleReconnect effect - instructs the shell to schedule a WebSocket reconnection.
+ */
+export interface ScheduleReconnectEffect {
+  type: 'scheduleReconnect'
+  delayMs: number
+}
+
+/**
  * All possible effects returned by pure message handlers.
  */
 export type Effect =
@@ -102,6 +110,7 @@ export type Effect =
   | SelectNextEffect
   | SelectPreviousEffect
   | ScrollEffect
+  | ScheduleReconnectEffect
 
 /**
  * Plain-object projection of the bucket state needed for message handling.
@@ -392,4 +401,122 @@ export function handleKeypress(
   }
 
   return { effects }
+}
+
+// --- WebSocket Connection Lifecycle ---
+
+/** Constants for reconnection timing */
+export const INITIAL_RECONNECT_DELAY_MS = 1000
+export const MAX_RECONNECT_DELAY_MS = 30000
+
+/**
+ * State needed for connection lifecycle handlers.
+ */
+export interface ConnectionLifecycleState {
+  /** Current reconnect delay in milliseconds */
+  reconnectDelay: number
+  /** Whether the bucket is shutting down */
+  shuttingDown: boolean
+}
+
+/**
+ * Result from connection lifecycle handlers.
+ * Includes both updated state and effects to execute.
+ */
+interface ConnectionLifecycleResult {
+  state: ConnectionLifecycleState
+  effects: Effect[]
+}
+
+/**
+ * Handle WebSocket close event.
+ * Returns updated state and effects (log, scheduleReconnect).
+ *
+ * Code 4000 means we were replaced by another connection from the same user;
+ * in that case we don't reconnect to avoid an infinite replacement loop.
+ */
+export function handleClose(
+  state: ConnectionLifecycleState,
+  code: number,
+  reason: string
+): ConnectionLifecycleResult {
+  const effects: Effect[] = []
+
+  effects.push({
+    type: 'log',
+    message: `bucket.disconnected code=${code} reason=${reason || 'none'}`,
+    stream: 'stdout',
+  })
+
+  // Code 4000: replaced by another connection - don't reconnect
+  if (code === 4000) {
+    effects.push({
+      type: 'log',
+      message: 'Another connection replaced this one. Not reconnecting.',
+      stream: 'stdout',
+    })
+    return { state, effects }
+  }
+
+  // Schedule reconnection unless shutting down
+  if (!state.shuttingDown) {
+    effects.push({
+      type: 'log',
+      message: `Reconnecting in ${state.reconnectDelay / 1000} seconds...`,
+      stream: 'stdout',
+    })
+
+    effects.push({
+      type: 'scheduleReconnect',
+      delayMs: state.reconnectDelay,
+    })
+
+    // Calculate next delay with exponential backoff
+    const nextDelay = Math.min(state.reconnectDelay * 2, MAX_RECONNECT_DELAY_MS)
+    return {
+      state: { ...state, reconnectDelay: nextDelay },
+      effects,
+    }
+  }
+
+  return { state, effects }
+}
+
+/**
+ * Handle WebSocket error event.
+ * Returns effects to log the error.
+ */
+export function handleError(
+  state: ConnectionLifecycleState,
+  errorMessage: string
+): ConnectionLifecycleResult {
+  return {
+    state,
+    effects: [
+      {
+        type: 'log',
+        message: `WebSocket error: ${errorMessage}`,
+        stream: 'stderr',
+      },
+    ],
+  }
+}
+
+/**
+ * Handle WebSocket open event.
+ * Resets reconnect delay and logs connected status.
+ */
+export function handleOpen(
+  state: ConnectionLifecycleState
+): ConnectionLifecycleResult {
+  return {
+    state: { ...state, reconnectDelay: INITIAL_RECONNECT_DELAY_MS },
+    effects: [
+      {
+        type: 'log',
+        message: 'bucket.connected',
+        stream: 'stdout',
+      },
+    ],
+  }
 }
