@@ -7,7 +7,6 @@
 
 import { existsSync as fsExistsSync } from 'node:fs'
 import os from 'node:os'
-import path from 'node:path'
 import type { AgentSessionEvent, EventMessage } from '../agent-events'
 import { createHeartbeatThrottler, formatAgentEvent } from '../agent-events'
 import {
@@ -32,12 +31,7 @@ import {
   run as codexRun,
 } from '../codex/run'
 import { loadSettings } from '../config/settings'
-import {
-  buildDockerImage,
-  generateImageTag,
-  hasDockerfile,
-  isDockerAvailable,
-} from '../docker/docker-agent'
+import { prepareDockerConfig } from '../docker/docker-agent'
 import { createLogger } from '../logging'
 import type { SendEventFn } from './events'
 import { appendLogLine, createLogLine, type LogBuffer } from './log-buffer'
@@ -384,57 +378,31 @@ export async function runRepositoryLoop(
     existsSync: repoDeps.dockerDeps?.existsSync ?? fsExistsSync,
   }
 
-  log(`checking for .dust/Dockerfile in ${repoState.path}`)
-  if (hasDockerfile(repoState.path, dockerDeps)) {
-    const imageTag = generateImageTag(repoState.path)
-    log(`Dockerfile found, image tag: ${imageTag}`)
-    onLoopEvent({ type: 'loop.docker_detected', imageTag })
+  const dockerResult = await prepareDockerConfig(
+    repoState.path,
+    dockerDeps,
+    onLoopEvent
+  )
 
-    if (!(await isDockerAvailable(dockerDeps))) {
-      log('Docker not available')
+  if ('error' in dockerResult) {
+    log(`Docker error: ${dockerResult.error}`)
+    appendLogLine(
+      repoState.logBuffer,
+      createLogLine(dockerResult.error, 'stderr')
+    )
+  } else if ('config' in dockerResult) {
+    if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) {
+      log('CLAUDE_CODE_OAUTH_TOKEN is not set, cannot run in Docker mode')
       appendLogLine(
         repoState.logBuffer,
         createLogLine(
-          'Docker not available. Install Docker or remove .dust/Dockerfile.',
+          'Docker mode requires CLAUDE_CODE_OAUTH_TOKEN. Run `claude setup-token` and export the token.',
           'stderr'
         )
       )
-    } else {
-      onLoopEvent({ type: 'loop.docker_building', imageTag })
-      const buildResult = await buildDockerImage(
-        { repoPath: repoState.path, imageTag },
-        dockerDeps
-      )
-
-      if (!buildResult.success) {
-        onLoopEvent({ type: 'loop.docker_error', error: buildResult.error })
-        log(`Docker build failed: ${buildResult.error}`)
-      } else {
-        onLoopEvent({ type: 'loop.docker_built', imageTag })
-        const homeDir = dockerDeps.homedir()
-        dockerConfig = {
-          imageTag,
-          repoPath: repoState.path,
-          homeDir,
-          hasGitconfig: dockerDeps.existsSync(path.join(homeDir, '.gitconfig')),
-        }
-        log(`Docker config ready: ${JSON.stringify(dockerConfig)}`)
-
-        if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) {
-          log('CLAUDE_CODE_OAUTH_TOKEN is not set, cannot run in Docker mode')
-          appendLogLine(
-            repoState.logBuffer,
-            createLogLine(
-              'Docker mode requires CLAUDE_CODE_OAUTH_TOKEN. Run `claude setup-token` and export the token.',
-              'stderr'
-            )
-          )
-          return
-        }
-      }
+      return
     }
-  } else {
-    log('no .dust/Dockerfile found, running without Docker')
+    dockerConfig = dockerResult.config
   }
 
   log(`loop started for ${repoName} at ${repoState.path}`)

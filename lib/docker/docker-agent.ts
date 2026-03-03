@@ -117,3 +117,79 @@ export function hasDockerfile(
   const dockerfilePath = path.join(repoPath, '.dust', 'Dockerfile')
   return dependencies.existsSync(dockerfilePath)
 }
+
+type DockerPrepareEvent =
+  | { type: 'loop.docker_detected'; imageTag: string }
+  | { type: 'loop.docker_building'; imageTag: string }
+  | { type: 'loop.docker_built'; imageTag: string }
+  | { type: 'loop.docker_error'; error: string }
+
+interface DockerSpawnConfig {
+  imageTag: string
+  repoPath: string
+  homeDir: string
+  hasGitconfig: boolean
+}
+
+type PrepareDockerConfigResult =
+  | { config: DockerSpawnConfig }
+  | { error: string }
+  | Record<string, never>
+
+/**
+ * Prepare Docker configuration for agent execution.
+ *
+ * Checks for a .dust/Dockerfile, verifies Docker availability, builds the image,
+ * and returns the spawn configuration. Emits events throughout the process.
+ *
+ * Returns:
+ * - `{ config: DockerSpawnConfig }` on success
+ * - `{ error: string }` on failure (Docker not available or build failed)
+ * - `{}` if no Dockerfile exists
+ */
+export async function prepareDockerConfig(
+  repoPath: string,
+  dependencies: DockerDependencies,
+  onEvent: (event: DockerPrepareEvent) => void
+): Promise<PrepareDockerConfigResult> {
+  log(`checking for .dust/Dockerfile in ${repoPath}`)
+
+  if (!hasDockerfile(repoPath, dependencies)) {
+    log('no .dust/Dockerfile found, running without Docker')
+    return {}
+  }
+
+  const imageTag = generateImageTag(repoPath)
+  log(`Dockerfile found, image tag: ${imageTag}`)
+  onEvent({ type: 'loop.docker_detected', imageTag })
+
+  if (!(await isDockerAvailable(dependencies))) {
+    const error =
+      'Docker not available. Install Docker or remove .dust/Dockerfile to run without Docker.'
+    return { error }
+  }
+
+  onEvent({ type: 'loop.docker_building', imageTag })
+  const buildResult = await buildDockerImage(
+    { repoPath, imageTag },
+    dependencies
+  )
+
+  if (!buildResult.success) {
+    onEvent({ type: 'loop.docker_error', error: buildResult.error })
+    return { error: buildResult.error }
+  }
+
+  onEvent({ type: 'loop.docker_built', imageTag })
+
+  const homeDir = dependencies.homedir()
+  const config: DockerSpawnConfig = {
+    imageTag,
+    repoPath,
+    homeDir,
+    hasGitconfig: dependencies.existsSync(path.join(homeDir, '.gitconfig')),
+  }
+
+  log(`Docker config ready: ${JSON.stringify(config)}`)
+  return { config }
+}

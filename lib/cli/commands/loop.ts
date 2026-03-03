@@ -19,7 +19,6 @@
 import { spawn as nodeSpawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import os from 'node:os'
-import path from 'node:path'
 import {
   type AgentSessionEvent,
   createHeartbeatThrottler,
@@ -29,11 +28,8 @@ import {
 import { run as claudeRun } from '../../claude/run'
 import type { DockerSpawnConfig } from '../../claude/types'
 import {
-  buildDockerImage,
   type DockerDependencies,
-  generateImageTag,
-  hasDockerfile,
-  isDockerAvailable,
+  prepareDockerConfig,
 } from '../../docker/docker-agent'
 import { createLogger, enableFileLogs } from '../../logging'
 import { buildUnattendedEnv, isUnattended } from '../../session'
@@ -544,52 +540,25 @@ export async function loopClaude(
     existsSync: loopDependencies.dockerDeps?.existsSync ?? existsSync,
   }
 
-  log(`checking for .dust/Dockerfile in ${context.cwd}`)
-  if (hasDockerfile(context.cwd, dockerDeps)) {
-    const imageTag = generateImageTag(context.cwd)
-    log(`Dockerfile found, image tag: ${imageTag}`)
-    onLoopEvent({ type: 'loop.docker_detected', imageTag })
+  const dockerResult = await prepareDockerConfig(
+    context.cwd,
+    dockerDeps,
+    onLoopEvent
+  )
 
-    // Verify Docker is available
-    if (!(await isDockerAvailable(dockerDeps))) {
-      context.stderr(
-        'Docker not available. Install Docker or remove .dust/Dockerfile to run without Docker.'
-      )
-      return { exitCode: 1 }
-    }
+  if ('error' in dockerResult) {
+    context.stderr(dockerResult.error)
+    return { exitCode: 1 }
+  }
 
-    // Build the Docker image
-    onLoopEvent({ type: 'loop.docker_building', imageTag })
-    const buildResult = await buildDockerImage(
-      { repoPath: context.cwd, imageTag },
-      dockerDeps
-    )
-
-    if (!buildResult.success) {
-      onLoopEvent({ type: 'loop.docker_error', error: buildResult.error })
-      context.stderr(buildResult.error)
-      return { exitCode: 1 }
-    }
-
-    onLoopEvent({ type: 'loop.docker_built', imageTag })
-
-    // Configure Docker spawn
-    const homeDir = os.homedir()
-    dockerConfig = {
-      imageTag,
-      repoPath: context.cwd,
-      homeDir,
-      hasGitconfig: existsSync(path.join(homeDir, '.gitconfig')),
-    }
-
+  if ('config' in dockerResult) {
+    dockerConfig = dockerResult.config
     if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) {
       context.stderr(
         'Docker mode requires CLAUDE_CODE_OAUTH_TOKEN. Run `claude setup-token` and export the token.'
       )
       return { exitCode: 1 }
     }
-  } else {
-    log('no .dust/Dockerfile found, running without Docker')
   }
 
   log(`starting loop, maxIterations=${maxIterations}, sessionId=${sessionId}`)
