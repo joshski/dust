@@ -290,19 +290,14 @@ export async function handleRepositoryList(
 
   // Add new repositories or update existing ones
   for (const [name, repo] of incomingRepos) {
-    if (!manager.repositories.has(name)) {
+    const existing = manager.repositories.get(name)
+    if (!existing) {
       await addRepository(repo, manager, repoDeps, context)
-    } else {
-      const existing = manager.repositories.get(name)
-      /* v8 ignore start -- guarded by has() check above */
-      if (!existing) continue
-      /* v8 ignore stop */
-      if (existing.repository.agentProvider !== repo.agentProvider) {
-        const from = existing.repository.agentProvider ?? '(unset)'
-        const to = repo.agentProvider ?? '(unset)'
-        log(`${name}: agentProvider changed from ${from} to ${to}`)
-        existing.repository.agentProvider = repo.agentProvider
-      }
+    } else if (existing.repository.agentProvider !== repo.agentProvider) {
+      const from = existing.repository.agentProvider ?? '(unset)'
+      const to = repo.agentProvider ?? '(unset)'
+      log(`${name}: agentProvider changed from ${from} to ${to}`)
+      existing.repository.agentProvider = repo.agentProvider
     }
   }
 

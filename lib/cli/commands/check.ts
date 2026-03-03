@@ -146,15 +146,13 @@ async function runValidationCheck(
   if (result.exitCode === 0) {
     emitEvent?.({ type: 'check-passed', name: 'lint', durationMs })
   } else {
-    const failedEvent: Parameters<NonNullable<typeof emitEvent>>[0] = {
+    // Lint always produces output on failure, so we unconditionally include it
+    emitEvent?.({
       type: 'check-failed',
       name: 'lint',
       durationMs,
-    }
-    /* v8 ignore start - defensive guard: lint always produces output on failure */
-    if (output) failedEvent.output = output
-    /* v8 ignore stop */
-    emitEvent?.(failedEvent)
+      output,
+    })
   }
 
   return {

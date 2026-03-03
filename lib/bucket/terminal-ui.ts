@@ -88,10 +88,12 @@ export function visibleLength(text: string): number {
  */
 export function truncateLine(text: string, maxWidth: number): string {
   if (maxWidth <= 0) return ''
-  if (visibleLength(text) <= maxWidth) return text
+  const textLength = visibleLength(text)
+  if (textLength <= maxWidth) return text
 
   // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI codes require escape sequences
   const ansiRegex = /\x1b\[[0-9;]*m/g
+  const truncateAt = maxWidth - CHARS.ellipsis.length
   let visibleCount = 0
   let result = ''
   let lastIndex = 0
@@ -104,9 +106,8 @@ export function truncateLine(text: string, maxWidth: number): string {
     // Add visible characters before this ANSI code
     const textBefore = text.slice(lastIndex, match.index)
     for (const char of textBefore) {
-      if (visibleCount >= maxWidth - CHARS.ellipsis.length) {
-        result += CHARS.ellipsis
-        return result + ANSI.RESET
+      if (visibleCount >= truncateAt) {
+        return result + CHARS.ellipsis + ANSI.RESET
       }
       result += char
       visibleCount++
@@ -116,19 +117,20 @@ export function truncateLine(text: string, maxWidth: number): string {
     lastIndex = match.index + match[0].length
   }
 
-  // Add remaining text after the last ANSI code (or all text if no ANSI codes)
+  // Add remaining text after the last ANSI code (or all text if no ANSI codes).
+  // Since textLength > maxWidth (guard above), visibleCount will reach truncateAt.
   const remaining = text.slice(lastIndex)
   for (const char of remaining) {
-    if (visibleCount >= maxWidth - CHARS.ellipsis.length) {
-      result += CHARS.ellipsis
-      return result + ANSI.RESET
+    if (visibleCount >= truncateAt) {
+      return result + CHARS.ellipsis + ANSI.RESET
     }
     result += char
     visibleCount++
   }
 
-  /* v8 ignore start - unreachable: visibleLength guard on line 80 ensures truncation always occurs above */
-  return result
+  /* v8 ignore start - unreachable: textLength > maxWidth guarantees visibleCount
+     reaches truncateAt before exhausting all characters. Required for TypeScript. */
+  return result + ANSI.RESET
   /* v8 ignore stop */
 }
 
@@ -363,9 +365,8 @@ export function getVisibleLogs(state: TerminalUIState): DisplayLogLine[] {
     for (const repoName of state.repositories) {
       const buffer = state.logBuffers.get(repoName)
       if (!buffer) continue
-      /* v8 ignore start - fallback unreachable: repoColors is built from the same repositories array */
-      const color = repoColors.get(repoName) ?? ANSI.FG_WHITE
-      /* v8 ignore stop */
+      // repoColors is built from the same repositories array above, so key is guaranteed
+      const color = repoColors.get(repoName)!
       const lines = getLogLines(buffer)
       for (const line of lines) {
         allLogs.push({ ...line, repository: repoName, color })

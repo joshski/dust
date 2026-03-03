@@ -255,13 +255,13 @@ export async function list(
         facts: collectedItems.map(i => ({ path: i.path, title: i.title })),
       })
     } else if (type === 'ideas') {
+      // status is always set when type === 'ideas' (see line 232 above)
       context.emitEvent?.({
         type: 'ideas-listed',
         ideas: collectedItems.map(i => ({
           path: i.path,
           title: i.title,
-          /* v8 ignore next - status is always set for ideas, fallback is defensive */
-          status: i.status ?? 'draft',
+          status: i.status!,
         })),
       })
     } else if (type === 'principles') {
