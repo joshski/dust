@@ -321,42 +321,6 @@ export async function runRepositoryLoop(
     agentSessionId: undefined,
   }
 
-  // Select agent based on agentProvider
-  const isCodex = repoState.repository.agentProvider === 'codex'
-  const agentType = isCodex ? 'codex' : 'claude'
-  log(
-    `${repoName}: agentProvider=${repoState.repository.agentProvider ?? '(unset)'}, using ${agentType}`
-  )
-
-  // Shared sink creation for both agent types
-  const createStdoutSink = createStdoutSinkFactory(
-    loopState,
-    repoState.logBuffer
-  )
-
-  let bufferRun: typeof claudeRun
-  if (isCodex) {
-    const codexBufferSinkDeps: CodexRunnerDependencies = {
-      ...codexDefaultRunnerDependencies,
-      createStdoutSink,
-    }
-    bufferRun = createCodexBufferRun(codexRun, codexBufferSinkDeps)
-  } else {
-    const bufferSinkDeps: RunnerDependencies = {
-      ...defaultRunnerDependencies,
-      createStdoutSink,
-    }
-    bufferRun = createBufferRun(run, bufferSinkDeps)
-  }
-
-  const loopDeps: LoopDependencies = {
-    spawn,
-    run: bufferRun,
-    sleep,
-    postEvent: noOpPostEvent,
-    agentType,
-  }
-
   const onLoopEvent = createLoopEventHandler(repoState.logBuffer)
 
   const onAgentEvent = createAgentEventHandler({
@@ -409,6 +373,42 @@ export async function runRepositoryLoop(
 
   while (!repoState.stopRequested) {
     loopState.agentSessionId = crypto.randomUUID()
+
+    // Select agent based on agentProvider (re-read each iteration so changes take effect)
+    const isCodex = repoState.repository.agentProvider === 'codex'
+    const agentType = isCodex ? 'codex' : 'claude'
+    log(
+      `${repoName}: agentProvider=${repoState.repository.agentProvider ?? '(unset)'}, using ${agentType}`
+    )
+
+    // Shared sink creation for both agent types
+    const createStdoutSink = createStdoutSinkFactory(
+      loopState,
+      repoState.logBuffer
+    )
+
+    let bufferRun: typeof claudeRun
+    if (isCodex) {
+      const codexBufferSinkDeps: CodexRunnerDependencies = {
+        ...codexDefaultRunnerDependencies,
+        createStdoutSink,
+      }
+      bufferRun = createCodexBufferRun(codexRun, codexBufferSinkDeps)
+    } else {
+      const bufferSinkDeps: RunnerDependencies = {
+        ...defaultRunnerDependencies,
+        createStdoutSink,
+      }
+      bufferRun = createBufferRun(run, bufferSinkDeps)
+    }
+
+    const loopDeps: LoopDependencies = {
+      spawn,
+      run: bufferRun,
+      sleep,
+      postEvent: noOpPostEvent,
+      agentType,
+    }
     const abortController = new AbortController()
     const cancelCurrentIteration = createCancelHandler(abortController)
     repoState.cancelCurrentIteration = cancelCurrentIteration

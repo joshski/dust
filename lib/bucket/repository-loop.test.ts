@@ -780,6 +780,62 @@ describe('runRepositoryLoop', () => {
     expect(errorLine).toBeDefined()
   })
 
+  test('uses updated agentProvider on next iteration', async () => {
+    const repoState = createTestRepoState() // starts as claude (undefined)
+    let iterationCount = 0
+
+    // Spawn returns a proc that exits with code 1 (failed git pull)
+    // This triggers the run() call path where agentName is observable
+    const failingPullSpawn = (() => {
+      const proc = {
+        on(event: string, listener: (arg: unknown) => void) {
+          if (event === 'close') setTimeout(() => listener(1), 0)
+          return proc
+        },
+        stdout: { on: () => {} },
+        stderr: { on: () => {} },
+      }
+      return proc
+    }) as unknown as RepositoryDependencies['spawn']
+
+    const repoDeps: RepositoryDependencies = {
+      spawn: failingPullSpawn,
+      run: async () => {
+        throw new Error('agent run failed')
+      },
+      fileSystem: {
+        exists: () => false,
+        readFile: async () => '',
+        readdir: async () => [],
+        isDirectory: () => false,
+        writeFile: async () => {},
+        mkdir: async () => {},
+        chmod: async () => {},
+        getFileCreationTime: () => 0,
+        rename: async () => {},
+      },
+      sleep: async () => {
+        iterationCount++
+        if (iterationCount === 1) {
+          // Switch to codex before the second iteration
+          repoState.repository.agentProvider = 'codex'
+        } else {
+          repoState.stopRequested = true
+        }
+      },
+      getReposDir: () => '/tmp/repos',
+    }
+
+    await runRepositoryLoop(repoState, repoDeps)
+
+    const lines = getLogLines(repoState.logBuffer)
+    const errorLines = lines.filter(l => l.text.includes('failed to resolve'))
+    // First iteration uses Claude, second uses Codex
+    expect(errorLines.length).toBe(2)
+    expect(errorLines[0].text).toContain('Claude failed')
+    expect(errorLines[1].text).toContain('Codex failed')
+  })
+
   afterEach(() => restoreEnv())
 
   test('detects Dockerfile and builds docker image', async () => {
