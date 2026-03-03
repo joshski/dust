@@ -71,6 +71,20 @@ interface BucketConnection {
 
 ## Open Questions
 
+### How should the bucket server distinguish between single-repo and multi-repo clients?
+
+#### Use existing repository field with implicit registration
+
+Events already include a `repository` field. The server can infer the client mode from the events it receives — if events arrive for a repository not in the user's managed list, it's a standalone loop. No protocol change needed; the server just associates events with whatever repository name is provided.
+
+#### Add a client type field to the connection handshake
+
+Introduce a `clientType` field (`'loop'` | `'bucket'`) sent during WebSocket connection (either in headers or as an initial message). The server can then apply different behaviors (e.g., `dust bucket` receives `repository-list` messages; `dust loop` only receives `task-available` for its single repo).
+
+#### Use different WebSocket endpoints
+
+Route `dust loop` connections to a dedicated endpoint (e.g., `/agent/loop`) while `dust bucket` continues to use `/agent/connect`. The server applies different handlers based on the endpoint. Keeps connection logic distinct but adds endpoint proliferation.
+
 ### How should `dust loop` behave when stdin is not a TTY?
 
 #### Skip prompt and continue without event sending
