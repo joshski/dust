@@ -179,6 +179,18 @@ export function createBufferStdoutSink(
 }
 
 /**
+ * Create a factory function that produces OutputSinks for agent runners.
+ * This factory captures loopState and logBuffer, returning a function
+ * that can be passed to RunnerDependencies.createStdoutSink.
+ */
+export function createStdoutSinkFactory(
+  loopState: LoopState,
+  logBuffer: LogBuffer
+): () => OutputSink {
+  return () => createBufferStdoutSink(loopState, logBuffer)
+}
+
+/**
  * Create a run function that redirects Claude output to a log buffer.
  */
 export function createBufferRun(
@@ -311,11 +323,11 @@ export async function runRepositoryLoop(
     `${repoName}: agentProvider=${repoState.repository.agentProvider ?? '(unset)'}, using ${agentType}`
   )
 
-  // Shared sink creation for both agent types (tested via createBufferStdoutSink)
-  /* v8 ignore start - callback tested via createBufferStdoutSink tests */
-  const createStdoutSink = () =>
-    createBufferStdoutSink(loopState, repoState.logBuffer)
-  /* v8 ignore stop */
+  // Shared sink creation for both agent types
+  const createStdoutSink = createStdoutSinkFactory(
+    loopState,
+    repoState.logBuffer
+  )
 
   let bufferRun: typeof claudeRun
   /* v8 ignore start - codex path mirrors claude path, tested in loop-codex.test.ts */

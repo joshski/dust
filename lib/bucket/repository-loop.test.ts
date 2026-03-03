@@ -13,6 +13,7 @@ import {
   createCancelHandler,
   createLogCallbacks,
   createLoopEventHandler,
+  createStdoutSinkFactory,
   createWakeUpHandler,
   flushAndLogMultiLine,
   type LoopState,
@@ -296,6 +297,26 @@ describe('createBufferStdoutSink', () => {
     expect(lines[0].text).toBe('pending')
     expect(lines[1].text).toBe('content')
     expect(loopState.partialLine).toBe('')
+  })
+})
+
+describe('createStdoutSinkFactory', () => {
+  test('returns a function that creates buffer sinks', () => {
+    const buffer = createLogBuffer()
+    const loopState: LoopState = {
+      partialLine: '',
+      sequence: 0,
+      agentSessionId: undefined,
+    }
+
+    const factory = createStdoutSinkFactory(loopState, buffer)
+    const sink = factory()
+
+    sink.write('test\n')
+
+    const lines = getLogLines(buffer)
+    expect(lines).toHaveLength(1)
+    expect(lines[0].text).toBe('test')
   })
 })
 

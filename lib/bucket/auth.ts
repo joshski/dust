@@ -22,6 +22,7 @@ export interface AuthDependencies {
   fileSystem: FileSystem
   authTimeoutMs?: number
   exchangeCode?: (code: string) => Promise<string>
+  fetch?: typeof fetch
 }
 
 function credentialsPath(homeDir: string): string {
@@ -98,9 +99,9 @@ export async function defaultExchangeCode(
 export async function authenticate(
   authDeps: AuthDependencies
 ): Promise<string> {
-  /* v8 ignore start - defaultExchangeCode fallback tested directly, not via authenticate */
-  const exchange = authDeps.exchangeCode ?? defaultExchangeCode
-  /* v8 ignore stop */
+  const exchange =
+    authDeps.exchangeCode ??
+    ((code: string) => defaultExchangeCode(code, authDeps.fetch))
 
   return new Promise<string>((resolve, reject) => {
     let timer: ReturnType<typeof setTimeout> | null = null

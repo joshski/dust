@@ -305,4 +305,29 @@ describe('authenticate', () => {
     )
     expect(stopped).toBe(true)
   })
+
+  test('uses defaultExchangeCode when exchangeCode not provided', async () => {
+    stubEnv('DUST_BUCKET_HOST', 'http://localhost:9999')
+    const stubFetch = (async () =>
+      new Response(JSON.stringify({ token: 'default-exchange-token' }), {
+        status: 200,
+      })) as unknown as typeof fetch
+
+    const authDependencies: AuthDependencies = {
+      createServer: handler => {
+        setTimeout(() => {
+          handler(new Request('http://localhost:9999/callback?code=test-code'))
+        }, 0)
+        return { port: 9999, stop: () => {} }
+      },
+      openBrowser: () => {},
+      getHomeDir: () => '/home',
+      fileSystem: createFileSystemEmulator(),
+      fetch: stubFetch,
+      // Note: exchangeCode is intentionally not provided to test the fallback
+    }
+
+    const token = await authenticate(authDependencies)
+    expect(token).toBe('default-exchange-token')
+  })
 })
