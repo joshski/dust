@@ -307,6 +307,9 @@ export async function runRepositoryLoop(
   // Select agent based on agentProvider
   const isCodex = repoState.repository.agentProvider === 'codex'
   const agentType = isCodex ? 'codex' : 'claude'
+  log(
+    `${repoName}: agentProvider=${repoState.repository.agentProvider ?? '(unset)'}, using ${agentType}`
+  )
 
   // Shared sink creation for both agent types (tested via createBufferStdoutSink)
   /* v8 ignore start - callback tested via createBufferStdoutSink tests */

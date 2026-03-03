@@ -74,6 +74,7 @@ describe('bucket-state', () => {
               url: 'https://github.com/user/my-repo',
               id: 456,
               hasTask: true,
+              agentProvider: 'codex',
             },
           ],
         }
@@ -100,6 +101,7 @@ describe('bucket-state', () => {
         )
         expect(logMessages).toContain('    url=https://github.com/user/my-repo')
         expect(logMessages).toContain('    hasTask=true')
+        expect(logMessages).toContain('    agentProvider=codex')
       })
 
       it('logs (none) for missing gitSshUrl', () => {

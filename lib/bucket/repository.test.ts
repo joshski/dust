@@ -188,6 +188,23 @@ describe('parseRepository', () => {
     ).toBeNull()
   })
 
+  test('parses object with agentProvider', () => {
+    const repo = parseRepository({
+      name: 'my-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+      url: 'https://example.com/my-repo',
+      id: 123,
+      agentProvider: 'codex',
+    })
+    expect(repo).toEqual({
+      name: 'my-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+      url: 'https://example.com/my-repo',
+      id: 123,
+      agentProvider: 'codex',
+    })
+  })
+
   test('returns null when id is missing or invalid', () => {
     expect(
       parseRepository({
@@ -1110,6 +1127,151 @@ describe('handleRepositoryList', () => {
 
     // No repositories should be added since all are invalid
     expect(manager.repositories.size).toBe(0)
+  })
+
+  test('updates agentProvider on existing repository', async () => {
+    const context = createContextEmulator()
+    const manager = createMockManager()
+    const repoDeps = createRepositoryDependencies({
+      sleep: () => Promise.resolve(),
+    })
+
+    // Pre-populate manager with a repo that has no agentProvider
+    manager.repositories.set('user/repo', {
+      repository: {
+        name: 'user/repo',
+        gitUrl: 'https://github.com/user/repo.git',
+        url: 'https://example.com/user/repo',
+        id: 1,
+      },
+      path: '/tmp/user/repo',
+      logBuffer: { lines: [], maxLines: 100, trimToLines: 60 },
+      loopPromise: null,
+      stopRequested: false,
+      agentStatus: 'idle',
+    } as RepositoryState)
+
+    await handleRepositoryList(
+      [
+        {
+          name: 'user/repo',
+          gitUrl: 'https://github.com/user/repo.git',
+          url: 'https://example.com/user/repo',
+          id: 1,
+          agentProvider: 'codex',
+        },
+      ],
+      manager,
+      repoDeps,
+      context
+    )
+
+    expect(
+      manager.repositories.get('user/repo')?.repository.agentProvider
+    ).toBe('codex')
+
+    // Send same agentProvider again — should not change
+    await handleRepositoryList(
+      [
+        {
+          name: 'user/repo',
+          gitUrl: 'https://github.com/user/repo.git',
+          url: 'https://example.com/user/repo',
+          id: 1,
+          agentProvider: 'codex',
+        },
+      ],
+      manager,
+      repoDeps,
+      context
+    )
+
+    expect(
+      manager.repositories.get('user/repo')?.repository.agentProvider
+    ).toBe('codex')
+  })
+
+  test('updates agentProvider to undefined when removed', async () => {
+    const context = createContextEmulator()
+    const manager = createMockManager()
+    const repoDeps = createRepositoryDependencies({
+      sleep: () => Promise.resolve(),
+    })
+
+    manager.repositories.set('user/repo', {
+      repository: {
+        name: 'user/repo',
+        gitUrl: 'https://github.com/user/repo.git',
+        url: 'https://example.com/user/repo',
+        id: 1,
+        agentProvider: 'codex',
+      },
+      path: '/tmp/user/repo',
+      logBuffer: { lines: [], maxLines: 100, trimToLines: 60 },
+      loopPromise: null,
+      stopRequested: false,
+      agentStatus: 'idle',
+    } as RepositoryState)
+
+    await handleRepositoryList(
+      [
+        {
+          name: 'user/repo',
+          gitUrl: 'https://github.com/user/repo.git',
+          url: 'https://example.com/user/repo',
+          id: 1,
+        },
+      ],
+      manager,
+      repoDeps,
+      context
+    )
+
+    expect(
+      manager.repositories.get('user/repo')?.repository.agentProvider
+    ).toBeUndefined()
+  })
+
+  test('updates agentProvider between named providers', async () => {
+    const context = createContextEmulator()
+    const manager = createMockManager()
+    const repoDeps = createRepositoryDependencies({
+      sleep: () => Promise.resolve(),
+    })
+
+    manager.repositories.set('user/repo', {
+      repository: {
+        name: 'user/repo',
+        gitUrl: 'https://github.com/user/repo.git',
+        url: 'https://example.com/user/repo',
+        id: 1,
+        agentProvider: 'claude',
+      },
+      path: '/tmp/user/repo',
+      logBuffer: { lines: [], maxLines: 100, trimToLines: 60 },
+      loopPromise: null,
+      stopRequested: false,
+      agentStatus: 'idle',
+    } as RepositoryState)
+
+    await handleRepositoryList(
+      [
+        {
+          name: 'user/repo',
+          gitUrl: 'https://github.com/user/repo.git',
+          url: 'https://example.com/user/repo',
+          id: 1,
+          agentProvider: 'codex',
+        },
+      ],
+      manager,
+      repoDeps,
+      context
+    )
+
+    expect(
+      manager.repositories.get('user/repo')?.repository.agentProvider
+    ).toBe('codex')
   })
 
   test('adds new repositories and tracks them in state', async () => {

@@ -182,6 +182,13 @@ export function handleServerMessage(
             message: `    hasTask=${r.hasTask}`,
             stream: 'stdout',
           })
+          if (r.agentProvider) {
+            effects.push({
+              type: 'log',
+              message: `    agentProvider=${r.agentProvider}`,
+              stream: 'stdout',
+            })
+          }
         }
       }
 
