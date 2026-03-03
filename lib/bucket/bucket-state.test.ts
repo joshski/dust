@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   type Effect,
   handleInvalidMessageFormat,
+  handleKeypress,
   handleMessageParseError,
   handleServerMessage,
+  type KeypressHandlerState,
   type MessageHandlerResult,
   type MessageHandlerState,
 } from './bucket-state'
@@ -11,6 +13,19 @@ import type {
   RepositoryListMessage,
   TaskAvailableMessage,
 } from './server-messages'
+
+/** Key input constants for tests */
+const KEYS = {
+  UP: '\x1b[A',
+  DOWN: '\x1b[B',
+  RIGHT: '\x1b[C',
+  LEFT: '\x1b[D',
+  PAGE_UP: '\x1b[5~',
+  PAGE_DOWN: '\x1b[6~',
+  HOME: '\x1b[H',
+  END: '\x1b[F',
+  CTRL_C: '\x03',
+} as const
 
 describe('bucket-state', () => {
   describe('handleServerMessage', () => {
@@ -254,6 +269,240 @@ describe('bucket-state', () => {
           stream: 'stderr',
         },
       ])
+    })
+  })
+
+  describe('handleKeypress', () => {
+    function createKeypressState(
+      overrides: Partial<KeypressHandlerState> = {}
+    ): KeypressHandlerState {
+      return {
+        selectedIndex: -1,
+        repositories: [],
+        repositoryUrls: {},
+        ...overrides,
+      }
+    }
+
+    describe('quit keys', () => {
+      it('returns quit effect for q key', () => {
+        const state = createKeypressState()
+
+        const result = handleKeypress(state, 'q')
+
+        expect(result.effects).toContainEqual({ type: 'quit' })
+      })
+
+      it('returns quit effect for Ctrl+C', () => {
+        const state = createKeypressState()
+
+        const result = handleKeypress(state, KEYS.CTRL_C)
+
+        expect(result.effects).toContainEqual({ type: 'quit' })
+      })
+    })
+
+    describe('navigation keys', () => {
+      it('returns selectNext effect for right arrow', () => {
+        const state = createKeypressState({ repositories: ['repo1', 'repo2'] })
+
+        const result = handleKeypress(state, KEYS.RIGHT)
+
+        expect(result.effects).toContainEqual({ type: 'selectNext' })
+      })
+
+      it('returns selectPrevious effect for left arrow', () => {
+        const state = createKeypressState({ repositories: ['repo1', 'repo2'] })
+
+        const result = handleKeypress(state, KEYS.LEFT)
+
+        expect(result.effects).toContainEqual({ type: 'selectPrevious' })
+      })
+    })
+
+    describe('scroll keys', () => {
+      it('returns scroll up effect for up arrow', () => {
+        const state = createKeypressState()
+
+        const result = handleKeypress(state, KEYS.UP)
+
+        expect(result.effects).toContainEqual({
+          type: 'scroll',
+          direction: 'up',
+        })
+      })
+
+      it('returns scroll down effect for down arrow', () => {
+        const state = createKeypressState()
+
+        const result = handleKeypress(state, KEYS.DOWN)
+
+        expect(result.effects).toContainEqual({
+          type: 'scroll',
+          direction: 'down',
+        })
+      })
+
+      it('returns scroll pageUp effect for Page Up', () => {
+        const state = createKeypressState()
+
+        const result = handleKeypress(state, KEYS.PAGE_UP)
+
+        expect(result.effects).toContainEqual({
+          type: 'scroll',
+          direction: 'pageUp',
+        })
+      })
+
+      it('returns scroll pageDown effect for Page Down', () => {
+        const state = createKeypressState()
+
+        const result = handleKeypress(state, KEYS.PAGE_DOWN)
+
+        expect(result.effects).toContainEqual({
+          type: 'scroll',
+          direction: 'pageDown',
+        })
+      })
+
+      it('returns scroll top effect for g key', () => {
+        const state = createKeypressState()
+
+        const result = handleKeypress(state, 'g')
+
+        expect(result.effects).toContainEqual({
+          type: 'scroll',
+          direction: 'top',
+        })
+      })
+
+      it('returns scroll top effect for Home key', () => {
+        const state = createKeypressState()
+
+        const result = handleKeypress(state, KEYS.HOME)
+
+        expect(result.effects).toContainEqual({
+          type: 'scroll',
+          direction: 'top',
+        })
+      })
+
+      it('returns scroll bottom effect for G key', () => {
+        const state = createKeypressState()
+
+        const result = handleKeypress(state, 'G')
+
+        expect(result.effects).toContainEqual({
+          type: 'scroll',
+          direction: 'bottom',
+        })
+      })
+
+      it('returns scroll bottom effect for End key', () => {
+        const state = createKeypressState()
+
+        const result = handleKeypress(state, KEYS.END)
+
+        expect(result.effects).toContainEqual({
+          type: 'scroll',
+          direction: 'bottom',
+        })
+      })
+    })
+
+    describe('mouse scroll', () => {
+      it('returns three scroll up effects for mouse wheel up', () => {
+        const state = createKeypressState()
+
+        const result = handleKeypress(state, '\x1b[<64;10;5M')
+
+        const scrollUpEffects = result.effects.filter(
+          e => e.type === 'scroll' && e.direction === 'up'
+        )
+        expect(scrollUpEffects).toHaveLength(3)
+      })
+
+      it('returns three scroll down effects for mouse wheel down', () => {
+        const state = createKeypressState()
+
+        const result = handleKeypress(state, '\x1b[<65;10;5M')
+
+        const scrollDownEffects = result.effects.filter(
+          e => e.type === 'scroll' && e.direction === 'down'
+        )
+        expect(scrollDownEffects).toHaveLength(3)
+      })
+
+      it('returns no effects for non-scroll mouse events', () => {
+        const state = createKeypressState()
+
+        const result = handleKeypress(state, '\x1b[<0;10;5M')
+
+        expect(result.effects).toHaveLength(0)
+      })
+    })
+
+    describe('open browser key', () => {
+      it('returns openBrowser effect when o pressed on repo with URL', () => {
+        const state = createKeypressState({
+          selectedIndex: 0,
+          repositories: ['repo1'],
+          repositoryUrls: { repo1: 'https://github.com/user/repo1' },
+        })
+
+        const result = handleKeypress(state, 'o')
+
+        expect(result.effects).toContainEqual({
+          type: 'openBrowser',
+          url: 'https://github.com/user/repo1',
+        })
+      })
+
+      it('returns no effect when o pressed on All tab', () => {
+        const state = createKeypressState({
+          selectedIndex: -1,
+          repositories: ['repo1'],
+          repositoryUrls: { repo1: 'https://github.com/user/repo1' },
+        })
+
+        const result = handleKeypress(state, 'o')
+
+        expect(result.effects).toHaveLength(0)
+      })
+
+      it('returns no effect when o pressed on repo without URL', () => {
+        const state = createKeypressState({
+          selectedIndex: 0,
+          repositories: ['repo1'],
+          repositoryUrls: {},
+        })
+
+        const result = handleKeypress(state, 'o')
+
+        expect(result.effects).toHaveLength(0)
+      })
+
+      it('returns no effect when selectedIndex is out of range', () => {
+        const state = createKeypressState({
+          selectedIndex: 5,
+          repositories: ['repo1'],
+          repositoryUrls: { repo1: 'https://github.com/user/repo1' },
+        })
+
+        const result = handleKeypress(state, 'o')
+
+        expect(result.effects).toHaveLength(0)
+      })
+    })
+
+    describe('unknown keys', () => {
+      it('returns no effects for unknown keys', () => {
+        const state = createKeypressState()
+
+        const result = handleKeypress(state, 'x')
+
+        expect(result.effects).toHaveLength(0)
+      })
     })
   })
 })

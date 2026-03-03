@@ -32,8 +32,10 @@ import { createLocalServer, openBrowser } from '../../bucket/auth-server'
 import {
   type Effect,
   handleInvalidMessageFormat,
+  handleKeypress,
   handleMessageParseError,
   handleServerMessage,
+  type KeypressHandlerState,
   type MessageHandlerState,
 } from '../../bucket/bucket-state'
 import {
@@ -67,10 +69,15 @@ import {
   createTerminalUIState,
   enterAlternateScreen,
   exitAlternateScreen,
-  type HandleKeyInputOptions,
-  handleKeyInput,
+  getLogAreaHeight,
   removeRepository as removeRepoFromUI,
   renderFrame,
+  scrollDown,
+  scrollToBottom,
+  scrollToTop,
+  scrollUp,
+  selectNext,
+  selectPrevious,
   type TerminalUIState,
   updateDimensions,
 } from '../../bucket/terminal-ui'
@@ -833,24 +840,113 @@ export function setupTUI(
 }
 
 /**
+ * Options for createKeypressHandler.
+ */
+interface KeypressHandlerOptions {
+  /** Callback to open a URL in the browser */
+  openBrowser?: (url: string) => void
+}
+
+/**
+ * Create a projection of UI state for the pure keypress handler.
+ */
+function createKeypressHandlerState(ui: TerminalUIState): KeypressHandlerState {
+  const repositoryUrls: Record<string, string> = {}
+  for (const [name, url] of ui.repositoryUrls) {
+    repositoryUrls[name] = url
+  }
+  return {
+    selectedIndex: ui.selectedIndex,
+    repositories: ui.repositories,
+    repositoryUrls,
+  }
+}
+
+/**
+ * Execute keypress effects on UI state.
+ * This is the imperative shell that interprets pure handler results.
+ */
+function executeKeypressEffects(
+  ui: TerminalUIState,
+  effects: Effect[],
+  onQuit: () => void,
+  options?: KeypressHandlerOptions
+): void {
+  for (const effect of effects) {
+    switch (effect.type) {
+      case 'quit':
+        onQuit()
+        break
+      case 'openBrowser':
+        if (options?.openBrowser) {
+          options.openBrowser(effect.url)
+        }
+        break
+      case 'selectNext':
+        selectNext(ui)
+        ui.scrollOffset = 0
+        ui.autoScroll = true
+        break
+      case 'selectPrevious':
+        selectPrevious(ui)
+        ui.scrollOffset = 0
+        ui.autoScroll = true
+        break
+      case 'scroll':
+        switch (effect.direction) {
+          case 'up':
+            scrollUp(ui, 1)
+            break
+          case 'down':
+            scrollDown(ui, 1)
+            break
+          case 'pageUp':
+            scrollUp(ui, getLogAreaHeight(ui))
+            break
+          case 'pageDown':
+            scrollDown(ui, getLogAreaHeight(ui))
+            break
+          case 'top':
+            scrollToTop(ui)
+            break
+          case 'bottom':
+            scrollToBottom(ui)
+            break
+        }
+        break
+    }
+  }
+}
+
+/**
  * Create a keypress handler appropriate for the current mode.
- * In TUI mode, routes all keys through handleKeyInput.
+ * In TUI mode, routes all keys through the pure handleKeypress handler.
  * In non-TUI mode, only responds to 'q' and Ctrl+C.
  */
 export function createKeypressHandler(
   useTUI: boolean,
   state: BucketState,
   onQuit: () => void,
-  options?: HandleKeyInputOptions
+  options?: KeypressHandlerOptions
 ): (key: string) => void {
   if (useTUI) {
     return (key: string) => {
-      const shouldQuit = handleKeyInput(state.ui, key, options)
-      if (shouldQuit) onQuit()
+      const keypressState = createKeypressHandlerState(state.ui)
+      const { effects } = handleKeypress(keypressState, key)
+      executeKeypressEffects(state.ui, effects, onQuit, options)
     }
   }
   return (key: string) => {
-    if (key === 'q' || key === '\u0003') onQuit()
+    // Non-TUI mode: use pure handler for consistent quit detection
+    const keypressState = createKeypressHandlerState(state.ui)
+    const { effects } = handleKeypress(keypressState, key)
+    // Only handle quit effects in non-TUI mode
+    for (const effect of effects) {
+      if (effect.type === 'quit') {
+        onQuit()
+        break
+      }
+    }
   }
 }
 

@@ -24,7 +24,6 @@ These can be consolidated into a clearly-marked "native wrappers" section, makin
 
 ## Blocked By
 
-- [Extract bucket keypress handling to pure function](extract-bucket-keypress-handling-to-pure-function.md)
 - [Extract bucket connection lifecycle to pure functions](extract-bucket-connection-lifecycle-to-pure-functions.md)
 
 ## Definition of Done

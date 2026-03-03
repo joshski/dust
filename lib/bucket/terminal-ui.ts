@@ -630,7 +630,7 @@ function parseSGRMouse(key: string): number | null {
 /**
  * Options for handleKeyInput.
  */
-export interface HandleKeyInputOptions {
+interface HandleKeyInputOptions {
   /** Callback to open a URL in the browser */
   openBrowser?: (url: string) => void
 }
