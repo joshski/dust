@@ -1,0 +1,25 @@
+language js
+
+or {
+  `vi.mock($...)` where {
+    register_diagnostic(span=$match, message="Avoid vi.mock(). Use dependency injection or a test helper instead.")
+  },
+  `vi.spyOn($...)` where {
+    register_diagnostic(span=$match, message="Avoid vi.spyOn(). Use dependency injection or a test helper instead.")
+  },
+  `vi.useFakeTimers($...)` where {
+    register_diagnostic(span=$match, message="Avoid vi.useFakeTimers(). Use a test helper instead.")
+  },
+  `vi.useRealTimers($...)` where {
+    register_diagnostic(span=$match, message="Avoid vi.useRealTimers(). Use a test helper instead.")
+  },
+  `vi.runAllTimers($...)` where {
+    register_diagnostic(span=$match, message="Avoid vi.runAllTimers(). Use a test helper instead.")
+  },
+  `vi.advanceTimersByTime($...)` where {
+    register_diagnostic(span=$match, message="Avoid vi.advanceTimersByTime(). Use a test helper instead.")
+  },
+  `vi.fn($...)` where {
+    register_diagnostic(span=$match, message="Avoid vi.fn(). Use a typed test double or test helper instead.")
+  }
+}

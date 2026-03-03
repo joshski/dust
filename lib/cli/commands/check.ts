@@ -17,6 +17,8 @@ import { lintMarkdown } from './lint-markdown'
 
 const log = createLogger('dust:cli:commands:check')
 
+type Clock = () => number
+
 const DEFAULT_CHECK_TIMEOUT_MS = 13000 // Long enough for typical lint/test runs, short enough to fail fast on hangs
 const MAX_OUTPUT_LINES = 500
 const KEEP_LINES = 250
@@ -52,14 +54,15 @@ async function runSingleCheck(
   check: CheckConfig,
   cwd: string,
   runner: ShellRunner,
-  emitEvent?: CommandContext['emitEvent']
+  emitEvent?: CommandContext['emitEvent'],
+  clock: Clock = Date.now
 ): Promise<CheckResult> {
   const timeoutMs = check.timeoutMilliseconds ?? DEFAULT_CHECK_TIMEOUT_MS
   log(`running check ${check.name}: ${check.command}`)
   emitEvent?.({ type: 'check-started', name: check.name })
-  const startTime = Date.now()
+  const startTime = clock()
   const result = await runner.run(check.command, cwd, timeoutMs)
-  const durationMs = Date.now() - startTime
+  const durationMs = clock() - startTime
   const status = result.timedOut
     ? 'timed out'
     : result.exitCode === 0
@@ -93,10 +96,11 @@ async function runConfiguredChecks(
   checks: CheckConfig[],
   cwd: string,
   runner: ShellRunner,
-  emitEvent?: CommandContext['emitEvent']
+  emitEvent?: CommandContext['emitEvent'],
+  clock: Clock = Date.now
 ): Promise<CheckResult[]> {
   const promises = checks.map(check =>
-    runSingleCheck(check, cwd, runner, emitEvent)
+    runSingleCheck(check, cwd, runner, emitEvent, clock)
   )
   return Promise.all(promises)
 }
@@ -105,18 +109,20 @@ async function runConfiguredChecksSerially(
   checks: CheckConfig[],
   cwd: string,
   runner: ShellRunner,
-  emitEvent?: CommandContext['emitEvent']
+  emitEvent?: CommandContext['emitEvent'],
+  clock: Clock = Date.now
 ): Promise<CheckResult[]> {
   const results: CheckResult[] = []
   for (const check of checks) {
-    results.push(await runSingleCheck(check, cwd, runner, emitEvent))
+    results.push(await runSingleCheck(check, cwd, runner, emitEvent, clock))
   }
   return results
 }
 
 async function runValidationCheck(
   dependencies: CommandDependencies,
-  emitEvent?: CommandContext['emitEvent']
+  emitEvent?: CommandContext['emitEvent'],
+  clock: Clock = Date.now
 ): Promise<CheckResult> {
   const outputLines: string[] = []
   const bufferedContext: CommandContext = {
@@ -127,13 +133,13 @@ async function runValidationCheck(
 
   log('running built-in check: dust lint')
   emitEvent?.({ type: 'check-started', name: 'lint' })
-  const startTime = Date.now()
+  const startTime = clock()
   const result = await lintMarkdown({
     ...dependencies,
     context: bufferedContext,
     arguments: [],
   })
-  const durationMs = Date.now() - startTime
+  const durationMs = clock() - startTime
   const lintStatus = result.exitCode === 0 ? 'passed' : 'failed'
   log(`built-in check dust lint ${lintStatus} (${durationMs}ms)`)
   const output = outputLines.join('\n')
@@ -221,7 +227,8 @@ function displayResults(
 
 export async function check(
   dependencies: CommandDependencies,
-  shellRunner: ShellRunner = defaultShellRunner
+  shellRunner: ShellRunner = defaultShellRunner,
+  clock: Clock = Date.now
 ): Promise<CommandResult> {
   const {
     arguments: commandArguments,
@@ -253,14 +260,17 @@ export async function check(
     const results: CheckResult[] = []
 
     if (hasDustDir) {
-      results.push(await runValidationCheck(dependencies, context.emitEvent))
+      results.push(
+        await runValidationCheck(dependencies, context.emitEvent, clock)
+      )
     }
 
     const configuredResults = await runConfiguredChecksSerially(
       settings.checks,
       context.cwd,
       shellRunner,
-      context.emitEvent
+      context.emitEvent,
+      clock
     )
     results.push(...configuredResults)
 
@@ -273,7 +283,9 @@ export async function check(
 
   // Add validation check if .dust directory exists
   if (hasDustDir) {
-    checkPromises.push(runValidationCheck(dependencies, context.emitEvent))
+    checkPromises.push(
+      runValidationCheck(dependencies, context.emitEvent, clock)
+    )
   }
 
   // Add configured checks
@@ -282,7 +294,8 @@ export async function check(
       settings.checks,
       context.cwd,
       shellRunner,
-      context.emitEvent
+      context.emitEvent,
+      clock
     )
   )
 

@@ -1,6 +1,9 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.3.13/schema.json",
-  "plugins": ["./biome/dust-no-abbreviated-names.grit"],
+  "plugins": [
+    "./biome/dust-no-abbreviated-names.grit",
+    "./biome/no-vitest-mocking.grit"
+  ],
   "files": {
     "ignoreUnknown": false,
     "includes": ["**", "!node_modules", "!dist", "!coverage", "!.claude"]

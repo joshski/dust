@@ -74,7 +74,15 @@ const DUST_LOG_FILE = 'DUST_LOG_FILE'
  * Create an isolated logging service instance. All mutable state is
  * encapsulated inside the returned object.
  */
-export function createLoggingService(): LoggingService {
+export interface LoggingServiceOptions {
+  stdout?: (line: string) => boolean
+}
+
+export function createLoggingService(
+  options?: LoggingServiceOptions
+): LoggingService {
+  const writeStdout =
+    options?.stdout ?? process.stdout.write.bind(process.stdout)
   let patterns: RegExp[] | null = null
   let initialized = false
   let activeFileSink: LogSink | null = null
@@ -130,7 +138,7 @@ export function createLoggingService(): LoggingService {
         }
 
         if (patterns && matchesAny(name, patterns)) {
-          process.stdout.write(line)
+          writeStdout(line)
         }
       }
     },

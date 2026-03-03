@@ -245,7 +245,8 @@ export async function bucketAssetUpload(
   // Read file and upload
   const fileBytes = await uploadDeps.readFileBytes(filePath)
   const contentType = getContentType(filePath)
-  const fileName = filePath.split('/').pop()!
+  const parts = filePath.split('/')
+  const fileName = parts[parts.length - 1]
   const uploadUrl = `${getDustbucketHost()}/api/assets?repositoryId=${encodeURIComponent(repositoryId)}`
 
   try {

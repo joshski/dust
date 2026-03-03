@@ -1,36 +1,33 @@
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { stubEnv } from '../test/test-utilities'
 import { createLoggingService } from './index'
-
-afterEach(() => {
-  vi.restoreAllMocks()
-})
 
 function fakeSink(lines: string[]) {
   return { write: (line: string) => lines.push(line) }
 }
 
+function fakeStdout(lines: string[]) {
+  return (line: string) => {
+    lines.push(String(line))
+    return true
+  }
+}
+
 describe('createLogger — stdout (DEBUG)', () => {
   test('does not write to stdout when DEBUG is not set', () => {
     return stubEnv('DEBUG', undefined, () => {
-      const spy = vi
-        .spyOn(process.stdout, 'write')
-        .mockImplementation(() => true)
-      const service = createLoggingService()
+      const lines: string[] = []
+      const service = createLoggingService({ stdout: fakeStdout(lines) })
       const log = service.createLogger('dust:test')
       log('hello')
-      expect(spy).not.toHaveBeenCalled()
+      expect(lines).toHaveLength(0)
     })
   })
 
   test('writes to stdout when DEBUG=*', () => {
     return stubEnv('DEBUG', '*', () => {
       const lines: string[] = []
-      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
-        lines.push(String(line))
-        return true
-      })
-      const service = createLoggingService()
+      const service = createLoggingService({ stdout: fakeStdout(lines) })
       const log = service.createLogger('dust:test')
       log('hello world')
       expect(lines).toHaveLength(1)
@@ -42,11 +39,7 @@ describe('createLogger — stdout (DEBUG)', () => {
   test('includes ISO timestamp in stdout output', () => {
     return stubEnv('DEBUG', '*', () => {
       const lines: string[] = []
-      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
-        lines.push(String(line))
-        return true
-      })
-      const service = createLoggingService()
+      const service = createLoggingService({ stdout: fakeStdout(lines) })
       const log = service.createLogger('dust:foo')
       log('msg')
       expect(lines[0]).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
@@ -56,11 +49,7 @@ describe('createLogger — stdout (DEBUG)', () => {
   test('matches exact logger name', () => {
     return stubEnv('DEBUG', 'dust:foo', () => {
       const lines: string[] = []
-      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
-        lines.push(String(line))
-        return true
-      })
-      const service = createLoggingService()
+      const service = createLoggingService({ stdout: fakeStdout(lines) })
       const fooLog = service.createLogger('dust:foo')
       const barLog = service.createLogger('dust:bar')
       fooLog('yes')
@@ -73,11 +62,7 @@ describe('createLogger — stdout (DEBUG)', () => {
   test('matches multiple comma-separated names', () => {
     return stubEnv('DEBUG', 'dust:foo,dust:bar', () => {
       const lines: string[] = []
-      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
-        lines.push(String(line))
-        return true
-      })
-      const service = createLoggingService()
+      const service = createLoggingService({ stdout: fakeStdout(lines) })
       service.createLogger('dust:foo')('f')
       service.createLogger('dust:bar')('b')
       service.createLogger('dust:baz')('z')
@@ -90,11 +75,7 @@ describe('createLogger — stdout (DEBUG)', () => {
   test('supports wildcard at end', () => {
     return stubEnv('DEBUG', 'dust:bucket:*', () => {
       const lines: string[] = []
-      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
-        lines.push(String(line))
-        return true
-      })
-      const service = createLoggingService()
+      const service = createLoggingService({ stdout: fakeStdout(lines) })
       service.createLogger('dust:bucket:repository-loop')('bl')
       service.createLogger('dust:bucket:repository')('br')
       service.createLogger('dust:cli:commands:loop')('l')
@@ -107,11 +88,7 @@ describe('createLogger — stdout (DEBUG)', () => {
   test('supports wildcard at beginning', () => {
     return stubEnv('DEBUG', '*loop', () => {
       const lines: string[] = []
-      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
-        lines.push(String(line))
-        return true
-      })
-      const service = createLoggingService()
+      const service = createLoggingService({ stdout: fakeStdout(lines) })
       service.createLogger('dust:bucket:repository-loop')('bl')
       service.createLogger('dust:cli:commands:loop')('l')
       service.createLogger('dust:cli:commands:bucket')('b')
@@ -124,11 +101,7 @@ describe('createLogger — stdout (DEBUG)', () => {
   test('mixed patterns: exact and wildcard', () => {
     return stubEnv('DEBUG', 'dust:foo,*bar', () => {
       const lines: string[] = []
-      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
-        lines.push(String(line))
-        return true
-      })
-      const service = createLoggingService()
+      const service = createLoggingService({ stdout: fakeStdout(lines) })
       service.createLogger('dust:foo')('f')
       service.createLogger('dust:foo:bar')('fb')
       service.createLogger('dust:baz')('z')
@@ -141,11 +114,7 @@ describe('createLogger — stdout (DEBUG)', () => {
   test('serializes non-string arguments as JSON', () => {
     return stubEnv('DEBUG', '*', () => {
       const lines: string[] = []
-      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
-        lines.push(String(line))
-        return true
-      })
-      const service = createLoggingService()
+      const service = createLoggingService({ stdout: fakeStdout(lines) })
       const log = service.createLogger('dust:test')
       log('data:', { count: 42 })
       expect(lines[0]).toContain('data: {"count":42}')
@@ -155,11 +124,7 @@ describe('createLogger — stdout (DEBUG)', () => {
   test('writes each call on its own line', () => {
     return stubEnv('DEBUG', '*', () => {
       const lines: string[] = []
-      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
-        lines.push(String(line))
-        return true
-      })
-      const service = createLoggingService()
+      const service = createLoggingService({ stdout: fakeStdout(lines) })
       const log = service.createLogger('dust:test')
       log('first')
       log('second')
@@ -210,12 +175,8 @@ describe('enableFileLogs', () => {
     return stubEnv('DEBUG', '*', () => {
       const fileLines: string[] = []
       const stdoutLines: string[] = []
-      const service = createLoggingService()
+      const service = createLoggingService({ stdout: fakeStdout(stdoutLines) })
       service.enableFileLogs('test', fakeSink(fileLines))
-      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
-        stdoutLines.push(String(line))
-        return true
-      })
       const log = service.createLogger('dust:test')
       log('both')
       expect(fileLines).toHaveLength(1)
@@ -229,12 +190,8 @@ describe('enableFileLogs', () => {
     return stubEnv('DEBUG', 'dust:foo', () => {
       const fileLines: string[] = []
       const stdoutLines: string[] = []
-      const service = createLoggingService()
+      const service = createLoggingService({ stdout: fakeStdout(stdoutLines) })
       service.enableFileLogs('test', fakeSink(fileLines))
-      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
-        stdoutLines.push(String(line))
-        return true
-      })
       service.createLogger('dust:foo')('matches')
       service.createLogger('dust:bar')('no-match')
       expect(fileLines).toHaveLength(2)
@@ -296,12 +253,8 @@ describe('createLogger — per-logger file routing', () => {
     return stubEnv('DEBUG', '*', () => {
       const globalLines: string[] = []
       const stdoutLines: string[] = []
-      const service = createLoggingService()
+      const service = createLoggingService({ stdout: fakeStdout(stdoutLines) })
       service.enableFileLogs('test', fakeSink(globalLines))
-      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
-        stdoutLines.push(String(line))
-        return true
-      })
       const silentLog = service.createLogger('dust:silent', { file: false })
       const normalLog = service.createLogger('dust:normal')
       silentLog('no-file')
@@ -343,11 +296,7 @@ describe('createLogger — per-logger file routing', () => {
   test('stdout DEBUG filtering remains unchanged for all logger types', () => {
     return stubEnv('DEBUG', 'dust:visible', () => {
       const stdoutLines: string[] = []
-      vi.spyOn(process.stdout, 'write').mockImplementation(line => {
-        stdoutLines.push(String(line))
-        return true
-      })
-      const service = createLoggingService()
+      const service = createLoggingService({ stdout: fakeStdout(stdoutLines) })
       service.createLogger('dust:visible', { file: '/tmp/x.log' })('a')
       service.createLogger('dust:visible', { file: false })('b')
       service.createLogger('dust:visible')('c')
