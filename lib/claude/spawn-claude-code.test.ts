@@ -589,4 +589,99 @@ describe('spawnClaudeCode', () => {
     if (originalOpenai === undefined) delete process.env.OPENAI_API_KEY
     else process.env.OPENAI_API_KEY = originalOpenai
   })
+
+  test('does not mount ~/.dust directory in docker container', async () => {
+    let capturedArgs: string[] | undefined
+
+    const dependencies: EventSourceDependencies = {
+      spawn: ((_cmd: string, spawnArgs: string[]) => {
+        capturedArgs = spawnArgs
+        return {
+          stdout: {},
+          stderr: { on: () => {} },
+          on(event: string, listener: EventListener) {
+            if (event === 'close') setTimeout(() => listener(0), 0)
+            return this
+          },
+        }
+      }) as unknown as typeof spawn,
+      createInterface: (() => ({
+        close: () => {},
+        async *[Symbol.asyncIterator]() {
+          // no lines
+        },
+      })) as unknown as typeof createInterface,
+    }
+
+    for await (const _ of spawnClaudeCode(
+      'test prompt',
+      {
+        docker: {
+          imageTag: 'dust-agent-test',
+          repoPath: '/home/user/project',
+          homeDir: '/home/user',
+          hasGitconfig: false,
+        },
+      },
+      dependencies
+    )) {
+      // consume
+    }
+
+    // Verify ~/.dust (containing credentials.json) is NOT mounted
+    const dustMount = capturedArgs?.find(arg => arg.includes('/.dust'))
+    expect(dustMount).toBeUndefined()
+  })
+
+  test('does not pass DUST_BUCKET_TOKEN to docker container', async () => {
+    const originalToken = process.env.DUST_BUCKET_TOKEN
+    process.env.DUST_BUCKET_TOKEN = 'secret-bucket-token'
+
+    let capturedArgs: string[] | undefined
+
+    const dependencies: EventSourceDependencies = {
+      spawn: ((_cmd: string, spawnArgs: string[]) => {
+        capturedArgs = spawnArgs
+        return {
+          stdout: {},
+          stderr: { on: () => {} },
+          on(event: string, listener: EventListener) {
+            if (event === 'close') setTimeout(() => listener(0), 0)
+            return this
+          },
+        }
+      }) as unknown as typeof spawn,
+      createInterface: (() => ({
+        close: () => {},
+        async *[Symbol.asyncIterator]() {
+          // no lines
+        },
+      })) as unknown as typeof createInterface,
+    }
+
+    for await (const _ of spawnClaudeCode(
+      'test prompt',
+      {
+        docker: {
+          imageTag: 'dust-agent-test',
+          repoPath: '/home/user/project',
+          homeDir: '/home/user',
+          hasGitconfig: false,
+        },
+      },
+      dependencies
+    )) {
+      // consume
+    }
+
+    // Verify DUST_BUCKET_TOKEN is NOT passed to the container
+    const bucketToken = capturedArgs?.find(arg =>
+      arg.includes('DUST_BUCKET_TOKEN')
+    )
+    expect(bucketToken).toBeUndefined()
+
+    // Restore
+    if (originalToken === undefined) delete process.env.DUST_BUCKET_TOKEN
+    else process.env.DUST_BUCKET_TOKEN = originalToken
+  })
 })
