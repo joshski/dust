@@ -8,7 +8,8 @@
     "lib/audits/index.ts",
     "lib/biome/index.ts",
     "lib/bucket/server-messages.ts",
-    "lib/validation/index.ts"
+    "lib/validation/index.ts",
+    "lib/proxy/git-credential-proxy.ts"
   ],
   "ignoreDependencies": ["@biomejs/biome"]
 }

@@ -12,7 +12,7 @@ The container should be able to `git clone`, `git push`, `git pull` transparentl
 
 ## Blocked By
 
-- [Build Git Credential Proxy Server](build-git-credential-proxy-server.md)
+(none)
 
 ## Definition of Done
 
