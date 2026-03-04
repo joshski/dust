@@ -1,6 +1,6 @@
 # Configure Docker Containers to Use Git Proxy
 
-Modify `buildDockerRunArguments()` in `lib/claude/spawn-claude-code.ts` to stop mounting host credentials and instead route git traffic through the git credential proxy.
+Stop mounting host credentials in Docker containers. Route git traffic through the git credential proxy instead.
 
 Changes:
 - Stop mounting `~/.ssh` into the container
@@ -12,7 +12,7 @@ The container should be able to `git clone`, `git push`, `git pull` transparentl
 
 ## Blocked By
 
-- [Build Git Credential Proxy Server](build-git-credential-proxy.md)
+- [Build Git Credential Proxy Server](build-git-credential-proxy-server.md)
 
 ## Definition of Done
 

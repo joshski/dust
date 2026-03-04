@@ -11,7 +11,7 @@ The proxy handles token management (including refresh) on the host side.
 
 ## Blocked By
 
-- [Build Git Credential Proxy Server](build-git-credential-proxy.md)
+- [Build Git Credential Proxy Server](build-git-credential-proxy-server.md)
 
 ## Definition of Done
 
