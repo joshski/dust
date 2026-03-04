@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import { createInterface } from 'node:readline'
 import { describe, expect, test } from 'vitest'
 import {
+  buildDockerRunArguments,
   defaultDependencies,
   type EventSourceDependencies,
   spawnClaudeCode,
@@ -423,7 +424,6 @@ describe('spawnClaudeCode', () => {
           imageTag: 'dust-agent-test',
           repoPath: '/home/user/project',
           homeDir: '/home/user',
-          hasGitconfig: true,
         },
       },
       dependencies
@@ -440,18 +440,14 @@ describe('spawnClaudeCode', () => {
     expect(capturedArgs).toContain(
       '/home/user/.claude.json:/home/user/.claude.json'
     )
-    expect(capturedArgs).toContain('/home/user/.ssh:/home/user/.ssh:ro')
     expect(capturedArgs).toContain('HOME=/home/user')
-    expect(capturedArgs).toContain(
-      '/home/user/.gitconfig:/home/user/.gitconfig:ro'
-    )
     expect(capturedArgs).toContain('dust-agent-test')
     expect(capturedArgs).toContain('claude')
     expect(capturedArgs).toContain('-p')
     expect(capturedArgs).toContain('test prompt')
   })
 
-  test('spawns docker without gitconfig mount when hasGitconfig is false', async () => {
+  test('does not mount ~/.ssh or ~/.gitconfig in docker container', async () => {
     let capturedArgs: string[] | undefined
 
     const dependencies: EventSourceDependencies = {
@@ -481,7 +477,6 @@ describe('spawnClaudeCode', () => {
           imageTag: 'dust-agent-test',
           repoPath: '/home/user/project',
           homeDir: '/home/user',
-          hasGitconfig: false,
         },
       },
       dependencies
@@ -489,6 +484,11 @@ describe('spawnClaudeCode', () => {
       // consume
     }
 
+    // Verify ~/.ssh is NOT mounted
+    const sshMount = capturedArgs?.find(arg => arg.includes('.ssh'))
+    expect(sshMount).toBeUndefined()
+
+    // Verify ~/.gitconfig is NOT mounted
     const gitconfigMount = capturedArgs?.find(arg => arg.includes('.gitconfig'))
     expect(gitconfigMount).toBeUndefined()
   })
@@ -523,7 +523,6 @@ describe('spawnClaudeCode', () => {
           imageTag: 'dust-agent-test',
           repoPath: '/home/user/project',
           homeDir: '/home/user',
-          hasGitconfig: false,
         },
         env: { DUST_UNATTENDED: '1', MY_VAR: 'value' },
       },
@@ -572,7 +571,6 @@ describe('spawnClaudeCode', () => {
           imageTag: 'dust-agent-test',
           repoPath: '/home/user/project',
           homeDir: '/home/user',
-          hasGitconfig: false,
         },
       },
       dependencies
@@ -620,7 +618,6 @@ describe('spawnClaudeCode', () => {
           imageTag: 'dust-agent-test',
           repoPath: '/home/user/project',
           homeDir: '/home/user',
-          hasGitconfig: false,
         },
       },
       dependencies
@@ -666,7 +663,6 @@ describe('spawnClaudeCode', () => {
           imageTag: 'dust-agent-test',
           repoPath: '/home/user/project',
           homeDir: '/home/user',
-          hasGitconfig: false,
         },
       },
       dependencies
@@ -683,5 +679,55 @@ describe('spawnClaudeCode', () => {
     // Restore
     if (originalToken === undefined) delete process.env.DUST_BUCKET_TOKEN
     else process.env.DUST_BUCKET_TOKEN = originalToken
+  })
+})
+
+describe('buildDockerRunArguments', () => {
+  test('configures git URL rewriting when gitProxyUrl is set', () => {
+    const dockerArguments = buildDockerRunArguments(
+      {
+        imageTag: 'dust-agent-test',
+        repoPath: '/home/user/project',
+        homeDir: '/home/user',
+        gitProxyUrl: 'http://host.docker.internal:3001',
+      },
+      ['-p', 'test'],
+      {}
+    )
+
+    expect(dockerArguments).toContain(
+      'GIT_PROXY_URL=http://host.docker.internal:3001'
+    )
+    expect(dockerArguments).toContain('GIT_CONFIG_COUNT=2')
+    expect(dockerArguments).toContain(
+      'GIT_CONFIG_KEY_0=url.http://host.docker.internal:3001/github.com/.insteadOf'
+    )
+    expect(dockerArguments).toContain('GIT_CONFIG_VALUE_0=https://github.com/')
+    expect(dockerArguments).toContain(
+      'GIT_CONFIG_KEY_1=url.http://host.docker.internal:3001/github.com/.insteadOf'
+    )
+    expect(dockerArguments).toContain('GIT_CONFIG_VALUE_1=git@github.com:')
+  })
+
+  test('does not configure git URL rewriting when gitProxyUrl is not set', () => {
+    const dockerArguments = buildDockerRunArguments(
+      {
+        imageTag: 'dust-agent-test',
+        repoPath: '/home/user/project',
+        homeDir: '/home/user',
+      },
+      ['-p', 'test'],
+      {}
+    )
+
+    expect(
+      dockerArguments.find(argument => argument.includes('GIT_PROXY_URL'))
+    ).toBeUndefined()
+    expect(
+      dockerArguments.find(argument => argument.includes('GIT_CONFIG_COUNT'))
+    ).toBeUndefined()
+    expect(
+      dockerArguments.find(argument => argument.includes('insteadOf'))
+    ).toBeUndefined()
   })
 })

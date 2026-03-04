@@ -31,5 +31,13 @@ These environment variables are automatically passed through to the container. I
 
 - `hasDockerfile()` checks for `.dust/Dockerfile` in the repo
 - `buildDockerImage()` builds the image with a tag derived from the repo path
-- Agent sessions are spawned with `docker run`, mounting the repo at `/workspace` and the user's config at `/home/user/`
+- Agent sessions are spawned with `docker run`, mounting the repo at `/workspace` and Claude Code config at `/home/user/`
 - Both `dust loop` and `dust bucket worker` support Docker mode
+
+## Git Access
+
+Docker containers do not mount `~/.ssh` or `~/.gitconfig` from the host, preventing credential exposure. Instead, git operations route through a host-side credential proxy:
+
+- When `gitProxyUrl` is configured in the Docker spawn config, the container's git is configured to rewrite URLs via `GIT_CONFIG_*` environment variables
+- The proxy (e.g., `http://host.docker.internal:3001`) handles authentication by running `git credential fill` on the host
+- Both `https://github.com/` and `git@github.com:` URLs are rewritten to use the proxy

@@ -4,15 +4,26 @@ Docker containers started by `dust bucket worker` should not include any secrets
 
 ## Current State
 
-Currently, secrets are passed directly into Docker containers via environment variables and mounted files:
+### Implemented
 
-- `CLAUDE_CODE_OAUTH_TOKEN` and `OPENAI_API_KEY` are passed via `-e` flags (`lib/claude/spawn-claude-code.ts:62-67`)
-- `~/.claude/` is mounted for OAuth token refresh (`lib/claude/spawn-claude-code.ts:37-38`)
-- `~/.ssh/` is mounted for git SSH access (`lib/claude/spawn-claude-code.ts:42-43`)
-- `~/.gitconfig` is mounted if present (`lib/claude/spawn-claude-code.ts:49-55`)
+The git credential proxy is now implemented:
+
+- `lib/proxy/git-credential-proxy.ts` provides an HTTP server that proxies git requests, injecting credentials via `git credential fill` on the host
+- Docker containers no longer mount `~/.ssh` or `~/.gitconfig`
+- When `gitProxyUrl` is set in the Docker spawn config, git URLs are rewritten via `GIT_CONFIG_*` environment variables to route through the proxy
+
+### Remaining
+
+Secrets are still passed directly into Docker containers:
+
+- `CLAUDE_CODE_OAUTH_TOKEN` and `OPENAI_API_KEY` are passed via `-e` flags
+- `~/.claude/` is mounted for OAuth token refresh
 - The dustbucket token is stored in `~/.dust/credentials.json` which agents could read
+- HTTP proxy for general API requests is not implemented
+- Dust events proxy is not implemented
+- Network isolation is not implemented
 
-This means agents have direct access to all credentials and could exfiltrate them via network requests. See [Securing Bucket Access Tokens from Agents](securing-bucket-access-tokens-from-agents.md) for a detailed threat analysis.
+See [Securing Bucket Access Tokens from Agents](securing-bucket-access-tokens-from-agents.md) for a detailed threat analysis.
 
 ## Proposed Architecture
 

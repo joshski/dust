@@ -18,7 +18,7 @@ export const defaultDependencies: EventSourceDependencies = {
 /**
  * Build docker run arguments for spawning claude in a container.
  */
-function buildDockerRunArguments(
+export function buildDockerRunArguments(
   docker: DockerSpawnConfig,
   claudeArguments: string[],
   env: Record<string, string>
@@ -39,18 +39,27 @@ function buildDockerRunArguments(
     // Mount .claude.json for Claude Code configuration
     '-v',
     `${docker.homeDir}/.claude.json:/home/user/.claude.json`,
-    '-v',
-    `${docker.homeDir}/.ssh:/home/user/.ssh:ro`,
     // Set HOME so Claude Code finds its config files
     '-e',
     'HOME=/home/user',
   ]
 
-  // Mount .gitconfig if it exists
-  if (docker.hasGitconfig) {
+  // Configure git to use the proxy for known hosts when gitProxyUrl is set
+  if (docker.gitProxyUrl) {
+    dockerArguments.push('-e', `GIT_PROXY_URL=${docker.gitProxyUrl}`)
+    // Configure git URL rewriting to route through the proxy
+    // This makes git clone https://github.com/... use http://<proxy>/github.com/... instead
     dockerArguments.push(
-      '-v',
-      `${docker.homeDir}/.gitconfig:/home/user/.gitconfig:ro`
+      '-e',
+      'GIT_CONFIG_COUNT=2',
+      '-e',
+      `GIT_CONFIG_KEY_0=url.${docker.gitProxyUrl}/github.com/.insteadOf`,
+      '-e',
+      'GIT_CONFIG_VALUE_0=https://github.com/',
+      '-e',
+      `GIT_CONFIG_KEY_1=url.${docker.gitProxyUrl}/github.com/.insteadOf`,
+      '-e',
+      'GIT_CONFIG_VALUE_1=git@github.com:'
     )
   }
 

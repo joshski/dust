@@ -1766,8 +1766,7 @@ describe('loopClaude', () => {
     const loopDeps = createLoopDeps({
       run: async () => {},
       dockerDeps: {
-        existsSync: (p: string) =>
-          p === '/project/.dust/Dockerfile' || p.includes('.gitconfig'),
+        existsSync: (p: string) => p === '/project/.dust/Dockerfile',
         homedir: () => '/home/user',
         spawn: createMockSpawn(0),
       },
@@ -1806,8 +1805,7 @@ describe('loopClaude', () => {
     const loopDeps = createLoopDeps({
       run: async () => {},
       dockerDeps: {
-        existsSync: (p: string) =>
-          p === '/project/.dust/Dockerfile' || p.includes('.gitconfig'),
+        existsSync: (p: string) => p === '/project/.dust/Dockerfile',
         homedir: () => '/home/user',
         spawn: createMockSpawn(0),
       },

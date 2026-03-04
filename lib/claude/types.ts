@@ -55,8 +55,8 @@ export interface DockerSpawnConfig {
   repoPath: string
   /** Home directory for credential mounts */
   homeDir: string
-  /** Whether .gitconfig exists (for optional mount) */
-  hasGitconfig: boolean
+  /** Git credential proxy URL (e.g., http://host.docker.internal:3001) */
+  gitProxyUrl?: string
 }
 
 export interface SpawnOptions {

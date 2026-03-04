@@ -128,7 +128,6 @@ interface DockerSpawnConfig {
   imageTag: string
   repoPath: string
   homeDir: string
-  hasGitconfig: boolean
 }
 
 type PrepareDockerConfigResult =
@@ -187,7 +186,6 @@ export async function prepareDockerConfig(
     imageTag,
     repoPath,
     homeDir,
-    hasGitconfig: dependencies.existsSync(path.join(homeDir, '.gitconfig')),
   }
 
   log(`Docker config ready: ${JSON.stringify(config)}`)
