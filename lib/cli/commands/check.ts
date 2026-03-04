@@ -223,10 +223,14 @@ function displayResults(
   return failed.length > 0 ? 1 : 0
 }
 
+const PROGRESS_INTERVAL_MS = 1000
+
 export async function check(
   dependencies: CommandDependencies,
   shellRunner: ShellRunner = defaultShellRunner,
-  clock: Clock = Date.now
+  clock: Clock = Date.now,
+  setInterval: typeof globalThis.setInterval = globalThis.setInterval,
+  clearInterval: typeof globalThis.clearInterval = globalThis.clearInterval
 ): Promise<CommandResult> {
   const {
     arguments: commandArguments,
@@ -253,61 +257,75 @@ export async function check(
   const dustPath = `${context.cwd}/.dust`
   const hasDustDir = fileSystem.exists(dustPath)
 
-  if (serial) {
-    // Run checks sequentially: built-in first, then configured checks
-    const results: CheckResult[] = []
+  const writeInline = context.stdoutInline ?? context.stdout
 
-    if (hasDustDir) {
-      results.push(
-        await runValidationCheck(dependencies, context.emitEvent, clock)
+  // Emit initial progress dot and set up interval
+  writeInline('.')
+  const progressInterval = setInterval(() => {
+    writeInline('.')
+  }, PROGRESS_INTERVAL_MS)
+
+  let results: CheckResult[]
+
+  try {
+    if (serial) {
+      // Run checks sequentially: built-in first, then configured checks
+      results = []
+
+      if (hasDustDir) {
+        results.push(
+          await runValidationCheck(dependencies, context.emitEvent, clock)
+        )
+      }
+
+      const configuredResults = await runConfiguredChecksSerially(
+        settings.checks,
+        context.cwd,
+        shellRunner,
+        context.emitEvent,
+        clock
       )
-    }
-
-    const configuredResults = await runConfiguredChecksSerially(
-      settings.checks,
-      context.cwd,
-      shellRunner,
-      context.emitEvent,
-      clock
-    )
-    results.push(...configuredResults)
-
-    const exitCode = displayResults(results, context)
-    return { exitCode }
-  }
-
-  // Run built-in and configured checks in parallel (default behavior)
-  const checkPromises: Promise<CheckResult | CheckResult[]>[] = []
-
-  // Add validation check if .dust directory exists
-  if (hasDustDir) {
-    checkPromises.push(
-      runValidationCheck(dependencies, context.emitEvent, clock)
-    )
-  }
-
-  // Add configured checks
-  checkPromises.push(
-    runConfiguredChecks(
-      settings.checks,
-      context.cwd,
-      shellRunner,
-      context.emitEvent,
-      clock
-    )
-  )
-
-  const promiseResults = await Promise.all(checkPromises)
-
-  // Flatten results, maintaining order: built-in checks first, then configured checks
-  const results: CheckResult[] = []
-  for (const result of promiseResults) {
-    if (Array.isArray(result)) {
-      results.push(...result)
+      results.push(...configuredResults)
     } else {
-      results.push(result)
+      // Run built-in and configured checks in parallel (default behavior)
+      const checkPromises: Promise<CheckResult | CheckResult[]>[] = []
+
+      // Add validation check if .dust directory exists
+      if (hasDustDir) {
+        checkPromises.push(
+          runValidationCheck(dependencies, context.emitEvent, clock)
+        )
+      }
+
+      // Add configured checks
+      checkPromises.push(
+        runConfiguredChecks(
+          settings.checks,
+          context.cwd,
+          shellRunner,
+          context.emitEvent,
+          clock
+        )
+      )
+
+      const promiseResults = await Promise.all(checkPromises)
+
+      // Flatten results, maintaining order: built-in checks first, then configured checks
+      results = []
+      for (const result of promiseResults) {
+        if (Array.isArray(result)) {
+          results.push(...result)
+        } else {
+          results.push(result)
+        }
+      }
     }
+  } finally {
+    clearInterval(progressInterval)
   }
+
+  // Emit newline before results
+  context.stdout('')
 
   const exitCode = displayResults(results, context)
   return { exitCode }
