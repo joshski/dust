@@ -33,16 +33,23 @@ export function buildDockerRunArguments(
     // Set working directory
     '-w',
     '/workspace',
-    // Mount .claude read-write so Claude Code can refresh OAuth tokens
-    '-v',
-    `${docker.homeDir}/.claude:/home/user/.claude`,
-    // Mount .claude.json for Claude Code configuration
-    '-v',
-    `${docker.homeDir}/.claude.json:/home/user/.claude.json`,
     // Set HOME so Claude Code finds its config files
     '-e',
     'HOME=/home/user',
   ]
+
+  // When using Claude API proxy, don't mount credential files
+  // The proxy handles OAuth token management on the host side
+  if (!docker.claudeApiProxyUrl) {
+    // Mount .claude read-write so Claude Code can refresh OAuth tokens
+    dockerArguments.push(
+      '-v',
+      `${docker.homeDir}/.claude:/home/user/.claude`,
+      // Mount .claude.json for Claude Code configuration
+      '-v',
+      `${docker.homeDir}/.claude.json:/home/user/.claude.json`
+    )
+  }
 
   // Configure git to use the proxy for known hosts when gitProxyUrl is set
   if (docker.gitProxyUrl) {
@@ -63,13 +70,23 @@ export function buildDockerRunArguments(
     )
   }
 
+  // Configure Claude Code to use the API proxy
+  if (docker.claudeApiProxyUrl) {
+    dockerArguments.push('-e', `ANTHROPIC_BASE_URL=${docker.claudeApiProxyUrl}`)
+  }
+
   // Pass through environment variables
   for (const [key, value] of Object.entries(env)) {
     dockerArguments.push('-e', `${key}=${value}`)
   }
 
   // Pass through agent auth tokens if set in the host environment
-  for (const key of ['CLAUDE_CODE_OAUTH_TOKEN', 'OPENAI_API_KEY']) {
+  // Skip CLAUDE_CODE_OAUTH_TOKEN when using the API proxy (it's handled by the proxy)
+  const tokensToPassThrough = docker.claudeApiProxyUrl
+    ? ['OPENAI_API_KEY']
+    : ['CLAUDE_CODE_OAUTH_TOKEN', 'OPENAI_API_KEY']
+
+  for (const key of tokensToPassThrough) {
     if (process.env[key] && !(key in env)) {
       dockerArguments.push('-e', `${key}=${process.env[key]}`)
     }

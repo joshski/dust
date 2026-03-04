@@ -57,6 +57,8 @@ export interface DockerSpawnConfig {
   homeDir: string
   /** Git credential proxy URL (e.g., http://host.docker.internal:3001) */
   gitProxyUrl?: string
+  /** Claude API proxy URL (e.g., http://host.docker.internal:3002) */
+  claudeApiProxyUrl?: string
 }
 
 export interface SpawnOptions {

@@ -436,6 +436,7 @@ describe('spawnClaudeCode', () => {
     expect(capturedArgs).toContain('--rm')
     expect(capturedArgs).toContain('-i')
     expect(capturedArgs).toContain('/home/user/project:/workspace')
+    // When not using API proxy, .claude and .claude.json are mounted
     expect(capturedArgs).toContain('/home/user/.claude:/home/user/.claude')
     expect(capturedArgs).toContain(
       '/home/user/.claude.json:/home/user/.claude.json'
@@ -683,6 +684,95 @@ describe('spawnClaudeCode', () => {
 })
 
 describe('buildDockerRunArguments', () => {
+  test('does not mount .claude files when claudeApiProxyUrl is set', () => {
+    const dockerArguments = buildDockerRunArguments(
+      {
+        imageTag: 'dust-agent-test',
+        repoPath: '/home/user/project',
+        homeDir: '/home/user',
+        claudeApiProxyUrl: 'http://host.docker.internal:3002',
+      },
+      ['-p', 'test'],
+      {}
+    )
+
+    // Should NOT contain .claude mounts
+    const claudeMount = dockerArguments.find(arg =>
+      arg.includes('.claude:/home/user/.claude')
+    )
+    expect(claudeMount).toBeUndefined()
+
+    const claudeJsonMount = dockerArguments.find(arg =>
+      arg.includes('.claude.json')
+    )
+    expect(claudeJsonMount).toBeUndefined()
+  })
+
+  test('sets ANTHROPIC_BASE_URL when claudeApiProxyUrl is set', () => {
+    const dockerArguments = buildDockerRunArguments(
+      {
+        imageTag: 'dust-agent-test',
+        repoPath: '/home/user/project',
+        homeDir: '/home/user',
+        claudeApiProxyUrl: 'http://host.docker.internal:3002',
+      },
+      ['-p', 'test'],
+      {}
+    )
+
+    expect(dockerArguments).toContain(
+      'ANTHROPIC_BASE_URL=http://host.docker.internal:3002'
+    )
+  })
+
+  test('does not pass CLAUDE_CODE_OAUTH_TOKEN when claudeApiProxyUrl is set', () => {
+    const originalToken = process.env.CLAUDE_CODE_OAUTH_TOKEN
+    process.env.CLAUDE_CODE_OAUTH_TOKEN = 'test-oauth-token'
+
+    const dockerArguments = buildDockerRunArguments(
+      {
+        imageTag: 'dust-agent-test',
+        repoPath: '/home/user/project',
+        homeDir: '/home/user',
+        claudeApiProxyUrl: 'http://host.docker.internal:3002',
+      },
+      ['-p', 'test'],
+      {}
+    )
+
+    // Should NOT contain CLAUDE_CODE_OAUTH_TOKEN
+    const oauthArg = dockerArguments.find(arg =>
+      arg.includes('CLAUDE_CODE_OAUTH_TOKEN')
+    )
+    expect(oauthArg).toBeUndefined()
+
+    // Restore
+    if (originalToken === undefined) delete process.env.CLAUDE_CODE_OAUTH_TOKEN
+    else process.env.CLAUDE_CODE_OAUTH_TOKEN = originalToken
+  })
+
+  test('still passes OPENAI_API_KEY when claudeApiProxyUrl is set', () => {
+    const originalKey = process.env.OPENAI_API_KEY
+    process.env.OPENAI_API_KEY = 'test-openai-key'
+
+    const dockerArguments = buildDockerRunArguments(
+      {
+        imageTag: 'dust-agent-test',
+        repoPath: '/home/user/project',
+        homeDir: '/home/user',
+        claudeApiProxyUrl: 'http://host.docker.internal:3002',
+      },
+      ['-p', 'test'],
+      {}
+    )
+
+    expect(dockerArguments).toContain('OPENAI_API_KEY=test-openai-key')
+
+    // Restore
+    if (originalKey === undefined) delete process.env.OPENAI_API_KEY
+    else process.env.OPENAI_API_KEY = originalKey
+  })
+
   test('configures git URL rewriting when gitProxyUrl is set', () => {
     const dockerArguments = buildDockerRunArguments(
       {

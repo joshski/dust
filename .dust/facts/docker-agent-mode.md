@@ -20,18 +20,19 @@ WORKDIR /workspace
 
 ## Authentication
 
-Docker containers cannot access the host's keychain, so authentication requires environment variables:
+Docker containers cannot access the host's keychain. Authentication is handled through proxies on the host:
 
-- **`CLAUDE_CODE_OAUTH_TOKEN`** — required for Claude Code. Obtain it with `claude setup-token` on the host, then export it before running dust.
-- **`OPENAI_API_KEY`** — required for Codex agent mode.
+- **Claude API Proxy**: When `claudeApiProxyUrl` is configured, API calls to Anthropic route through a host-side proxy that injects the OAuth token. The container sees `ANTHROPIC_BASE_URL` pointing to the proxy, and `~/.claude` is not mounted.
+- **OPENAI_API_KEY**: Required for Codex agent mode, passed as an environment variable.
 
-These environment variables are automatically passed through to the container. If `CLAUDE_CODE_OAUTH_TOKEN` is not set when Docker mode is detected, dust exits early with an error message.
+Without the API proxy, `CLAUDE_CODE_OAUTH_TOKEN` must be set and `~/.claude` is mounted for token refresh. If neither is available when Docker mode is detected, dust exits early with an error message.
 
 ## How it works
 
 - `hasDockerfile()` checks for `.dust/Dockerfile` in the repo
 - `buildDockerImage()` builds the image with a tag derived from the repo path
-- Agent sessions are spawned with `docker run`, mounting the repo at `/workspace` and Claude Code config at `/home/user/`
+- Agent sessions are spawned with `docker run`, mounting the repo at `/workspace`
+- When using the Claude API proxy, `~/.claude` and `~/.claude.json` are NOT mounted (credentials stay on host)
 - Both `dust loop` and `dust bucket worker` support Docker mode
 
 ## Git Access

@@ -6,20 +6,24 @@ Docker containers started by `dust bucket worker` should not include any secrets
 
 ### Implemented
 
-The git credential proxy is now implemented:
-
-- `lib/proxy/git-credential-proxy.ts` provides an HTTP server that proxies git requests, injecting credentials via `git credential fill` on the host
+**Git Credential Proxy** (`lib/proxy/git-credential-proxy.ts`):
+- HTTP server that proxies git requests, injecting credentials via `git credential fill` on the host
 - Docker containers no longer mount `~/.ssh` or `~/.gitconfig`
-- When `gitProxyUrl` is set in the Docker spawn config, git URLs are rewritten via `GIT_CONFIG_*` environment variables to route through the proxy
+- When `gitProxyUrl` is set, git URLs are rewritten via `GIT_CONFIG_*` environment variables to route through the proxy
+
+**Claude API Proxy** (`lib/proxy/claude-api-proxy.ts`):
+- HTTP server that proxies Claude API requests, injecting OAuth token from the host
+- When `claudeApiProxyUrl` is set, `ANTHROPIC_BASE_URL` is configured to point to the proxy
+- `~/.claude` and `~/.claude.json` are no longer mounted when using the proxy
+- `CLAUDE_CODE_OAUTH_TOKEN` is no longer passed as an environment variable when using the proxy
+- Token is read from `CLAUDE_CODE_OAUTH_TOKEN` env var or `~/.claude/.credentials.json` on the host
 
 ### Remaining
 
-Secrets are still passed directly into Docker containers:
+Secrets still exposed or not fully proxied:
 
-- `CLAUDE_CODE_OAUTH_TOKEN` and `OPENAI_API_KEY` are passed via `-e` flags
-- `~/.claude/` is mounted for OAuth token refresh
+- `OPENAI_API_KEY` is still passed via `-e` flag (needed for Codex agent mode)
 - The dustbucket token is stored in `~/.dust/credentials.json` which agents could read
-- HTTP proxy for general API requests is not implemented
 - Dust events proxy is not implemented
 - Network isolation is not implemented
 
