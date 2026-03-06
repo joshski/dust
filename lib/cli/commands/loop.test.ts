@@ -1052,6 +1052,65 @@ describe('runOneIteration', () => {
 
     expect(capturedOnRawEvent).toBeUndefined()
   })
+
+  test('includes toolsSection in prompt when provided', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+        },
+      },
+    })
+    let capturedPrompt: string | undefined
+    const loopDeps = createLoopDeps({
+      run: async prompt => {
+        capturedPrompt = prompt
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+    const toolsSection = `## Available Tools
+
+### asset-upload
+Upload a file to dustbucket.
+
+Usage: \`dust bucket tool asset-upload <file>\``
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent, {
+      toolsSection,
+    })
+
+    expect(capturedPrompt).toContain('## Available Tools')
+    expect(capturedPrompt).toContain('### asset-upload')
+    expect(capturedPrompt).toContain(
+      'Usage: `dust bucket tool asset-upload <file>`'
+    )
+  })
+
+  test('does not add extra newlines when toolsSection is empty', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+        },
+      },
+    })
+    let capturedPrompt: string | undefined
+    const loopDeps = createLoopDeps({
+      run: async prompt => {
+        capturedPrompt = prompt
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent, {
+      toolsSection: '',
+    })
+
+    // Prompt should end with the implementation instructions without trailing tools section
+    expect(capturedPrompt).not.toContain('## Available Tools')
+    // Should not have trailing newlines from empty toolsSection
+    expect(capturedPrompt?.endsWith('\n\n')).toBe(false)
+  })
 })
 
 describe('formatLoopEvent', () => {

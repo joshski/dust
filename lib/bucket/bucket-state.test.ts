@@ -18,6 +18,7 @@ import {
 import type {
   RepositoryListMessage,
   TaskAvailableMessage,
+  ToolDefinitionsMessage,
 } from './server-messages'
 
 /** Key input constants for tests */
@@ -247,6 +248,138 @@ describe('bucket-state', () => {
         expect(debugLogEffect).toEqual({
           type: 'debugLog',
           message: 'ws message: task-available',
+        })
+      })
+    })
+
+    describe('tool-definitions messages', () => {
+      it('returns storeToolDefinitions effect with tools', () => {
+        const state: MessageHandlerState = { repositoryNames: [] }
+        const message: ToolDefinitionsMessage = {
+          type: 'tool-definitions',
+          tools: [
+            {
+              name: 'upload',
+              description: 'Upload a file',
+              endpoint: '/api/upload',
+              method: 'POST',
+              parameters: [
+                {
+                  name: 'file',
+                  type: 'file',
+                  required: true,
+                  description: 'The file to upload',
+                },
+              ],
+            },
+          ],
+        }
+
+        const result = handleServerMessage(state, message)
+
+        const storeEffect = result.effects.find(
+          e => e.type === 'storeToolDefinitions'
+        )
+        expect(storeEffect).toEqual({
+          type: 'storeToolDefinitions',
+          tools: message.tools,
+        })
+      })
+
+      it('logs tool count with singular form', () => {
+        const state: MessageHandlerState = { repositoryNames: [] }
+        const message: ToolDefinitionsMessage = {
+          type: 'tool-definitions',
+          tools: [
+            {
+              name: 'ping',
+              description: 'Ping',
+              endpoint: '/ping',
+              method: 'GET',
+              parameters: [],
+            },
+          ],
+        }
+
+        const result = handleServerMessage(state, message)
+
+        const logEffects = result.effects.filter(e => e.type === 'log')
+        const logMessages = logEffects.map(e =>
+          e.type === 'log' ? e.message : ''
+        )
+
+        expect(logMessages).toContain('Received tool definitions (1 tool)')
+      })
+
+      it('logs tool count with plural form', () => {
+        const state: MessageHandlerState = { repositoryNames: [] }
+        const message: ToolDefinitionsMessage = {
+          type: 'tool-definitions',
+          tools: [
+            {
+              name: 'ping',
+              description: 'Ping',
+              endpoint: '/ping',
+              method: 'GET',
+              parameters: [],
+            },
+            {
+              name: 'upload',
+              description: 'Upload',
+              endpoint: '/upload',
+              method: 'POST',
+              parameters: [],
+            },
+          ],
+        }
+
+        const result = handleServerMessage(state, message)
+
+        const logEffects = result.effects.filter(e => e.type === 'log')
+        const logMessages = logEffects.map(e =>
+          e.type === 'log' ? e.message : ''
+        )
+
+        expect(logMessages).toContain('Received tool definitions (2 tools)')
+      })
+
+      it('handles empty tools array', () => {
+        const state: MessageHandlerState = { repositoryNames: [] }
+        const message: ToolDefinitionsMessage = {
+          type: 'tool-definitions',
+          tools: [],
+        }
+
+        const result = handleServerMessage(state, message)
+
+        const storeEffect = result.effects.find(
+          e => e.type === 'storeToolDefinitions'
+        )
+        expect(storeEffect).toEqual({
+          type: 'storeToolDefinitions',
+          tools: [],
+        })
+
+        const logEffects = result.effects.filter(e => e.type === 'log')
+        const logMessages = logEffects.map(e =>
+          e.type === 'log' ? e.message : ''
+        )
+        expect(logMessages).toContain('Received tool definitions (0 tools)')
+      })
+
+      it('includes debug log effect', () => {
+        const state: MessageHandlerState = { repositoryNames: [] }
+        const message: ToolDefinitionsMessage = {
+          type: 'tool-definitions',
+          tools: [],
+        }
+
+        const result = handleServerMessage(state, message)
+
+        const debugLogEffect = result.effects.find(e => e.type === 'debugLog')
+        expect(debugLogEffect).toEqual({
+          type: 'debugLog',
+          message: 'ws message: tool-definitions',
         })
       })
     })

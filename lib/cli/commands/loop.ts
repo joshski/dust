@@ -318,6 +318,8 @@ interface IterationOptions {
   repositoryId?: string
   /** Docker spawn config when running in Docker mode */
   docker?: DockerSpawnConfig
+  /** Pre-formatted tools section to inject into the prompt */
+  toolsSection?: string
 }
 
 export async function runOneIteration(
@@ -338,6 +340,7 @@ export async function runOneIteration(
     logger = log,
     repositoryId,
     docker,
+    toolsSection = '',
   } = options
   const baseEnv = buildUnattendedEnv({ repositoryId })
 
@@ -433,7 +436,7 @@ ${taskContent}
 
 ## How to implement the task
 
-${instructions}`
+${instructions}${toolsSection ? `\n${toolsSection}` : ''}`
 
   onAgentEvent?.({
     type: 'agent-session-started',

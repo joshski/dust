@@ -68,6 +68,7 @@ import {
 import {
   parseServerMessage,
   type RepositoryListItem,
+  type ToolDefinition,
 } from '../../bucket/server-messages'
 import {
   addRepository as addRepoToUI,
@@ -284,6 +285,7 @@ interface BucketState {
   sendEvent: SendEventFn
   ui: TerminalUIState
   logBuffers: Map<string, LogBuffer>
+  tools: ToolDefinition[]
 }
 
 export function createInitialState(): BucketState {
@@ -300,6 +302,7 @@ export function createInitialState(): BucketState {
     sendEvent: () => {},
     ui: createTerminalUIState(),
     logBuffers: new Map(),
+    tools: [],
   }
   state.sendEvent = createEventMessageSender(() => state.ws)
   // Register system buffer so connection messages appear in the "All" TUI view
@@ -320,7 +323,8 @@ export function getWebSocketUrl(): string {
  */
 function toRepositoryDependencies(
   bucketDeps: BucketDependencies,
-  fileSystem: FileSystem
+  fileSystem: FileSystem,
+  state: BucketState
 ): RepositoryDependencies {
   return {
     spawn: bucketDeps.spawn,
@@ -328,6 +332,7 @@ function toRepositoryDependencies(
     fileSystem,
     sleep: bucketDeps.sleep,
     getReposDir: bucketDeps.getReposDir,
+    getTools: () => state.tools,
   }
 }
 
@@ -706,7 +711,8 @@ function executeEffects(
       case 'handleRepositoryList': {
         const repoDeps = toRepositoryDependencies(
           bucketDependencies,
-          fileSystem
+          fileSystem,
+          state
         )
         const repoContext = createTUIContext(state, context, useTUI)
         const repos = effect.repositories
@@ -723,7 +729,8 @@ function executeEffects(
       case 'signalTaskAvailable': {
         const repoDeps = toRepositoryDependencies(
           bucketDependencies,
-          fileSystem
+          fileSystem,
+          state
         )
         const repoState = state.repositories.get(effect.repositoryName)
         if (repoState) {
@@ -731,6 +738,10 @@ function executeEffects(
         }
         break
       }
+
+      case 'storeToolDefinitions':
+        state.tools = effect.tools
+        break
 
       case 'scheduleReconnect':
         // Requires token to be available - this is handled by connectWebSocket wrapper

@@ -6,7 +6,11 @@
  * The imperative shell (bucket.ts) interprets and executes the effects.
  */
 
-import type { RepositoryListItem, ServerMessage } from './server-messages'
+import type {
+  RepositoryListItem,
+  ServerMessage,
+  ToolDefinition,
+} from './server-messages'
 
 /**
  * Log effect - instructs the shell to log a message.
@@ -97,6 +101,14 @@ export interface ScheduleReconnectEffect {
 }
 
 /**
+ * StoreToolDefinitions effect - instructs the shell to store received tool definitions.
+ */
+export interface StoreToolDefinitionsEffect {
+  type: 'storeToolDefinitions'
+  tools: ToolDefinition[]
+}
+
+/**
  * All possible effects returned by pure message handlers.
  */
 export type Effect =
@@ -111,6 +123,7 @@ export type Effect =
   | SelectPreviousEffect
   | ScrollEffect
   | ScheduleReconnectEffect
+  | StoreToolDefinitionsEffect
 
 /**
  * Plain-object projection of the bucket state needed for message handling.
@@ -234,6 +247,21 @@ export function handleServerMessage(
           stream: 'stderr',
         })
       }
+      break
+    }
+
+    case 'tool-definitions': {
+      const toolCount = message.tools.length
+      effects.push({
+        type: 'log',
+        message: `Received tool definitions (${toolCount} tool${toolCount === 1 ? '' : 's'})`,
+        stream: 'stdout',
+      })
+
+      effects.push({
+        type: 'storeToolDefinitions',
+        tools: message.tools,
+      })
       break
     }
   }

@@ -38,7 +38,7 @@ Key decisions:
 
 ## Blocked By
 
-- [Inject Tools Into Agent Prompts](inject-tools-into-agent-prompts.md)
+(none)
 
 ## Definition of Done
 

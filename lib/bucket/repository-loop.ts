@@ -37,6 +37,7 @@ import { createLogger } from '../logging'
 import type { SendEventFn } from './events'
 import { appendLogLine, createLogLine, type LogBuffer } from './log-buffer'
 import type { RepositoryDependencies, RepositoryState } from './repository'
+import { formatToolsSection } from './tool-prompt'
 
 const log = createLogger('dust:bucket:repository-loop')
 
@@ -425,6 +426,10 @@ export async function runRepositoryLoop(
     const cancelCurrentIteration = createCancelHandler(abortController)
     repoState.cancelCurrentIteration = cancelCurrentIteration
     let result: Awaited<ReturnType<typeof runOneIteration>>
+    // Get current tools and format for prompt injection
+    const tools = repoDeps.getTools?.() ?? []
+    const toolsSection = formatToolsSection(tools)
+
     try {
       result = await runOneIteration(
         commandDeps,
@@ -437,6 +442,7 @@ export async function runRepositoryLoop(
           repositoryId: repoState.repository.id.toString(),
           onRawEvent: createHeartbeatThrottler(onAgentEvent, agentType),
           docker: dockerConfig,
+          toolsSection,
         }
       )
     } catch (error) {

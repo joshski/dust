@@ -33,6 +33,7 @@ import {
   removeRepository,
 } from './repository-git'
 import { runRepositoryLoop } from './repository-loop'
+import type { ToolDefinition } from './server-messages'
 
 export {
   cloneRepository,
@@ -84,6 +85,8 @@ export interface RepositoryDependencies {
   getReposDir: () => string
   /** Optional overrides for Docker dependency functions (for testing) */
   dockerDeps?: Partial<DockerDependencies>
+  /** Function to get current tool definitions */
+  getTools?: () => ToolDefinition[]
 }
 
 /**
