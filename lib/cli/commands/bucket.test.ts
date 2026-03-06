@@ -1842,6 +1842,30 @@ describe('bucketWorker', () => {
     expect(written.some(s => s.includes('\x1b[?1049l'))).toBe(true)
   })
 
+  test('sets DUST_PROXY_PORT during run and restores previous value on exit', async () => {
+    const dependencies = createDependencies()
+    stubEnv('DUST_BUCKET_TOKEN', 'token')
+    stubEnv('DUST_PROXY_PORT', '9999')
+    let proxyPortDuringRun: string | undefined
+
+    const bucketDependencies = createBucketDependencies({
+      setupKeypress: onKey => {
+        setTimeout(() => {
+          proxyPortDuringRun = process.env.DUST_PROXY_PORT
+          onKey('q')
+        }, 10)
+        return () => {}
+      },
+    })
+
+    const result = await bucketWorker(dependencies, bucketDependencies)
+
+    expect(result.exitCode).toBe(0)
+    expect(proxyPortDuringRun).toBeDefined()
+    expect(proxyPortDuringRun).not.toBe('9999')
+    expect(process.env.DUST_PROXY_PORT).toBe('9999')
+  })
+
   test('falls back to raw URL when wsUrl is not parseable', async () => {
     const dependencies = createDependencies()
     stubEnv('DUST_BUCKET_TOKEN', 'token')

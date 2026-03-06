@@ -1,11 +1,13 @@
 import { describe, expect, test } from 'vitest'
 import {
   buildUnattendedEnv,
+  DUST_PROXY_PORT,
   DUST_REPOSITORY_ID,
   DUST_SKIP_AGENT,
   DUST_UNATTENDED,
   isUnattended,
 } from './session'
+import { stubEnv } from './test/test-utilities'
 
 describe('isUnattended', () => {
   test('returns false when DUST_UNATTENDED is not set', () => {
@@ -42,5 +44,12 @@ describe('buildUnattendedEnv', () => {
   test('omits DUST_REPOSITORY_ID when not provided', () => {
     const env = buildUnattendedEnv({})
     expect(env[DUST_REPOSITORY_ID]).toBeUndefined()
+  })
+
+  test('includes DUST_PROXY_PORT when present in process env', () => {
+    return stubEnv(DUST_PROXY_PORT, '4310', () => {
+      const env = buildUnattendedEnv()
+      expect(env[DUST_PROXY_PORT]).toBe('4310')
+    })
   })
 })

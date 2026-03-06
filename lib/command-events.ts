@@ -1,9 +1,9 @@
 /**
  * Command event types for the dust back channel protocol.
  *
- * These types define structured events emitted by dust commands
- * to a file descriptor specified by DUST_EVENTS_FD. Events are
- * written as newline-delimited JSON using the CommandEventMessage envelope.
+ * These types define structured events emitted by dust commands.
+ * Events can be transported via DUST_EVENTS_FD (newline-delimited JSON)
+ * or via DUST_PROXY_PORT (HTTP POST /events), using the same envelope.
  */
 
 /**

@@ -14,18 +14,21 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import { type CommandEventMessage, createEventEmitter } from '../command-events'
+import { createCommandEventWriter } from '../command-events-transport'
 import { wireEntry } from './wire'
 
-// Create emitEvent function if DUST_EVENTS_FD is set
-const eventsFd = process.env.DUST_EVENTS_FD
-  ? Number.parseInt(process.env.DUST_EVENTS_FD, 10)
+const writeEvent = createCommandEventWriter(process.env, {
+  writeSync,
+  fetch: (input, init) => fetch(input, init),
+  onError: message => {
+    console.error(message)
+  },
+})
+const emitEvent = writeEvent
+  ? createEventEmitter((message: CommandEventMessage) => {
+      writeEvent(message)
+    })
   : undefined
-const emitEvent =
-  eventsFd !== undefined && !Number.isNaN(eventsFd)
-    ? createEventEmitter((message: CommandEventMessage) => {
-        writeSync(eventsFd, `${JSON.stringify(message)}\n`)
-      })
-    : undefined
 
 await wireEntry(
   { existsSync, statSync, readFile, writeFile, mkdir, readdir, chmod, rename },

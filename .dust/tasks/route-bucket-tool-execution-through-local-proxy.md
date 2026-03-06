@@ -11,7 +11,7 @@ Route `dust bucket tool` executions through the local proxy in the active bucket
 
 ## Blocked By
 
-- [Add Local Bucket Proxy for Command Events](add-local-bucket-proxy-for-command-events.md)
+(none)
 
 ## Definition of Done
 

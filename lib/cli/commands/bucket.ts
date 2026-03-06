@@ -43,6 +43,7 @@ import {
   type KeypressHandlerState,
   type MessageHandlerState,
 } from '../../bucket/bucket-state'
+import { startCommandEventsProxy } from '../../bucket/command-events-proxy'
 import {
   type BucketEmitFn,
   createEventMessageSender,
@@ -89,6 +90,7 @@ import {
 } from '../../bucket/terminal-ui'
 import { storeTools } from '../../bucket/tool-storage'
 import { run as claudeRun } from '../../claude/run'
+import { DUST_PROXY_PORT } from '../../command-events-transport'
 import { createLogger, enableFileLogs } from '../../logging'
 import { isUnattended } from '../../session'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
@@ -1074,6 +1076,8 @@ export async function bucketWorker(
 
   const state = createInitialState()
   const useTUI = bucketDeps.isTTY
+  const previousProxyPort = process.env[DUST_PROXY_PORT]
+  let stopCommandEventsProxy: (() => Promise<void>) | undefined
 
   // Set connected host for TUI header
   try {
@@ -1087,6 +1091,27 @@ export async function bucketWorker(
   let cleanupSignals: (() => void) | undefined
 
   try {
+    try {
+      const proxy = await startCommandEventsProxy(message => {
+        const ws = state.ws
+        if (ws && ws.readyState === WS_OPEN) {
+          try {
+            ws.send(JSON.stringify(message))
+          } catch {
+            // Fire-and-forget: ignore send errors
+          }
+        }
+      })
+      process.env[DUST_PROXY_PORT] = String(proxy.port)
+      stopCommandEventsProxy = proxy.stop
+    } catch (error) {
+      initialWs.close()
+      context.stderr(
+        `Failed to start command events proxy: ${(error as Error).message}`
+      )
+      return { exitCode: 1 }
+    }
+
     if (useTUI) {
       tuiHandle = setupTUI(state, bucketDeps)
     }
@@ -1132,6 +1157,18 @@ export async function bucketWorker(
     tuiHandle?.cleanup()
     cleanupKeypress?.()
     cleanupSignals?.()
+    try {
+      await stopCommandEventsProxy?.()
+    } catch (error) {
+      context.stderr(
+        `Failed to stop command events proxy: ${(error as Error).message}`
+      )
+    }
+    if (previousProxyPort === undefined) {
+      delete process.env[DUST_PROXY_PORT]
+    } else {
+      process.env[DUST_PROXY_PORT] = previousProxyPort
+    }
   }
 
   context.stdout('Goodbye!')

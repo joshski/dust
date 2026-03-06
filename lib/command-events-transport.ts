@@ -1,0 +1,94 @@
+import { writeSync } from 'node:fs'
+import type { CommandEventMessage } from './command-events'
+
+export const DUST_EVENTS_FD = 'DUST_EVENTS_FD'
+export const DUST_PROXY_PORT = 'DUST_PROXY_PORT'
+
+interface ProxyResponseLike {
+  ok: boolean
+  status: number
+}
+
+interface EventTransportDependencies {
+  writeSync: typeof writeSync
+  fetch: (
+    input: string,
+    init: {
+      method: 'POST'
+      headers: Record<string, string>
+      body: string
+    }
+  ) => Promise<ProxyResponseLike>
+  onError: (message: string) => void
+}
+
+const defaultDependencies: EventTransportDependencies = {
+  writeSync,
+  fetch: (input, init) => fetch(input, init),
+  onError: message => {
+    console.error(message)
+  },
+}
+
+function parseInteger(value: string | undefined): number | undefined {
+  if (!value) return undefined
+  const parsed = Number.parseInt(value, 10)
+  return Number.isNaN(parsed) ? undefined : parsed
+}
+
+export function parseProxyPort(value: string | undefined): number | undefined {
+  const parsed = parseInteger(value)
+  if (parsed === undefined) return undefined
+  return parsed >= 1 && parsed <= 65535 ? parsed : undefined
+}
+
+/**
+ * Creates a message writer for command events.
+ *
+ * Priority order:
+ * 1. DUST_EVENTS_FD (legacy file descriptor transport)
+ * 2. DUST_PROXY_PORT (HTTP proxy transport)
+ */
+export function createCommandEventWriter(
+  env: Record<string, string | undefined> = process.env,
+  dependencies: EventTransportDependencies = defaultDependencies
+): ((message: CommandEventMessage) => void) | undefined {
+  const eventsFd = parseInteger(env[DUST_EVENTS_FD])
+  if (eventsFd !== undefined) {
+    return (message: CommandEventMessage) => {
+      dependencies.writeSync(eventsFd, `${JSON.stringify(message)}\n`)
+    }
+  }
+
+  const proxyPort = parseProxyPort(env[DUST_PROXY_PORT])
+  if (proxyPort === undefined) {
+    return undefined
+  }
+
+  const eventsUrl = `http://127.0.0.1:${proxyPort}/events`
+  return (message: CommandEventMessage) => {
+    void dependencies
+      .fetch(eventsUrl, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          connection: 'close',
+        },
+        body: JSON.stringify(message),
+      })
+      .then(response => {
+        if (!response.ok) {
+          dependencies.onError(
+            `Event proxy POST failed (${response.status}): ${eventsUrl}`
+          )
+        }
+      })
+      .catch(error => {
+        const messageText =
+          error instanceof Error ? error.message : String(error)
+        dependencies.onError(
+          `Event proxy POST failed (${messageText}): ${eventsUrl}`
+        )
+      })
+  }
+}
