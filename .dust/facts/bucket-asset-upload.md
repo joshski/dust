@@ -1,14 +1,23 @@
 # Bucket Asset Upload
 
-The `dust bucket asset upload` command uploads a file to the dustbucket server and outputs the public URL.
+Asset upload is now a server-defined tool executed via `dust bucket tool asset-upload`.
 
 ## Usage
 
 ```bash
-dust bucket asset upload <file-path>
+dust bucket tool asset-upload <file-path>
 ```
 
 On success, the command outputs the public URL of the uploaded asset.
+
+## How It Works
+
+Asset upload is implemented as a server-defined tool rather than a hardcoded command:
+
+1. The server sends tool definitions via WebSocket when `dust bucket` connects
+2. Tool definitions are stored in `~/.dust/tools.json`
+3. The `dust bucket tool` command loads definitions and executes tools generically
+4. File validation (size limits, allowed extensions) is now handled server-side
 
 ## Repository Context
 
@@ -26,26 +35,17 @@ The command uses the same authentication infrastructure as `dust bucket`. It tri
 
 On successful browser authentication, the token is stored in `~/.dust/credentials.json` for future use.
 
-## File Constraints
-
-**Maximum file size:** 10 MB
-
-**Allowed file extensions:**
-- Images: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`
-- Documents: `.pdf`, `.txt`, `.json`, `.csv`, `.md`, `.html`, `.xml`
-
 ## Server API Contract
 
-The command makes a `POST` request to `{DUST_BUCKET_HOST}/api/assets?repositoryId=<id>` (defaults to `https://dustbucket.com/api/assets?repositoryId=<id>`).
+The tool executor makes requests to the endpoint specified in the tool definition. For asset-upload, this is typically `POST /api/assets?repositoryId=<id>`.
 
 **Request:**
-- Method: `POST`
+- Method: `POST` (as defined in tool definition)
 - Query parameters:
   - `repositoryId`: The repository ID from `DUST_REPOSITORY_ID` environment variable
 - Headers:
   - `Authorization: Bearer <token>`
-  - `Content-Type: <mime-type>` (derived from file extension)
-- Body: Raw file bytes
+- Body: `multipart/form-data` with file parameter
 
 **Response (success):**
 ```json

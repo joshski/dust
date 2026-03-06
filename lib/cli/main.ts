@@ -13,7 +13,7 @@ import { DUST_VERSION } from '../version'
 import { agent } from './commands/agent'
 import { audit } from './commands/audit'
 import { bucketWorker } from './commands/bucket'
-import { bucketAssetUpload } from './commands/bucket-asset-upload'
+import { bucketTool } from './commands/bucket-tool'
 import { check } from './commands/check'
 import { focus } from './commands/focus'
 import { generateHelpText, help } from './commands/help'
@@ -61,7 +61,7 @@ const commandRegistry = {
   agent,
   audit,
   'bucket worker': bucketWorker,
-  'bucket asset upload': bucketAssetUpload,
+  'bucket tool': bucketTool,
   focus,
   'new task': newTask,
   'new principle': newPrinciple,

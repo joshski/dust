@@ -87,6 +87,7 @@ import {
   type TerminalUIState,
   updateDimensions,
 } from '../../bucket/terminal-ui'
+import { storeTools } from '../../bucket/tool-storage'
 import { run as claudeRun } from '../../claude/run'
 import { createLogger, enableFileLogs } from '../../logging'
 import { isUnattended } from '../../session'
@@ -741,6 +742,14 @@ function executeEffects(
 
       case 'storeToolDefinitions':
         state.tools = effect.tools
+        // Persist to disk for CLI commands to access
+        storeTools(
+          fileSystem,
+          bucketDependencies.auth.getHomeDir(),
+          effect.tools
+        ).catch(error => {
+          log(`Failed to persist tools: ${error.message}`)
+        })
         break
 
       case 'scheduleReconnect':
