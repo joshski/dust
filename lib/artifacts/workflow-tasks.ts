@@ -40,13 +40,13 @@ export function titleToFilename(title: string): string {
     .replace(/^-|-$/g, '')}.md`
 }
 
-export type WorkflowTaskType = 'refine' | 'decompose-idea' | 'shelve'
+export type WorkflowTaskType = 'refine-idea' | 'decompose-idea' | 'shelve-idea'
 type WorkflowHintType = WorkflowTaskType | 'add-idea' | 'expedite-idea'
 
 const WORKFLOW_HINT_PATHS: Record<WorkflowHintType, string> = {
-  refine: 'config/hints/refine-idea.md',
+  'refine-idea': 'config/hints/refine-idea.md',
   'decompose-idea': 'config/hints/decompose-idea.md',
-  shelve: 'config/hints/shelve-idea.md',
+  'shelve-idea': 'config/hints/shelve-idea.md',
   'add-idea': 'config/hints/add-idea.md',
   'expedite-idea': 'config/hints/expedite-idea.md',
 }
@@ -71,9 +71,9 @@ export interface WorkflowTaskMatch {
 
 const WORKFLOW_SECTION_HEADINGS: { type: WorkflowTaskType; heading: string }[] =
   [
-    { type: 'refine', heading: 'Refines Idea' },
+    { type: 'refine-idea', heading: 'Refines Idea' },
     { type: 'decompose-idea', heading: 'Decomposes Idea' },
-    { type: 'shelve', heading: 'Shelves Idea' },
+    { type: 'shelve-idea', heading: 'Shelves Idea' },
   ]
 
 function extractIdeaSlugFromSection(
@@ -336,7 +336,7 @@ export async function createRefineIdeaTask(
   return createIdeaTransitionTask(
     fileSystem,
     dustPath,
-    'refine',
+    'refine-idea',
     'Refine Idea: ',
     ideaSlug,
     ideaTitle =>
@@ -390,7 +390,7 @@ export async function createShelveIdeaTask(
   return createIdeaTransitionTask(
     fileSystem,
     dustPath,
-    'shelve',
+    'shelve-idea',
     'Shelve Idea: ',
     ideaSlug,
     ideaTitle =>

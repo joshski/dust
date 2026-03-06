@@ -22,14 +22,14 @@ import type {
 type IdeaStatus = 'draft' | 'refining' | 'decomposing' | 'shelving'
 
 function workflowTypeToStatus(
-  type: 'refine' | 'decompose-idea' | 'shelve'
+  type: 'refine-idea' | 'decompose-idea' | 'shelve-idea'
 ): IdeaStatus {
   switch (type) {
-    case 'refine':
+    case 'refine-idea':
       return 'refining'
     case 'decompose-idea':
       return 'decomposing'
-    case 'shelve':
+    case 'shelve-idea':
       return 'shelving'
   }
 }

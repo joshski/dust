@@ -692,7 +692,7 @@ describe('findWorkflowTaskForIdea', () => {
       'progress-broadcasting'
     )
     expect(result).toEqual({
-      type: 'refine',
+      type: 'refine-idea',
       ideaSlug: 'progress-broadcasting',
       taskSlug: 'refine-idea-progress-broadcasting',
     })
@@ -728,7 +728,7 @@ describe('findWorkflowTaskForIdea', () => {
       'progress-broadcasting'
     )
     expect(result).toEqual({
-      type: 'shelve',
+      type: 'shelve-idea',
       ideaSlug: 'progress-broadcasting',
       taskSlug: 'shelve-idea-progress-broadcasting',
     })
@@ -809,7 +809,7 @@ Do something.
       'progress-broadcasting'
     )
     expect(result).toEqual({
-      type: 'refine',
+      type: 'refine-idea',
       ideaSlug: 'progress-broadcasting',
       taskSlug: 'some-unrelated-name',
     })
@@ -889,7 +889,7 @@ Archive this idea.
       'my-idea'
     )
     expect(result).toEqual({
-      type: 'shelve',
+      type: 'shelve-idea',
       ideaSlug: 'my-idea',
       taskSlug: 'archive-task',
     })
@@ -1268,12 +1268,12 @@ describe('findAllWorkflowTasks', () => {
     await createShelveIdeaTask(fileSystem, '/project/.dust', 'idea-b')
     const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
     expect(result.workflowTasksByIdeaSlug.get('idea-a')).toEqual({
-      type: 'refine',
+      type: 'refine-idea',
       ideaSlug: 'idea-a',
       taskSlug: 'refine-idea-idea-a',
     })
     expect(result.workflowTasksByIdeaSlug.get('idea-b')).toEqual({
-      type: 'shelve',
+      type: 'shelve-idea',
       ideaSlug: 'idea-b',
       taskSlug: 'shelve-idea-idea-b',
     })

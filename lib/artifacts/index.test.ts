@@ -284,7 +284,7 @@ describe('buildArtifactsRepository', () => {
       })
 
       expect(result).toEqual({
-        type: 'refine',
+        type: 'refine-idea',
         ideaSlug: 'progress-broadcasting',
         taskSlug: 'refine-idea-progress-broadcasting',
       })
@@ -808,7 +808,7 @@ A regular non-workflow task.
     const refineNode = graph.nodes.find(
       n => n.task.slug === 'refine-idea-new-feature'
     )
-    expect(refineNode?.workflowType).toBe('refine')
+    expect(refineNode?.workflowType).toBe('refine-idea')
 
     const regularNode = graph.nodes.find(n => n.task.slug === 'regular-task')
     expect(regularNode?.workflowType).toBeNull()
