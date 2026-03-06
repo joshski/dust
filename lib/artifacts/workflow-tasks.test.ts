@@ -127,6 +127,49 @@ describe('createRefineIdeaTask', () => {
       '- [Progress Broadcasting](../ideas/progress-broadcasting.md)'
     )
   })
+
+  test('appends workflow hint when refine.md hint file exists', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'progress-broadcasting.md':
+              '# Progress Broadcasting\n\nA great idea.',
+          },
+          tasks: {},
+          config: {
+            'workflow-hints': {
+              'refine.md': 'Focus on edge cases and error handling.',
+            },
+          },
+        },
+      },
+    })
+    const result = await createRefineIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('Focus on edge cases and error handling.')
+    expect(content).toContain(
+      'only add questions that are meaningful decisions worth asking.\n\nFocus on edge cases and error handling.'
+    )
+  })
+
+  test('generates task without hint when refine.md does not exist', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createRefineIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('# Refine Idea: Progress Broadcasting')
+    expect(content).not.toContain('Focus on edge cases')
+  })
 })
 
 describe('decomposeIdea', () => {
@@ -250,6 +293,42 @@ describe('decomposeIdea', () => {
       '- [Progress Broadcasting](../ideas/progress-broadcasting.md)'
     )
   })
+
+  test('appends workflow hint when decompose-idea.md hint file exists', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'progress-broadcasting.md':
+              '# Progress Broadcasting\n\nA great idea.',
+          },
+          tasks: {},
+          config: {
+            'workflow-hints': {
+              'decompose-idea.md': 'Prefer tasks under 100 lines of code.',
+            },
+          },
+        },
+      },
+    })
+    const result = await decomposeIdea(fileSystem, '/project/.dust', {
+      ideaSlug: 'progress-broadcasting',
+    })
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('Prefer tasks under 100 lines of code.')
+  })
+
+  test('generates task without hint when decompose-idea.md does not exist', async () => {
+    const fileSystem = createFileSystem()
+    const result = await decomposeIdea(fileSystem, '/project/.dust', {
+      ideaSlug: 'progress-broadcasting',
+    })
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('# Decompose Idea: Progress Broadcasting')
+    expect(content).not.toContain('Prefer tasks under 100 lines')
+  })
 })
 
 describe('createShelveIdeaTask', () => {
@@ -288,6 +367,46 @@ describe('createShelveIdeaTask', () => {
     expect(content).toContain(
       '- [Progress Broadcasting](../ideas/progress-broadcasting.md)'
     )
+  })
+
+  test('appends workflow hint when shelve.md hint file exists', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'progress-broadcasting.md':
+              '# Progress Broadcasting\n\nA great idea.',
+          },
+          tasks: {},
+          config: {
+            'workflow-hints': {
+              'shelve.md': 'Document the reason for shelving clearly.',
+            },
+          },
+        },
+      },
+    })
+    const result = await createShelveIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('Document the reason for shelving clearly.')
+  })
+
+  test('generates task without hint when shelve.md does not exist', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createShelveIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('# Shelve Idea: Progress Broadcasting')
+    expect(content).not.toContain('Document the reason')
   })
 })
 

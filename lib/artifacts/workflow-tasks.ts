@@ -42,6 +42,24 @@ export function titleToFilename(title: string): string {
 
 export type WorkflowTaskType = 'refine' | 'decompose-idea' | 'shelve'
 
+const WORKFLOW_HINT_PATHS: Record<WorkflowTaskType, string> = {
+  refine: 'config/workflow-hints/refine.md',
+  'decompose-idea': 'config/workflow-hints/decompose-idea.md',
+  shelve: 'config/workflow-hints/shelve.md',
+}
+
+async function readWorkflowHint(
+  fileSystem: ReadableFileSystem,
+  dustPath: string,
+  workflowType: WorkflowTaskType
+): Promise<string | null> {
+  const hintPath = `${dustPath}/${WORKFLOW_HINT_PATHS[workflowType]}`
+  if (!fileSystem.exists(hintPath)) {
+    return null
+  }
+  return fileSystem.readFile(hintPath)
+}
+
 export interface WorkflowTaskMatch {
   type: WorkflowTaskType
   ideaSlug: string
@@ -266,6 +284,7 @@ ${definitionOfDone.map(item => `- [ ] ${item}`).join('\n')}
 async function createIdeaTransitionTask(
   fileSystem: FileSystem,
   dustPath: string,
+  workflowType: WorkflowTaskType,
   prefix: string,
   ideaSlug: string,
   openingSentenceTemplate: (ideaTitle: string) => string,
@@ -280,7 +299,12 @@ async function createIdeaTransitionTask(
   const taskTitle = `${prefix}${ideaTitle}`
   const filename = titleToFilename(taskTitle)
   const filePath = `${dustPath}/tasks/${filename}`
-  const openingSentence = openingSentenceTemplate(ideaTitle)
+  const baseOpeningSentence = openingSentenceTemplate(ideaTitle)
+
+  const hint = await readWorkflowHint(fileSystem, dustPath, workflowType)
+  const openingSentence = hint
+    ? `${baseOpeningSentence}\n\n${hint}`
+    : baseOpeningSentence
 
   const ideaSection = { heading: ideaSectionHeading, ideaTitle, ideaSlug }
 
@@ -309,6 +333,7 @@ export async function createRefineIdeaTask(
   return createIdeaTransitionTask(
     fileSystem,
     dustPath,
+    'refine',
     'Refine Idea: ',
     ideaSlug,
     ideaTitle =>
@@ -334,6 +359,7 @@ export async function decomposeIdea(
   return createIdeaTransitionTask(
     fileSystem,
     dustPath,
+    'decompose-idea',
     'Decompose Idea: ',
     options.ideaSlug,
     ideaTitle =>
@@ -361,6 +387,7 @@ export async function createShelveIdeaTask(
   return createIdeaTransitionTask(
     fileSystem,
     dustPath,
+    'shelve',
     'Shelve Idea: ',
     ideaSlug,
     ideaTitle =>
