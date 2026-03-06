@@ -799,6 +799,42 @@ describe('buildDockerRunArguments', () => {
     expect(dockerArguments).toContain('GIT_CONFIG_VALUE_1=git@github.com:')
   })
 
+  test('sets default git identity env vars', () => {
+    const dockerArguments = buildDockerRunArguments(
+      {
+        imageTag: 'dust-agent-test',
+        repoPath: '/home/user/project',
+        homeDir: '/home/user',
+      },
+      ['-p', 'test'],
+      {}
+    )
+
+    expect(dockerArguments).toContain('GIT_AUTHOR_NAME=Dust Agent')
+    expect(dockerArguments).toContain('GIT_AUTHOR_EMAIL=agent@dustbucket.com')
+    expect(dockerArguments).toContain('GIT_COMMITTER_NAME=Dust Agent')
+    expect(dockerArguments).toContain(
+      'GIT_COMMITTER_EMAIL=agent@dustbucket.com'
+    )
+  })
+
+  test('allows overriding git identity via env', () => {
+    const dockerArguments = buildDockerRunArguments(
+      {
+        imageTag: 'dust-agent-test',
+        repoPath: '/home/user/project',
+        homeDir: '/home/user',
+      },
+      ['-p', 'test'],
+      { GIT_AUTHOR_NAME: 'Custom Author' }
+    )
+
+    // Should use the explicit value, not the default
+    expect(dockerArguments).toContain('GIT_AUTHOR_NAME=Custom Author')
+    // Other defaults should still be set
+    expect(dockerArguments).toContain('GIT_AUTHOR_EMAIL=agent@dustbucket.com')
+  })
+
   test('does not configure git URL rewriting when gitProxyUrl is not set', () => {
     const dockerArguments = buildDockerRunArguments(
       {

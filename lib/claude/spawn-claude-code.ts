@@ -73,6 +73,23 @@ export function buildDockerRunArguments(
   // Configure Claude Code to use the API proxy
   if (docker.claudeApiProxyUrl) {
     dockerArguments.push('-e', `ANTHROPIC_BASE_URL=${docker.claudeApiProxyUrl}`)
+    // Provide a dummy auth token so Claude Code starts without real credentials.
+    // The proxy will strip this and inject the real OAuth token on the host side.
+    dockerArguments.push('-e', 'ANTHROPIC_AUTH_TOKEN=proxy-managed')
+  }
+
+  // Ensure commits inside Docker containers have a deterministic identity.
+  // Callers can still override these by passing explicit values in `env`.
+  const gitIdentityDefaults = {
+    GIT_AUTHOR_NAME: 'Dust Agent',
+    GIT_AUTHOR_EMAIL: 'agent@dustbucket.com',
+    GIT_COMMITTER_NAME: 'Dust Agent',
+    GIT_COMMITTER_EMAIL: 'agent@dustbucket.com',
+  }
+  for (const [key, value] of Object.entries(gitIdentityDefaults)) {
+    if (!(key in env)) {
+      dockerArguments.push('-e', `${key}=${value}`)
+    }
   }
 
   // Pass through environment variables
@@ -81,7 +98,7 @@ export function buildDockerRunArguments(
   }
 
   // Pass through agent auth tokens if set in the host environment
-  // Skip CLAUDE_CODE_OAUTH_TOKEN when using the API proxy (it's handled by the proxy)
+  // When using the API proxy, don't pass CLAUDE_CODE_OAUTH_TOKEN — secrets stay on the host.
   const tokensToPassThrough = docker.claudeApiProxyUrl
     ? ['OPENAI_API_KEY']
     : ['CLAUDE_CODE_OAUTH_TOKEN', 'OPENAI_API_KEY']

@@ -142,9 +142,9 @@ export interface ClaudeApiProxyServer {
  * The server accepts HTTP requests and forwards them to the Anthropic API
  * with the OAuth token injected.
  */
-export function createClaudeApiProxyServer(
+export async function createClaudeApiProxyServer(
   dependencies: ClaudeApiProxyDependencies = defaultDependencies
-): ClaudeApiProxyServer {
+): Promise<ClaudeApiProxyServer> {
   let resolvedPort = 0
 
   const server = httpCreateServer(async (nodeRequest, nodeResponse) => {
@@ -175,17 +175,17 @@ export function createClaudeApiProxyServer(
     }
     const body = chunks.length > 0 ? Buffer.concat(chunks) : undefined
 
-    // Forward request to upstream with OAuth token
+    // Forward request to upstream with OAuth token via x-api-key
     const headers: Record<string, string> = {
-      Authorization: `Bearer ${token}`,
+      'x-api-key': token,
     }
 
     // Copy relevant headers from the original request
+    // Don't forward authorization or x-api-key from the container
     const headersToForward = [
       'content-type',
       'anthropic-version',
       'anthropic-beta',
-      'x-api-key',
       'accept',
       'accept-encoding',
     ]
@@ -197,7 +197,7 @@ export function createClaudeApiProxyServer(
       }
     }
 
-    log(`forwarding to ${upstreamUrl.toString()}`)
+    log(`forwarding ${method} to ${upstreamUrl.toString()}`)
 
     try {
       const upstreamResponse = await dependencies.fetch(
@@ -218,6 +218,7 @@ export function createClaudeApiProxyServer(
         }
       })
 
+      log(`upstream responded: ${upstreamResponse.status}`)
       nodeResponse.writeHead(upstreamResponse.status, responseHeaders)
 
       // Stream the response body
@@ -243,19 +244,16 @@ export function createClaudeApiProxyServer(
     }
   })
 
-  server.listen(0, () => {
-    const addr = server.address()
-    if (addr && typeof addr === 'object') {
-      resolvedPort = addr.port
-      log(`claude api proxy listening on port ${resolvedPort}`)
-    }
+  await new Promise<void>(resolve => {
+    server.listen(0, () => {
+      const addr = server.address()
+      if (addr && typeof addr === 'object') {
+        resolvedPort = addr.port
+        log(`claude api proxy listening on port ${resolvedPort}`)
+      }
+      resolve()
+    })
   })
-
-  // Block until port is assigned
-  const addr = server.address()
-  if (addr && typeof addr === 'object') {
-    resolvedPort = addr.port
-  }
 
   return {
     port: resolvedPort,

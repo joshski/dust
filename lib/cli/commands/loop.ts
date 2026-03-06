@@ -32,6 +32,8 @@ import {
   prepareDockerConfig,
 } from '../../docker/docker-agent'
 import { createLogger, enableFileLogs } from '../../logging'
+import { createClaudeApiProxyServer } from '../../proxy/claude-api-proxy'
+import { createGitCredentialProxyServer } from '../../proxy/git-credential-proxy'
 import { buildUnattendedEnv, isUnattended } from '../../session'
 import { DUST_VERSION } from '../../version'
 import type { CommandDependencies, CommandResult } from '../types'
@@ -554,13 +556,30 @@ export async function loopClaude(
     return { exitCode: 1 }
   }
 
+  let stopGitProxy: (() => void) | undefined
+  let stopApiProxy: (() => void) | undefined
+
   if ('config' in dockerResult) {
-    dockerConfig = dockerResult.config
     if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) {
       context.stderr(
         'Docker mode requires CLAUDE_CODE_OAUTH_TOKEN. Run `claude setup-token` and export the token.'
       )
       return { exitCode: 1 }
+    }
+
+    // Start proxies for Docker containers — secrets stay on the host
+    const gitProxy = await createGitCredentialProxyServer({
+      spawn: loopDependencies.spawn,
+    })
+    stopGitProxy = gitProxy.stop
+
+    const apiProxy = await createClaudeApiProxyServer()
+    stopApiProxy = apiProxy.stop
+
+    dockerConfig = {
+      ...dockerResult.config,
+      gitProxyUrl: `http://host.docker.internal:${gitProxy.port}`,
+      claudeApiProxyUrl: `http://host.docker.internal:${apiProxy.port}`,
     }
   }
 
@@ -619,6 +638,10 @@ export async function loopClaude(
       })
     }
   }
+
+  // Stop proxy servers
+  stopGitProxy?.()
+  stopApiProxy?.()
 
   log(`loop ended after ${completedIterations} iterations`)
   onLoopEvent({ type: 'loop.ended', maxIterations })

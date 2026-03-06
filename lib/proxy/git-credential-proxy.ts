@@ -178,9 +178,9 @@ export interface GitCredentialProxyServer {
  * The server accepts git smart HTTP protocol requests and forwards them
  * to the upstream HTTPS URL with credentials injected.
  */
-export function createGitCredentialProxyServer(
+export async function createGitCredentialProxyServer(
   dependencies: GitCredentialProxyDependencies
-): GitCredentialProxyServer {
+): Promise<GitCredentialProxyServer> {
   let resolvedPort = 0
 
   const server = httpCreateServer(async (nodeRequest, nodeResponse) => {
@@ -283,19 +283,16 @@ export function createGitCredentialProxyServer(
     }
   })
 
-  server.listen(0, () => {
-    const addr = server.address()
-    if (addr && typeof addr === 'object') {
-      resolvedPort = addr.port
-      log(`git credential proxy listening on port ${resolvedPort}`)
-    }
+  await new Promise<void>(resolve => {
+    server.listen(0, () => {
+      const addr = server.address()
+      if (addr && typeof addr === 'object') {
+        resolvedPort = addr.port
+        log(`git credential proxy listening on port ${resolvedPort}`)
+      }
+      resolve()
+    })
   })
-
-  // Block until port is assigned
-  const addr = server.address()
-  if (addr && typeof addr === 'object') {
-    resolvedPort = addr.port
-  }
 
   return {
     port: resolvedPort,

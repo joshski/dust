@@ -34,6 +34,8 @@ import { defaultDependencies as codexSpawnDefaultDependencies } from '../codex/s
 import { loadSettings } from '../config/settings'
 import { prepareDockerConfig } from '../docker/docker-agent'
 import { createLogger } from '../logging'
+import { createClaudeApiProxyServer } from '../proxy/claude-api-proxy'
+import { createGitCredentialProxyServer } from '../proxy/git-credential-proxy'
 import type { SendEventFn } from './events'
 import { appendLogLine, createLogLine, type LogBuffer } from './log-buffer'
 import type { RepositoryDependencies, RepositoryState } from './repository'
@@ -338,6 +340,8 @@ export async function runRepositoryLoop(
 
   // Check for Docker mode (.dust/Dockerfile)
   let dockerConfig: DockerSpawnConfig | undefined
+  let stopGitProxy: (() => void) | undefined
+  let stopApiProxy: (() => void) | undefined
   const dockerDeps = {
     spawn: repoDeps.dockerDeps?.spawn ?? spawn,
     homedir: repoDeps.dockerDeps?.homedir ?? os.homedir,
@@ -368,7 +372,21 @@ export async function runRepositoryLoop(
       )
       return
     }
-    dockerConfig = dockerResult.config
+
+    // Start proxies for Docker containers — secrets stay on the host
+    const gitProxy = await createGitCredentialProxyServer({ spawn })
+    stopGitProxy = gitProxy.stop
+    log(`git credential proxy started on port ${gitProxy.port}`)
+
+    const apiProxy = await createClaudeApiProxyServer()
+    stopApiProxy = apiProxy.stop
+    log(`claude api proxy started on port ${apiProxy.port}`)
+
+    dockerConfig = {
+      ...dockerResult.config,
+      gitProxyUrl: `http://host.docker.internal:${gitProxy.port}`,
+      claudeApiProxyUrl: `http://host.docker.internal:${apiProxy.port}`,
+    }
   }
 
   log(`loop started for ${repoName} at ${repoState.path}`)
@@ -488,6 +506,16 @@ export async function runRepositoryLoop(
         setupFallbackTimeout(repoState, sleep, resolve, wakeUpForThisWait)
       })
     }
+  }
+
+  // Stop proxy servers
+  if (stopGitProxy) {
+    stopGitProxy()
+    log(`git credential proxy stopped for ${repoName}`)
+  }
+  if (stopApiProxy) {
+    stopApiProxy()
+    log(`claude api proxy stopped for ${repoName}`)
   }
 
   log(`loop stopped for ${repoName}`)
