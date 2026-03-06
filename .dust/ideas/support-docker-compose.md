@@ -90,7 +90,7 @@ Environment variables like `CLAUDE_CODE_OAUTH_TOKEN` need to be passed to the ag
 ## Related Work
 
 - [Docker Agent Mode](../facts/docker-agent-mode.md) - current single-container implementation
-- [Complete Docker Proxy Isolation](./complete-docker-proxy-isolation.md) - security architecture that would apply to compose mode
+- [Harden Docker Proxy Isolation Follow-Ups](./harden-docker-proxy-isolation-follow-ups.md) - security architecture follow-up work that would apply to compose mode
 - [Expand dust loop to support third-party sandbox providers](./expand-dust-loop-to-support-third-party-sandbox-providers.md) - broader sandboxing strategy
 
 ## Open Questions

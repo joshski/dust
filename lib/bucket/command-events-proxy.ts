@@ -1,6 +1,7 @@
 import { createServer as createHttpServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import type { CommandEventMessage } from '../command-events'
+import type { ToolDefinition } from './server-messages'
 
 const MAX_BODY_BYTES = 1024 * 1024
 const PROXY_ERROR_STATUS = 502
@@ -26,6 +27,7 @@ export interface ToolExecutionResult {
 
 interface CommandEventsProxyHandlers {
   forwardEvent: (event: CommandEventMessage) => void
+  getTools: () => ToolDefinition[]
   forwardToolExecution: (
     request: ToolExecutionRequest
   ) => Promise<ToolExecutionResult>
@@ -131,6 +133,18 @@ export async function startCommandEventsProxy(
         } catch {
           response.writeHead(PROXY_ERROR_STATUS).end('Event forwarding failed')
         }
+        return
+      }
+
+      if (pathname === '/tools') {
+        if (method !== 'GET') {
+          response.writeHead(405).end('Method Not Allowed')
+          return
+        }
+
+        respondJson(response, 200, {
+          tools: handlers.getTools(),
+        })
         return
       }
 

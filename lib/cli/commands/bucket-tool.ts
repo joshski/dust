@@ -1,113 +1,26 @@
 /**
- * dust bucket tool - Execute a server-defined tool
+ * dust bucket tool - Execute a server-defined tool via the local bucket proxy
  *
  * Usage: dust bucket tool <name> [args...]
- *
- * Executes a tool defined by the dustbucket server. Tools are received
- * via WebSocket when `dust bucket` connects and stored locally for
- * CLI access.
- *
- * This command must be run within a repository context (via `dust bucket`)
- * where DUST_REPOSITORY_ID is set.
  */
 
-import { accessSync, statSync } from 'node:fs'
-import { chmod, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
-import { homedir } from 'node:os'
-import {
-  type AuthDependencies,
-  authenticate,
-  loadStoredToken,
-  storeToken,
-} from '../../bucket/auth'
-import { createLocalServer, openBrowser } from '../../bucket/auth-server'
-import {
-  executeTool,
-  type ToolExecutorDependencies,
-} from '../../bucket/tool-executor'
-import { findToolByName, loadStoredTools } from '../../bucket/tool-storage'
+import type { ToolDefinition } from '../../bucket/server-messages'
 import { DUST_PROXY_PORT, parseProxyPort } from '../../command-events-transport'
 import type { CommandDependencies, CommandResult } from '../types'
-import { type AuthFileSystemDependencies, createAuthFileSystem } from './bucket'
 
 export interface BucketToolDependencies {
-  auth: AuthDependencies
-  executor: ToolExecutorDependencies
+  fetch: typeof fetch
 }
 
-/* v8 ignore start - thin wrappers around native functions */
 function createDefaultBucketToolDependencies(): BucketToolDependencies {
-  const authFileSystemDeps: AuthFileSystemDependencies = {
-    accessSync,
-    statSync,
-    readFile,
-    writeFile,
-    mkdir,
-    readdir,
-    chmod,
-    rename: (oldPath, newPath) =>
-      import('node:fs/promises').then(mod => mod.rename(oldPath, newPath)),
-  }
-  const authFileSystem = createAuthFileSystem(authFileSystemDeps)
-
   return {
-    auth: {
-      createServer: createLocalServer,
-      openBrowser: openBrowser,
-      getHomeDir: () => homedir(),
-      fileSystem: authFileSystem,
-    },
-    executor: {
-      readFileBytes: async (path: string) => {
-        const buffer = await Bun.file(path).arrayBuffer()
-        return new Uint8Array(buffer)
-      },
-      fileExists: async (path: string) => {
-        const file = Bun.file(path)
-        return file.exists()
-      },
-      fetch: fetch,
-    },
-  }
-}
-/* v8 ignore stop */
-
-async function resolveToken(
-  authDeps: AuthDependencies,
-  context: CommandDependencies['context'],
-  env: NodeJS.ProcessEnv
-): Promise<string | null> {
-  // 1. Environment variable
-  const envToken = env.DUST_BUCKET_TOKEN
-  if (envToken) {
-    return envToken
-  }
-
-  // 2. Stored credential
-  const stored = await loadStoredToken(
-    authDeps.fileSystem,
-    authDeps.getHomeDir()
-  )
-  if (stored) {
-    return stored
-  }
-
-  // 3. Browser auth flow
-  context.stdout('Opening browser to authenticate with dustbucket...')
-  try {
-    const token = await authenticate(authDeps)
-    await storeToken(authDeps.fileSystem, authDeps.getHomeDir(), token)
-    context.stdout('Authenticated successfully')
-    return token
-  } catch (error) {
-    context.stderr(`Authentication failed: ${(error as Error).message}`)
-    return null
+    fetch,
   }
 }
 
-function formatToolUsage(toolName: string, tools: { name: string }[]): string {
+function formatToolUsage(toolName: string, tools: ToolDefinition[]): string {
   if (tools.length === 0) {
-    return 'No tools available. Run `dust bucket` to receive tool definitions from the server.'
+    return 'No tools available in the active bucket session.'
   }
   const toolNames = tools.map(t => t.name).join(', ')
   return `Unknown tool: ${toolName}\nAvailable tools: ${toolNames}`
@@ -118,6 +31,68 @@ interface ProxyToolResponse {
   output?: string
   error?: string
   status?: string
+}
+
+interface ProxyToolsResponse {
+  tools?: ToolDefinition[]
+}
+
+function parseToolsResponse(text: string): ToolDefinition[] | undefined {
+  let parsed: ProxyToolsResponse
+  try {
+    parsed = JSON.parse(text) as ProxyToolsResponse
+  } catch {
+    return undefined
+  }
+
+  if (!Array.isArray(parsed.tools)) {
+    return undefined
+  }
+
+  return parsed.tools.filter(
+    (tool): tool is ToolDefinition =>
+      typeof tool === 'object' &&
+      tool !== null &&
+      typeof (tool as { name?: unknown }).name === 'string'
+  )
+}
+
+async function loadToolsViaProxy(
+  proxyPort: number,
+  fetchFn: typeof fetch
+): Promise<
+  { success: true; tools: ToolDefinition[] } | { success: false; error: string }
+> {
+  const url = `http://127.0.0.1:${proxyPort}/tools`
+
+  try {
+    const response = await fetchFn(url, {
+      method: 'GET',
+      headers: {
+        connection: 'close',
+      },
+    })
+
+    const responseText = await response.text()
+    const tools = parseToolsResponse(responseText)
+
+    if (tools) {
+      return { success: true, tools }
+    }
+
+    if (!response.ok) {
+      const error =
+        responseText || `Tool proxy request failed (${response.status})`
+      return { success: false, error }
+    }
+
+    return { success: false, error: 'Invalid tools payload from local proxy' }
+  } catch (error) {
+    return {
+      success: false,
+      error: `Tool proxy request failed: ${(error as Error).message}`,
+    }
+  }
 }
 
 async function executeToolViaProxy(
@@ -179,7 +154,7 @@ export async function bucketTool(
   toolDeps: BucketToolDependencies = createDefaultBucketToolDependencies(),
   env: NodeJS.ProcessEnv = process.env
 ): Promise<CommandResult> {
-  const { context, fileSystem } = dependencies
+  const { context } = dependencies
   const toolName = dependencies.arguments[0]
   const toolArgs = dependencies.arguments.slice(1)
 
@@ -188,7 +163,6 @@ export async function bucketTool(
     return { exitCode: 1 }
   }
 
-  // Require repository context
   const repositoryId = env.DUST_REPOSITORY_ID
   if (!repositoryId) {
     context.stderr('Error: DUST_REPOSITORY_ID environment variable is not set.')
@@ -199,49 +173,33 @@ export async function bucketTool(
   }
 
   const proxyPort = parseProxyPort(env[DUST_PROXY_PORT])
-  if (proxyPort !== undefined) {
-    const result = await executeToolViaProxy(
-      toolName,
-      toolArgs,
-      repositoryId,
-      proxyPort,
-      toolDeps.executor.fetch
+  if (proxyPort === undefined) {
+    context.stderr('Error: DUST_PROXY_PORT environment variable is not set.')
+    context.stderr(
+      'This command must be run within an active `dust bucket` session.'
     )
-    if (result.success) {
-      if (result.output) {
-        context.stdout(result.output)
-      }
-      return { exitCode: 0 }
-    }
-    context.stderr(result.error || 'Tool execution failed')
     return { exitCode: 1 }
   }
 
-  // Load stored tool definitions
-  const tools = await loadStoredTools(fileSystem, toolDeps.auth.getHomeDir())
+  const toolsResult = await loadToolsViaProxy(proxyPort, toolDeps.fetch)
+  if (!toolsResult.success) {
+    context.stderr(toolsResult.error)
+    return { exitCode: 1 }
+  }
 
-  // Find the requested tool
-  const tool = findToolByName(tools, toolName)
+  const tool = toolsResult.tools.find(candidate => candidate.name === toolName)
   if (!tool) {
-    context.stderr(formatToolUsage(toolName, tools))
+    context.stderr(formatToolUsage(toolName, toolsResult.tools))
     return { exitCode: 1 }
   }
 
-  // Resolve auth token
-  const token = await resolveToken(toolDeps.auth, context, env)
-  if (!token) {
-    return { exitCode: 1 }
-  }
-
-  // Execute the tool
-  const result = await executeTool(
-    tool,
+  const result = await executeToolViaProxy(
+    toolName,
     toolArgs,
-    token,
     repositoryId,
-    toolDeps.executor
+    proxyPort,
+    toolDeps.fetch
   )
-
   if (result.success) {
     if (result.output) {
       context.stdout(result.output)
@@ -249,7 +207,6 @@ export async function bucketTool(
     return { exitCode: 0 }
   }
 
-  // executeTool always sets error when success is false
-  context.stderr(result.error as string)
+  context.stderr(result.error || 'Tool execution failed')
   return { exitCode: 1 }
 }

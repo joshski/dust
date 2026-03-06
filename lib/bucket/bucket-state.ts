@@ -101,7 +101,7 @@ export interface ScheduleReconnectEffect {
 }
 
 /**
- * StoreToolDefinitions effect - instructs the shell to store received tool definitions.
+ * StoreToolDefinitions effect - instructs the shell to update in-memory tool definitions.
  */
 export interface StoreToolDefinitionsEffect {
   type: 'storeToolDefinitions'

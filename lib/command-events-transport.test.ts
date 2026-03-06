@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest'
 import type { CommandEventMessage } from './command-events'
 import {
   createCommandEventWriter,
-  DUST_EVENTS_FD,
   DUST_PROXY_PORT,
   parseProxyPort,
 } from './command-events-transport'
@@ -38,36 +37,6 @@ describe('createCommandEventWriter', () => {
     expect(writer).toBeUndefined()
   })
 
-  test('prefers DUST_EVENTS_FD when both transports are configured', () => {
-    const writeCalls: Array<{ fd: number; text: string }> = []
-    const fetchCalls: Array<{ input: string; init: unknown }> = []
-    const errorMessages: string[] = []
-
-    const writer = createCommandEventWriter(
-      { [DUST_EVENTS_FD]: '3', [DUST_PROXY_PORT]: '4123' },
-      {
-        writeSync: (fd, text) => {
-          writeCalls.push({ fd, text: String(text) })
-          return String(text).length
-        },
-        fetch: async (input, init) => {
-          fetchCalls.push({ input, init })
-          return { ok: true, status: 202 }
-        },
-        onError: message => {
-          errorMessages.push(message)
-        },
-      }
-    )
-
-    writer?.(testMessage)
-    expect(writeCalls).toEqual([
-      { fd: 3, text: `${JSON.stringify(testMessage)}\n` },
-    ])
-    expect(fetchCalls).toEqual([])
-    expect(errorMessages).toEqual([])
-  })
-
   test('posts to proxy when DUST_PROXY_PORT is configured', async () => {
     const fetchCalls: Array<{
       input: string
@@ -78,7 +47,6 @@ describe('createCommandEventWriter', () => {
     const writer = createCommandEventWriter(
       { [DUST_PROXY_PORT]: '4123' },
       {
-        writeSync: () => 0,
         fetch: async (input, init) => {
           fetchCalls.push({ input, init })
           return { ok: true, status: 202 }
@@ -114,7 +82,6 @@ describe('createCommandEventWriter', () => {
     const writer = createCommandEventWriter(
       { [DUST_PROXY_PORT]: '4123' },
       {
-        writeSync: () => 0,
         fetch: async () => {
           throw new Error('connect ECONNREFUSED')
         },
@@ -138,7 +105,6 @@ describe('createCommandEventWriter', () => {
     const writer = createCommandEventWriter(
       { [DUST_PROXY_PORT]: '4123' },
       {
-        writeSync: () => 0,
         fetch: async () => {
           throw 'socket closed'
         },
@@ -162,7 +128,6 @@ describe('createCommandEventWriter', () => {
     const writer = createCommandEventWriter(
       { [DUST_PROXY_PORT]: '4123' },
       {
-        writeSync: () => 0,
         fetch: async () => ({ ok: false, status: 503 }),
         onError: message => {
           errorMessages.push(message)

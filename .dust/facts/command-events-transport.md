@@ -1,9 +1,6 @@
 # Command Events Transport
 
-Dust command events support two fire-and-forget transports.
-
-1. `DUST_EVENTS_FD` (legacy): writes newline-delimited `CommandEventMessage` JSON to a file descriptor.
-2. `DUST_PROXY_PORT` (local proxy): HTTP `POST` to `http://127.0.0.1:<port>/events`.
+Dust command events use proxy-first transport via `DUST_PROXY_PORT` (local proxy): HTTP `POST` to `http://127.0.0.1:<port>/events`.
 
 ## Bucket Proxy Behavior
 
@@ -12,13 +9,15 @@ When `dust bucket` starts successfully, it also starts a local HTTP server on an
 - Endpoint: `POST /events`
 - Accepted payload: a JSON `CommandEventMessage` shape (`sequence`, `timestamp`, and `event.type`)
 - Forwarding: accepted payloads are relayed over the active bucket WebSocket channel as JSON messages
+- Additional endpoint: `GET /tools`
+- Tool-list response: `{ "tools": ToolDefinition[] }` from the active in-memory bucket session
 - Additional endpoint: `POST /tools/:name`
 - Tool payload: `{ "arguments": string[], "repositoryId": string }`
 - Tool forwarding: proxy sends `tool-execution-request` over the active bucket WebSocket and returns HTTP JSON from the matching `tool-execution-result`
 - Response codes:
   - `202` for accepted/forwarded payloads
   - `400` for invalid JSON or invalid payload shape
-  - `405` for non-`POST` methods on `/events`
+  - `405` for unsupported methods on `/events`, `/tools`, and `/tools/:name`
   - `404` for unknown paths
   - `413` for oversized payloads
   - Tool execution: `200` (`success`), `404` (`tool-not-found`), `502` (`error`)

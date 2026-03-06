@@ -94,7 +94,6 @@ import {
   type ToolExecutionRequestMessage,
   type ToolExecutionResultMessage,
 } from '../../bucket/tool-execution-protocol'
-import { storeTools } from '../../bucket/tool-storage'
 import { run as claudeRun } from '../../claude/run'
 import { DUST_PROXY_PORT } from '../../command-events-transport'
 import { createLogger, enableFileLogs } from '../../logging'
@@ -756,14 +755,6 @@ function executeEffects(
 
       case 'storeToolDefinitions':
         state.tools = effect.tools
-        // Persist to disk for CLI commands to access
-        storeTools(
-          fileSystem,
-          bucketDependencies.auth.getHomeDir(),
-          effect.tools
-        ).catch(error => {
-          log(`Failed to persist tools: ${error.message}`)
-        })
         break
 
       case 'scheduleReconnect':
@@ -1123,6 +1114,7 @@ export async function bucketWorker(
             }
           }
         },
+        getTools: () => state.tools,
         forwardToolExecution: request => {
           const ws = state.ws
           if (!ws || ws.readyState !== WS_OPEN) {

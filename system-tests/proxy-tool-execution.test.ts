@@ -50,7 +50,8 @@ async function runShellCommand(
 async function withToolProxyServer<T>(
   handler: (request: CapturedRequest) => {
     status: number
-    body: Record<string, unknown>
+    body?: Record<string, unknown>
+    text?: string
   },
   callback: (port: number, requests: CapturedRequest[]) => Promise<T>
 ): Promise<T> {
@@ -66,8 +67,16 @@ async function withToolProxyServer<T>(
       requests.push(capturedRequest)
 
       const result = handler(capturedRequest)
-      response.writeHead(result.status, { 'content-type': 'application/json' })
-      response.end(JSON.stringify(result.body))
+      if (result.body) {
+        response.writeHead(result.status, {
+          'content-type': 'application/json',
+        })
+        response.end(JSON.stringify(result.body))
+        return
+      }
+
+      response.writeHead(result.status, { 'content-type': 'text/plain' })
+      response.end(result.text ?? '')
     })
   })
 
@@ -92,14 +101,29 @@ async function withToolProxyServer<T>(
 describe('bucket tool proxy execution via DUST_PROXY_PORT', () => {
   test('returns successful proxy result and prints output', async () => {
     await withToolProxyServer(
-      () => ({
-        status: 200,
-        body: {
-          success: true,
-          status: 'success',
-          output: 'https://example.com/uploaded.png',
-        },
-      }),
+      request => {
+        if (request.path === '/tools') {
+          return {
+            status: 200,
+            body: {
+              tools: [
+                {
+                  name: 'asset-upload',
+                },
+              ],
+            },
+          }
+        }
+
+        return {
+          status: 200,
+          body: {
+            success: true,
+            status: 'success',
+            output: 'https://example.com/uploaded.png',
+          },
+        }
+      },
       async (port, requests) => {
         const result = await runShellCommand(
           `DUST_PROXY_PORT=${port} DUST_REPOSITORY_ID=repo-123 ${process.cwd()}/bin/dust bucket tool asset-upload /tmp/file.png`,
@@ -108,24 +132,40 @@ describe('bucket tool proxy execution via DUST_PROXY_PORT', () => {
 
         expect(result.status).toBe(0)
         expect(result.stdout).toContain('https://example.com/uploaded.png')
-        expect(requests).toHaveLength(1)
-        expect(requests[0].path).toBe('/tools/asset-upload')
-        expect(requests[0].body).toContain('"repositoryId":"repo-123"')
-        expect(requests[0].body).toContain('"arguments":["/tmp/file.png"]')
+        expect(requests).toHaveLength(2)
+        expect(requests[0].path).toBe('/tools')
+        expect(requests[1].path).toBe('/tools/asset-upload')
+        expect(requests[1].body).toContain('"repositoryId":"repo-123"')
+        expect(requests[1].body).toContain('"arguments":["/tmp/file.png"]')
       }
     )
   }, 20000)
 
   test('returns tool-not-found error from proxy', async () => {
     await withToolProxyServer(
-      () => ({
-        status: 404,
-        body: {
-          success: false,
-          status: 'tool-not-found',
-          error: 'Unknown tool: missing-tool',
-        },
-      }),
+      request => {
+        if (request.path === '/tools') {
+          return {
+            status: 200,
+            body: {
+              tools: [
+                {
+                  name: 'missing-tool',
+                },
+              ],
+            },
+          }
+        }
+
+        return {
+          status: 404,
+          body: {
+            success: false,
+            status: 'tool-not-found',
+            error: 'Unknown tool: missing-tool',
+          },
+        }
+      },
       async port => {
         const result = await runShellCommand(
           `DUST_PROXY_PORT=${port} DUST_REPOSITORY_ID=repo-123 ${process.cwd()}/bin/dust bucket tool missing-tool`,
@@ -140,14 +180,29 @@ describe('bucket tool proxy execution via DUST_PROXY_PORT', () => {
 
   test('returns proxied execution error from proxy', async () => {
     await withToolProxyServer(
-      () => ({
-        status: 502,
-        body: {
-          success: false,
-          status: 'error',
-          error: 'Proxy execution failed',
-        },
-      }),
+      request => {
+        if (request.path === '/tools') {
+          return {
+            status: 200,
+            body: {
+              tools: [
+                {
+                  name: 'asset-upload',
+                },
+              ],
+            },
+          }
+        }
+
+        return {
+          status: 502,
+          body: {
+            success: false,
+            status: 'error',
+            error: 'Proxy execution failed',
+          },
+        }
+      },
       async port => {
         const result = await runShellCommand(
           `DUST_PROXY_PORT=${port} DUST_REPOSITORY_ID=repo-123 ${process.cwd()}/bin/dust bucket tool asset-upload /tmp/file.png`,

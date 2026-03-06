@@ -1,7 +1,5 @@
-import { writeSync } from 'node:fs'
 import type { CommandEventMessage } from './command-events'
 
-export const DUST_EVENTS_FD = 'DUST_EVENTS_FD'
 export const DUST_PROXY_PORT = 'DUST_PROXY_PORT'
 
 interface ProxyResponseLike {
@@ -10,7 +8,6 @@ interface ProxyResponseLike {
 }
 
 interface EventTransportDependencies {
-  writeSync: typeof writeSync
   fetch: (
     input: string,
     init: {
@@ -23,7 +20,6 @@ interface EventTransportDependencies {
 }
 
 const defaultDependencies: EventTransportDependencies = {
-  writeSync,
   fetch: (input, init) => fetch(input, init),
   onError: message => {
     console.error(message)
@@ -44,22 +40,11 @@ export function parseProxyPort(value: string | undefined): number | undefined {
 
 /**
  * Creates a message writer for command events.
- *
- * Priority order:
- * 1. DUST_EVENTS_FD (legacy file descriptor transport)
- * 2. DUST_PROXY_PORT (HTTP proxy transport)
  */
 export function createCommandEventWriter(
   env: Record<string, string | undefined> = process.env,
   dependencies: EventTransportDependencies = defaultDependencies
 ): ((message: CommandEventMessage) => void) | undefined {
-  const eventsFd = parseInteger(env[DUST_EVENTS_FD])
-  if (eventsFd !== undefined) {
-    return (message: CommandEventMessage) => {
-      dependencies.writeSync(eventsFd, `${JSON.stringify(message)}\n`)
-    }
-  }
-
   const proxyPort = parseProxyPort(env[DUST_PROXY_PORT])
   if (proxyPort === undefined) {
     return undefined

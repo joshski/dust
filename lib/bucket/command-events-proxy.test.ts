@@ -8,6 +8,7 @@ import {
   type ToolExecutionRequest,
   type ToolExecutionResult,
 } from './command-events-proxy'
+import type { ToolDefinition } from './server-messages'
 
 const testMessage: CommandEventMessage = {
   sequence: 1,
@@ -104,6 +105,7 @@ describe('startCommandEventsProxy', () => {
   const createProxy = async (
     overrides: Partial<{
       forwardEvent: (event: CommandEventMessage) => void
+      getTools: () => ToolDefinition[]
       forwardToolExecution: (
         request: ToolExecutionRequest
       ) => Promise<ToolExecutionResult>
@@ -111,6 +113,7 @@ describe('startCommandEventsProxy', () => {
   ) => {
     proxy = await startCommandEventsProxy({
       forwardEvent: overrides.forwardEvent ?? (() => {}),
+      getTools: overrides.getTools ?? (() => []),
       forwardToolExecution:
         overrides.forwardToolExecution ??
         (async () => ({
@@ -226,6 +229,31 @@ describe('startCommandEventsProxy', () => {
     expect(capturedRepositoryId).toBe('repo-123')
     expect(response.body).toContain('"success":true')
     expect(response.body).toContain('"status":"success"')
+  })
+
+  test('returns tool definitions for GET /tools', async () => {
+    const tools: ToolDefinition[] = [
+      {
+        name: 'asset-upload',
+        description: 'Upload a file',
+        endpoint: '/api/assets',
+        method: 'POST',
+        parameters: [],
+      },
+    ]
+
+    await createProxy({
+      getTools: () => tools,
+    })
+    const response = await postJson(getProxyPort(), '/tools', 'GET', '')
+    expect(response.statusCode).toBe(200)
+    expect(response.body).toBe(JSON.stringify({ tools }))
+  })
+
+  test('returns 405 for non-GET methods on /tools', async () => {
+    await createProxy()
+    const response = await postJson(getProxyPort(), '/tools', 'POST', '{}')
+    expect(response.statusCode).toBe(405)
   })
 
   test('returns 404 for tool-not-found proxy results', async () => {
