@@ -53,8 +53,8 @@ The linter validates:
 
 Projects can customize workflow task instructions by creating optional hint files at `.dust/config/workflow-hints/{operation}.md`:
 
-- `.dust/config/workflow-hints/refine.md` - Appended to refine-idea task instructions
+- `.dust/config/workflow-hints/refine-idea.md` - Appended to refine-idea task instructions
 - `.dust/config/workflow-hints/decompose-idea.md` - Appended to decompose-idea task instructions
-- `.dust/config/workflow-hints/shelve.md` - Appended to shelve-idea task instructions
+- `.dust/config/workflow-hints/shelve-idea.md` - Appended to shelve-idea task instructions
 
 When a hint file exists, its content is appended to the task's opening sentence, separated by a blank line. If the hint file does not exist, the task is generated normally without additional content. No validation is performed on hint file content.

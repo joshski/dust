@@ -128,7 +128,7 @@ describe('createRefineIdeaTask', () => {
     )
   })
 
-  test('appends workflow hint when refine.md hint file exists', async () => {
+  test('appends workflow hint when refine-idea.md hint file exists', async () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -139,7 +139,7 @@ describe('createRefineIdeaTask', () => {
           tasks: {},
           config: {
             'workflow-hints': {
-              'refine.md': 'Focus on edge cases and error handling.',
+              'refine-idea.md': 'Focus on edge cases and error handling.',
             },
           },
         },
@@ -158,7 +158,7 @@ describe('createRefineIdeaTask', () => {
     )
   })
 
-  test('generates task without hint when refine.md does not exist', async () => {
+  test('generates task without hint when refine-idea.md does not exist', async () => {
     const fileSystem = createFileSystem()
     const result = await createRefineIdeaTask(
       fileSystem,
@@ -369,7 +369,7 @@ describe('createShelveIdeaTask', () => {
     )
   })
 
-  test('appends workflow hint when shelve.md hint file exists', async () => {
+  test('appends workflow hint when shelve-idea.md hint file exists', async () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -380,7 +380,7 @@ describe('createShelveIdeaTask', () => {
           tasks: {},
           config: {
             'workflow-hints': {
-              'shelve.md': 'Document the reason for shelving clearly.',
+              'shelve-idea.md': 'Document the reason for shelving clearly.',
             },
           },
         },
@@ -396,7 +396,7 @@ describe('createShelveIdeaTask', () => {
     expect(content).toContain('Document the reason for shelving clearly.')
   })
 
-  test('generates task without hint when shelve.md does not exist', async () => {
+  test('generates task without hint when shelve-idea.md does not exist', async () => {
     const fileSystem = createFileSystem()
     const result = await createShelveIdeaTask(
       fileSystem,

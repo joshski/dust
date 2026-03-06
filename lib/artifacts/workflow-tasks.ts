@@ -43,9 +43,9 @@ export function titleToFilename(title: string): string {
 export type WorkflowTaskType = 'refine' | 'decompose-idea' | 'shelve'
 
 const WORKFLOW_HINT_PATHS: Record<WorkflowTaskType, string> = {
-  refine: 'config/workflow-hints/refine.md',
+  refine: 'config/workflow-hints/refine-idea.md',
   'decompose-idea': 'config/workflow-hints/decompose-idea.md',
-  shelve: 'config/workflow-hints/shelve.md',
+  shelve: 'config/workflow-hints/shelve-idea.md',
 }
 
 async function readWorkflowHint(
