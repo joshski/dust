@@ -62,7 +62,6 @@ A new message type would need to be added for capabilities.
 ### Related Ideas
 
 - [Support codex in `dust bucket` command](support-codex-in-dust-bucket-command.md) — Addresses agent selection but assumes server-driven choice
-- [Server-defined bucket tools](server-defined-bucket-tools.md) — Related to extending bucket protocol
 
 ### Principles Alignment
 
