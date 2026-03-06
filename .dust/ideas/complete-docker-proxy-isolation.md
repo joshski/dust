@@ -1,20 +1,16 @@
-# Harden Docker Proxy Isolation
+# Complete Docker Proxy Isolation
 
-Finish the remaining security hardening work for proxy-based unattended sessions after introducing the local bucket proxy surface.
+Continue hardening unattended Docker sessions now that local proxy routing for events and tool execution is in place.
 
 ## Current State
 
-The local proxy flow is now split into focused tasks:
-
-- [Route Bucket Tool Execution Through Local Proxy](../tasks/route-bucket-tool-execution-through-local-proxy.md)
-- [Expose Bucket Tool Definitions via Local Proxy and Remove Legacy Paths](../tasks/expose-bucket-tool-definitions-via-local-proxy-and-remove-legacy-paths.md)
-
-These tasks cover event and tool routing, but broader isolation gaps remain for Docker-based unattended agents.
+- Completed: route `dust bucket tool` execution through the local bucket proxy.
+- Pending task: [Expose Bucket Tool Definitions via Local Proxy and Remove Legacy Paths](../tasks/expose-bucket-tool-definitions-via-local-proxy-and-remove-legacy-paths.md)
 
 ## Remaining Scope
 
 1. Prevent non-proxied outbound traffic from Docker agent containers by default.
-2. Remove or minimize direct secret pass-through that is still required in some modes (for example `OPENAI_API_KEY`).
+2. Remove or minimize direct secret pass-through still needed in some modes (for example `OPENAI_API_KEY`).
 3. Define an explicit host allowlist/audit policy for proxy-mediated HTTP requests.
 4. Add operational diagnostics for proxy lifecycle failures (start, bind, and shutdown behavior).
 

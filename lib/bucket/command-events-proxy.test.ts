@@ -5,6 +5,8 @@ import {
   type CommandEventsProxy,
   isCommandEventMessage,
   startCommandEventsProxy,
+  type ToolExecutionRequest,
+  type ToolExecutionResult,
 } from './command-events-proxy'
 
 const testMessage: CommandEventMessage = {
@@ -18,7 +20,7 @@ async function postJson(
   path: string,
   method: string,
   body: string
-): Promise<{ statusCode: number }> {
+): Promise<{ statusCode: number; body: string }> {
   return new Promise((resolve, reject) => {
     const request = httpRequest(
       {
@@ -32,7 +34,16 @@ async function postJson(
         },
       },
       response => {
-        resolve({ statusCode: response.statusCode ?? 0 })
+        const chunks: Buffer[] = []
+        response.on('data', (chunk: Buffer) => {
+          chunks.push(chunk)
+        })
+        response.on('end', () => {
+          resolve({
+            statusCode: response.statusCode ?? 0,
+            body: Buffer.concat(chunks).toString('utf8'),
+          })
+        })
       }
     )
     request.on('error', reject)
@@ -83,16 +94,44 @@ describe('isCommandEventMessage', () => {
 describe('startCommandEventsProxy', () => {
   let proxy: CommandEventsProxy | undefined
 
+  const getProxyPort = (): number => {
+    if (!proxy) {
+      throw new Error('proxy not initialized')
+    }
+    return proxy.port
+  }
+
+  const createProxy = async (
+    overrides: Partial<{
+      forwardEvent: (event: CommandEventMessage) => void
+      forwardToolExecution: (
+        request: ToolExecutionRequest
+      ) => Promise<ToolExecutionResult>
+    }> = {}
+  ) => {
+    proxy = await startCommandEventsProxy({
+      forwardEvent: overrides.forwardEvent ?? (() => {}),
+      forwardToolExecution:
+        overrides.forwardToolExecution ??
+        (async () => ({
+          status: 'success',
+          output: 'ok',
+        })),
+    })
+  }
+
   afterEach(async () => {
     await proxy?.stop()
   })
 
   test('forwards accepted POST /events payloads', async () => {
     const events: CommandEventMessage[] = []
-    proxy = await startCommandEventsProxy(event => events.push(event))
+    await createProxy({
+      forwardEvent: event => events.push(event),
+    })
 
     const response = await postJson(
-      proxy.port,
+      getProxyPort(),
       '/events',
       'POST',
       JSON.stringify(testMessage)
@@ -103,15 +142,15 @@ describe('startCommandEventsProxy', () => {
   })
 
   test('rejects invalid JSON payloads', async () => {
-    proxy = await startCommandEventsProxy(() => {})
-    const response = await postJson(proxy.port, '/events', 'POST', '{')
+    await createProxy()
+    const response = await postJson(getProxyPort(), '/events', 'POST', '{')
     expect(response.statusCode).toBe(400)
   })
 
   test('rejects invalid event payloads', async () => {
-    proxy = await startCommandEventsProxy(() => {})
+    await createProxy()
     const response = await postJson(
-      proxy.port,
+      getProxyPort(),
       '/events',
       'POST',
       JSON.stringify({ sequence: 1 })
@@ -120,22 +159,22 @@ describe('startCommandEventsProxy', () => {
   })
 
   test('returns 405 for non-POST methods', async () => {
-    proxy = await startCommandEventsProxy(() => {})
-    const response = await postJson(proxy.port, '/events', 'GET', '')
+    await createProxy()
+    const response = await postJson(getProxyPort(), '/events', 'GET', '')
     expect(response.statusCode).toBe(405)
   })
 
   test('returns 404 for unknown paths', async () => {
-    proxy = await startCommandEventsProxy(() => {})
-    const response = await postJson(proxy.port, '/unknown', 'POST', '{}')
+    await createProxy()
+    const response = await postJson(getProxyPort(), '/unknown', 'POST', '{}')
     expect(response.statusCode).toBe(404)
   })
 
   test('returns 413 for oversized payloads', async () => {
-    proxy = await startCommandEventsProxy(() => {})
+    await createProxy()
     const oversizedBody = `"${'x'.repeat(1024 * 1024 + 10)}"`
     const response = await postJson(
-      proxy.port,
+      getProxyPort(),
       '/events',
       'POST',
       oversizedBody
@@ -144,15 +183,178 @@ describe('startCommandEventsProxy', () => {
   })
 
   test('returns 502 when forward handler throws', async () => {
-    proxy = await startCommandEventsProxy(() => {
-      throw new Error('cannot forward')
+    await createProxy({
+      forwardEvent: () => {
+        throw new Error('cannot forward')
+      },
     })
     const response = await postJson(
-      proxy.port,
+      getProxyPort(),
       '/events',
       'POST',
       JSON.stringify(testMessage)
     )
     expect(response.statusCode).toBe(502)
+  })
+
+  test('forwards POST /tools/:name and returns success payload', async () => {
+    let capturedToolName = ''
+    let capturedArgs: string[] = []
+    let capturedRepositoryId = ''
+    await createProxy({
+      forwardToolExecution: async request => {
+        capturedToolName = request.toolName
+        capturedArgs = request.arguments
+        capturedRepositoryId = request.repositoryId
+        return { status: 'success', output: 'https://example.com/asset.png' }
+      },
+    })
+
+    const response = await postJson(
+      getProxyPort(),
+      '/tools/asset-upload',
+      'POST',
+      JSON.stringify({
+        arguments: ['/tmp/file.png'],
+        repositoryId: 'repo-123',
+      })
+    )
+
+    expect(response.statusCode).toBe(200)
+    expect(capturedToolName).toBe('asset-upload')
+    expect(capturedArgs).toEqual(['/tmp/file.png'])
+    expect(capturedRepositoryId).toBe('repo-123')
+    expect(response.body).toContain('"success":true')
+    expect(response.body).toContain('"status":"success"')
+  })
+
+  test('returns 404 for tool-not-found proxy results', async () => {
+    await createProxy({
+      forwardToolExecution: async () => ({
+        status: 'tool-not-found',
+        error: 'Unknown tool: nope',
+      }),
+    })
+
+    const response = await postJson(
+      getProxyPort(),
+      '/tools/nope',
+      'POST',
+      JSON.stringify({
+        arguments: [],
+        repositoryId: 'repo-123',
+      })
+    )
+
+    expect(response.statusCode).toBe(404)
+    expect(response.body).toContain('"success":false')
+    expect(response.body).toContain('"status":"tool-not-found"')
+  })
+
+  test('returns 502 for proxied tool execution errors', async () => {
+    await createProxy({
+      forwardToolExecution: async () => ({
+        status: 'error',
+        error: 'upstream failed',
+      }),
+    })
+
+    const response = await postJson(
+      getProxyPort(),
+      '/tools/break',
+      'POST',
+      JSON.stringify({
+        arguments: ['x'],
+        repositoryId: 'repo-123',
+      })
+    )
+
+    expect(response.statusCode).toBe(502)
+    expect(response.body).toContain('"status":"error"')
+  })
+
+  test('returns 405 for non-POST methods on /tools/:name', async () => {
+    await createProxy()
+    const response = await postJson(getProxyPort(), '/tools/ping', 'GET', '')
+    expect(response.statusCode).toBe(405)
+  })
+
+  test('rejects invalid JSON payloads for /tools/:name', async () => {
+    await createProxy()
+    const response = await postJson(getProxyPort(), '/tools/ping', 'POST', '{')
+    expect(response.statusCode).toBe(400)
+  })
+
+  test('rejects invalid tool payload shape for /tools/:name', async () => {
+    await createProxy()
+    const response = await postJson(
+      getProxyPort(),
+      '/tools/ping',
+      'POST',
+      JSON.stringify({
+        arguments: [1],
+        repositoryId: 'repo-123',
+      })
+    )
+    expect(response.statusCode).toBe(400)
+  })
+
+  test('rejects non-object tool payloads for /tools/:name', async () => {
+    await createProxy()
+    const response = await postJson(
+      getProxyPort(),
+      '/tools/ping',
+      'POST',
+      JSON.stringify('not-an-object')
+    )
+    expect(response.statusCode).toBe(400)
+  })
+
+  test('rejects tool payloads missing arguments array', async () => {
+    await createProxy()
+    const response = await postJson(
+      getProxyPort(),
+      '/tools/ping',
+      'POST',
+      JSON.stringify({
+        repositoryId: 'repo-123',
+      })
+    )
+    expect(response.statusCode).toBe(400)
+  })
+
+  test('returns 502 when tool forwarding rejects with a non-error value', async () => {
+    await createProxy({
+      forwardToolExecution: async () => Promise.reject('socket closed'),
+    })
+    const response = await postJson(
+      getProxyPort(),
+      '/tools/ping',
+      'POST',
+      JSON.stringify({
+        arguments: [],
+        repositoryId: 'repo-123',
+      })
+    )
+    expect(response.statusCode).toBe(502)
+    expect(response.body).toContain('socket closed')
+  })
+
+  test('returns 502 when tool forwarding rejects with an Error', async () => {
+    await createProxy({
+      forwardToolExecution: async () =>
+        Promise.reject(new Error('forward failed')),
+    })
+    const response = await postJson(
+      getProxyPort(),
+      '/tools/ping',
+      'POST',
+      JSON.stringify({
+        arguments: [],
+        repositoryId: 'repo-123',
+      })
+    )
+    expect(response.statusCode).toBe(502)
+    expect(response.body).toContain('forward failed')
   })
 })

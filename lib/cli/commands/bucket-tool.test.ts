@@ -385,4 +385,228 @@ describe('bucketTool', () => {
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain('500')
   })
+
+  test('uses local proxy when DUST_PROXY_PORT is set', async () => {
+    let capturedUrl: string | undefined
+    let capturedBody: string | undefined
+    const mockFetch = async (url: URL | RequestInfo, init?: RequestInit) => {
+      capturedUrl = String(url)
+      capturedBody = String(init?.body ?? '')
+      return new Response(
+        JSON.stringify({
+          success: true,
+          output: 'https://proxy.example/result',
+          status: 'success',
+        })
+      )
+    }
+    const commandDependencies = createCommandDependencies([
+      'asset-upload',
+      'a.png',
+    ])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const toolDependencies = createToolDependencies({
+      auth: createMockAuthDependencies({
+        getHomeDir: () => {
+          throw new Error('should not load auth in proxy mode')
+        },
+      }),
+      executor: createMockExecutorDependencies({
+        fetch: mockFetch as unknown as typeof fetch,
+      }),
+    })
+    const env = {
+      DUST_REPOSITORY_ID: 'repo-id',
+      DUST_PROXY_PORT: '4444',
+    }
+
+    const result = await bucketTool(commandDependencies, toolDependencies, env)
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines).toEqual(['https://proxy.example/result'])
+    expect(capturedUrl).toBe('http://127.0.0.1:4444/tools/asset-upload')
+    expect(capturedBody).toContain('"repositoryId":"repo-id"')
+    expect(capturedBody).toContain('"arguments":["a.png"]')
+  })
+
+  test('returns error for proxy tool-not-found response', async () => {
+    const mockFetch = async () =>
+      new Response(
+        JSON.stringify({
+          success: false,
+          status: 'tool-not-found',
+          error: 'Unknown tool: nope',
+        }),
+        { status: 404 }
+      )
+    const commandDependencies = createCommandDependencies(['nope'])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const toolDependencies = createToolDependencies({
+      executor: createMockExecutorDependencies({
+        fetch: mockFetch as unknown as typeof fetch,
+      }),
+    })
+
+    const result = await bucketTool(commandDependencies, toolDependencies, {
+      DUST_REPOSITORY_ID: 'repo-id',
+      DUST_PROXY_PORT: '4444',
+    })
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('Unknown tool: nope')
+  })
+
+  test('returns error for proxy execution failures', async () => {
+    const mockFetch = async () =>
+      new Response(
+        JSON.stringify({
+          success: false,
+          status: 'error',
+          error: 'proxy upstream failed',
+        }),
+        { status: 502 }
+      )
+    const commandDependencies = createCommandDependencies(['asset-upload'])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const toolDependencies = createToolDependencies({
+      executor: createMockExecutorDependencies({
+        fetch: mockFetch as unknown as typeof fetch,
+      }),
+    })
+
+    const result = await bucketTool(commandDependencies, toolDependencies, {
+      DUST_REPOSITORY_ID: 'repo-id',
+      DUST_PROXY_PORT: '4444',
+    })
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('proxy upstream failed')
+  })
+
+  test('handles proxy success without output', async () => {
+    const mockFetch = async () =>
+      new Response(JSON.stringify({ success: true, status: 'success' }))
+    const commandDependencies = createCommandDependencies(['asset-upload'])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const toolDependencies = createToolDependencies({
+      executor: createMockExecutorDependencies({
+        fetch: mockFetch as unknown as typeof fetch,
+      }),
+    })
+
+    const result = await bucketTool(commandDependencies, toolDependencies, {
+      DUST_REPOSITORY_ID: 'repo-id',
+      DUST_PROXY_PORT: '4444',
+    })
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines).toHaveLength(0)
+  })
+
+  test('handles non-json proxy error bodies', async () => {
+    const mockFetch = async () =>
+      new Response('proxy unavailable', { status: 503 })
+    const commandDependencies = createCommandDependencies(['asset-upload'])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const toolDependencies = createToolDependencies({
+      executor: createMockExecutorDependencies({
+        fetch: mockFetch as unknown as typeof fetch,
+      }),
+    })
+
+    const result = await bucketTool(commandDependencies, toolDependencies, {
+      DUST_REPOSITORY_ID: 'repo-id',
+      DUST_PROXY_PORT: '4444',
+    })
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('proxy unavailable')
+  })
+
+  test('falls back to status text when proxy error body is empty', async () => {
+    const mockFetch = async () => new Response('', { status: 503 })
+    const commandDependencies = createCommandDependencies(['asset-upload'])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const toolDependencies = createToolDependencies({
+      executor: createMockExecutorDependencies({
+        fetch: mockFetch as unknown as typeof fetch,
+      }),
+    })
+
+    const result = await bucketTool(commandDependencies, toolDependencies, {
+      DUST_REPOSITORY_ID: 'repo-id',
+      DUST_PROXY_PORT: '4444',
+    })
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain(
+      'Tool proxy request failed (503)'
+    )
+  })
+
+  test('returns proxy request failure when proxy fetch throws', async () => {
+    const mockFetch = async () => {
+      throw new Error('connect ECONNREFUSED')
+    }
+    const commandDependencies = createCommandDependencies(['asset-upload'])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const toolDependencies = createToolDependencies({
+      executor: createMockExecutorDependencies({
+        fetch: mockFetch as unknown as typeof fetch,
+      }),
+    })
+
+    const result = await bucketTool(commandDependencies, toolDependencies, {
+      DUST_REPOSITORY_ID: 'repo-id',
+      DUST_PROXY_PORT: '4444',
+    })
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain(
+      'Tool proxy request failed: connect ECONNREFUSED'
+    )
+  })
+
+  test('uses generic error when proxy returns empty error message', async () => {
+    const mockFetch = async () =>
+      new Response(
+        JSON.stringify({
+          success: false,
+          status: 'error',
+          error: '',
+        }),
+        { status: 502 }
+      )
+    const commandDependencies = createCommandDependencies(['asset-upload'])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const toolDependencies = createToolDependencies({
+      executor: createMockExecutorDependencies({
+        fetch: mockFetch as unknown as typeof fetch,
+      }),
+    })
+
+    const result = await bucketTool(commandDependencies, toolDependencies, {
+      DUST_REPOSITORY_ID: 'repo-id',
+      DUST_PROXY_PORT: '4444',
+    })
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('Tool execution failed')
+  })
 })

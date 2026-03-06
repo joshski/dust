@@ -1112,6 +1112,52 @@ describe('connectWebSocket', () => {
     )
   })
 
+  test('routes tool-execution-result messages to callback', () => {
+    const dependencies = createDependencies()
+    const state = createInitialState()
+    const ws = createMockWebSocket()
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => ws,
+    })
+    const captured: Array<{
+      requestId: string
+      status: 'success' | 'tool-not-found' | 'error'
+      output?: string
+      error?: string
+    }> = []
+
+    connectWebSocket(
+      'my-token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false,
+      undefined,
+      message => {
+        captured.push(message)
+      }
+    )
+
+    ws.onmessage?.({
+      data: JSON.stringify({
+        type: 'tool-execution-result',
+        requestId: 'req-1',
+        status: 'success',
+        output: 'https://example.com/result.png',
+      }),
+    })
+
+    expect(captured).toEqual([
+      {
+        type: 'tool-execution-result',
+        requestId: 'req-1',
+        status: 'success',
+        output: 'https://example.com/result.png',
+      },
+    ])
+  })
+
   test('logs error when handleRepositoryList rejects', async () => {
     const dependencies = createDependencies()
     const context = dependencies.context as ReturnType<

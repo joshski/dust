@@ -12,12 +12,16 @@ When `dust bucket` starts successfully, it also starts a local HTTP server on an
 - Endpoint: `POST /events`
 - Accepted payload: a JSON `CommandEventMessage` shape (`sequence`, `timestamp`, and `event.type`)
 - Forwarding: accepted payloads are relayed over the active bucket WebSocket channel as JSON messages
+- Additional endpoint: `POST /tools/:name`
+- Tool payload: `{ "arguments": string[], "repositoryId": string }`
+- Tool forwarding: proxy sends `tool-execution-request` over the active bucket WebSocket and returns HTTP JSON from the matching `tool-execution-result`
 - Response codes:
   - `202` for accepted/forwarded payloads
   - `400` for invalid JSON or invalid payload shape
   - `405` for non-`POST` methods on `/events`
   - `404` for unknown paths
   - `413` for oversized payloads
+  - Tool execution: `200` (`success`), `404` (`tool-not-found`), `502` (`error`)
 
 `DUST_PROXY_PORT` is restored to its previous value (or unset) when `dust bucket` exits.
 

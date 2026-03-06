@@ -26,6 +26,7 @@ import {
   type ToolExecutorDependencies,
 } from '../../bucket/tool-executor'
 import { findToolByName, loadStoredTools } from '../../bucket/tool-storage'
+import { DUST_PROXY_PORT, parseProxyPort } from '../../command-events-transport'
 import type { CommandDependencies, CommandResult } from '../types'
 import { type AuthFileSystemDependencies, createAuthFileSystem } from './bucket'
 
@@ -112,6 +113,67 @@ function formatToolUsage(toolName: string, tools: { name: string }[]): string {
   return `Unknown tool: ${toolName}\nAvailable tools: ${toolNames}`
 }
 
+interface ProxyToolResponse {
+  success?: boolean
+  output?: string
+  error?: string
+  status?: string
+}
+
+async function executeToolViaProxy(
+  toolName: string,
+  toolArgs: string[],
+  repositoryId: string,
+  proxyPort: number,
+  fetchFn: typeof fetch
+): Promise<{ success: boolean; output?: string; error?: string }> {
+  const url = `http://127.0.0.1:${proxyPort}/tools/${encodeURIComponent(toolName)}`
+  try {
+    const response = await fetchFn(url, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        connection: 'close',
+      },
+      body: JSON.stringify({
+        arguments: toolArgs,
+        repositoryId,
+      }),
+    })
+
+    const responseText = await response.text()
+    let parsedResponse: ProxyToolResponse | undefined
+    try {
+      parsedResponse = JSON.parse(responseText) as ProxyToolResponse
+    } catch {
+      parsedResponse = undefined
+    }
+
+    if (parsedResponse) {
+      if (parsedResponse.success) {
+        return { success: true, output: parsedResponse.output }
+      }
+      if (
+        typeof parsedResponse.error === 'string' &&
+        parsedResponse.error.length > 0
+      ) {
+        return { success: false, error: parsedResponse.error }
+      }
+      return { success: false }
+    }
+
+    const error = responseText
+      ? responseText
+      : `Tool proxy request failed (${response.status})`
+    return { success: false, error }
+  } catch (error) {
+    return {
+      success: false,
+      error: `Tool proxy request failed: ${(error as Error).message}`,
+    }
+  }
+}
+
 export async function bucketTool(
   dependencies: CommandDependencies,
   toolDeps: BucketToolDependencies = createDefaultBucketToolDependencies(),
@@ -133,6 +195,25 @@ export async function bucketTool(
     context.stderr(
       'This command must be run within a repository context (via `dust bucket`).'
     )
+    return { exitCode: 1 }
+  }
+
+  const proxyPort = parseProxyPort(env[DUST_PROXY_PORT])
+  if (proxyPort !== undefined) {
+    const result = await executeToolViaProxy(
+      toolName,
+      toolArgs,
+      repositoryId,
+      proxyPort,
+      toolDeps.executor.fetch
+    )
+    if (result.success) {
+      if (result.output) {
+        context.stdout(result.output)
+      }
+      return { exitCode: 0 }
+    }
+    context.stderr(result.error || 'Tool execution failed')
     return { exitCode: 1 }
   }
 

@@ -19,6 +19,8 @@ Asset upload is implemented as a server-defined tool rather than a hardcoded com
 3. The `dust bucket tool` command loads definitions and executes tools generically
 4. File validation (size limits, allowed extensions) is now handled server-side
 
+When `DUST_PROXY_PORT` is set (from an active `dust bucket` session), `dust bucket tool ...` sends execution requests to the local proxy (`POST /tools/:name`) instead of calling dustbucket APIs directly. This keeps execution inside the active bucket session and avoids passing bucket credentials to descendant processes.
+
 ## Repository Context
 
 This command requires a repository context and must be run within an agent iteration started by `dust bucket`. The `DUST_REPOSITORY_ID` environment variable must be set.

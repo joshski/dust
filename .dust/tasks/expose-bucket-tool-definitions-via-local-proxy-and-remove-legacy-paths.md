@@ -11,7 +11,7 @@ Expose tool definitions from the local proxy and remove disk/file-descriptor leg
 
 ## Blocked By
 
-- [Route Bucket Tool Execution Through Local Proxy](route-bucket-tool-execution-through-local-proxy.md)
+- (none)
 
 ## Definition of Done
 

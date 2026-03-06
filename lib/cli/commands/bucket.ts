@@ -43,6 +43,7 @@ import {
   type KeypressHandlerState,
   type MessageHandlerState,
 } from '../../bucket/bucket-state'
+import type { ToolExecutionResult } from '../../bucket/command-events-proxy'
 import { startCommandEventsProxy } from '../../bucket/command-events-proxy'
 import {
   type BucketEmitFn,
@@ -88,6 +89,11 @@ import {
   type TerminalUIState,
   updateDimensions,
 } from '../../bucket/terminal-ui'
+import {
+  isToolExecutionResultMessage,
+  type ToolExecutionRequestMessage,
+  type ToolExecutionResultMessage,
+} from '../../bucket/tool-execution-protocol'
 import { storeTools } from '../../bucket/tool-storage'
 import { run as claudeRun } from '../../claude/run'
 import { DUST_PROXY_PORT } from '../../command-events-transport'
@@ -556,7 +562,8 @@ export function connectWebSocket(
   context: CommandDependencies['context'],
   fileSystem: FileSystem,
   useTUI: boolean,
-  connectedWs?: WebSocketLike
+  connectedWs?: WebSocketLike,
+  onToolExecutionResult?: (message: ToolExecutionResultMessage) => void
 ): void {
   if (state.shuttingDown) return
 
@@ -643,6 +650,11 @@ export function connectWebSocket(
         bucketDependencies,
         fileSystem,
       })
+      return
+    }
+
+    if (isToolExecutionResultMessage(rawData)) {
+      onToolExecutionResult?.(rawData)
       return
     }
 
@@ -1078,6 +1090,14 @@ export async function bucketWorker(
   const useTUI = bucketDeps.isTTY
   const previousProxyPort = process.env[DUST_PROXY_PORT]
   let stopCommandEventsProxy: (() => Promise<void>) | undefined
+  const pendingToolExecutions = new Map<
+    string,
+    {
+      resolve: (result: ToolExecutionResult) => void
+      reject: (error: Error) => void
+      timeoutId: ReturnType<typeof setTimeout>
+    }
+  >()
 
   // Set connected host for TUI header
   try {
@@ -1092,15 +1112,62 @@ export async function bucketWorker(
 
   try {
     try {
-      const proxy = await startCommandEventsProxy(message => {
-        const ws = state.ws
-        if (ws && ws.readyState === WS_OPEN) {
-          try {
-            ws.send(JSON.stringify(message))
-          } catch {
-            // Fire-and-forget: ignore send errors
+      const proxy = await startCommandEventsProxy({
+        forwardEvent: message => {
+          const ws = state.ws
+          if (ws && ws.readyState === WS_OPEN) {
+            try {
+              ws.send(JSON.stringify(message))
+            } catch {
+              // Fire-and-forget: ignore send errors
+            }
           }
-        }
+        },
+        forwardToolExecution: request => {
+          const ws = state.ws
+          if (!ws || ws.readyState !== WS_OPEN) {
+            return Promise.resolve({
+              status: 'error',
+              error: 'Bucket session is not connected',
+            })
+          }
+
+          const requestId = crypto.randomUUID()
+          const message: ToolExecutionRequestMessage = {
+            type: 'tool-execution-request',
+            requestId,
+            toolName: request.toolName,
+            arguments: request.arguments,
+            repositoryId: request.repositoryId,
+          }
+
+          return new Promise<ToolExecutionResult>((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+              pendingToolExecutions.delete(requestId)
+              reject(new Error('Timed out waiting for tool execution result'))
+            }, 30000)
+
+            pendingToolExecutions.set(requestId, {
+              resolve,
+              reject,
+              timeoutId,
+            })
+
+            try {
+              ws.send(JSON.stringify(message))
+            } catch (error) {
+              clearTimeout(timeoutId)
+              pendingToolExecutions.delete(requestId)
+              const messageText =
+                error instanceof Error ? error.message : String(error)
+              reject(
+                new Error(
+                  `Failed to send tool execution request: ${messageText}`
+                )
+              )
+            }
+          })
+        },
       })
       process.env[DUST_PROXY_PORT] = String(proxy.port)
       stopCommandEventsProxy = proxy.stop
@@ -1146,7 +1213,20 @@ export async function bucketWorker(
         context,
         fileSystem,
         useTUI,
-        initialWs
+        initialWs,
+        message => {
+          const pending = pendingToolExecutions.get(message.requestId)
+          if (!pending) {
+            return
+          }
+          clearTimeout(pending.timeoutId)
+          pendingToolExecutions.delete(message.requestId)
+          pending.resolve({
+            status: message.status,
+            output: message.output,
+            error: message.error,
+          })
+        }
       )
 
       if (!useTUI) {
@@ -1164,6 +1244,11 @@ export async function bucketWorker(
         `Failed to stop command events proxy: ${(error as Error).message}`
       )
     }
+    for (const pending of pendingToolExecutions.values()) {
+      clearTimeout(pending.timeoutId)
+      pending.reject(new Error('Bucket proxy shutting down'))
+    }
+    pendingToolExecutions.clear()
     if (previousProxyPort === undefined) {
       delete process.env[DUST_PROXY_PORT]
     } else {
