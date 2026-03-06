@@ -138,7 +138,7 @@ describe('createRefineIdeaTask', () => {
           },
           tasks: {},
           config: {
-            'workflow-hints': {
+            hints: {
               'refine-idea.md': 'Focus on edge cases and error handling.',
             },
           },
@@ -304,7 +304,7 @@ describe('decomposeIdea', () => {
           },
           tasks: {},
           config: {
-            'workflow-hints': {
+            hints: {
               'decompose-idea.md': 'Prefer tasks under 100 lines of code.',
             },
           },
@@ -379,7 +379,7 @@ describe('createShelveIdeaTask', () => {
           },
           tasks: {},
           config: {
-            'workflow-hints': {
+            hints: {
               'shelve-idea.md': 'Document the reason for shelving clearly.',
             },
           },
@@ -542,7 +542,7 @@ describe('createIdeaTask', () => {
           },
           tasks: {},
           config: {
-            'workflow-hints': {
+            hints: {
               'add-idea.md': 'Prioritize concrete user outcomes.',
             },
           },
@@ -584,7 +584,7 @@ describe('createIdeaTask', () => {
           },
           tasks: {},
           config: {
-            'workflow-hints': {
+            hints: {
               'expedite-idea.md':
                 'Escalate to tasks if integration risk appears.',
             },

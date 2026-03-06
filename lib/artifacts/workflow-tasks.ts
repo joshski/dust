@@ -44,11 +44,11 @@ export type WorkflowTaskType = 'refine' | 'decompose-idea' | 'shelve'
 type WorkflowHintType = WorkflowTaskType | 'add-idea' | 'expedite-idea'
 
 const WORKFLOW_HINT_PATHS: Record<WorkflowHintType, string> = {
-  refine: 'config/workflow-hints/refine-idea.md',
-  'decompose-idea': 'config/workflow-hints/decompose-idea.md',
-  shelve: 'config/workflow-hints/shelve-idea.md',
-  'add-idea': 'config/workflow-hints/add-idea.md',
-  'expedite-idea': 'config/workflow-hints/expedite-idea.md',
+  refine: 'config/hints/refine-idea.md',
+  'decompose-idea': 'config/hints/decompose-idea.md',
+  shelve: 'config/hints/shelve-idea.md',
+  'add-idea': 'config/hints/add-idea.md',
+  'expedite-idea': 'config/hints/expedite-idea.md',
 }
 
 async function readWorkflowHint(
