@@ -1,6 +1,6 @@
 # Local Tool Proxy for Bucket
 
-Replace the current `tools.json` disk-based approach with a local proxy server that `dust bucket` runs, so that `dust bucket tool` commands execute via the parent's WebSocket connection instead of making independent HTTP requests.
+Run a local proxy server in `dust bucket` so that tool commands execute via the parent's WebSocket connection. This eliminates `tools.json` and independent HTTP auth for tool execution.
 
 ## Current State
 
