@@ -41,17 +41,20 @@ export function titleToFilename(title: string): string {
 }
 
 export type WorkflowTaskType = 'refine' | 'decompose-idea' | 'shelve'
+type WorkflowHintType = WorkflowTaskType | 'add-idea' | 'expedite-idea'
 
-const WORKFLOW_HINT_PATHS: Record<WorkflowTaskType, string> = {
+const WORKFLOW_HINT_PATHS: Record<WorkflowHintType, string> = {
   refine: 'config/workflow-hints/refine-idea.md',
   'decompose-idea': 'config/workflow-hints/decompose-idea.md',
   shelve: 'config/workflow-hints/shelve-idea.md',
+  'add-idea': 'config/workflow-hints/add-idea.md',
+  'expedite-idea': 'config/workflow-hints/expedite-idea.md',
 }
 
 async function readWorkflowHint(
   fileSystem: ReadableFileSystem,
   dustPath: string,
-  workflowType: WorkflowTaskType
+  workflowType: WorkflowHintType
 ): Promise<string | null> {
   const hintPath = `${dustPath}/${WORKFLOW_HINT_PATHS[workflowType]}`
   if (!fileSystem.exists(hintPath)) {
@@ -421,10 +424,15 @@ export async function createIdeaTask(
     const taskTitle = `${EXPEDITE_IDEA_PREFIX}${title}`
     const filename = titleToFilename(taskTitle)
     const filePath = `${dustPath}/tasks/${filename}`
+    const baseOpeningSentence = `Research this idea briefly. If confident the implementation is straightforward (clear scope, minimal risk, no open questions), implement directly and commit. Otherwise, create one or more narrowly-scoped task files in \`.dust/tasks/\`. Run \`${cmd} principles\` and \`${cmd} facts\` for relevant context.`
+    const hint = await readWorkflowHint(fileSystem, dustPath, 'expedite-idea')
+    const openingSentence = hint
+      ? `${baseOpeningSentence}\n\n${hint}`
+      : baseOpeningSentence
 
     const content = `# ${taskTitle}
 
-Research this idea briefly. If confident the implementation is straightforward (clear scope, minimal risk, no open questions), implement directly and commit. Otherwise, create one or more narrowly-scoped task files in \`.dust/tasks/\`. Run \`${cmd} principles\` and \`${cmd} facts\` for relevant context.
+${openingSentence}
 
 ## Idea Description
 
@@ -447,10 +455,15 @@ ${description}
   const taskTitle = `${CAPTURE_IDEA_PREFIX}${title}`
   const filename = titleToFilename(taskTitle)
   const filePath = `${dustPath}/tasks/${filename}`
+  const baseOpeningSentence = `Research this idea thoroughly, then create one or more idea files in \`.dust/ideas/\`. Read the codebase for relevant context, flesh out the description, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. If you add open questions, use \`## Open Questions\` with \`### Question?\` headings and one or more \`#### Option\` headings beneath each question, and only add questions that are meaningful decisions worth asking. Run \`${cmd} principles\` and \`${cmd} facts\` for relevant context.`
+  const hint = await readWorkflowHint(fileSystem, dustPath, 'add-idea')
+  const openingSentence = hint
+    ? `${baseOpeningSentence}\n\n${hint}`
+    : baseOpeningSentence
 
   const content = `# ${taskTitle}
 
-Research this idea thoroughly, then create one or more idea files in \`.dust/ideas/\`. Read the codebase for relevant context, flesh out the description, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. If you add open questions, use \`## Open Questions\` with \`### Question?\` headings and one or more \`#### Option\` headings beneath each question, and only add questions that are meaningful decisions worth asking. Run \`${cmd} principles\` and \`${cmd} facts\` for relevant context.
+${openingSentence}
 
 ## Idea Description
 

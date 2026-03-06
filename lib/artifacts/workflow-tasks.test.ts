@@ -532,6 +532,95 @@ describe('createIdeaTask', () => {
     expect(content).not.toContain('create an idea file')
   })
 
+  test('appends workflow hint when add-idea.md hint file exists', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'progress-broadcasting.md':
+              '# Progress Broadcasting\n\nA great idea.',
+          },
+          tasks: {},
+          config: {
+            'workflow-hints': {
+              'add-idea.md': 'Prioritize concrete user outcomes.',
+            },
+          },
+        },
+      },
+    })
+
+    const result = await createIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'Allow agents to broadcast progress via WebSocket.',
+    })
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('Prioritize concrete user outcomes.')
+    expect(content).toContain(
+      'Run `dust principles` and `dust facts` for relevant context.\n\nPrioritize concrete user outcomes.'
+    )
+  })
+
+  test('generates add-idea task without hint when add-idea.md does not exist', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'Allow agents to broadcast progress via WebSocket.',
+    })
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('# Add Idea: Progress Broadcasting')
+    expect(content).not.toContain('Prioritize concrete user outcomes.')
+  })
+
+  test('appends workflow hint when expedite-idea.md hint file exists', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'progress-broadcasting.md':
+              '# Progress Broadcasting\n\nA great idea.',
+          },
+          tasks: {},
+          config: {
+            'workflow-hints': {
+              'expedite-idea.md':
+                'Escalate to tasks if integration risk appears.',
+            },
+          },
+        },
+      },
+    })
+
+    const result = await createIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'Allow agents to broadcast progress via WebSocket.',
+      expedite: true,
+    })
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('Escalate to tasks if integration risk appears.')
+    expect(content).toContain(
+      'Run `dust principles` and `dust facts` for relevant context.\n\nEscalate to tasks if integration risk appears.'
+    )
+  })
+
+  test('generates expedite-idea task without hint when expedite-idea.md does not exist', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createIdeaTask(fileSystem, '/project/.dust', {
+      title: 'Progress Broadcasting',
+      description: 'Allow agents to broadcast progress via WebSocket.',
+      expedite: true,
+    })
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('# Expedite Idea: Progress Broadcasting')
+    expect(content).not.toContain(
+      'Escalate to tasks if integration risk appears.'
+    )
+  })
+
   test('uses custom dustCommand in templates', async () => {
     const fileSystem = createFileSystem()
     const result = await createIdeaTask(fileSystem, '/project/.dust', {
