@@ -4,7 +4,7 @@ Inject server-defined tool documentation into agent system prompts so agents kno
 
 ## Context
 
-This task builds on [Add Tool Definitions Protocol Message](add-tool-definitions-protocol-message.md). Once the client can parse tool definitions, the next step is making them available to agents.
+This task builds on the tool definitions support in the [Bucket Protocol](../facts/bucket-protocol.md). Once the client can parse tool definitions, the next step is making them available to agents.
 
 Key decision: Tools are injected into the agent system prompt (not via environment variables or a discovery command). This makes tools immediately visible without extra agent invocations.
 
@@ -38,7 +38,7 @@ Usage: `dust bucket tool asset-upload <file>`
 
 ## Blocked By
 
-- [Add Tool Definitions Protocol Message](add-tool-definitions-protocol-message.md)
+(none)
 
 ## Definition of Done
 

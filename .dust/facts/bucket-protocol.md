@@ -41,7 +41,7 @@ Exception: Close code `4000` indicates the server replaced this connection with 
 
 ## Server-to-Client Messages
 
-Messages are JSON objects with a `type` field. Two message types are defined:
+Messages are JSON objects with a `type` field. Three message types are defined:
 
 ### repository-list
 
@@ -85,6 +85,36 @@ interface TaskAvailableMessage {
 
 On receiving this message, clients wake the agent loop for the specified repository.
 
+### tool-definitions
+
+Sent when the client connects to provide available server-defined tools. Tools are global (not per-repository).
+
+```typescript
+interface ToolDefinitionsMessage {
+  type: 'tool-definitions'
+  tools: ToolDefinition[]
+}
+
+interface ToolDefinition {
+  name: string        // Tool identifier
+  description: string // Human-readable description
+  endpoint: string    // API endpoint path
+  method: 'GET' | 'POST'
+  parameters: ToolParameter[]
+}
+
+interface ToolParameter {
+  name: string        // Parameter identifier
+  type: 'string' | 'file' | 'number' | 'boolean'
+  required: boolean
+  description: string // Human-readable description
+}
+```
+
+All fields are required. The `tools` array may be empty if no server-defined tools are available.
+
+On receiving this message, clients store the tool definitions for use in agent prompts. The server maintains backwards compatibility; older clients that don't recognize this message type will ignore it.
+
 ## Client-to-Server Events
 
 Clients send events to the server using the [Dust Event Protocol](dust-event-protocol.md). Events are sent as JSON over the same WebSocket connection.
@@ -113,9 +143,10 @@ Event types sent by clients:
 
 1. Accept WebSocket connections with valid Bearer tokens
 2. Send `repository-list` immediately after connection
-3. Send `repository-list` when the user's repositories change
-4. Send `task-available` when a new task is created for a repository
-5. Close with code `4000` when replacing a connection from the same user
+3. Send `tool-definitions` after connection (if tools are available)
+4. Send `repository-list` when the user's repositories change
+5. Send `task-available` when a new task is created for a repository
+6. Close with code `4000` when replacing a connection from the same user
 
 ### Task Signaling
 

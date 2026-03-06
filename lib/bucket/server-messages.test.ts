@@ -277,6 +277,378 @@ describe('parseServerMessage', () => {
     })
   })
 
+  describe('tool-definitions messages', () => {
+    it('parses a valid tool-definitions message', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'upload-asset',
+            description: 'Upload an asset to the server',
+            endpoint: '/api/assets/upload',
+            method: 'POST',
+            parameters: [
+              {
+                name: 'file',
+                type: 'file',
+                required: true,
+                description: 'The file to upload',
+              },
+              {
+                name: 'name',
+                type: 'string',
+                required: false,
+                description: 'Optional display name',
+              },
+            ],
+          },
+        ],
+      }
+      const result = parseServerMessage(data)
+      expect(result).toEqual({
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'upload-asset',
+            description: 'Upload an asset to the server',
+            endpoint: '/api/assets/upload',
+            method: 'POST',
+            parameters: [
+              {
+                name: 'file',
+                type: 'file',
+                required: true,
+                description: 'The file to upload',
+              },
+              {
+                name: 'name',
+                type: 'string',
+                required: false,
+                description: 'Optional display name',
+              },
+            ],
+          },
+        ],
+      })
+    })
+
+    it('parses empty tools array', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [],
+      }
+      const result = parseServerMessage(data)
+      expect(result).toEqual({
+        type: 'tool-definitions',
+        tools: [],
+      })
+    })
+
+    it('parses tool with empty parameters array', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'ping',
+            description: 'Simple ping endpoint',
+            endpoint: '/api/ping',
+            method: 'GET',
+            parameters: [],
+          },
+        ],
+      }
+      const result = parseServerMessage(data)
+      expect(result).toEqual({
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'ping',
+            description: 'Simple ping endpoint',
+            endpoint: '/api/ping',
+            method: 'GET',
+            parameters: [],
+          },
+        ],
+      })
+    })
+
+    it('parses all parameter types', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'test-tool',
+            description: 'Tests all parameter types',
+            endpoint: '/api/test',
+            method: 'POST',
+            parameters: [
+              {
+                name: 'str',
+                type: 'string',
+                required: true,
+                description: 'A string',
+              },
+              {
+                name: 'num',
+                type: 'number',
+                required: true,
+                description: 'A number',
+              },
+              {
+                name: 'bool',
+                type: 'boolean',
+                required: false,
+                description: 'A boolean',
+              },
+              {
+                name: 'f',
+                type: 'file',
+                required: false,
+                description: 'A file',
+              },
+            ],
+          },
+        ],
+      }
+      const result = parseServerMessage(data)
+      expect(result).not.toBeNull()
+      const tools = (result as { tools: { parameters: { type: string }[] }[] })
+        .tools
+      expect(tools[0].parameters.map(p => p.type)).toEqual([
+        'string',
+        'number',
+        'boolean',
+        'file',
+      ])
+    })
+
+    it('returns null for tool-definitions with missing tools array', () => {
+      const data = {
+        type: 'tool-definitions',
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for tool-definitions with non-array tools', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: 'not-an-array',
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for tool missing name', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            description: 'Missing name',
+            endpoint: '/api/test',
+            method: 'GET',
+            parameters: [],
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for tool missing description', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'test',
+            endpoint: '/api/test',
+            method: 'GET',
+            parameters: [],
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for tool missing endpoint', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'test',
+            description: 'Missing endpoint',
+            method: 'GET',
+            parameters: [],
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for tool with invalid method', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'test',
+            description: 'Invalid method',
+            endpoint: '/api/test',
+            method: 'DELETE',
+            parameters: [],
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for tool missing parameters array', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'test',
+            description: 'Missing parameters',
+            endpoint: '/api/test',
+            method: 'GET',
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for parameter missing name', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'test',
+            description: 'Test',
+            endpoint: '/api/test',
+            method: 'GET',
+            parameters: [
+              {
+                type: 'string',
+                required: true,
+                description: 'Missing name',
+              },
+            ],
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for parameter missing type', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'test',
+            description: 'Test',
+            endpoint: '/api/test',
+            method: 'GET',
+            parameters: [
+              {
+                name: 'param',
+                required: true,
+                description: 'Missing type',
+              },
+            ],
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for parameter with invalid type', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'test',
+            description: 'Test',
+            endpoint: '/api/test',
+            method: 'GET',
+            parameters: [
+              {
+                name: 'param',
+                type: 'invalid',
+                required: true,
+                description: 'Invalid type',
+              },
+            ],
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for parameter missing required', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'test',
+            description: 'Test',
+            endpoint: '/api/test',
+            method: 'GET',
+            parameters: [
+              {
+                name: 'param',
+                type: 'string',
+                description: 'Missing required',
+              },
+            ],
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for parameter missing description', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'test',
+            description: 'Test',
+            endpoint: '/api/test',
+            method: 'GET',
+            parameters: [
+              {
+                name: 'param',
+                type: 'string',
+                required: true,
+              },
+            ],
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for null tool in list', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [null],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for null parameter in list', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'test',
+            description: 'Test',
+            endpoint: '/api/test',
+            method: 'GET',
+            parameters: [null],
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+  })
+
   describe('invalid messages', () => {
     it('returns null for null', () => {
       expect(parseServerMessage(null)).toBeNull()
