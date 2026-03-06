@@ -60,6 +60,22 @@ Since the loop infrastructure now handles dependency installation and pre-flight
 
 For non-loop usage (e.g., interactive `dust focus`), the instructions remain unchanged since there's no loop infrastructure running checks.
 
+#### Implementation Detail
+
+Add a `skipPreflightSteps?: boolean` parameter to `buildImplementationInstructions` in `lib/cli/commands/focus.ts`. When `true`, the function omits:
+
+- The `installCommand` step (lines 29-32)
+- The initial `dust check` step (lines 34-37)
+
+The pre-commit `dust check` step (when hooks aren't installed, lines 42-45) is preserved — it's a safety net during implementation, not a pre-flight check.
+
+In `lib/cli/commands/loop.ts:421`, pass `skipPreflightSteps: true` when calling `buildImplementationInstructions`. The `dust focus` command (interactive usage) continues to pass `undefined`, keeping current behavior.
+
+Tests in `lib/cli/commands/focus.test.ts` should cover:
+- `skipPreflightSteps: true` omits install and initial check steps
+- `skipPreflightSteps: true` with `hooksInstalled: false` still includes the pre-commit check
+- Existing tests pass unchanged (they don't set the new parameter)
+
 ### Blocking Repositories on Persistent Check Failures
 
 In bucket mode, the server tracks consecutive check failures per repository. The mechanism:
