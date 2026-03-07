@@ -25,19 +25,23 @@ describe('isUnattended', () => {
 
 describe('buildUnattendedEnv', () => {
   test('returns DUST_UNATTENDED and DUST_SKIP_AGENT', () => {
-    const env = buildUnattendedEnv()
-    expect(env).toEqual({
-      [DUST_UNATTENDED]: '1',
-      [DUST_SKIP_AGENT]: '1',
+    return stubEnv(DUST_PROXY_PORT, undefined, () => {
+      const env = buildUnattendedEnv()
+      expect(env).toEqual({
+        [DUST_UNATTENDED]: '1',
+        [DUST_SKIP_AGENT]: '1',
+      })
     })
   })
 
   test('includes DUST_REPOSITORY_ID when provided', () => {
-    const env = buildUnattendedEnv({ repositoryId: 'repo-123' })
-    expect(env).toEqual({
-      [DUST_UNATTENDED]: '1',
-      [DUST_SKIP_AGENT]: '1',
-      [DUST_REPOSITORY_ID]: 'repo-123',
+    return stubEnv(DUST_PROXY_PORT, undefined, () => {
+      const env = buildUnattendedEnv({ repositoryId: 'repo-123' })
+      expect(env).toEqual({
+        [DUST_UNATTENDED]: '1',
+        [DUST_SKIP_AGENT]: '1',
+        [DUST_REPOSITORY_ID]: 'repo-123',
+      })
     })
   })
 
