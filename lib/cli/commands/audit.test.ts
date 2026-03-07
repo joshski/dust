@@ -353,26 +353,26 @@ describe('audit command', () => {
     )
   })
 
-  test('single-responsibility-violations audit enforces layer-mixing and collector high-confidence contract', () => {
+  test('single-responsibility-violations audit enforces responsibility-count high-confidence contract', () => {
     const singleResponsibilityAudit = loadStockAudits().find(
       audit => audit.name === 'single-responsibility-violations'
     )
 
     expect(singleResponsibilityAudit).toBeDefined()
     expect(singleResponsibilityAudit?.template).toContain(
-      'Focus only on three additive high-confidence slices'
+      'Focus only on high-confidence function-level findings where one function clearly combines 3+ distinct responsibilities'
     )
     expect(singleResponsibilityAudit?.template).toContain(
-      'Positive layer-mixing case'
+      'Include both runtime code and test helpers.'
     )
     expect(singleResponsibilityAudit?.template).toContain(
-      'Negative layer-mixing case'
+      'Module-level layer-mixing findings (future slices)'
     )
     expect(singleResponsibilityAudit?.template).toContain(
-      'Positive collector case'
+      'Collector/orchestrator hotspot findings based on collaborator/parameter load (future slices)'
     )
     expect(singleResponsibilityAudit?.template).toContain(
-      'Negative collector case'
+      'Keep findings only when 3+ distinct responsibilities are clearly present in the same function'
     )
     expect(singleResponsibilityAudit?.template).toContain(
       'For each finding, provide:'
@@ -390,10 +390,10 @@ describe('audit command', () => {
       '**Suggested extraction plan** - A small-step plan'
     )
     expect(singleResponsibilityAudit?.template).toContain(
-      'covered by the `refactoring-opportunities` audit'
+      'Kept recommendations high-confidence only with clear concern boundaries'
     )
     expect(singleResponsibilityAudit?.template).toContain(
-      'extracting pure decision logic from imperative orchestration'
+      'Preserve Functional Core, Imperative Shell boundaries'
     )
   })
 })

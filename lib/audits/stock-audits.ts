@@ -886,43 +886,37 @@ function singleResponsibilityViolations(): string {
   return dedent`
     # Single Responsibility Violations
 
-    Review high-confidence single responsibility violations across additive responsibility-focused slices.
+    Review high-confidence single responsibility violations driven by responsibility count at function level.
 
     ${ideasHint}
 
     ## Scope
 
-    Focus only on three additive high-confidence slices:
-    - Functions that clearly combine 3+ distinct responsibilities
-    - Modules/files that mix layers (for example parsing/validation + domain execution + presentation/formatting)
-    - Collector-style functions that coordinate too many collaborators/parameters even when line count is moderate
+    Focus only on high-confidence function-level findings where one function clearly combines 3+ distinct responsibilities.
+
+    Responsibility examples:
+    - Parsing/validation
+    - Domain decision/execution logic
+    - Side effects or IO coordination
+    - Presentation/formatting/reporting
+    - Cross-module orchestration
 
     Include both runtime code and test helpers.
 
     Out of scope:
-    - Churn-driven recommendations based on commit history or file modification frequency (covered by the \`refactoring-opportunities\` audit)
-    - Broad rewrite recommendations without clear extraction seams
+    - Module-level layer-mixing findings (future slices)
+    - Collector/orchestrator hotspot findings based on collaborator/parameter load (future slices)
+    - Functions with only one or two responsibilities
     - Ambiguous style-only concerns without clear responsibility boundaries
+    - Broad rewrite recommendations without clear extraction seams
 
     ## Analysis Steps
 
-    1. Find candidate functions that combine distinct concerns (for example parsing, decision logic, side effects, formatting, reporting)
-    2. Find module-level layer mixing where one file combines boundary concerns with domain decisions and presentation concerns
-    3. Find collector/orchestrator functions with high collaborator or parameter load where multiple concerns are coordinated in one place
-    4. Keep only high-confidence findings with clear responsibility splits and concrete extraction seams
-    5. Preserve Functional Core, Imperative Shell boundaries in recommendations by extracting pure decision logic from imperative orchestration
-
-    Positive layer-mixing case:
-    - Report when one module clearly combines parsing/validation, execution/decision logic, and presentation/output formatting responsibilities
-
-    Negative layer-mixing case:
-    - Do not report modules that primarily implement one layer with straightforward delegation (for example thin adapters or focused formatting modules)
-
-    Positive collector case:
-    - Report collector hotspots where a function coordinates many collaborators/parameters and also embeds cross-layer decisions or formatting concerns
-
-    Negative collector case:
-    - Do not report straightforward dependency-wiring, pass-through wrappers, or data-aggregation helpers that do not mix additional decision/presentation concerns
+    1. Identify runtime functions and test helpers that appear to mix concerns
+    2. Keep findings only when 3+ distinct responsibilities are clearly present in the same function
+    3. Validate a concrete extraction seam for each responsibility split (no speculative or style-only recommendations)
+    4. Keep recommendations incremental and high-confidence only
+    5. Preserve Functional Core, Imperative Shell boundaries by extracting pure logic from imperative shells where possible
 
     ## Output
 
@@ -947,12 +941,10 @@ function singleResponsibilityViolations(): string {
     ## Definition of Done
 
     - [ ] Reviewed high-confidence function-level findings where 3+ distinct responsibilities are combined
-    - [ ] Reviewed high-confidence module layer-mixing findings
-    - [ ] Reviewed high-confidence collector-style orchestration hotspots independent of line count
     - [ ] Included runtime code and test helpers in scope
     - [ ] Documented each finding with location, responsibility split, severity, and suggested extraction plan
     - [ ] Preserved Functional Core, Imperative Shell boundaries in recommendations
-    - [ ] Avoided overlap with churn-driven \`refactoring-opportunities\` findings
+    - [ ] Kept recommendations high-confidence only with clear concern boundaries
     - [ ] Proposed ideas for substantial responsibility-splitting work identified
   `
 }
