@@ -186,28 +186,29 @@ function formatStatusLine(result: CheckResult): string {
   return `${indicator} ${result.name}${timing}`
 }
 
-function displayFailureDetails(
-  results: CheckResult[],
+function displayFailureDetail(
+  result: CheckResult,
   context: CommandContext
 ): void {
-  const failed = results.filter(r => r.exitCode !== 0)
-  for (const result of failed) {
+  if (result.exitCode === 0) {
+    return
+  }
+
+  context.stdout('')
+  context.stdout(`> ${result.command}`)
+  if (result.timedOut) {
+    context.stdout(
+      `Note: This check was killed after ${result.timeoutSeconds}s. To configure a different timeout, set "timeoutMilliseconds" in the check configuration in .dust/config/settings.json`
+    )
+  }
+  if (result.output.trim()) {
+    context.stdout(truncateOutput(result.output).trimEnd())
+  }
+  if (result.hints && result.hints.length > 0) {
     context.stdout('')
-    context.stdout(`> ${result.command}`)
-    if (result.timedOut) {
-      context.stdout(
-        `Note: This check was killed after ${result.timeoutSeconds}s. To configure a different timeout, set "timeoutMilliseconds" in the check configuration in .dust/config/settings.json`
-      )
-    }
-    if (result.output.trim()) {
-      context.stdout(truncateOutput(result.output).trimEnd())
-    }
-    if (result.hints && result.hints.length > 0) {
-      context.stdout('')
-      context.stdout(`Hints for fixing '${result.name}':`)
-      for (const hint of result.hints) {
-        context.stdout(`  - ${hint}`)
-      }
+    context.stdout(`Hints for fixing '${result.name}':`)
+    for (const hint of result.hints) {
+      context.stdout(`  - ${hint}`)
     }
   }
 }
@@ -289,6 +290,7 @@ export async function check(
       const result = await orderedCheckExecutions[index]()
       resultsByDisplayOrder[index] = result
       context.stdout(formatStatusLine(result))
+      displayFailureDetail(result, context)
     }
   } else {
     const pending = new Set<Promise<{ index: number; result: CheckResult }>>()
@@ -326,11 +328,11 @@ export async function check(
 
       for (const result of ready) {
         context.stdout(formatStatusLine(result))
+        displayFailureDetail(result, context)
       }
     }
   }
 
-  displayFailureDetails(resultsByDisplayOrder, context)
   const exitCode = displaySummary(resultsByDisplayOrder, context)
 
   return { exitCode }

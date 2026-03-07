@@ -1368,4 +1368,84 @@ describe('check command progressive ordered status output', () => {
       '✓ 3/3 checks passed',
     ])
   })
+
+  test('prints failure details immediately when failed checks become displayable', async () => {
+    const context = createContextEmulator()
+    const settings: DustSettings = {
+      dustCommand: 'dust',
+      checks: [
+        { name: 'first', command: 'cmd1' },
+        { name: 'second', command: 'cmd2' },
+        { name: 'third', command: 'cmd3', hints: ['rerun third'] },
+      ],
+    }
+    const fileSystem = createFileSystemEmulator()
+
+    let resolveCmd1:
+      | ((value: { exitCode: number; output: string }) => void)
+      | undefined
+    let resolveCmd2:
+      | ((value: { exitCode: number; output: string }) => void)
+      | undefined
+    let resolveCmd3:
+      | ((value: { exitCode: number; output: string }) => void)
+      | undefined
+
+    const cmd1 = new Promise<{ exitCode: number; output: string }>(resolve => {
+      resolveCmd1 = resolve
+    })
+    const cmd2 = new Promise<{ exitCode: number; output: string }>(resolve => {
+      resolveCmd2 = resolve
+    })
+    const cmd3 = new Promise<{ exitCode: number; output: string }>(resolve => {
+      resolveCmd3 = resolve
+    })
+
+    const runner: ShellRunner = {
+      run: async command => {
+        if (command === 'cmd1') return cmd1
+        if (command === 'cmd2') return cmd2
+        if (command === 'cmd3') return cmd3
+        return { exitCode: 0, output: '' }
+      },
+    }
+
+    const checkPromise = check(
+      createDependencies(context, fileSystem, settings),
+      runner
+    )
+
+    resolveCmd2?.({ exitCode: 0, output: '' })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(context.stdoutLines).toEqual([])
+
+    resolveCmd1?.({ exitCode: 1, output: 'first failed' })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(context.stdoutLines).toEqual([
+      '✗ first',
+      '',
+      '> cmd1',
+      'first failed',
+      '✓ second',
+    ])
+
+    resolveCmd3?.({ exitCode: 1, output: 'third failed' })
+    await checkPromise
+    expect(context.stdoutLines).toEqual([
+      '✗ first',
+      '',
+      '> cmd1',
+      'first failed',
+      '✓ second',
+      '✗ third',
+      '',
+      '> cmd3',
+      'third failed',
+      '',
+      "Hints for fixing 'third':",
+      '  - rerun third',
+      '',
+      '✗ 1/3 checks passed',
+    ])
+  })
 })
