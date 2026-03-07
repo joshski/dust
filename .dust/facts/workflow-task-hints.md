@@ -9,7 +9,7 @@ Supported files:
 - `add-idea.md`
 - `expedite-idea.md`
 
-If a hint file exists, its contents are appended to the task opening sentence with a blank line separator. If it does not exist, task generation proceeds normally.
+If a hint file exists, its contents are rendered in a dedicated `## Repository Hints` section. This section appears after the idea-specific section and before `## Definition of Done`. If no hint file exists, the section is omitted.
 
 ## Example
 
@@ -19,4 +19,10 @@ If `.dust/config/hints/expedite-idea.md` contains:
 Prefer implementation when change scope is isolated to one module.
 ```
 
-Then generated expedite tasks include that line immediately after the default opening instructions.
+Then generated expedite tasks include:
+
+```md
+## Repository Hints
+
+Prefer implementation when change scope is isolated to one module.
+```

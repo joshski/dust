@@ -128,7 +128,7 @@ describe('createRefineIdeaTask', () => {
     )
   })
 
-  test('appends workflow hint when refine-idea.md hint file exists', async () => {
+  test('renders workflow hint in Repository Hints section when refine-idea.md hint file exists', async () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -152,10 +152,15 @@ describe('createRefineIdeaTask', () => {
     )
 
     const content = fileSystem.writtenFiles.get(result.filePath) as string
+    const refinesIdeaIndex = content.indexOf('## Refines Idea')
+    const repositoryHintsIndex = content.indexOf('## Repository Hints')
+    const definitionOfDoneIndex = content.indexOf('## Definition of Done')
+
+    expect(refinesIdeaIndex).toBeGreaterThan(-1)
+    expect(repositoryHintsIndex).toBeGreaterThan(refinesIdeaIndex)
+    expect(definitionOfDoneIndex).toBeGreaterThan(repositoryHintsIndex)
     expect(content).toContain('Focus on edge cases and error handling.')
-    expect(content).toContain(
-      'only add questions that are meaningful decisions worth asking.\n\nFocus on edge cases and error handling.'
-    )
+    expect(content).toContain('## Repository Hints')
   })
 
   test('generates task without hint when refine-idea.md does not exist', async () => {
@@ -169,6 +174,7 @@ describe('createRefineIdeaTask', () => {
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain('# Refine Idea: Progress Broadcasting')
     expect(content).not.toContain('Focus on edge cases')
+    expect(content).not.toContain('## Repository Hints')
   })
 })
 
@@ -294,7 +300,7 @@ describe('decomposeIdea', () => {
     )
   })
 
-  test('appends workflow hint when decompose-idea.md hint file exists', async () => {
+  test('renders workflow hint in Repository Hints section when decompose-idea.md hint file exists', async () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -316,7 +322,15 @@ describe('decomposeIdea', () => {
     })
 
     const content = fileSystem.writtenFiles.get(result.filePath) as string
+    const decomposesIdeaIndex = content.indexOf('## Decomposes Idea')
+    const repositoryHintsIndex = content.indexOf('## Repository Hints')
+    const definitionOfDoneIndex = content.indexOf('## Definition of Done')
+
+    expect(decomposesIdeaIndex).toBeGreaterThan(-1)
+    expect(repositoryHintsIndex).toBeGreaterThan(decomposesIdeaIndex)
+    expect(definitionOfDoneIndex).toBeGreaterThan(repositoryHintsIndex)
     expect(content).toContain('Prefer tasks under 100 lines of code.')
+    expect(content).toContain('## Repository Hints')
   })
 
   test('generates task without hint when decompose-idea.md does not exist', async () => {
@@ -328,6 +342,7 @@ describe('decomposeIdea', () => {
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain('# Decompose Idea: Progress Broadcasting')
     expect(content).not.toContain('Prefer tasks under 100 lines')
+    expect(content).not.toContain('## Repository Hints')
   })
 })
 
@@ -369,7 +384,7 @@ describe('createShelveIdeaTask', () => {
     )
   })
 
-  test('appends workflow hint when shelve-idea.md hint file exists', async () => {
+  test('renders workflow hint in Repository Hints section when shelve-idea.md hint file exists', async () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -393,7 +408,15 @@ describe('createShelveIdeaTask', () => {
     )
 
     const content = fileSystem.writtenFiles.get(result.filePath) as string
+    const shelvesIdeaIndex = content.indexOf('## Shelves Idea')
+    const repositoryHintsIndex = content.indexOf('## Repository Hints')
+    const definitionOfDoneIndex = content.indexOf('## Definition of Done')
+
+    expect(shelvesIdeaIndex).toBeGreaterThan(-1)
+    expect(repositoryHintsIndex).toBeGreaterThan(shelvesIdeaIndex)
+    expect(definitionOfDoneIndex).toBeGreaterThan(repositoryHintsIndex)
     expect(content).toContain('Document the reason for shelving clearly.')
+    expect(content).toContain('## Repository Hints')
   })
 
   test('generates task without hint when shelve-idea.md does not exist', async () => {
@@ -407,6 +430,7 @@ describe('createShelveIdeaTask', () => {
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain('# Shelve Idea: Progress Broadcasting')
     expect(content).not.toContain('Document the reason')
+    expect(content).not.toContain('## Repository Hints')
   })
 })
 
@@ -532,7 +556,7 @@ describe('createIdeaTask', () => {
     expect(content).not.toContain('create an idea file')
   })
 
-  test('appends workflow hint when add-idea.md hint file exists', async () => {
+  test('renders workflow hint in Repository Hints section when add-idea.md hint file exists', async () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -556,10 +580,15 @@ describe('createIdeaTask', () => {
     })
 
     const content = fileSystem.writtenFiles.get(result.filePath) as string
+    const ideaDescriptionIndex = content.indexOf('## Idea Description')
+    const repositoryHintsIndex = content.indexOf('## Repository Hints')
+    const definitionOfDoneIndex = content.indexOf('## Definition of Done')
+
+    expect(ideaDescriptionIndex).toBeGreaterThan(-1)
+    expect(repositoryHintsIndex).toBeGreaterThan(ideaDescriptionIndex)
+    expect(definitionOfDoneIndex).toBeGreaterThan(repositoryHintsIndex)
     expect(content).toContain('Prioritize concrete user outcomes.')
-    expect(content).toContain(
-      'Run `dust principles` and `dust facts` for relevant context.\n\nPrioritize concrete user outcomes.'
-    )
+    expect(content).toContain('## Repository Hints')
   })
 
   test('generates add-idea task without hint when add-idea.md does not exist', async () => {
@@ -572,9 +601,10 @@ describe('createIdeaTask', () => {
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain('# Add Idea: Progress Broadcasting')
     expect(content).not.toContain('Prioritize concrete user outcomes.')
+    expect(content).not.toContain('## Repository Hints')
   })
 
-  test('appends workflow hint when expedite-idea.md hint file exists', async () => {
+  test('renders workflow hint in Repository Hints section when expedite-idea.md hint file exists', async () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -600,10 +630,15 @@ describe('createIdeaTask', () => {
     })
 
     const content = fileSystem.writtenFiles.get(result.filePath) as string
+    const ideaDescriptionIndex = content.indexOf('## Idea Description')
+    const repositoryHintsIndex = content.indexOf('## Repository Hints')
+    const definitionOfDoneIndex = content.indexOf('## Definition of Done')
+
+    expect(ideaDescriptionIndex).toBeGreaterThan(-1)
+    expect(repositoryHintsIndex).toBeGreaterThan(ideaDescriptionIndex)
+    expect(definitionOfDoneIndex).toBeGreaterThan(repositoryHintsIndex)
     expect(content).toContain('Escalate to tasks if integration risk appears.')
-    expect(content).toContain(
-      'Run `dust principles` and `dust facts` for relevant context.\n\nEscalate to tasks if integration risk appears.'
-    )
+    expect(content).toContain('## Repository Hints')
   })
 
   test('generates expedite-idea task without hint when expedite-idea.md does not exist', async () => {
@@ -619,6 +654,7 @@ describe('createIdeaTask', () => {
     expect(content).not.toContain(
       'Escalate to tasks if integration risk appears.'
     )
+    expect(content).not.toContain('## Repository Hints')
   })
 
   test('uses custom dustCommand in templates', async () => {

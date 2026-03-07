@@ -251,6 +251,18 @@ function renderIdeaSection(ideaSection: IdeaSection): string {
 `
 }
 
+function renderRepositoryHintsSection(repositoryHint?: string): string {
+  if (!repositoryHint) {
+    return ''
+  }
+
+  return `
+## Repository Hints
+
+${repositoryHint}
+`
+}
+
 function renderTask(
   title: string,
   openingSentence: string,
@@ -259,6 +271,7 @@ function renderTask(
   options?: {
     description?: string
     resolvedQuestions?: OpenQuestionResponse[]
+    repositoryHint?: string
   }
 ): string {
   const descriptionParagraph =
@@ -270,6 +283,9 @@ function renderTask(
       : ''
 
   const ideaSectionContent = `\n${renderIdeaSection(ideaSection)}\n`
+  const repositoryHintsSection = renderRepositoryHintsSection(
+    options?.repositoryHint
+  )
 
   return `# ${title}
 
@@ -277,6 +293,7 @@ ${openingSentence}
 ${descriptionParagraph}${resolvedSection}${ideaSectionContent}## Blocked By
 
 (none)
+${repositoryHintsSection}
 
 ## Definition of Done
 
@@ -305,20 +322,18 @@ async function createIdeaTransitionTask(
   const baseOpeningSentence = openingSentenceTemplate(ideaTitle)
 
   const hint = await readWorkflowHint(fileSystem, dustPath, workflowType)
-  const openingSentence = hint
-    ? `${baseOpeningSentence}\n\n${hint}`
-    : baseOpeningSentence
 
   const ideaSection = { heading: ideaSectionHeading, ideaTitle, ideaSlug }
 
   const content = renderTask(
     taskTitle,
-    openingSentence,
+    baseOpeningSentence,
     definitionOfDone,
     ideaSection,
     {
       description: taskOptions?.description,
       resolvedQuestions: taskOptions?.resolvedQuestions,
+      repositoryHint: hint ?? undefined,
     }
   )
   await fileSystem.writeFile(filePath, content)
@@ -426,13 +441,13 @@ export async function createIdeaTask(
     const filePath = `${dustPath}/tasks/${filename}`
     const baseOpeningSentence = `Research this idea briefly. If confident the implementation is straightforward (clear scope, minimal risk, no open questions), implement directly and commit. Otherwise, create one or more narrowly-scoped task files in \`.dust/tasks/\`. Run \`${cmd} principles\` and \`${cmd} facts\` for relevant context.`
     const hint = await readWorkflowHint(fileSystem, dustPath, 'expedite-idea')
-    const openingSentence = hint
-      ? `${baseOpeningSentence}\n\n${hint}`
-      : baseOpeningSentence
+    const repositoryHintsSection = renderRepositoryHintsSection(
+      hint ?? undefined
+    )
 
     const content = `# ${taskTitle}
 
-${openingSentence}
+${baseOpeningSentence}
 
 ## Idea Description
 
@@ -441,6 +456,7 @@ ${description}
 ## Blocked By
 
 (none)
+${repositoryHintsSection}
 
 ## Definition of Done
 
@@ -457,13 +473,11 @@ ${description}
   const filePath = `${dustPath}/tasks/${filename}`
   const baseOpeningSentence = `Research this idea thoroughly, then create one or more idea files in \`.dust/ideas/\`. Read the codebase for relevant context, flesh out the description, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. If you add open questions, use \`## Open Questions\` with \`### Question?\` headings and one or more \`#### Option\` headings beneath each question, and only add questions that are meaningful decisions worth asking. Run \`${cmd} principles\` and \`${cmd} facts\` for relevant context.`
   const hint = await readWorkflowHint(fileSystem, dustPath, 'add-idea')
-  const openingSentence = hint
-    ? `${baseOpeningSentence}\n\n${hint}`
-    : baseOpeningSentence
+  const repositoryHintsSection = renderRepositoryHintsSection(hint ?? undefined)
 
   const content = `# ${taskTitle}
 
-${openingSentence}
+${baseOpeningSentence}
 
 ## Idea Description
 
@@ -472,6 +486,7 @@ ${description}
 ## Blocked By
 
 (none)
+${repositoryHintsSection}
 
 ## Definition of Done
 
