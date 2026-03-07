@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process'
 import { createInterface } from 'node:readline'
 import { describe, expect, test } from 'vitest'
+import { asCreateInterfaceStub, asSpawnStub } from '../test/test-utilities'
 import {
   defaultDependencies,
   type EventSourceDependencies,
@@ -16,7 +17,7 @@ function createMockDependencies(
   stderrData?: string
 ): EventSourceDependencies {
   return {
-    spawn: (() => {
+    spawn: asSpawnStub(() => {
       const listeners: Record<string, EventListener[]> = {}
       const stderrListeners: Record<string, EventListener[]> = {}
       return {
@@ -43,16 +44,14 @@ function createMockDependencies(
           return this
         },
       }
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-    }) as unknown as typeof spawn,
-    createInterface: (() => ({
+    }),
+    createInterface: asCreateInterfaceStub(() => ({
       async *[Symbol.asyncIterator]() {
         for (const line of lines) {
           yield line
         }
       },
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-    })) as unknown as typeof createInterface,
+    })),
   }
 }
 
@@ -126,7 +125,7 @@ describe('spawnCodex', () => {
     let capturedArguments: string[] = []
 
     const dependencies: EventSourceDependencies = {
-      spawn: ((_cmd: string, spawnArguments: string[]) => {
+      spawn: asSpawnStub((_cmd: string, spawnArguments: string[]) => {
         capturedArguments = spawnArguments
         return {
           stdout: {},
@@ -135,14 +134,12 @@ describe('spawnCodex', () => {
             return this
           },
         }
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      }) as unknown as typeof spawn,
-      createInterface: (() => ({
+      }),
+      createInterface: asCreateInterfaceStub(() => ({
         async *[Symbol.asyncIterator]() {
           // no lines
         },
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      })) as unknown as typeof createInterface,
+      })),
     }
 
     for await (const _ of spawnCodex(
@@ -165,7 +162,7 @@ describe('spawnCodex', () => {
     let capturedArguments: string[] = []
 
     const dependencies: EventSourceDependencies = {
-      spawn: ((_cmd: string, spawnArguments: string[]) => {
+      spawn: asSpawnStub((_cmd: string, spawnArguments: string[]) => {
         capturedArguments = spawnArguments
         return {
           stdout: {},
@@ -174,14 +171,12 @@ describe('spawnCodex', () => {
             return this
           },
         }
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      }) as unknown as typeof spawn,
-      createInterface: (() => ({
+      }),
+      createInterface: asCreateInterfaceStub(() => ({
         async *[Symbol.asyncIterator]() {
           // no lines
         },
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      })) as unknown as typeof createInterface,
+      })),
     }
 
     for await (const _ of spawnCodex('test prompt', {}, dependencies)) {
@@ -228,15 +223,13 @@ describe('spawnCodex', () => {
 
   test('throws if stdout is null', async () => {
     const dependencies: EventSourceDependencies = {
-      spawn: (() => ({
+      spawn: asSpawnStub(() => ({
         stdout: null,
         on: () => {},
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      })) as unknown as typeof spawn,
-      createInterface: (() => ({
+      })),
+      createInterface: asCreateInterfaceStub(() => ({
         async *[Symbol.asyncIterator]() {},
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      })) as unknown as typeof createInterface,
+      })),
     }
 
     const consume = async () => {
@@ -256,7 +249,7 @@ describe('spawnCodex', () => {
     controller.abort()
 
     const dependencies: EventSourceDependencies = {
-      spawn: (() => {
+      spawn: asSpawnStub(() => {
         return {
           killed: false,
           kill() {
@@ -271,15 +264,13 @@ describe('spawnCodex', () => {
             return this
           },
         }
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      }) as unknown as typeof spawn,
-      createInterface: (() => ({
+      }),
+      createInterface: asCreateInterfaceStub(() => ({
         close: () => {},
         async *[Symbol.asyncIterator]() {
           // no lines
         },
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      })) as unknown as typeof createInterface,
+      })),
     }
 
     for await (const _ of spawnCodex(
@@ -299,7 +290,7 @@ describe('spawnCodex', () => {
     const controller = new AbortController()
 
     const dependencies: EventSourceDependencies = {
-      spawn: (() => {
+      spawn: asSpawnStub(() => {
         return {
           killed: false,
           kill() {
@@ -317,15 +308,13 @@ describe('spawnCodex', () => {
             return this
           },
         }
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      }) as unknown as typeof spawn,
-      createInterface: (() => ({
+      }),
+      createInterface: asCreateInterfaceStub(() => ({
         close: () => {},
         async *[Symbol.asyncIterator]() {
           await new Promise(resolve => setTimeout(resolve, 0))
         },
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      })) as unknown as typeof createInterface,
+      })),
     }
 
     const consume = (async () => {
@@ -349,7 +338,7 @@ describe('spawnCodex', () => {
     controller.abort()
 
     const dependencies: EventSourceDependencies = {
-      spawn: (() => {
+      spawn: asSpawnStub(() => {
         return {
           killed: true,
           kill() {
@@ -363,15 +352,13 @@ describe('spawnCodex', () => {
             return this
           },
         }
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      }) as unknown as typeof spawn,
-      createInterface: (() => ({
+      }),
+      createInterface: asCreateInterfaceStub(() => ({
         close: () => {},
         async *[Symbol.asyncIterator]() {
           // no lines
         },
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      })) as unknown as typeof createInterface,
+      })),
     }
 
     for await (const _ of spawnCodex(

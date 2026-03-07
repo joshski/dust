@@ -1,7 +1,7 @@
-import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
 import {
+  asChildProcessStub,
   createContextEmulator,
   createFileSystemEmulator,
   type FileSystemEmulator,
@@ -870,9 +870,7 @@ describe('createGitRunner', () => {
     }
     mockProc.stdout = new EventEmitter()
     mockProc.stderr = new EventEmitter()
-
-    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-    const mockSpawn = () => mockProc as unknown as ChildProcess
+    const mockSpawn = () => asChildProcessStub(mockProc)
     const runner = createGitRunner(mockSpawn)
 
     const promise = runner.run(['status'], '/')
@@ -892,9 +890,7 @@ describe('createGitRunner', () => {
     }
     mockProc.stdout = new EventEmitter()
     mockProc.stderr = new EventEmitter()
-
-    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-    const mockSpawn = () => mockProc as unknown as ChildProcess
+    const mockSpawn = () => asChildProcessStub(mockProc)
     const runner = createGitRunner(mockSpawn)
 
     const promise = runner.run(['status'], '/')
@@ -911,9 +907,7 @@ describe('createGitRunner', () => {
     }
     mockProc.stdout = new EventEmitter()
     mockProc.stderr = new EventEmitter()
-
-    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-    const mockSpawn = () => mockProc as unknown as ChildProcess
+    const mockSpawn = () => asChildProcessStub(mockProc)
     const runner = createGitRunner(mockSpawn)
 
     const promise = runner.run(['status'], '/')
@@ -930,9 +924,7 @@ describe('createGitRunner', () => {
     }
     mockProc.stdout = new EventEmitter()
     mockProc.stderr = new EventEmitter()
-
-    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-    const mockSpawn = () => mockProc as unknown as ChildProcess
+    const mockSpawn = () => asChildProcessStub(mockProc)
     const runner = createGitRunner(mockSpawn)
 
     const promise = runner.run(['status'], '/')
@@ -950,9 +942,7 @@ describe('createGitRunner', () => {
     }
     mockProc.stdout = null
     mockProc.stderr = null
-
-    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-    const mockSpawn = () => mockProc as unknown as ChildProcess
+    const mockSpawn = () => asChildProcessStub(mockProc)
     const runner = createGitRunner(mockSpawn)
 
     const promise = runner.run(['status'], '/')

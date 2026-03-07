@@ -10,6 +10,7 @@ import {
 } from '../../bucket/log-buffer'
 import type { RepositoryState } from '../../bucket/repository'
 import {
+  asTestType,
   createContextEmulator,
   createFileSystemEmulator,
   createTestAgentSessionStartedEvent,
@@ -89,11 +90,10 @@ function createBucketDependencies(
   overrides: Partial<BucketDependencies> = {}
 ): BucketDependencies {
   return {
-    spawn: (() => {
+    spawn: asTestType<BucketDependencies['spawn']>(() => {
       const proc = new EventEmitter()
       return proc
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-    }) as unknown as BucketDependencies['spawn'],
+    }),
     createWebSocket: () => createAutoConnectWebSocket(),
     setupKeypress: () => () => {},
     setupSignals: () => () => {},
@@ -1169,10 +1169,9 @@ describe('connectWebSocket', () => {
     const ws = createMockWebSocket()
     const bucketDependencies = createBucketDependencies({
       createWebSocket: () => ws,
-      spawn: (() => {
+      spawn: asTestType<BucketDependencies['spawn']>(() => {
         throw new Error('spawn exploded')
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      }) as unknown as BucketDependencies['spawn'],
+      }),
     })
 
     connectWebSocket(
@@ -1265,7 +1264,7 @@ describe('connectWebSocket', () => {
     const ws = createMockWebSocket()
     const bucketDependencies = createBucketDependencies({
       createWebSocket: () => ws,
-      spawn: (() => {
+      spawn: asTestType<BucketDependencies['spawn']>(() => {
         const proc = new EventEmitter() as EventEmitter & {
           stdout: EventEmitter | null
           stderr: EventEmitter | null
@@ -1274,8 +1273,7 @@ describe('connectWebSocket', () => {
         proc.stderr = new EventEmitter()
         process.nextTick(() => proc.emit('close', 0))
         return proc
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      }) as unknown as BucketDependencies['spawn'],
+      }),
       sleep: () => new Promise(() => {}),
     })
 
@@ -1460,18 +1458,20 @@ describe('shutdown', () => {
 
     const rmProcesses: EventEmitter[] = []
     const bucketDependencies = createBucketDependencies({
-      spawn: ((_command: string, _spawnArguments: string[]) => {
-        const proc = new EventEmitter() as EventEmitter & {
-          stdout: EventEmitter | null
-          stderr: EventEmitter | null
+      spawn: asTestType<BucketDependencies['spawn']>(
+        (_command: string, _spawnArguments: string[]) => {
+          const proc = new EventEmitter() as EventEmitter & {
+            stdout: EventEmitter | null
+            stderr: EventEmitter | null
+          }
+          proc.stdout = new EventEmitter()
+          proc.stderr = new EventEmitter()
+          rmProcesses.push(proc)
+          // Auto-resolve rm -rf
+          setTimeout(() => proc.emit('close', 0), 0)
+          return proc
         }
-        proc.stdout = new EventEmitter()
-        proc.stderr = new EventEmitter()
-        rmProcesses.push(proc)
-        // Auto-resolve rm -rf
-        setTimeout(() => proc.emit('close', 0), 0)
-        return proc
-      }) as BucketDependencies['spawn'],
+      ),
     })
 
     await shutdown(state, bucketDependencies, dependencies.context)
@@ -2371,8 +2371,7 @@ describe('handleRepositoryListSuccess', () => {
     state.repositories.set('repo1', repoState)
 
     const repoDeps = {
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      spawn: (() => {}) as unknown as BucketDependencies['spawn'],
+      spawn: asTestType<BucketDependencies['spawn']>(() => {}),
       run: async () => {},
       fileSystem: dependencies.fileSystem,
       sleep: async () => {},
@@ -2418,8 +2417,7 @@ describe('handleRepositoryListSuccess', () => {
     state.repositories.set('repo1', repoState)
 
     const repoDeps = {
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      spawn: (() => {}) as unknown as BucketDependencies['spawn'],
+      spawn: asTestType<BucketDependencies['spawn']>(() => {}),
       run: async () => {},
       fileSystem: dependencies.fileSystem,
       sleep: async () => {},
@@ -2464,8 +2462,7 @@ describe('handleRepositoryListSuccess', () => {
     state.repositories.set('repo1', repoState)
 
     const repoDeps = {
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      spawn: (() => {}) as unknown as BucketDependencies['spawn'],
+      spawn: asTestType<BucketDependencies['spawn']>(() => {}),
       run: async () => {},
       fileSystem: dependencies.fileSystem,
       sleep: async () => {},

@@ -6,6 +6,8 @@
  * See .dust/principles/stubs-over-mocks.md for the rationale.
  */
 
+import type { ChildProcess, spawn } from 'node:child_process'
+import type { createInterface } from 'node:readline'
 import type { AgentSessionEvent } from '../agent-events'
 import type {
   CommandContext,
@@ -142,6 +144,59 @@ export function restoreEnv(): void {
     }
   }
   originalEnvValues.clear()
+}
+
+/**
+ * Typed process.stdout.isTTY seam for tests.
+ * Uses defineProperty to avoid unsafe casts when toggling TTY state.
+ */
+export function stubStdoutIsTTY(value: boolean | undefined): void {
+  Object.defineProperty(process.stdout, 'isTTY', {
+    value,
+    configurable: true,
+  })
+}
+
+/**
+ * Typed test seam for process-spawn dependency injection.
+ */
+export function asSpawnStub(stub: unknown): typeof spawn {
+  return stub as unknown as typeof spawn
+}
+
+/**
+ * Typed test seam for readline.createInterface dependency injection.
+ */
+export function asCreateInterfaceStub(stub: unknown): typeof createInterface {
+  return stub as unknown as typeof createInterface
+}
+
+/**
+ * Typed test seam for ChildProcess instances.
+ */
+export function asChildProcessStub(stub: unknown): ChildProcess {
+  return stub as unknown as ChildProcess
+}
+
+/**
+ * Typed test seam for setInterval replacement.
+ */
+export function asSetIntervalStub(stub: unknown): typeof setInterval {
+  return stub as unknown as typeof setInterval
+}
+
+/**
+ * Typed test seam for clearInterval replacement.
+ */
+export function asClearIntervalStub(stub: unknown): typeof clearInterval {
+  return stub as unknown as typeof clearInterval
+}
+
+/**
+ * Generic typed seam for test-only interop boundaries.
+ */
+export function asTestType<T>(value: unknown): T {
+  return value as T
 }
 
 type FetchStub = (...arguments_: Parameters<typeof fetch>) => Promise<Response>

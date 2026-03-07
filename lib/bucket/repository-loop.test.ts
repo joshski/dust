@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from 'vitest'
 import type { AgentSessionEvent } from '../agent-events'
 import type { RunnerDependencies } from '../claude/run'
 import type { RunnerDependencies as CodexRunnerDependencies } from '../codex/run'
-import { restoreEnv, stubEnv } from '../test/test-utilities'
+import { asTestType, restoreEnv, stubEnv } from '../test/test-utilities'
 import type { SendEventFn } from './events'
 import { createLogBuffer, getLogLines } from './log-buffer'
 import type { RepositoryDependencies, RepositoryState } from './repository'
@@ -345,8 +345,7 @@ describe('createCodexBufferRun', () => {
     }
     const mockDeps = {} as CodexRunnerDependencies
     const bufferRun = createCodexBufferRun(
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      mockRun as unknown as typeof import('../codex/run').run,
+      mockRun as typeof import('../codex/run').run,
       mockDeps
     )
 
@@ -787,7 +786,7 @@ describe('runRepositoryLoop', () => {
 
     // Spawn returns a proc that exits with code 1 (failed git pull)
     // This triggers the run() call path where agentName is observable
-    const failingPullSpawn = (() => {
+    const failingPullSpawn = asTestType<RepositoryDependencies['spawn']>(() => {
       const proc = {
         on(event: string, listener: (arg: unknown) => void) {
           if (event === 'close') setTimeout(() => listener(1), 0)
@@ -797,8 +796,7 @@ describe('runRepositoryLoop', () => {
         stderr: { on: () => {} },
       }
       return proc
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-    }) as unknown as RepositoryDependencies['spawn']
+    })
 
     const repoDeps: RepositoryDependencies = {
       spawn: failingPullSpawn,
@@ -848,34 +846,35 @@ describe('runRepositoryLoop', () => {
     let dockerBuildCalled = false
 
     const repoDeps: RepositoryDependencies = {
-      spawn: ((cmd: string, spawnArgs: string[]) => {
-        if (cmd === 'docker' && spawnArgs[0] === '--version') {
-          const proc = {
-            on(event: string, listener: (code: number) => void) {
-              if (event === 'close') setTimeout(() => listener(0), 0)
-              return proc
-            },
-            stdout: { on: () => {} },
-            stderr: { on: () => {} },
+      spawn: asTestType<RepositoryDependencies['spawn']>(
+        (cmd: string, spawnArgs: string[]) => {
+          if (cmd === 'docker' && spawnArgs[0] === '--version') {
+            const proc = {
+              on(event: string, listener: (code: number) => void) {
+                if (event === 'close') setTimeout(() => listener(0), 0)
+                return proc
+              },
+              stdout: { on: () => {} },
+              stderr: { on: () => {} },
+            }
+            return proc
           }
-          return proc
-        }
-        if (cmd === 'docker' && spawnArgs[0] === 'build') {
-          dockerBuildCalled = true
-          const proc = {
-            on(event: string, listener: (code: number) => void) {
-              if (event === 'close') setTimeout(() => listener(0), 0)
-              return proc
-            },
-            stdout: { on: () => {} },
-            stderr: { on: () => {} },
+          if (cmd === 'docker' && spawnArgs[0] === 'build') {
+            dockerBuildCalled = true
+            const proc = {
+              on(event: string, listener: (code: number) => void) {
+                if (event === 'close') setTimeout(() => listener(0), 0)
+                return proc
+              },
+              stdout: { on: () => {} },
+              stderr: { on: () => {} },
+            }
+            return proc
           }
-          return proc
+          // git pull / other spawns - throw to stop the loop
+          throw new Error('spawn failure')
         }
-        // git pull / other spawns - throw to stop the loop
-        throw new Error('spawn failure')
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      }) as unknown as RepositoryDependencies['spawn'],
+      ),
       run: async () => {},
       fileSystem: {
         exists: () => false,
@@ -919,32 +918,33 @@ describe('runRepositoryLoop', () => {
     const repoState = createTestRepoState()
 
     const repoDeps: RepositoryDependencies = {
-      spawn: ((cmd: string, spawnArgs: string[]) => {
-        if (cmd === 'docker' && spawnArgs[0] === '--version') {
-          const proc = {
-            on(event: string, listener: (code: number) => void) {
-              if (event === 'close') setTimeout(() => listener(0), 0)
-              return proc
-            },
-            stdout: { on: () => {} },
-            stderr: { on: () => {} },
+      spawn: asTestType<RepositoryDependencies['spawn']>(
+        (cmd: string, spawnArgs: string[]) => {
+          if (cmd === 'docker' && spawnArgs[0] === '--version') {
+            const proc = {
+              on(event: string, listener: (code: number) => void) {
+                if (event === 'close') setTimeout(() => listener(0), 0)
+                return proc
+              },
+              stdout: { on: () => {} },
+              stderr: { on: () => {} },
+            }
+            return proc
           }
-          return proc
-        }
-        if (cmd === 'docker' && spawnArgs[0] === 'build') {
-          const proc = {
-            on(event: string, listener: (code: number) => void) {
-              if (event === 'close') setTimeout(() => listener(0), 0)
-              return proc
-            },
-            stdout: { on: () => {} },
-            stderr: { on: () => {} },
+          if (cmd === 'docker' && spawnArgs[0] === 'build') {
+            const proc = {
+              on(event: string, listener: (code: number) => void) {
+                if (event === 'close') setTimeout(() => listener(0), 0)
+                return proc
+              },
+              stdout: { on: () => {} },
+              stderr: { on: () => {} },
+            }
+            return proc
           }
-          return proc
+          throw new Error('spawn failure')
         }
-        throw new Error('spawn failure')
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      }) as unknown as RepositoryDependencies['spawn'],
+      ),
       run: async () => {},
       fileSystem: {
         exists: () => false,
@@ -979,21 +979,22 @@ describe('runRepositoryLoop', () => {
     let sleepCallCount = 0
 
     const repoDeps: RepositoryDependencies = {
-      spawn: ((cmd: string, spawnArgs: string[]) => {
-        if (cmd === 'docker' && spawnArgs[0] === '--version') {
-          const proc = {
-            on(event: string, listener: (code: number) => void) {
-              if (event === 'close') setTimeout(() => listener(1), 0)
-              return proc
-            },
-            stdout: { on: () => {} },
-            stderr: { on: () => {} },
+      spawn: asTestType<RepositoryDependencies['spawn']>(
+        (cmd: string, spawnArgs: string[]) => {
+          if (cmd === 'docker' && spawnArgs[0] === '--version') {
+            const proc = {
+              on(event: string, listener: (code: number) => void) {
+                if (event === 'close') setTimeout(() => listener(1), 0)
+                return proc
+              },
+              stdout: { on: () => {} },
+              stderr: { on: () => {} },
+            }
+            return proc
           }
-          return proc
+          throw new Error('spawn failure')
         }
-        throw new Error('spawn failure')
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      }) as unknown as RepositoryDependencies['spawn'],
+      ),
       run: async () => {},
       fileSystem: {
         exists: () => false,
@@ -1033,32 +1034,33 @@ describe('runRepositoryLoop', () => {
     let sleepCallCount = 0
 
     const repoDeps: RepositoryDependencies = {
-      spawn: ((cmd: string, spawnArgs: string[]) => {
-        if (cmd === 'docker' && spawnArgs[0] === '--version') {
-          const proc = {
-            on(event: string, listener: (code: number) => void) {
-              if (event === 'close') setTimeout(() => listener(0), 0)
-              return proc
-            },
-            stdout: { on: () => {} },
-            stderr: { on: () => {} },
+      spawn: asTestType<RepositoryDependencies['spawn']>(
+        (cmd: string, spawnArgs: string[]) => {
+          if (cmd === 'docker' && spawnArgs[0] === '--version') {
+            const proc = {
+              on(event: string, listener: (code: number) => void) {
+                if (event === 'close') setTimeout(() => listener(0), 0)
+                return proc
+              },
+              stdout: { on: () => {} },
+              stderr: { on: () => {} },
+            }
+            return proc
           }
-          return proc
-        }
-        if (cmd === 'docker' && spawnArgs[0] === 'build') {
-          const proc = {
-            on(event: string, listener: (code: number) => void) {
-              if (event === 'close') setTimeout(() => listener(1), 0)
-              return proc
-            },
-            stdout: { on: () => {} },
-            stderr: { on: () => {} },
+          if (cmd === 'docker' && spawnArgs[0] === 'build') {
+            const proc = {
+              on(event: string, listener: (code: number) => void) {
+                if (event === 'close') setTimeout(() => listener(1), 0)
+                return proc
+              },
+              stdout: { on: () => {} },
+              stderr: { on: () => {} },
+            }
+            return proc
           }
-          return proc
+          throw new Error('spawn failure')
         }
-        throw new Error('spawn failure')
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      }) as unknown as RepositoryDependencies['spawn'],
+      ),
       run: async () => {},
       fileSystem: {
         exists: () => false,

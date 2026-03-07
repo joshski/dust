@@ -1,6 +1,6 @@
-import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
+import { asChildProcessStub } from '../test/test-utilities'
 import {
   createAuthHeader,
   extractGitEndpoint,
@@ -41,9 +41,7 @@ function createMockSpawn(
         proc.emit('close', exitCode)
       }
     }, 0)
-
-    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-    return proc as unknown as ChildProcess
+    return asChildProcessStub(proc)
   }) as GitCredentialProxyDependencies['spawn']
 }
 

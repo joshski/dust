@@ -1,7 +1,7 @@
-import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import {
+  asChildProcessStub,
   createContextEmulator,
   createFileSystemEmulator,
   restoreEnv,
@@ -33,8 +33,7 @@ function createMockChildProcess(exitCode = 0) {
   proc.stdout = null
   proc.stderr = new EventEmitter()
   setTimeout(() => proc.emit('close', exitCode), 0)
-  // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-  return proc as unknown as ChildProcess
+  return asChildProcessStub(proc)
 }
 
 function createMockSpawn(pullExitCode = 0) {

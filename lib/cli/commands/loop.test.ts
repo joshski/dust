@@ -1,8 +1,8 @@
-import type { ChildProcess } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import type { AgentSessionEvent, EventMessage } from '../../agent-events'
 import {
+  asChildProcessStub,
   createContextEmulator,
   createFileSystemEmulator,
   createTestAgentSessionStartedEvent,
@@ -49,8 +49,7 @@ function createMockChildProcess(exitCode = 0) {
   proc.stdout = null
   proc.stderr = new EventEmitter()
   setTimeout(() => proc.emit('close', exitCode), 0)
-  // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-  return proc as unknown as ChildProcess
+  return asChildProcessStub(proc)
 }
 
 function createMockSpawn(pullExitCode = 0) {
@@ -322,8 +321,7 @@ describe('gitPull', () => {
         proc.stderr.emit('data', Buffer.from('fatal: not a git repository'))
         proc.emit('close', 128)
       }, 0)
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      return proc as unknown as ChildProcess
+      return asChildProcessStub(proc)
     }) as LoopDependencies['spawn']
     const result = await gitPull('/project', spawn)
     expect(result.success).toBe(false)
@@ -350,8 +348,7 @@ describe('gitPull', () => {
       proc.stdout = null
       proc.stderr = new EventEmitter()
       setTimeout(() => proc.emit('error', new Error('spawn ENOENT')), 0)
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      return proc as unknown as ChildProcess
+      return asChildProcessStub(proc)
     }) as LoopDependencies['spawn']
     const result = await gitPull('/project', spawn)
     expect(result.success).toBe(false)
@@ -413,8 +410,7 @@ describe('runOneIteration', () => {
           proc.stderr.emit('data', Buffer.from('merge conflict'))
           proc.emit('close', 1)
         }, 0)
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-        return proc as unknown as ChildProcess
+        return asChildProcessStub(proc)
       }) as LoopDependencies['spawn'],
       run: async prompt => {
         claudePrompt = prompt
@@ -468,8 +464,7 @@ describe('runOneIteration', () => {
           proc.stderr.emit('data', Buffer.from('conflict'))
           proc.emit('close', 1)
         }, 0)
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-        return proc as unknown as ChildProcess
+        return asChildProcessStub(proc)
       }) as LoopDependencies['spawn'],
       run: async () => {
         throw new Error('Claude crashed')
@@ -516,8 +511,7 @@ describe('runOneIteration', () => {
           proc.stderr.emit('data', Buffer.from('conflict'))
           proc.emit('close', 1)
         }, 0)
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-        return proc as unknown as ChildProcess
+        return asChildProcessStub(proc)
       }) as LoopDependencies['spawn'],
       run: async () => {
         throw 'string error'
@@ -979,8 +973,7 @@ describe('runOneIteration', () => {
           proc.stderr.emit('data', Buffer.from('merge conflict'))
           proc.emit('close', 1)
         }, 0)
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-        return proc as unknown as ChildProcess
+        return asChildProcessStub(proc)
       }) as LoopDependencies['spawn'],
       run: async () => {},
     })
@@ -1517,8 +1510,7 @@ describe('loopClaude', () => {
           proc.stderr.emit('data', Buffer.from('no remote configured'))
           proc.emit('close', 1)
         }, 0)
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-        return proc as unknown as ChildProcess
+        return asChildProcessStub(proc)
       }) as LoopDependencies['spawn'],
       run: async () => {},
     })
@@ -1949,8 +1941,7 @@ describe('loopClaude', () => {
             )
             proc.emit('close', 1)
           }, 0)
-          // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-          return proc as unknown as ChildProcess
+          return asChildProcessStub(proc)
         }) as LoopDependencies['spawn'],
       },
     })

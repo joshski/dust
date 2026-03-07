@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { restoreEnv, stubEnv } from '../test/test-utilities'
+import { restoreEnv, stubEnv, stubStdoutIsTTY } from '../test/test-utilities'
 import { getColors, shouldDisableColors } from './colors'
 
 describe('colors', () => {
@@ -14,15 +14,12 @@ describe('colors', () => {
   }
 
   beforeEach(() => {
-    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-    ;(process.stdout as unknown as { isTTY: boolean }).isTTY = true
+    stubStdoutIsTTY(true)
   })
 
   afterEach(() => {
     restoreEnv()
-    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-    ;(process.stdout as unknown as { isTTY: boolean | undefined }).isTTY =
-      originalIsTTY
+    stubStdoutIsTTY(originalIsTTY)
   })
 
   describe('shouldDisableColors', () => {
@@ -51,16 +48,14 @@ describe('colors', () => {
 
     it('returns true when stdout is not a TTY', () => {
       withColorFriendlyEnv(() => {
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-        ;(process.stdout as unknown as { isTTY: boolean }).isTTY = false
+        stubStdoutIsTTY(false)
         expect(shouldDisableColors()).toBe(true)
       })
     })
 
     it('returns true when stdout.isTTY is undefined', () => {
       withColorFriendlyEnv(() => {
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-        ;(process.stdout as unknown as { isTTY: undefined }).isTTY = undefined
+        stubStdoutIsTTY(undefined)
         expect(shouldDisableColors()).toBe(true)
       })
     })
@@ -99,8 +94,7 @@ describe('colors', () => {
 
     it('returns empty strings when stdout is not a TTY', () => {
       withColorFriendlyEnv(() => {
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-        ;(process.stdout as unknown as { isTTY: boolean }).isTTY = false
+        stubStdoutIsTTY(false)
         const colors = getColors()
         expect(colors.reset).toBe('')
         expect(colors.bold).toBe('')
