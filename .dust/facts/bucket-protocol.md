@@ -41,7 +41,7 @@ Exception: Close code `4000` indicates the server replaced this connection with 
 
 ## Server-to-Client Messages
 
-Messages are JSON objects with a `type` field. Three message types are defined:
+Messages are JSON objects with a `type` field. Three server-to-client message types and one response message type are defined:
 
 ### repository-list
 
@@ -115,11 +115,27 @@ All fields are required. The `tools` array may be empty if no server-defined too
 
 On receiving this message, clients store the tool definitions for use in agent prompts. The server maintains backwards compatibility; older clients that don't recognize this message type will ignore it.
 
-## Client-to-Server Events
+### tool-execution-result
 
-Clients send events to the server using the [Dust Event Protocol](dust-event-protocol.md). Events are sent as JSON over the same WebSocket connection.
+Sent in response to a client's `tool-execution-request` (see below).
 
-The `EventMessage` envelope includes:
+```typescript
+interface ToolExecutionResultMessage {
+  type: 'tool-execution-result'
+  requestId: string              // Matches the client's request
+  status: 'success' | 'tool-not-found' | 'error'
+  output?: string                // Tool output on success
+  error?: string                 // Error message on failure
+}
+```
+
+## Client-to-Server Messages
+
+Clients send three categories of messages over the WebSocket:
+
+### Agent session events
+
+Events following the [Dust Event Protocol](dust-event-protocol.md) `EventMessage` envelope:
 
 - `sequence` — Monotonically increasing counter
 - `timestamp` — ISO 8601 timestamp
@@ -128,14 +144,34 @@ The `EventMessage` envelope includes:
 - `agentSessionId` — UUID for the current agent run (present after `agent-session-started`)
 - `event` — The event payload
 
-Event types sent by clients:
-
 | Event Type | When Sent |
 |------------|-----------|
 | `agent-session-started` | Agent begins working on a task |
 | `agent-session-ended` | Agent completes or fails |
 | `agent-session-activity` | Heartbeat during agent work |
 | `agent-event` | Raw agent streaming events (with `provider` field) |
+
+### Command events (forwarded from subprocesses)
+
+When the agent runs dust subcommands (e.g. `dust check`, `dust next`), those subprocesses POST `CommandEventMessage` payloads to the local command events proxy via `DUST_PROXY_PORT`. The proxy forwards these as-is over the WebSocket. These have a `CommandEventMessage` envelope (`sequence`, `timestamp`, `event`) — distinct from the `EventMessage` envelope above.
+
+Command event types include: `check-started`, `check-passed`, `check-failed`, `tasks-listed`, `facts-listed`, `ideas-listed`, `principles-listed`.
+
+### Tool execution requests
+
+Sent when the agent invokes a server-defined tool via `dust bucket tool <name>`.
+
+```typescript
+interface ToolExecutionRequestMessage {
+  type: 'tool-execution-request'
+  requestId: string       // UUID for correlating the response
+  toolName: string        // Tool identifier from tool-definitions
+  arguments: string[]     // Positional arguments
+  repositoryId: string    // Repository context
+}
+```
+
+The client waits up to 30 seconds for a matching `tool-execution-result` response. The request flows: `dust bucket tool` subprocess → HTTP POST to proxy `/tools/:name` → proxy sends over WebSocket → server responds with `tool-execution-result` → proxy returns HTTP response to subprocess.
 
 ## Expected Server Behavior
 
@@ -162,7 +198,12 @@ The `hasTask` field in `repository-list` provides initial state. Subsequent task
 
 Servers receive client events for monitoring, logging, and UI updates. Event handling is implementation-specific. The `agent-session-activity` event serves as a heartbeat and need not be stored.
 
+### Tool Execution
+
+When a client sends a `tool-execution-request`, the server should execute the tool and respond with a `tool-execution-result` on the same WebSocket connection, using the same `requestId`. Clients time out after 30 seconds if no response is received.
+
 ## Related Documentation
 
-- [Dust Event Protocol](dust-event-protocol.md) — Wire format for client-to-server events
+- [Dust Event Protocol](dust-event-protocol.md) — Wire format for agent session events
+- [Command Events Transport](command-events-transport.md) — Local proxy for subprocess command events and tool execution
 - [Loop Command](loop-command.md) — The agent loop that runs within each repository
