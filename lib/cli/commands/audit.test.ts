@@ -219,7 +219,7 @@ describe('audit command', () => {
   test('loadStockAudits loads audits from markdown files', () => {
     const audits = loadStockAudits()
     expect(audits).toBeInstanceOf(Array)
-    expect(audits.length).toBe(20)
+    expect(audits.length).toBe(21)
 
     const names = audits.map(a => a.name)
     expect(names).toContain('agent-developer-experience')
@@ -234,6 +234,7 @@ describe('audit command', () => {
     expect(names).toContain('ideas-from-principles')
     expect(names).toContain('naming-consistency')
     expect(names).toContain('performance-review')
+    expect(names).toContain('primitive-obsession')
     expect(names).toContain('refactoring-opportunities')
     expect(names).toContain('security-review')
     expect(names).toContain('stale-ideas')
@@ -264,6 +265,7 @@ describe('audit command', () => {
       'error-handling',
       'global-state',
       'naming-consistency',
+      'primitive-obsession',
       'refactoring-opportunities',
       'slow-tests',
       'ubiquitous-language',
@@ -312,6 +314,33 @@ describe('audit command', () => {
     )
     expect(namingConsistencyAudit?.template).toContain(
       'Canonical artifact-list ordering or shape checks'
+    )
+  })
+
+  test('primitive-obsession audit enforces existing-type drift high-confidence contract', () => {
+    const primitiveObsessionAudit = loadStockAudits().find(
+      audit => audit.name === 'primitive-obsession'
+    )
+
+    expect(primitiveObsessionAudit).toBeDefined()
+    expect(primitiveObsessionAudit?.template).toContain(
+      'Focus only on existing-type drift for domain string concepts'
+    )
+    expect(primitiveObsessionAudit?.template).toContain('`ArtifactType`')
+    expect(primitiveObsessionAudit?.template).toContain(
+      '**Locations** - File paths and line numbers where primitive literals are used'
+    )
+    expect(primitiveObsessionAudit?.template).toContain(
+      '**Primitive pattern** - The free-form literal pattern currently used'
+    )
+    expect(primitiveObsessionAudit?.template).toContain(
+      '**Existing domain type opportunity** - The canonical existing type that should be used instead'
+    )
+    expect(primitiveObsessionAudit?.template).toContain(
+      '**Incremental migration path** - A safe sequence of steps to migrate call sites with minimal risk'
+    )
+    expect(primitiveObsessionAudit?.template).toContain(
+      'Avoided speculative introduction of entirely new types'
     )
   })
 })

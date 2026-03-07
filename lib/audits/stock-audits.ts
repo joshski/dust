@@ -806,6 +806,65 @@ function namingConsistency(): string {
   `
 }
 
+function primitiveObsession(): string {
+  return dedent`
+    # Primitive Obsession
+
+    Review high-confidence primitive obsession where call sites use free-form domain string literals instead of existing canonical types.
+
+    ${ideasHint}
+
+    ## Scope
+
+    Focus only on existing-type drift for domain string concepts:
+    - Call sites using free-form string literals where a canonical domain type already exists
+    - Cases where the existing domain type is bypassed (for example artifact directory names that should use \`ArtifactType\`)
+    - High-confidence matches where intent is clear and the existing type is directly applicable
+
+    Out of scope:
+    - Proposing entirely new domain types in this slice
+    - Numeric magic values (covered by a later slice)
+    - Ambiguous literals where no canonical existing type can be identified with high confidence
+
+    ## Analysis Steps
+
+    1. Identify domain string concepts with existing canonical types (enums, unions, branded strings, or shared constants)
+    2. Search for free-form string literals that represent those same concepts at call sites
+    3. Keep only high-confidence drift where the literal clearly maps to an existing canonical type
+    4. Group duplicate call-site drift by concept to avoid repetitive findings
+    5. Preserve Functional Core, Imperative Shell boundaries in recommendations (pure matching/analysis logic separated from IO shell)
+    6. Recommend incremental migrations only; avoid speculative introduction of brand-new types
+
+    ## Output
+
+    For each finding, provide:
+    - **Locations** - File paths and line numbers where primitive literals are used
+    - **Primitive pattern** - The free-form literal pattern currently used
+    - **Existing domain type opportunity** - The canonical existing type that should be used instead
+    - **Incremental migration path** - A safe sequence of steps to migrate call sites with minimal risk
+
+    ## Principles
+
+    - [Functional Core, Imperative Shell](../principles/functional-core-imperative-shell.md)
+    - [Small Units](../principles/small-units.md)
+    - [Make the Change Easy](../principles/make-the-change-easy.md)
+    - [Naming Matters](../principles/naming-matters.md)
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - [ ] Reviewed high-confidence existing-type drift for domain string literals
+    - [ ] Constrained findings to cases where canonical domain types already exist
+    - [ ] Documented each finding with locations, primitive pattern, existing domain type opportunity, and incremental migration path
+    - [ ] Preserved Functional Core, Imperative Shell boundaries in recommendations
+    - [ ] Avoided speculative introduction of entirely new types
+    - [ ] Proposed ideas for primitive obsession improvements identified
+  `
+}
+
 function ubiquitousLanguage(): string {
   return dedent`
     # Ubiquitous Language
@@ -943,6 +1002,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'ideas-from-principles': ideasFromPrinciples,
   'naming-consistency': namingConsistency,
   'performance-review': performanceReview,
+  'primitive-obsession': primitiveObsession,
   'refactoring-opportunities': refactoringOpportunities,
   'repository-context': repositoryContext,
   'security-review': securityReview,

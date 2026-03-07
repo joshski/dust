@@ -22,7 +22,7 @@ Guardrails:
 
 ## Blocked By
 
-- [Primitive Obsession Audit: Existing-Type Drift Slice](./primitive-obsession-audit-existing-type-drift-slice.md)
+(none)
 
 ## Definition of Done
 
