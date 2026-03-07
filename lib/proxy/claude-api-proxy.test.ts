@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { restoreEnv, stubEnv } from '../test/test-utilities'
+import { createFetchStub, restoreEnv, stubEnv } from '../test/test-utilities'
 import {
   type ClaudeApiProxyDependencies,
   isTokenExpired,
@@ -7,10 +7,9 @@ import {
 } from './claude-api-proxy'
 
 function createMockFetch(): typeof fetch {
-  return (() => {
+  return createFetchStub(async () => {
     throw new Error('fetch not implemented in test')
-    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-  }) as unknown as typeof fetch
+  })
 }
 
 function createMockDependencies(

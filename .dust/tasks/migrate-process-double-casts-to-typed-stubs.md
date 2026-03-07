@@ -16,7 +16,7 @@ Refactor process-execution tests (`spawn`, `ChildProcess`, `readline`) to use ty
 
 ## Blocked By
 
-- [Migrate Network Double Casts To Typed Stubs](./migrate-network-double-casts-to-typed-stubs.md)
+(none)
 
 ## Definition of Done
 

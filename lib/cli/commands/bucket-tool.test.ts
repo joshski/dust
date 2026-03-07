@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import type { ToolDefinition } from '../../bucket/server-messages'
 import {
   createContextEmulator,
+  createFetchStub,
   createFileSystemEmulator,
 } from '../../test/test-utilities'
 import type { CommandDependencies } from '../types'
@@ -115,8 +116,7 @@ describe('bucketTool', () => {
 
     const result = await bucketTool(
       commandDependencies,
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      createToolDependencies(mockFetch as unknown as typeof fetch),
+      createToolDependencies(createFetchStub(mockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -138,8 +138,7 @@ describe('bucketTool', () => {
 
     const result = await bucketTool(
       commandDependencies,
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      createToolDependencies(mockFetch as unknown as typeof fetch),
+      createToolDependencies(createFetchStub(mockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -162,8 +161,7 @@ describe('bucketTool', () => {
 
     const result = await bucketTool(
       commandDependencies,
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      createToolDependencies(mockFetch as unknown as typeof fetch),
+      createToolDependencies(createFetchStub(mockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -186,8 +184,7 @@ describe('bucketTool', () => {
 
     const result = await bucketTool(
       commandDependencies,
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      createToolDependencies(mockFetch as unknown as typeof fetch),
+      createToolDependencies(createFetchStub(mockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -207,8 +204,7 @@ describe('bucketTool', () => {
 
     const result = await bucketTool(
       commandDependencies,
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      createToolDependencies(mockFetch as unknown as typeof fetch),
+      createToolDependencies(createFetchStub(mockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -232,8 +228,7 @@ describe('bucketTool', () => {
 
     const result = await bucketTool(
       commandDependencies,
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      createToolDependencies(mockFetch as unknown as typeof fetch),
+      createToolDependencies(createFetchStub(mockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -256,8 +251,7 @@ describe('bucketTool', () => {
 
     const result = await bucketTool(
       commandDependencies,
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      createToolDependencies(mockFetch as unknown as typeof fetch),
+      createToolDependencies(createFetchStub(mockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -303,8 +297,7 @@ describe('bucketTool', () => {
 
     const result = await bucketTool(
       commandDependencies,
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      createToolDependencies(mockFetch as unknown as typeof fetch),
+      createToolDependencies(createFetchStub(mockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -348,8 +341,7 @@ describe('bucketTool', () => {
 
     const result = await bucketTool(
       commandDependencies,
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      createToolDependencies(mockFetch as unknown as typeof fetch),
+      createToolDependencies(createFetchStub(mockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -380,8 +372,7 @@ describe('bucketTool', () => {
 
     const result = await bucketTool(
       commandDependencies,
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      createToolDependencies(mockFetch as unknown as typeof fetch),
+      createToolDependencies(createFetchStub(mockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -412,8 +403,7 @@ describe('bucketTool', () => {
 
     const result = await bucketTool(
       commandDependencies,
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      createToolDependencies(mockFetch as unknown as typeof fetch),
+      createToolDependencies(createFetchStub(mockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -453,8 +443,7 @@ describe('bucketTool', () => {
 
     const result = await bucketTool(
       commandDependencies,
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      createToolDependencies(mockFetch as unknown as typeof fetch),
+      createToolDependencies(createFetchStub(mockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -490,8 +479,7 @@ describe('bucketTool', () => {
 
     const result = await bucketTool(
       commandDependencies,
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      createToolDependencies(mockFetch as unknown as typeof fetch),
+      createToolDependencies(createFetchStub(mockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -521,8 +509,7 @@ describe('bucketTool', () => {
 
     const result = await bucketTool(
       commandDependencies,
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      createToolDependencies(mockFetch as unknown as typeof fetch),
+      createToolDependencies(createFetchStub(mockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',

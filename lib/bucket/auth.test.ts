@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from 'vitest'
 import {
+  createFetchStub,
   createFileSystemEmulator,
   restoreEnv,
   stubEnv,
@@ -128,11 +129,12 @@ describe('defaultExchangeCode', () => {
 
   test('exchanges code for token', async () => {
     stubEnv('DUST_BUCKET_HOST', 'http://localhost:9999')
-    const stubFetch = (async () =>
-      new Response(JSON.stringify({ token: 'exchanged-token' }), {
-        status: 200,
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      })) as unknown as typeof fetch
+    const stubFetch = createFetchStub(
+      async () =>
+        new Response(JSON.stringify({ token: 'exchanged-token' }), {
+          status: 200,
+        })
+    )
 
     const token = await defaultExchangeCode('my-code', stubFetch)
     expect(token).toBe('exchanged-token')
@@ -140,9 +142,9 @@ describe('defaultExchangeCode', () => {
 
   test('throws when response is not ok', async () => {
     stubEnv('DUST_BUCKET_HOST', 'http://localhost:9999')
-    const stubFetch = (async () =>
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      new Response('error', { status: 401 })) as unknown as typeof fetch
+    const stubFetch = createFetchStub(
+      async () => new Response('error', { status: 401 })
+    )
 
     await expect(defaultExchangeCode('bad-code', stubFetch)).rejects.toThrow(
       'Token exchange failed: 401'
@@ -151,11 +153,12 @@ describe('defaultExchangeCode', () => {
 
   test('throws when response has no token string', async () => {
     stubEnv('DUST_BUCKET_HOST', 'http://localhost:9999')
-    const stubFetch = (async () =>
-      new Response(JSON.stringify({ token: 42 }), {
-        status: 200,
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      })) as unknown as typeof fetch
+    const stubFetch = createFetchStub(
+      async () =>
+        new Response(JSON.stringify({ token: 42 }), {
+          status: 200,
+        })
+    )
 
     await expect(defaultExchangeCode('my-code', stubFetch)).rejects.toThrow(
       'Invalid token exchange response'
@@ -311,11 +314,12 @@ describe('authenticate', () => {
 
   test('uses defaultExchangeCode when exchangeCode not provided', async () => {
     stubEnv('DUST_BUCKET_HOST', 'http://localhost:9999')
-    const stubFetch = (async () =>
-      new Response(JSON.stringify({ token: 'default-exchange-token' }), {
-        status: 200,
-        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      })) as unknown as typeof fetch
+    const stubFetch = createFetchStub(
+      async () =>
+        new Response(JSON.stringify({ token: 'default-exchange-token' }), {
+          status: 200,
+        })
+    )
 
     const authDependencies: AuthDependencies = {
       createServer: handler => {

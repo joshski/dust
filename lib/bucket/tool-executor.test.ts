@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { stubEnv } from '../test/test-utilities'
+import { createFetchStub, stubEnv } from '../test/test-utilities'
 import type { ToolDefinition } from './server-messages'
 import {
   buildToolUrl,
@@ -18,8 +18,7 @@ function createMockDependencies(
   return {
     readFileBytes: async () => new Uint8Array([1, 2, 3]),
     fileExists: async () => true,
-    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-    fetch: mockFetch as unknown as typeof fetch,
+    fetch: createFetchStub(mockFetch),
     ...overrides,
   }
 }
@@ -195,8 +194,7 @@ describe('executeTool', () => {
       return new Response(JSON.stringify({ url: 'https://result.com/asset' }))
     }
     const dependencies = createMockDependencies({
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      fetch: mockFetch as unknown as typeof fetch,
+      fetch: createFetchStub(mockFetch),
     })
 
     await stubEnv('DUST_BUCKET_HOST', undefined, async () => {
@@ -224,8 +222,7 @@ describe('executeTool', () => {
         statusText: 'Payload Too Large',
       })
     const dependencies = createMockDependencies({
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      fetch: mockFetch as unknown as typeof fetch,
+      fetch: createFetchStub(mockFetch),
     })
 
     const result = await executeTool(
@@ -246,8 +243,7 @@ describe('executeTool', () => {
       throw new Error('Network timeout')
     }
     const dependencies = createMockDependencies({
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      fetch: mockFetch as unknown as typeof fetch,
+      fetch: createFetchStub(mockFetch),
     })
 
     const result = await executeTool(
@@ -266,8 +262,7 @@ describe('executeTool', () => {
     const mockFetch = async () =>
       new Response(JSON.stringify({ status: 'ok', count: 5 }))
     const dependencies = createMockDependencies({
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      fetch: mockFetch as unknown as typeof fetch,
+      fetch: createFetchStub(mockFetch),
     })
 
     const result = await executeTool(
@@ -286,8 +281,7 @@ describe('executeTool', () => {
   test('handles non-JSON responses', async () => {
     const mockFetch = async () => new Response('Plain text response')
     const dependencies = createMockDependencies({
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      fetch: mockFetch as unknown as typeof fetch,
+      fetch: createFetchStub(mockFetch),
     })
 
     const result = await executeTool(
@@ -316,8 +310,7 @@ describe('executeTool', () => {
       return new Response(JSON.stringify({ status: 'ok' }))
     }
     const dependencies = createMockDependencies({
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      fetch: mockFetch as unknown as typeof fetch,
+      fetch: createFetchStub(mockFetch),
     })
 
     const result = await executeTool(
@@ -359,8 +352,7 @@ describe('executeTool', () => {
       return new Response(JSON.stringify({ url: 'https://result.com/ok' }))
     }
     const dependencies = createMockDependencies({
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      fetch: mockFetch as unknown as typeof fetch,
+      fetch: createFetchStub(mockFetch),
     })
 
     await executeTool(
@@ -381,8 +373,7 @@ describe('executeTool', () => {
       return new Response(JSON.stringify({ status: 'ok' }))
     }
     const dependencies = createMockDependencies({
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      fetch: mockFetch as unknown as typeof fetch,
+      fetch: createFetchStub(mockFetch),
     })
 
     await executeTool(
@@ -429,8 +420,7 @@ describe('executeTool', () => {
     const mockFetch = async () =>
       new Response('', { status: 502, statusText: 'Bad Gateway' })
     const dependencies = createMockDependencies({
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      fetch: mockFetch as unknown as typeof fetch,
+      fetch: createFetchStub(mockFetch),
     })
 
     const result = await executeTool(
@@ -474,8 +464,7 @@ describe('executeTool', () => {
       return new Response(JSON.stringify({ status: 'ok' }))
     }
     const dependencies = createMockDependencies({
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      fetch: mockFetch as unknown as typeof fetch,
+      fetch: createFetchStub(mockFetch),
     })
 
     const result = await executeTool(
@@ -517,8 +506,7 @@ describe('executeTool', () => {
     }
     const mockFetch = async () => new Response(JSON.stringify({ status: 'ok' }))
     const dependencies = createMockDependencies({
-      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
-      fetch: mockFetch as unknown as typeof fetch,
+      fetch: createFetchStub(mockFetch),
       fileExists: async () => false, // File doesn't exist, but shouldn't be checked
     })
 

@@ -144,6 +144,19 @@ export function restoreEnv(): void {
   originalEnvValues.clear()
 }
 
+type FetchStub = (...arguments_: Parameters<typeof fetch>) => Promise<Response>
+
+/**
+ * Creates a typed fetch stub for dependency injection in tests.
+ * Keeps tests aligned with fetch's call signature without double-casts.
+ */
+export function createFetchStub(handler: FetchStub): typeof fetch {
+  return Object.assign(
+    (...arguments_: Parameters<typeof fetch>) => handler(...arguments_),
+    { preconnect: fetch.preconnect }
+  )
+}
+
 /**
  * Extended context with captured output lines for assertions
  */

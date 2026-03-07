@@ -177,6 +177,41 @@ export function createAuthFileSystem(
 }
 
 /* v8 ignore start - native wrappers: WebSocket, stdin, signals, resize, stdout */
+function adaptWebSocket(ws: WebSocket): WebSocketLike {
+  const adapter: WebSocketLike = {
+    onopen: null,
+    onclose: null,
+    onerror: null,
+    onmessage: null,
+    close: () => ws.close(),
+    send: (data: string) => ws.send(data),
+    readyState: ws.readyState,
+  }
+
+  ws.addEventListener('open', () => {
+    adapter.readyState = ws.readyState
+    adapter.onopen?.()
+  })
+
+  ws.addEventListener('close', event => {
+    adapter.readyState = ws.readyState
+    adapter.onclose?.({ code: event.code, reason: event.reason })
+  })
+
+  ws.addEventListener('error', event => {
+    const maybeError = (event as { error?: unknown }).error
+    const error =
+      maybeError instanceof Error ? maybeError : new Error('WebSocket error')
+    adapter.onerror?.(error)
+  })
+
+  ws.addEventListener('message', event => {
+    adapter.onmessage?.({ data: String(event.data) })
+  })
+
+  return adapter
+}
+
 function defaultCreateWebSocket(url: string, token: string): WebSocketLike {
   const ws = new WebSocket(url, {
     // @ts-expect-error - Bun's WebSocket accepts headers option
@@ -184,7 +219,7 @@ function defaultCreateWebSocket(url: string, token: string): WebSocketLike {
       Authorization: `Bearer ${token}`,
     },
   })
-  return ws as unknown as WebSocketLike
+  return adaptWebSocket(ws)
 }
 
 function defaultSetupKeypress(onKey: (key: string) => void): () => void {
