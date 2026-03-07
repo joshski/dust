@@ -153,9 +153,9 @@ Events following the [Dust Event Protocol](dust-event-protocol.md) `EventMessage
 
 ### Command events (forwarded from subprocesses)
 
-When the agent runs dust subcommands (e.g. `dust check`, `dust next`), those subprocesses POST `CommandEventMessage` payloads to the local command events proxy via `DUST_PROXY_PORT`. The proxy forwards these as-is over the WebSocket. These have a `CommandEventMessage` envelope (`sequence`, `timestamp`, `event`) — distinct from the `EventMessage` envelope above.
+When the agent runs dust subcommands (e.g. `dust check`, `dust next`), those subprocesses POST `CommandEventMessage` payloads to a per-iteration command events proxy via `DUST_PROXY_PORT`. The proxy wraps each command event in an `EventMessage` envelope with the correct `sessionId`, `repository`, `repoId`, and `agentSessionId`, using a `command-event` wrapper: `{ type: 'command-event', commandEvent: <original event> }`. This makes command events easy to discriminate from agent events.
 
-Command event types include: `check-started`, `check-passed`, `check-failed`, `tasks-listed`, `facts-listed`, `ideas-listed`, `principles-listed`.
+Command event types (inside `commandEvent`) include: `check-started`, `check-passed`, `check-failed`, `tasks-listed`, `facts-listed`, `ideas-listed`, `principles-listed`.
 
 ### Tool execution requests
 

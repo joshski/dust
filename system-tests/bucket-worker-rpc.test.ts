@@ -227,11 +227,19 @@ describe('bucket worker RPC integration', () => {
       // Agent events from the repository loop
       expect(eventTypes).toContain('agent-session-started')
 
-      // Command events forwarded through the proxy from dust check subprocess
-      expect(eventTypes).toContain('check-started')
+      // Command events forwarded through the proxy, wrapped in command-event envelope
+      expect(eventTypes).toContain('command-event')
+      const commandEvents = capturedMessages
+        .filter(m => (m.event as Record<string, unknown>)?.type === 'command-event')
+        .map(
+          m =>
+            ((m.event as Record<string, unknown>).commandEvent as Record<string, unknown>)
+              .type as string
+        )
+      expect(commandEvents).toContain('check-started')
       expect(
-        eventTypes.includes('check-passed') ||
-          eventTypes.includes('check-failed')
+        commandEvents.includes('check-passed') ||
+          commandEvents.includes('check-failed')
       ).toBe(true)
 
       // Auth token was forwarded

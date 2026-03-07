@@ -7,7 +7,7 @@
 
 import type { CommandEvent } from './command-events'
 
-// The 4 agent session event types sent over the wire
+// Agent session event types sent over the wire
 export type AgentSessionEvent =
   | {
       type: 'agent-session-started'
@@ -24,6 +24,7 @@ export type AgentSessionEvent =
   | { type: 'agent-session-ended'; success: boolean; error?: string }
   | { type: 'agent-session-activity' }
   | { type: 'agent-event'; provider: string; rawEvent: Record<string, unknown> }
+  | { type: 'command-event'; commandEvent: CommandEvent }
 
 // Unified wire format for both HTTP and WebSocket paths
 export interface EventMessage {
@@ -36,7 +37,7 @@ export interface EventMessage {
   // At that point we can stop sending `repository` (full name) entirely.
   repoId?: number
   agentSessionId?: string
-  event: AgentSessionEvent | CommandEvent
+  event: AgentSessionEvent
 }
 
 /**
@@ -111,6 +112,7 @@ export function formatAgentEvent(event: AgentSessionEvent): string | null {
         : `🤖 Agent session ended (error: ${event.error})`
     case 'agent-session-activity':
     case 'agent-event':
+    case 'command-event':
       return null
   }
 }

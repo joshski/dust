@@ -463,7 +463,7 @@ export async function runRepositoryLoop(
               sessionId,
               repository: repoName,
               repoId: repoState.repository.id,
-              event: commandEvent.event,
+              event: { type: 'command-event', commandEvent: commandEvent.event },
               agentSessionId: loopState.agentSessionId,
             })
           )
