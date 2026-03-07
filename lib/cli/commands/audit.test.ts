@@ -286,25 +286,32 @@ describe('audit command', () => {
     }
   })
 
-  test('naming-consistency audit includes shared concept list output contract and examples', () => {
+  test('naming-consistency audit enforces factory-constructor high-confidence contract', () => {
     const namingConsistencyAudit = loadStockAudits().find(
       audit => audit.name === 'naming-consistency'
     )
 
     expect(namingConsistencyAudit).toBeDefined()
     expect(namingConsistencyAudit?.template).toContain(
-      '**Shared concept list inconsistencies**'
+      'Focus only on high-confidence factory/constructor naming inconsistencies'
     )
     expect(namingConsistencyAudit?.template).toContain(
-      '**Canonical proposal** - The recommended canonical set and rationale'
+      '`build*`, `create*`, `make*`, or `new*`'
     )
     expect(namingConsistencyAudit?.template).toContain(
-      '**Migration strategy** - A low-churn sequence to converge safely'
+      '**Inconsistent term set** - The observed naming variants'
     )
-    expect(namingConsistencyAudit?.template).toContain('**Positive example**')
-    expect(namingConsistencyAudit?.template).toContain('**Negative example**')
     expect(namingConsistencyAudit?.template).toContain(
-      'Exclude broad terminology drift'
+      '**Canonical proposal** - The recommended canonical name and rationale'
+    )
+    expect(namingConsistencyAudit?.template).toContain(
+      '**Migration strategy** - Choose either **incremental**'
+    )
+    expect(namingConsistencyAudit?.template).toContain(
+      'do not propose speculative broad renames'
+    )
+    expect(namingConsistencyAudit?.template).toContain(
+      'Canonical artifact-list ordering or shape checks'
     )
   })
 })

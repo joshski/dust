@@ -752,48 +752,41 @@ function namingConsistency(): string {
   return dedent`
     # Naming Consistency
 
-    Review high-confidence naming consistency issues where the same concept is represented with inconsistent names, ordering, or shape.
+    Review high-confidence naming consistency issues for equivalent factory/constructor creation APIs.
 
     ${ideasHint}
 
     ## Scope
 
-    Focus on these high-confidence areas:
+    Focus only on high-confidence factory/constructor naming inconsistencies where intent is clearly the same:
+    - Equivalent creation abstractions using \`build*\`, \`create*\`, \`make*\`, or \`new*\`
+    - Cases where names differ but behavior and role clearly indicate the same creation concept
 
-    1. **Factory/constructor API naming** - Similar creation APIs using inconsistent verb patterns for the same role (for example \`createX\` vs \`buildX\` when both are factories)
-    2. **Shared concept list inconsistencies** - Repeated concept sets that drift across modules in:
-       - **Naming** - Same concept renamed across files (for example \`principles\` vs \`rules\`)
-       - **Ordering** - Same canonical list reordered without explicit need
-       - **Shape** - Same list represented with different structures (string list vs object list) without clear boundary reason
-       Example target set: artifact directory concepts like \`principles\`, \`facts\`, \`ideas\`, \`tasks\`
-
-    Exclude broad terminology drift and ambiguous language choices; those belong in the \`ubiquitous-language\` audit.
+    Out of scope:
+    - Canonical artifact-list ordering or shape checks
+    - Broad terminology drift and ambiguous language choices (covered by the \`ubiquitous-language\` audit)
 
     ## Analysis Steps
 
-    1. Identify repeated concept lists and factory/constructor APIs that appear in multiple modules
-    2. Group findings by shared concept to avoid duplicate reporting
+    1. Identify factory/constructor APIs with equivalent behavior that use \`build*\`, \`create*\`, \`make*\`, or \`new*\` naming variants
+    2. Group findings by shared creation concept to avoid duplicate reporting
     3. Keep only high-confidence inconsistencies where the compared usages clearly represent the same concept
-    4. Prefer low-churn standardization recommendations over rename-only sweeps
+    4. Recommend only high-confidence renames with clear semantic equivalence; do not propose speculative broad renames
     5. Preserve Functional Core, Imperative Shell boundaries in recommendations (pure matching/analysis logic separated from IO shell)
 
     ## Output
 
     For each inconsistency, provide:
-    - **Locations** - File paths and line numbers where inconsistent naming/list variants appear
-    - **Inconsistent set** - The observed variants (names, ordering differences, or shape differences)
-    - **Canonical proposal** - The recommended canonical set and rationale
-    - **Migration strategy** - A low-churn sequence to converge safely (for example adapters, phased updates, alias period, follow-up cleanup)
-
-    Concept-list recommendation examples:
-    - **Positive example** - Two modules both represent artifact directories but one omits \`tasks\` and another reorders entries; propose canonical \`[principles, facts, ideas, tasks]\` and a phased migration.
-    - **Negative example** - A runtime cache registry and a documentation index happen to share terms but model different concerns; do not force a shared canonical list.
+    - **Locations** - File paths and line numbers where inconsistent factory/constructor names appear
+    - **Inconsistent term set** - The observed naming variants (for example \`createWidget\`, \`buildWidget\`, \`makeWidget\`)
+    - **Canonical proposal** - The recommended canonical name and rationale
+    - **Migration strategy** - Choose either **incremental** (aliases/adapters then cleanup) or **one-shot** (single coordinated rename), with rationale
 
     ## Principles
 
     - [Consistent Naming](../principles/consistent-naming.md)
     - [Naming Matters](../principles/naming-matters.md)
-    - [Reasonably DRY](../principles/reasonably-dry.md)
+    - [Clarity Over Brevity](../principles/clarity-over-brevity.md)
     - [Functional Core, Imperative Shell](../principles/functional-core-imperative-shell.md)
     - [Small Units](../principles/small-units.md)
 
@@ -803,12 +796,12 @@ function namingConsistency(): string {
 
     ## Definition of Done
 
-    - [ ] Reviewed factory/constructor naming consistency for high-confidence same-concept APIs
-    - [ ] Reviewed repeated shared concept lists for naming, ordering, and shape drift
-    - [ ] Documented only high-confidence findings with locations and inconsistent variants
-    - [ ] Proposed a canonical set for each finding
-    - [ ] Included low-churn migration strategy for each canonical proposal
-    - [ ] Avoided broad terminology drift covered by the ubiquitous-language audit
+    - [ ] Reviewed high-confidence factory/constructor naming consistency for equivalent creation APIs
+    - [ ] Constrained findings to \`build*\`, \`create*\`, \`make*\`, and \`new*\` naming variants with clearly equivalent intent
+    - [ ] Documented each finding with locations, inconsistent term set, canonical proposal, and migration strategy
+    - [ ] Chose incremental or one-shot migration strategy for each canonical proposal
+    - [ ] Avoided speculative broad renames
+    - [ ] Avoided artifact-list ordering/shape checks and broad terminology drift
     - [ ] Proposed ideas for naming consistency improvements identified
   `
 }
