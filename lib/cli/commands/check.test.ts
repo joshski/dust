@@ -3,8 +3,6 @@ import { PassThrough } from 'node:stream'
 import { describe, expect, test } from 'vitest'
 import {
   asChildProcessStub,
-  asClearIntervalStub,
-  asSetIntervalStub,
   createContextEmulator,
   createFileSystemEmulator,
   type FileSystemEmulator,
@@ -15,7 +13,12 @@ import type {
   CommandDependencies,
   DustSettings,
 } from '../types'
-import { check, truncateOutput } from './check'
+import {
+  check,
+  createOrderedFlushState,
+  flushCompletedInDisplayOrder,
+  truncateOutput,
+} from './check'
 
 function createMockBufferedRunner(
   results: Record<
@@ -45,10 +48,6 @@ function createMockBufferedRunner(
     calls,
   }
 }
-
-// Mock timer functions to prevent actual intervals in tests
-const mockSetInterval = asSetIntervalStub(() => 1)
-const mockClearInterval = asClearIntervalStub(() => {})
 
 function createDependencies(
   context: CommandContext,
@@ -115,15 +114,10 @@ describe('check command with checks configuration', () => {
 
     await check(
       createDependencies(context, fileSystem, settings),
-      bufferedRunner,
-      Date.now,
-      mockSetInterval,
-      mockClearInterval
+      bufferedRunner
     )
 
     expect(context.stdoutLines).toEqual([
-      '.',
-      '',
       '✓ lint',
       '✓ test',
       '',
@@ -925,18 +919,12 @@ describe('check command --serial flag', () => {
 
     const result = await check(
       createDependencies(context, fileSystem, settings, ['--serial']),
-      bufferedRunner,
-      Date.now,
-      mockSetInterval,
-      mockClearInterval
+      bufferedRunner
     )
 
     expect(result.exitCode).toBe(0)
-    // Progress indicator comes first, then empty line, then lint
-    expect(context.stdoutLines[0]).toBe('.')
-    expect(context.stdoutLines[1]).toBe('')
-    expect(context.stdoutLines[2]).toBe('✓ lint')
-    expect(context.stdoutLines[3]).toBe('✓ biome')
+    expect(context.stdoutLines[0]).toBe('✓ lint')
+    expect(context.stdoutLines[1]).toBe('✓ biome')
   })
 
   test('output format is consistent between parallel and serial modes', async () => {
@@ -1280,8 +1268,21 @@ describe('truncateOutput', () => {
   })
 })
 
-describe('check command progress indicator', () => {
-  test('emits dots via stdoutInline', async () => {
+describe('flushCompletedInDisplayOrder', () => {
+  test('holds later results until missing earlier index arrives', () => {
+    let state = createOrderedFlushState<string>()
+
+    const second = flushCompletedInDisplayOrder(state, 1, 'second')
+    state = second.nextState
+    expect(second.ready).toEqual([])
+
+    const first = flushCompletedInDisplayOrder(state, 0, 'first')
+    expect(first.ready).toEqual(['first', 'second'])
+  })
+})
+
+describe('check command progressive ordered status output', () => {
+  test('does not emit progress dots while checks are running', async () => {
     const context = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
@@ -1294,107 +1295,77 @@ describe('check command progress indicator', () => {
 
     await check(
       createDependencies(context, fileSystem, settings),
-      bufferedRunner,
-      Date.now,
-      mockSetInterval,
-      mockClearInterval
+      bufferedRunner
     )
 
-    // Progress dot is first, followed by newline
-    expect(context.stdoutLines[0]).toBe('.')
-    expect(context.stdoutLines[1]).toBe('')
+    expect(context.stdoutLines).not.toContain('.')
   })
 
-  test('falls back to stdout when stdoutInline not available', async () => {
-    const stdoutLines: string[] = []
-    const context: CommandContext = {
-      cwd: '/project',
-      stdout: (msg: string) => stdoutLines.push(msg),
-      stderr: () => {},
-    }
-    const settings: DustSettings = {
-      dustCommand: 'dust',
-      checks: [{ name: 'test', command: 'test-cmd' }],
-    }
-    const fileSystem = createFileSystemEmulator()
-    const bufferedRunner = createMockBufferedRunner({
-      'test-cmd': { exitCode: 0, output: '' },
-    })
-
-    await check(
-      createDependencies(context, fileSystem, settings),
-      bufferedRunner,
-      Date.now,
-      mockSetInterval,
-      mockClearInterval
-    )
-
-    // Without stdoutInline, dots go to stdout as separate lines
-    expect(stdoutLines[0]).toBe('.')
-  })
-
-  test('interval callback emits additional dots', async () => {
+  test('flushes parallel completion in deterministic display order', async () => {
     const context = createContextEmulator()
     const settings: DustSettings = {
       dustCommand: 'dust',
-      checks: [{ name: 'test', command: 'test-cmd' }],
+      checks: [
+        { name: 'first', command: 'cmd1' },
+        { name: 'second', command: 'cmd2' },
+        { name: 'third', command: 'cmd3' },
+      ],
     }
     const fileSystem = createFileSystemEmulator()
 
-    // Capture the interval callback
-    let intervalCallback: (() => void) | undefined
-    const capturingSetInterval = asSetIntervalStub((callback: () => void) => {
-      intervalCallback = callback
-      return 1
+    let resolveCmd1:
+      | ((value: { exitCode: number; output: string }) => void)
+      | undefined
+    let resolveCmd2:
+      | ((value: { exitCode: number; output: string }) => void)
+      | undefined
+    let resolveCmd3:
+      | ((value: { exitCode: number; output: string }) => void)
+      | undefined
+
+    const cmd1 = new Promise<{ exitCode: number; output: string }>(resolve => {
+      resolveCmd1 = resolve
+    })
+    const cmd2 = new Promise<{ exitCode: number; output: string }>(resolve => {
+      resolveCmd2 = resolve
+    })
+    const cmd3 = new Promise<{ exitCode: number; output: string }>(resolve => {
+      resolveCmd3 = resolve
     })
 
-    // Create a runner that invokes the interval callback before resolving
-    const slowRunner: ShellRunner = {
-      run: async () => {
-        // Simulate the interval firing during check execution
-        intervalCallback?.()
-        intervalCallback?.()
+    let runCallCount = 0
+    const runner: ShellRunner = {
+      run: async command => {
+        runCallCount += 1
+        if (command === 'cmd1') return cmd1
+        if (command === 'cmd2') return cmd2
+        if (command === 'cmd3') return cmd3
         return { exitCode: 0, output: '' }
       },
     }
 
-    await check(
+    const checkPromise = check(
       createDependencies(context, fileSystem, settings),
-      slowRunner,
-      Date.now,
-      capturingSetInterval,
-      mockClearInterval
+      runner
     )
+    expect(runCallCount).toBe(3)
 
-    // Should see initial dot plus 2 from interval callbacks
-    expect(context.stdoutLines[0]).toBe('...')
-  })
+    resolveCmd2?.({ exitCode: 0, output: '' })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(context.stdoutLines).toEqual([])
 
-  test('clears interval after checks complete', async () => {
-    const context = createContextEmulator()
-    const settings: DustSettings = {
-      dustCommand: 'dust',
-      checks: [{ name: 'test', command: 'test-cmd' }],
-    }
-    const fileSystem = createFileSystemEmulator()
-    const bufferedRunner = createMockBufferedRunner({
-      'test-cmd': { exitCode: 0, output: '' },
-    })
+    resolveCmd1?.({ exitCode: 0, output: '' })
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(context.stdoutLines).toEqual(['✓ first', '✓ second'])
 
-    let clearedIntervalId: unknown
-    const trackingSetInterval = asSetIntervalStub(() => 42)
-    const trackingClearInterval = asClearIntervalStub((id: unknown) => {
-      clearedIntervalId = id
-    })
-
-    await check(
-      createDependencies(context, fileSystem, settings),
-      bufferedRunner,
-      Date.now,
-      trackingSetInterval,
-      trackingClearInterval
-    )
-
-    expect(clearedIntervalId).toBe(42)
+    resolveCmd3?.({ exitCode: 0, output: '' })
+    await checkPromise
+    expect(context.stdoutLines).toEqual([
+      '✓ first',
+      '✓ second',
+      '✓ third',
+      '',
+      '✓ 3/3 checks passed',
+    ])
   })
 })

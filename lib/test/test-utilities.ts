@@ -164,20 +164,6 @@ export function asChildProcessStub(stub: unknown): ChildProcess {
 }
 
 /**
- * Typed test seam for setInterval replacement.
- */
-export function asSetIntervalStub(stub: unknown): typeof setInterval {
-  return stub as typeof setInterval
-}
-
-/**
- * Typed test seam for clearInterval replacement.
- */
-export function asClearIntervalStub(stub: unknown): typeof clearInterval {
-  return stub as typeof clearInterval
-}
-
-/**
  * Generic typed seam for test-only interop boundaries.
  */
 export function asTestType<T>(value: unknown): T {

@@ -66,7 +66,7 @@ Each check can optionally include:
 }
 ```
 
-Checks run in parallel with buffered output. The `dust check` command also runs `dust lint` as a built-in check.
+Checks run in parallel by default. `dust check` prints per-check status lines progressively as checks become displayable in deterministic order, and also runs `dust lint` as a built-in first check when `.dust/` exists.
 
 ## Implementation
 
