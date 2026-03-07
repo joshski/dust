@@ -6,7 +6,7 @@ Add a stock audit that identifies antipatterns and code smells in the codebase.
 
 The existing audit suite covers specific concerns like error handling, test coverage, and component reuse. An antipatterns audit would provide a broader code quality review, identifying patterns that make code harder to understand, maintain, or extend.
 
-Related ideas cover specific antipatterns: [Increase type safety](increase-type-safety.md) addresses type assertions and loose typing, [Establish consistent error handling](establish-consistent-error-handling.md) covers error patterns, and [Duplicate code in recent commits audit](duplicate-code-in-recent-commits-audit.md) addresses duplication. This audit complements those by covering structural and organizational antipatterns.
+Related ideas cover specific antipatterns: [Harden Claude event and tool input typing](harden-claude-event-and-tool-input-typing.md), [Centralize filesystem error code narrowing](centralize-filesystem-error-code-narrowing.md), and [Reduce unsafe double casts in tests](reduce-unsafe-double-casts-in-tests.md) address type-safety issues; [Establish consistent error handling](establish-consistent-error-handling.md) covers error patterns; and [Duplicate code in recent commits audit](duplicate-code-in-recent-commits-audit.md) addresses duplication. This audit complements those by covering structural and organizational antipatterns.
 
 ## Proposed Audit Focus Areas
 
