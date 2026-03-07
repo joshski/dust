@@ -1,7 +1,10 @@
 import { createServer as createHttpServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import type { CommandEventMessage } from '../command-events'
+import { createLogger } from '../logging'
 import type { ToolDefinition } from './server-messages'
+
+const log = createLogger('dust:bucket:command-events-proxy')
 
 const MAX_BODY_BYTES = 1024 * 1024
 const PROXY_ERROR_STATUS = 502
@@ -129,10 +132,13 @@ export async function startCommandEventsProxy(
 
         try {
           handlers.forwardEvent(parsedBody)
+          log(`forwarded event: ${parsedBody.event.type}`)
           response.writeHead(202).end('Accepted')
-        } catch {
+        } catch (error) /* v8 ignore start */ {
+          const msg = error instanceof Error ? error.message : String(error)
+          log(`event forwarding failed: ${msg}`)
           response.writeHead(PROXY_ERROR_STATUS).end('Event forwarding failed')
-        }
+        } /* v8 ignore stop */
         return
       }
 
@@ -167,6 +173,9 @@ export async function startCommandEventsProxy(
           return
         }
 
+        log(
+          `tool execution request: ${toolName} (repo=${parsedBody.repositoryId})`
+        )
         handlers
           .forwardToolExecution({
             toolName,
@@ -174,6 +183,7 @@ export async function startCommandEventsProxy(
             repositoryId: parsedBody.repositoryId,
           })
           .then(result => {
+            log(`tool execution result: ${toolName} status=${result.status}`)
             respondJson(
               response,
               mapToolResultStatusToHttpStatus(result.status),
@@ -188,6 +198,7 @@ export async function startCommandEventsProxy(
           .catch(error => {
             const message =
               error instanceof Error ? error.message : String(error)
+            log(`tool execution error: ${toolName} ${message}`)
             respondJson(response, PROXY_ERROR_STATUS, {
               success: false,
               error: message,
@@ -210,14 +221,17 @@ export async function startCommandEventsProxy(
   })
 
   const address = server.address() as AddressInfo
+  log(`proxy listening on port ${address.port}`)
 
   return {
     port: address.port,
     stop: () =>
       new Promise<void>(resolve => {
+        log('proxy stopping')
         server.closeAllConnections?.()
         server.closeIdleConnections?.()
         server.close(() => {
+          log('proxy stopped')
           resolve()
         })
       }),

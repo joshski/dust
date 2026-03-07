@@ -1111,15 +1111,21 @@ export async function bucketWorker(
           if (ws && ws.readyState === WS_OPEN) {
             try {
               ws.send(JSON.stringify(message))
-            } catch {
-              // Fire-and-forget: ignore send errors
+            } catch (error) {
+              const msg = error instanceof Error ? error.message : String(error)
+              log(`failed to forward event to WebSocket: ${msg}`)
             }
+          } else {
+            log(`dropping event ${message.event.type}: WebSocket not connected`)
           }
         },
         getTools: () => state.tools,
         forwardToolExecution: request => {
           const ws = state.ws
           if (!ws || ws.readyState !== WS_OPEN) {
+            log(
+              `tool execution rejected: ${request.toolName} (WebSocket not connected)`
+            )
             return Promise.resolve({
               status: 'error',
               error: 'Bucket session is not connected',
@@ -1135,9 +1141,15 @@ export async function bucketWorker(
             repositoryId: request.repositoryId,
           }
 
+          log(
+            `forwarding tool execution: ${request.toolName} requestId=${requestId}`
+          )
           return new Promise<ToolExecutionResult>((resolve, reject) => {
             const timeoutId = setTimeout(() => {
               pendingToolExecutions.delete(requestId)
+              log(
+                `tool execution timed out: ${request.toolName} requestId=${requestId}`
+              )
               reject(new Error('Timed out waiting for tool execution result'))
             }, 30000)
 
@@ -1211,8 +1223,14 @@ export async function bucketWorker(
         message => {
           const pending = pendingToolExecutions.get(message.requestId)
           if (!pending) {
+            log(
+              `received tool execution result for unknown requestId=${message.requestId}`
+            )
             return
           }
+          log(
+            `received tool execution result: requestId=${message.requestId} status=${message.status}`
+          )
           clearTimeout(pending.timeoutId)
           pendingToolExecutions.delete(message.requestId)
           pending.resolve({

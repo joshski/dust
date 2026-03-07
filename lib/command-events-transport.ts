@@ -1,4 +1,7 @@
 import type { CommandEventMessage } from './command-events'
+import { createLogger } from './logging'
+
+const log = createLogger('dust:command-events-transport')
 
 export const DUST_PROXY_PORT = 'DUST_PROXY_PORT'
 
@@ -51,7 +54,9 @@ export function createCommandEventWriter(
   }
 
   const eventsUrl = `http://127.0.0.1:${proxyPort}/events`
+  log(`event writer created, target=${eventsUrl}`)
   return (message: CommandEventMessage) => {
+    log(`sending event: ${message.event.type}`)
     void dependencies
       .fetch(eventsUrl, {
         method: 'POST',
