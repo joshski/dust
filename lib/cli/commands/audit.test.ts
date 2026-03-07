@@ -219,7 +219,7 @@ describe('audit command', () => {
   test('loadStockAudits loads audits from markdown files', () => {
     const audits = loadStockAudits()
     expect(audits).toBeInstanceOf(Array)
-    expect(audits.length).toBe(19)
+    expect(audits.length).toBe(20)
 
     const names = audits.map(a => a.name)
     expect(names).toContain('agent-developer-experience')
@@ -232,6 +232,7 @@ describe('audit command', () => {
     expect(names).toContain('global-state')
     expect(names).toContain('ideas-from-commits')
     expect(names).toContain('ideas-from-principles')
+    expect(names).toContain('naming-consistency')
     expect(names).toContain('performance-review')
     expect(names).toContain('refactoring-opportunities')
     expect(names).toContain('security-review')
@@ -262,6 +263,7 @@ describe('audit command', () => {
       'data-access-review',
       'error-handling',
       'global-state',
+      'naming-consistency',
       'refactoring-opportunities',
       'slow-tests',
       'ubiquitous-language',
@@ -282,6 +284,28 @@ describe('audit command', () => {
         expect(goalsMatch?.[1].trim()).toBe('(none)')
       }
     }
+  })
+
+  test('naming-consistency audit includes shared concept list output contract and examples', () => {
+    const namingConsistencyAudit = loadStockAudits().find(
+      audit => audit.name === 'naming-consistency'
+    )
+
+    expect(namingConsistencyAudit).toBeDefined()
+    expect(namingConsistencyAudit?.template).toContain(
+      '**Shared concept list inconsistencies**'
+    )
+    expect(namingConsistencyAudit?.template).toContain(
+      '**Canonical proposal** - The recommended canonical set and rationale'
+    )
+    expect(namingConsistencyAudit?.template).toContain(
+      '**Migration strategy** - A low-churn sequence to converge safely'
+    )
+    expect(namingConsistencyAudit?.template).toContain('**Positive example**')
+    expect(namingConsistencyAudit?.template).toContain('**Negative example**')
+    expect(namingConsistencyAudit?.template).toContain(
+      'Exclude broad terminology drift'
+    )
   })
 })
 

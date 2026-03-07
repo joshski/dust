@@ -748,6 +748,71 @@ function slowTests(): string {
   `
 }
 
+function namingConsistency(): string {
+  return dedent`
+    # Naming Consistency
+
+    Review high-confidence naming consistency issues where the same concept is represented with inconsistent names, ordering, or shape.
+
+    ${ideasHint}
+
+    ## Scope
+
+    Focus on these high-confidence areas:
+
+    1. **Factory/constructor API naming** - Similar creation APIs using inconsistent verb patterns for the same role (for example \`createX\` vs \`buildX\` when both are factories)
+    2. **Shared concept list inconsistencies** - Repeated concept sets that drift across modules in:
+       - **Naming** - Same concept renamed across files (for example \`principles\` vs \`rules\`)
+       - **Ordering** - Same canonical list reordered without explicit need
+       - **Shape** - Same list represented with different structures (string list vs object list) without clear boundary reason
+       Example target set: artifact directory concepts like \`principles\`, \`facts\`, \`ideas\`, \`tasks\`
+
+    Exclude broad terminology drift and ambiguous language choices; those belong in the \`ubiquitous-language\` audit.
+
+    ## Analysis Steps
+
+    1. Identify repeated concept lists and factory/constructor APIs that appear in multiple modules
+    2. Group findings by shared concept to avoid duplicate reporting
+    3. Keep only high-confidence inconsistencies where the compared usages clearly represent the same concept
+    4. Prefer low-churn standardization recommendations over rename-only sweeps
+    5. Preserve Functional Core, Imperative Shell boundaries in recommendations (pure matching/analysis logic separated from IO shell)
+
+    ## Output
+
+    For each inconsistency, provide:
+    - **Locations** - File paths and line numbers where inconsistent naming/list variants appear
+    - **Inconsistent set** - The observed variants (names, ordering differences, or shape differences)
+    - **Canonical proposal** - The recommended canonical set and rationale
+    - **Migration strategy** - A low-churn sequence to converge safely (for example adapters, phased updates, alias period, follow-up cleanup)
+
+    Concept-list recommendation examples:
+    - **Positive example** - Two modules both represent artifact directories but one omits \`tasks\` and another reorders entries; propose canonical \`[principles, facts, ideas, tasks]\` and a phased migration.
+    - **Negative example** - A runtime cache registry and a documentation index happen to share terms but model different concerns; do not force a shared canonical list.
+
+    ## Principles
+
+    - [Consistent Naming](../principles/consistent-naming.md)
+    - [Naming Matters](../principles/naming-matters.md)
+    - [Reasonably DRY](../principles/reasonably-dry.md)
+    - [Functional Core, Imperative Shell](../principles/functional-core-imperative-shell.md)
+    - [Small Units](../principles/small-units.md)
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - [ ] Reviewed factory/constructor naming consistency for high-confidence same-concept APIs
+    - [ ] Reviewed repeated shared concept lists for naming, ordering, and shape drift
+    - [ ] Documented only high-confidence findings with locations and inconsistent variants
+    - [ ] Proposed a canonical set for each finding
+    - [ ] Included low-churn migration strategy for each canonical proposal
+    - [ ] Avoided broad terminology drift covered by the ubiquitous-language audit
+    - [ ] Proposed ideas for naming consistency improvements identified
+  `
+}
+
 function ubiquitousLanguage(): string {
   return dedent`
     # Ubiquitous Language
@@ -883,6 +948,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'global-state': globalState,
   'ideas-from-commits': ideasFromCommits,
   'ideas-from-principles': ideasFromPrinciples,
+  'naming-consistency': namingConsistency,
   'performance-review': performanceReview,
   'refactoring-opportunities': refactoringOpportunities,
   'repository-context': repositoryContext,
