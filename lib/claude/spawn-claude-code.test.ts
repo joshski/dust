@@ -1,7 +1,12 @@
 import { spawn } from 'node:child_process'
 import { createInterface } from 'node:readline'
+import { PassThrough } from 'node:stream'
 import { describe, expect, test } from 'vitest'
-import { asCreateInterfaceStub, asSpawnStub } from '../test/test-utilities'
+import {
+  createProcessEventSourceDependencies,
+  createReadlineStub,
+  createSpawnStub,
+} from '../test/process-event-source-stubs'
 import {
   buildDockerRunArguments,
   defaultDependencies,
@@ -17,43 +22,12 @@ function createMockDependencies(
   errorToThrow?: Error,
   stderrData?: string
 ): EventSourceDependencies {
-  return {
-    spawn: asSpawnStub(() => {
-      const listeners: Record<string, EventListener[]> = {}
-      const stderrListeners: Record<string, EventListener[]> = {}
-      return {
-        stdout: {},
-        stderr: {
-          on(event: string, listener: EventListener) {
-            stderrListeners[event] = stderrListeners[event] || []
-            stderrListeners[event].push(listener)
-            if (event === 'data' && stderrData) {
-              setTimeout(() => listener(Buffer.from(stderrData)), 0)
-            }
-            return this
-          },
-        },
-        on(event: string, listener: EventListener) {
-          listeners[event] = listeners[event] || []
-          listeners[event].push(listener)
-          if (event === 'close' && !errorToThrow) {
-            setTimeout(() => listener(exitCode), 10)
-          }
-          if (event === 'error' && errorToThrow) {
-            setTimeout(() => listener(errorToThrow), 0)
-          }
-          return this
-        },
-      }
-    }),
-    createInterface: asCreateInterfaceStub(() => ({
-      async *[Symbol.asyncIterator]() {
-        for (const line of lines) {
-          yield line
-        }
-      },
-    })),
-  }
+  return createProcessEventSourceDependencies({
+    lines,
+    exitCode,
+    errorToThrow,
+    stderrData,
+  })
 }
 
 describe('spawnClaudeCode', () => {
@@ -130,21 +104,17 @@ describe('spawnClaudeCode', () => {
     let capturedArguments: string[] = []
 
     const dependencies: EventSourceDependencies = {
-      spawn: asSpawnStub((_cmd: string, spawnArguments: string[]) => {
+      spawn: createSpawnStub((_cmd: string, spawnArguments: string[]) => {
         capturedArguments = spawnArguments
         return {
-          stdout: {},
+          stdout: new PassThrough(),
           on(event: string, listener: EventListener) {
             if (event === 'close') setTimeout(() => listener(0), 0)
             return this
           },
         }
       }),
-      createInterface: asCreateInterfaceStub(() => ({
-        async *[Symbol.asyncIterator]() {
-          // no lines
-        },
-      })),
+      createInterface: createReadlineStub([]),
     }
 
     for await (const _ of spawnClaudeCode(
@@ -180,21 +150,17 @@ describe('spawnClaudeCode', () => {
     let capturedArguments: string[] = []
 
     const dependencies: EventSourceDependencies = {
-      spawn: asSpawnStub((_cmd: string, spawnArguments: string[]) => {
+      spawn: createSpawnStub((_cmd: string, spawnArguments: string[]) => {
         capturedArguments = spawnArguments
         return {
-          stdout: {},
+          stdout: new PassThrough(),
           on(event: string, listener: EventListener) {
             if (event === 'close') setTimeout(() => listener(0), 0)
             return this
           },
         }
       }),
-      createInterface: asCreateInterfaceStub(() => ({
-        async *[Symbol.asyncIterator]() {
-          // no lines
-        },
-      })),
+      createInterface: createReadlineStub([]),
     }
 
     for await (const _ of spawnClaudeCode(
@@ -245,13 +211,13 @@ describe('spawnClaudeCode', () => {
 
   test('throws if stdout is null', async () => {
     const dependencies: EventSourceDependencies = {
-      spawn: asSpawnStub(() => ({
+      spawn: createSpawnStub(() => ({
         stdout: null,
-        on: () => {},
+        on() {
+          return this
+        },
       })),
-      createInterface: asCreateInterfaceStub(() => ({
-        async *[Symbol.asyncIterator]() {},
-      })),
+      createInterface: createReadlineStub([]),
     }
 
     const consume = async () => {
@@ -271,28 +237,27 @@ describe('spawnClaudeCode', () => {
     controller.abort()
 
     const dependencies: EventSourceDependencies = {
-      spawn: asSpawnStub(() => {
+      spawn: createSpawnStub(() => {
         return {
           killed: false,
           kill() {
             killCalled = true
-            ;(this as { killed: boolean }).killed = true
+            this.killed = true
             return true
           },
-          stdout: {},
-          stderr: { on: () => {} },
+          stdout: new PassThrough(),
+          stderr: {
+            on() {
+              return this
+            },
+          },
           on(event: string, listener: EventListener) {
             if (event === 'close') setTimeout(() => listener(0), 0)
             return this
           },
         }
       }),
-      createInterface: asCreateInterfaceStub(() => ({
-        close: () => {},
-        async *[Symbol.asyncIterator]() {
-          // no lines
-        },
-      })),
+      createInterface: createReadlineStub([]),
     }
 
     for await (const _ of spawnClaudeCode(
@@ -312,17 +277,21 @@ describe('spawnClaudeCode', () => {
     const controller = new AbortController()
 
     const dependencies: EventSourceDependencies = {
-      spawn: asSpawnStub(() => {
+      spawn: createSpawnStub(() => {
         return {
           killed: false,
           kill() {
             killCalled = true
-            ;(this as { killed: boolean }).killed = true
+            this.killed = true
             for (const listener of closeListeners) listener(0)
             return true
           },
-          stdout: {},
-          stderr: { on: () => {} },
+          stdout: new PassThrough(),
+          stderr: {
+            on() {
+              return this
+            },
+          },
           on(event: string, listener: EventListener) {
             if (event === 'close') {
               closeListeners.push(listener)
@@ -331,12 +300,12 @@ describe('spawnClaudeCode', () => {
           },
         }
       }),
-      createInterface: asCreateInterfaceStub(() => ({
+      createInterface: () => ({
         close: () => {},
         async *[Symbol.asyncIterator]() {
           await new Promise(resolve => setTimeout(resolve, 0))
         },
-      })),
+      }),
     }
 
     const consume = (async () => {
@@ -360,27 +329,26 @@ describe('spawnClaudeCode', () => {
     controller.abort()
 
     const dependencies: EventSourceDependencies = {
-      spawn: asSpawnStub(() => {
+      spawn: createSpawnStub(() => {
         return {
           killed: true,
           kill() {
             killCallCount++
             return true
           },
-          stdout: {},
-          stderr: { on: () => {} },
+          stdout: new PassThrough(),
+          stderr: {
+            on() {
+              return this
+            },
+          },
           on(event: string, listener: EventListener) {
             if (event === 'close') setTimeout(() => listener(0), 0)
             return this
           },
         }
       }),
-      createInterface: asCreateInterfaceStub(() => ({
-        close: () => {},
-        async *[Symbol.asyncIterator]() {
-          // no lines
-        },
-      })),
+      createInterface: createReadlineStub([]),
     }
 
     for await (const _ of spawnClaudeCode(
@@ -398,24 +366,23 @@ describe('spawnClaudeCode', () => {
     let capturedArgs: string[] | undefined
 
     const dependencies: EventSourceDependencies = {
-      spawn: asSpawnStub((cmd: string, spawnArgs: string[]) => {
+      spawn: createSpawnStub((cmd: string, spawnArgs: string[]) => {
         capturedCommand = cmd
         capturedArgs = spawnArgs
         return {
-          stdout: {},
-          stderr: { on: () => {} },
+          stdout: new PassThrough(),
+          stderr: {
+            on() {
+              return this
+            },
+          },
           on(event: string, listener: EventListener) {
             if (event === 'close') setTimeout(() => listener(0), 0)
             return this
           },
         }
       }),
-      createInterface: asCreateInterfaceStub(() => ({
-        close: () => {},
-        async *[Symbol.asyncIterator]() {
-          // no lines
-        },
-      })),
+      createInterface: createReadlineStub([]),
     }
 
     for await (const _ of spawnClaudeCode(
@@ -453,23 +420,22 @@ describe('spawnClaudeCode', () => {
     let capturedArgs: string[] | undefined
 
     const dependencies: EventSourceDependencies = {
-      spawn: asSpawnStub((_cmd: string, spawnArgs: string[]) => {
+      spawn: createSpawnStub((_cmd: string, spawnArgs: string[]) => {
         capturedArgs = spawnArgs
         return {
-          stdout: {},
-          stderr: { on: () => {} },
+          stdout: new PassThrough(),
+          stderr: {
+            on() {
+              return this
+            },
+          },
           on(event: string, listener: EventListener) {
             if (event === 'close') setTimeout(() => listener(0), 0)
             return this
           },
         }
       }),
-      createInterface: asCreateInterfaceStub(() => ({
-        close: () => {},
-        async *[Symbol.asyncIterator]() {
-          // no lines
-        },
-      })),
+      createInterface: createReadlineStub([]),
     }
 
     for await (const _ of spawnClaudeCode(
@@ -499,23 +465,22 @@ describe('spawnClaudeCode', () => {
     let capturedArgs: string[] | undefined
 
     const dependencies: EventSourceDependencies = {
-      spawn: asSpawnStub((_cmd: string, spawnArgs: string[]) => {
+      spawn: createSpawnStub((_cmd: string, spawnArgs: string[]) => {
         capturedArgs = spawnArgs
         return {
-          stdout: {},
-          stderr: { on: () => {} },
+          stdout: new PassThrough(),
+          stderr: {
+            on() {
+              return this
+            },
+          },
           on(event: string, listener: EventListener) {
             if (event === 'close') setTimeout(() => listener(0), 0)
             return this
           },
         }
       }),
-      createInterface: asCreateInterfaceStub(() => ({
-        close: () => {},
-        async *[Symbol.asyncIterator]() {
-          // no lines
-        },
-      })),
+      createInterface: createReadlineStub([]),
     }
 
     for await (const _ of spawnClaudeCode(
@@ -547,23 +512,22 @@ describe('spawnClaudeCode', () => {
     let capturedArgs: string[] | undefined
 
     const dependencies: EventSourceDependencies = {
-      spawn: asSpawnStub((_cmd: string, spawnArgs: string[]) => {
+      spawn: createSpawnStub((_cmd: string, spawnArgs: string[]) => {
         capturedArgs = spawnArgs
         return {
-          stdout: {},
-          stderr: { on: () => {} },
+          stdout: new PassThrough(),
+          stderr: {
+            on() {
+              return this
+            },
+          },
           on(event: string, listener: EventListener) {
             if (event === 'close') setTimeout(() => listener(0), 0)
             return this
           },
         }
       }),
-      createInterface: asCreateInterfaceStub(() => ({
-        close: () => {},
-        async *[Symbol.asyncIterator]() {
-          // no lines
-        },
-      })),
+      createInterface: createReadlineStub([]),
     }
 
     for await (const _ of spawnClaudeCode(
@@ -594,23 +558,22 @@ describe('spawnClaudeCode', () => {
     let capturedArgs: string[] | undefined
 
     const dependencies: EventSourceDependencies = {
-      spawn: asSpawnStub((_cmd: string, spawnArgs: string[]) => {
+      spawn: createSpawnStub((_cmd: string, spawnArgs: string[]) => {
         capturedArgs = spawnArgs
         return {
-          stdout: {},
-          stderr: { on: () => {} },
+          stdout: new PassThrough(),
+          stderr: {
+            on() {
+              return this
+            },
+          },
           on(event: string, listener: EventListener) {
             if (event === 'close') setTimeout(() => listener(0), 0)
             return this
           },
         }
       }),
-      createInterface: asCreateInterfaceStub(() => ({
-        close: () => {},
-        async *[Symbol.asyncIterator]() {
-          // no lines
-        },
-      })),
+      createInterface: createReadlineStub([]),
     }
 
     for await (const _ of spawnClaudeCode(
@@ -639,23 +602,22 @@ describe('spawnClaudeCode', () => {
     let capturedArgs: string[] | undefined
 
     const dependencies: EventSourceDependencies = {
-      spawn: asSpawnStub((_cmd: string, spawnArgs: string[]) => {
+      spawn: createSpawnStub((_cmd: string, spawnArgs: string[]) => {
         capturedArgs = spawnArgs
         return {
-          stdout: {},
-          stderr: { on: () => {} },
+          stdout: new PassThrough(),
+          stderr: {
+            on() {
+              return this
+            },
+          },
           on(event: string, listener: EventListener) {
             if (event === 'close') setTimeout(() => listener(0), 0)
             return this
           },
         }
       }),
-      createInterface: asCreateInterfaceStub(() => ({
-        close: () => {},
-        async *[Symbol.asyncIterator]() {
-          // no lines
-        },
-      })),
+      createInterface: createReadlineStub([]),
     }
 
     for await (const _ of spawnClaudeCode(

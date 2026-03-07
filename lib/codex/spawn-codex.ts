@@ -2,12 +2,16 @@ import { spawn as nodeSpawn } from 'node:child_process'
 import { createInterface as nodeCreateInterface } from 'node:readline'
 import type { RawEvent, SpawnOptions } from '../claude/types'
 import { createLogger } from '../logging'
+import type {
+  CreateReadlineForEvents,
+  SpawnForEvents,
+} from '../process/spawn-contract'
 
 const debug = createLogger('dust.codex.spawn-codex')
 
 export interface EventSourceDependencies {
-  spawn: typeof nodeSpawn
-  createInterface: typeof nodeCreateInterface
+  spawn: SpawnForEvents
+  createInterface: CreateReadlineForEvents
 }
 
 export const defaultDependencies: EventSourceDependencies = {
@@ -85,6 +89,6 @@ export async function* spawnCodex(
     await closePromise
   } finally {
     signal?.removeEventListener('abort', abortHandler)
-    ;(rl as { close?: () => void }).close?.()
+    rl.close?.()
   }
 }

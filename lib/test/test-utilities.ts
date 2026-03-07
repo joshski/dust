@@ -6,8 +6,7 @@
  * See .dust/principles/stubs-over-mocks.md for the rationale.
  */
 
-import type { ChildProcess, spawn } from 'node:child_process'
-import type { createInterface } from 'node:readline'
+import type { ChildProcess } from 'node:child_process'
 import type { AgentSessionEvent } from '../agent-events'
 import type {
   CommandContext,
@@ -158,38 +157,24 @@ export function stubStdoutIsTTY(value: boolean | undefined): void {
 }
 
 /**
- * Typed test seam for process-spawn dependency injection.
- */
-export function asSpawnStub(stub: unknown): typeof spawn {
-  return stub as unknown as typeof spawn
-}
-
-/**
- * Typed test seam for readline.createInterface dependency injection.
- */
-export function asCreateInterfaceStub(stub: unknown): typeof createInterface {
-  return stub as unknown as typeof createInterface
-}
-
-/**
  * Typed test seam for ChildProcess instances.
  */
 export function asChildProcessStub(stub: unknown): ChildProcess {
-  return stub as unknown as ChildProcess
+  return stub as ChildProcess
 }
 
 /**
  * Typed test seam for setInterval replacement.
  */
 export function asSetIntervalStub(stub: unknown): typeof setInterval {
-  return stub as unknown as typeof setInterval
+  return stub as typeof setInterval
 }
 
 /**
  * Typed test seam for clearInterval replacement.
  */
 export function asClearIntervalStub(stub: unknown): typeof clearInterval {
-  return stub as unknown as typeof clearInterval
+  return stub as typeof clearInterval
 }
 
 /**

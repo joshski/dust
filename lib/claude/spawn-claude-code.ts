@@ -1,13 +1,17 @@
 import { spawn as nodeSpawn } from 'node:child_process'
 import { createInterface as nodeCreateInterface } from 'node:readline'
 import { createLogger } from '../logging'
+import type {
+  CreateReadlineForEvents,
+  SpawnForEvents,
+} from '../process/spawn-contract'
 import type { DockerSpawnConfig, RawEvent, SpawnOptions } from './types'
 
 const debug = createLogger('dust.claude.spawn-claude-code')
 
 export interface EventSourceDependencies {
-  spawn: typeof nodeSpawn
-  createInterface: typeof nodeCreateInterface
+  spawn: SpawnForEvents
+  createInterface: CreateReadlineForEvents
 }
 
 export const defaultDependencies: EventSourceDependencies = {
@@ -234,6 +238,6 @@ export async function* spawnClaudeCode(
     await closePromise
   } finally {
     signal?.removeEventListener('abort', abortHandler)
-    ;(rl as { close?: () => void }).close?.()
+    rl.close?.()
   }
 }
