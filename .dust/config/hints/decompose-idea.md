@@ -1,0 +1,1 @@
+Really think about "Functional Core, Imperative Shell"
