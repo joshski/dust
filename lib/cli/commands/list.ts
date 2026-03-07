@@ -261,7 +261,7 @@ export async function list(
         ideas: collectedItems.map(i => ({
           path: i.path,
           title: i.title,
-          status: i.status!,
+          status: i.status as string,
         })),
       })
     } else if (type === 'principles') {

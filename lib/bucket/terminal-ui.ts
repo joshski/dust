@@ -355,18 +355,11 @@ export function getVisibleLogs(state: TerminalUIState): DisplayLogLine[] {
   if (state.selectedIndex === -1) {
     // "All" view: merge logs from all repositories
     const allLogs: DisplayLogLine[] = []
-    const repoColors = new Map<string, string>()
-
     for (let i = 0; i < state.repositories.length; i++) {
       const repoName = state.repositories[i]
-      repoColors.set(repoName, getRepoColor(repoName, i))
-    }
-
-    for (const repoName of state.repositories) {
       const buffer = state.logBuffers.get(repoName)
       if (!buffer) continue
-      // repoColors is built from the same repositories array above, so key is guaranteed
-      const color = repoColors.get(repoName)!
+      const color = getRepoColor(repoName, i)
       const lines = getLogLines(buffer)
       for (const line of lines) {
         allLogs.push({ ...line, repository: repoName, color })

@@ -230,11 +230,17 @@ describe('bucket worker RPC integration', () => {
       // Command events forwarded through the proxy, wrapped in command-event envelope
       expect(eventTypes).toContain('command-event')
       const commandEvents = capturedMessages
-        .filter(m => (m.event as Record<string, unknown>)?.type === 'command-event')
+        .filter(
+          m => (m.event as Record<string, unknown>)?.type === 'command-event'
+        )
         .map(
           m =>
-            ((m.event as Record<string, unknown>).commandEvent as Record<string, unknown>)
-              .type as string
+            (
+              (m.event as Record<string, unknown>).commandEvent as Record<
+                string,
+                unknown
+              >
+            ).type as string
         )
       expect(commandEvents).toContain('check-started')
       expect(
