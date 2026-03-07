@@ -317,27 +317,34 @@ describe('audit command', () => {
     )
   })
 
-  test('primitive-obsession audit enforces existing-type drift high-confidence contract', () => {
+  test('primitive-obsession audit enforces existing-type and numeric high-confidence contract', () => {
     const primitiveObsessionAudit = loadStockAudits().find(
       audit => audit.name === 'primitive-obsession'
     )
 
     expect(primitiveObsessionAudit).toBeDefined()
     expect(primitiveObsessionAudit?.template).toContain(
-      'Focus only on existing-type drift for domain string concepts'
+      'Focus only on two high-confidence slices'
     )
     expect(primitiveObsessionAudit?.template).toContain('`ArtifactType`')
+    expect(primitiveObsessionAudit?.template).toContain('retry counts like `3`')
+    expect(primitiveObsessionAudit?.template).toContain(
+      'Obvious local loop indices/counters and trivial literals like `0` or `1`'
+    )
     expect(primitiveObsessionAudit?.template).toContain(
       '**Locations** - File paths and line numbers where primitive literals are used'
     )
     expect(primitiveObsessionAudit?.template).toContain(
-      '**Primitive pattern** - The free-form literal pattern currently used'
+      '**Primitive pattern** - The free-form literal pattern currently used (string concept or numeric role)'
     )
     expect(primitiveObsessionAudit?.template).toContain(
-      '**Existing domain type opportunity** - The canonical existing type that should be used instead'
+      '**Constant/type opportunity** - The canonical existing type or named constant/domain wrapper that should be used instead'
     )
     expect(primitiveObsessionAudit?.template).toContain(
       '**Incremental migration path** - A safe sequence of steps to migrate call sites with minimal risk'
+    )
+    expect(primitiveObsessionAudit?.template).toContain(
+      '**Numeric pattern** - The repeated threshold/limit/retry/timing literal pattern'
     )
     expect(primitiveObsessionAudit?.template).toContain(
       'Avoided speculative introduction of entirely new types'
