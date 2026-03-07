@@ -219,7 +219,7 @@ describe('audit command', () => {
   test('loadStockAudits loads audits from markdown files', () => {
     const audits = loadStockAudits()
     expect(audits).toBeInstanceOf(Array)
-    expect(audits.length).toBe(21)
+    expect(audits.length).toBe(22)
 
     const names = audits.map(a => a.name)
     expect(names).toContain('agent-developer-experience')
@@ -237,6 +237,7 @@ describe('audit command', () => {
     expect(names).toContain('primitive-obsession')
     expect(names).toContain('refactoring-opportunities')
     expect(names).toContain('security-review')
+    expect(names).toContain('single-responsibility-violations')
     expect(names).toContain('stale-ideas')
     expect(names).toContain('test-coverage')
     expect(names).toContain('ubiquitous-language')
@@ -267,6 +268,7 @@ describe('audit command', () => {
       'naming-consistency',
       'primitive-obsession',
       'refactoring-opportunities',
+      'single-responsibility-violations',
       'slow-tests',
       'ubiquitous-language',
       'ux-audit',
@@ -348,6 +350,50 @@ describe('audit command', () => {
     )
     expect(primitiveObsessionAudit?.template).toContain(
       'Avoided speculative introduction of entirely new types'
+    )
+  })
+
+  test('single-responsibility-violations audit enforces layer-mixing and collector high-confidence contract', () => {
+    const singleResponsibilityAudit = loadStockAudits().find(
+      audit => audit.name === 'single-responsibility-violations'
+    )
+
+    expect(singleResponsibilityAudit).toBeDefined()
+    expect(singleResponsibilityAudit?.template).toContain(
+      'Focus only on three additive high-confidence slices'
+    )
+    expect(singleResponsibilityAudit?.template).toContain(
+      'Positive layer-mixing case'
+    )
+    expect(singleResponsibilityAudit?.template).toContain(
+      'Negative layer-mixing case'
+    )
+    expect(singleResponsibilityAudit?.template).toContain(
+      'Positive collector case'
+    )
+    expect(singleResponsibilityAudit?.template).toContain(
+      'Negative collector case'
+    )
+    expect(singleResponsibilityAudit?.template).toContain(
+      'For each finding, provide:'
+    )
+    expect(singleResponsibilityAudit?.template).toContain(
+      '**Location** - File path and function name where applicable'
+    )
+    expect(singleResponsibilityAudit?.template).toContain(
+      '**Responsibility split** - Distinct responsibilities currently mixed'
+    )
+    expect(singleResponsibilityAudit?.template).toContain(
+      '**Severity** - `high`, `medium`, or `low`'
+    )
+    expect(singleResponsibilityAudit?.template).toContain(
+      '**Suggested extraction plan** - A small-step plan'
+    )
+    expect(singleResponsibilityAudit?.template).toContain(
+      'covered by the `refactoring-opportunities` audit'
+    )
+    expect(singleResponsibilityAudit?.template).toContain(
+      'extracting pure decision logic from imperative orchestration'
     )
   })
 })

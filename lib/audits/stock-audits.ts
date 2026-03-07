@@ -882,6 +882,81 @@ function primitiveObsession(): string {
   `
 }
 
+function singleResponsibilityViolations(): string {
+  return dedent`
+    # Single Responsibility Violations
+
+    Review high-confidence single responsibility violations across additive responsibility-focused slices.
+
+    ${ideasHint}
+
+    ## Scope
+
+    Focus only on three additive high-confidence slices:
+    - Functions that clearly combine 3+ distinct responsibilities
+    - Modules/files that mix layers (for example parsing/validation + domain execution + presentation/formatting)
+    - Collector-style functions that coordinate too many collaborators/parameters even when line count is moderate
+
+    Include both runtime code and test helpers.
+
+    Out of scope:
+    - Churn-driven recommendations based on commit history or file modification frequency (covered by the \`refactoring-opportunities\` audit)
+    - Broad rewrite recommendations without clear extraction seams
+    - Ambiguous style-only concerns without clear responsibility boundaries
+
+    ## Analysis Steps
+
+    1. Find candidate functions that combine distinct concerns (for example parsing, decision logic, side effects, formatting, reporting)
+    2. Find module-level layer mixing where one file combines boundary concerns with domain decisions and presentation concerns
+    3. Find collector/orchestrator functions with high collaborator or parameter load where multiple concerns are coordinated in one place
+    4. Keep only high-confidence findings with clear responsibility splits and concrete extraction seams
+    5. Preserve Functional Core, Imperative Shell boundaries in recommendations by extracting pure decision logic from imperative orchestration
+
+    Positive layer-mixing case:
+    - Report when one module clearly combines parsing/validation, execution/decision logic, and presentation/output formatting responsibilities
+
+    Negative layer-mixing case:
+    - Do not report modules that primarily implement one layer with straightforward delegation (for example thin adapters or focused formatting modules)
+
+    Positive collector case:
+    - Report collector hotspots where a function coordinates many collaborators/parameters and also embeds cross-layer decisions or formatting concerns
+
+    Negative collector case:
+    - Do not report straightforward dependency-wiring, pass-through wrappers, or data-aggregation helpers that do not mix additional decision/presentation concerns
+
+    ## Output
+
+    For each finding, provide:
+    - **Location** - File path and function name where applicable
+    - **Responsibility split** - Distinct responsibilities currently mixed (for example parsing, execution, presentation)
+    - **Severity** - \`high\`, \`medium\`, or \`low\` based on extraction urgency and coupling risk
+    - **Suggested extraction plan** - A small-step plan describing what to extract first, with Functional Core, Imperative Shell boundaries preserved
+
+    ## Principles
+
+    - [Functional Core, Imperative Shell](../principles/functional-core-imperative-shell.md)
+    - [Decoupled Code](../principles/decoupled-code.md)
+    - [Small Units](../principles/small-units.md)
+    - [Make the Change Easy](../principles/make-the-change-easy.md)
+    - [Context-Optimised Code](../principles/context-optimised-code.md)
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - [ ] Reviewed high-confidence function-level findings where 3+ distinct responsibilities are combined
+    - [ ] Reviewed high-confidence module layer-mixing findings
+    - [ ] Reviewed high-confidence collector-style orchestration hotspots independent of line count
+    - [ ] Included runtime code and test helpers in scope
+    - [ ] Documented each finding with location, responsibility split, severity, and suggested extraction plan
+    - [ ] Preserved Functional Core, Imperative Shell boundaries in recommendations
+    - [ ] Avoided overlap with churn-driven \`refactoring-opportunities\` findings
+    - [ ] Proposed ideas for substantial responsibility-splitting work identified
+  `
+}
+
 function ubiquitousLanguage(): string {
   return dedent`
     # Ubiquitous Language
@@ -1023,6 +1098,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'refactoring-opportunities': refactoringOpportunities,
   'repository-context': repositoryContext,
   'security-review': securityReview,
+  'single-responsibility-violations': singleResponsibilityViolations,
   'slow-tests': slowTests,
   'stale-ideas': staleIdeas,
   'test-coverage': testCoverage,
