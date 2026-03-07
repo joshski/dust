@@ -92,6 +92,7 @@ function createBucketDependencies(
     spawn: (() => {
       const proc = new EventEmitter()
       return proc
+      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     }) as unknown as BucketDependencies['spawn'],
     createWebSocket: () => createAutoConnectWebSocket(),
     setupKeypress: () => () => {},
@@ -1170,6 +1171,7 @@ describe('connectWebSocket', () => {
       createWebSocket: () => ws,
       spawn: (() => {
         throw new Error('spawn exploded')
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       }) as unknown as BucketDependencies['spawn'],
     })
 
@@ -1272,6 +1274,7 @@ describe('connectWebSocket', () => {
         proc.stderr = new EventEmitter()
         process.nextTick(() => proc.emit('close', 0))
         return proc
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       }) as unknown as BucketDependencies['spawn'],
       sleep: () => new Promise(() => {}),
     })
@@ -2368,6 +2371,7 @@ describe('handleRepositoryListSuccess', () => {
     state.repositories.set('repo1', repoState)
 
     const repoDeps = {
+      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       spawn: (() => {}) as unknown as BucketDependencies['spawn'],
       run: async () => {},
       fileSystem: dependencies.fileSystem,
@@ -2414,6 +2418,7 @@ describe('handleRepositoryListSuccess', () => {
     state.repositories.set('repo1', repoState)
 
     const repoDeps = {
+      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       spawn: (() => {}) as unknown as BucketDependencies['spawn'],
       run: async () => {},
       fileSystem: dependencies.fileSystem,
@@ -2459,6 +2464,7 @@ describe('handleRepositoryListSuccess', () => {
     state.repositories.set('repo1', repoState)
 
     const repoDeps = {
+      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       spawn: (() => {}) as unknown as BucketDependencies['spawn'],
       run: async () => {},
       fileSystem: dependencies.fileSystem,

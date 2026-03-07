@@ -43,6 +43,7 @@ function createMockDependencies(
           return this
         },
       }
+      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     }) as unknown as typeof spawn,
     createInterface: (() => ({
       async *[Symbol.asyncIterator]() {
@@ -50,6 +51,7 @@ function createMockDependencies(
           yield line
         }
       },
+      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     })) as unknown as typeof createInterface,
   }
 }
@@ -133,11 +135,13 @@ describe('spawnCodex', () => {
             return this
           },
         }
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       }) as unknown as typeof spawn,
       createInterface: (() => ({
         async *[Symbol.asyncIterator]() {
           // no lines
         },
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       })) as unknown as typeof createInterface,
     }
 
@@ -170,11 +174,13 @@ describe('spawnCodex', () => {
             return this
           },
         }
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       }) as unknown as typeof spawn,
       createInterface: (() => ({
         async *[Symbol.asyncIterator]() {
           // no lines
         },
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       })) as unknown as typeof createInterface,
     }
 
@@ -225,9 +231,11 @@ describe('spawnCodex', () => {
       spawn: (() => ({
         stdout: null,
         on: () => {},
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       })) as unknown as typeof spawn,
       createInterface: (() => ({
         async *[Symbol.asyncIterator]() {},
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       })) as unknown as typeof createInterface,
     }
 
@@ -263,12 +271,14 @@ describe('spawnCodex', () => {
             return this
           },
         }
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       }) as unknown as typeof spawn,
       createInterface: (() => ({
         close: () => {},
         async *[Symbol.asyncIterator]() {
           // no lines
         },
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       })) as unknown as typeof createInterface,
     }
 
@@ -307,12 +317,14 @@ describe('spawnCodex', () => {
             return this
           },
         }
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       }) as unknown as typeof spawn,
       createInterface: (() => ({
         close: () => {},
         async *[Symbol.asyncIterator]() {
           await new Promise(resolve => setTimeout(resolve, 0))
         },
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       })) as unknown as typeof createInterface,
     }
 
@@ -351,12 +363,14 @@ describe('spawnCodex', () => {
             return this
           },
         }
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       }) as unknown as typeof spawn,
       createInterface: (() => ({
         close: () => {},
         async *[Symbol.asyncIterator]() {
           // no lines
         },
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       })) as unknown as typeof createInterface,
     }
 

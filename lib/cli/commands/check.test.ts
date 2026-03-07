@@ -45,7 +45,9 @@ function createMockBufferedRunner(
 }
 
 // Mock timer functions to prevent actual intervals in tests
+// biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
 const mockSetInterval = (() => 1) as unknown as typeof setInterval
+// biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
 const mockClearInterval = (() => {}) as unknown as typeof clearInterval
 
 function createDependencies(
@@ -416,6 +418,7 @@ describe('createShellRunner', () => {
   test('captures stdout and stderr', async () => {
     const mockProc = createMockChildProcess()
 
+    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
 
@@ -432,6 +435,7 @@ describe('createShellRunner', () => {
   test('resolves with exit code from close event', async () => {
     const mockProc = createMockChildProcess()
 
+    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
 
@@ -445,6 +449,7 @@ describe('createShellRunner', () => {
   test('resolves with 1 when close event has null code', async () => {
     const mockProc = createMockChildProcess()
 
+    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
 
@@ -458,6 +463,7 @@ describe('createShellRunner', () => {
   test('resolves with 1 on error', async () => {
     const mockProc = createMockChildProcess()
 
+    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
 
@@ -476,6 +482,7 @@ describe('createShellRunner', () => {
       killed = true
     }
 
+    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
 
@@ -492,6 +499,7 @@ describe('createShellRunner', () => {
   test('ignores close event after timeout has already resolved', async () => {
     const mockProc = createMockChildProcess()
 
+    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
 
@@ -509,6 +517,7 @@ describe('createShellRunner', () => {
   test('ignores error event after timeout has already resolved', async () => {
     const mockProc = createMockChildProcess()
 
+    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
 
@@ -524,6 +533,7 @@ describe('createShellRunner', () => {
   test('clears timeout timer on normal completion', async () => {
     const mockProc = createMockChildProcess()
 
+    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
 
@@ -545,6 +555,7 @@ describe('createShellRunner', () => {
     mockProc.stdout = null
     mockProc.stderr = null
 
+    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     const mockSpawn = () => mockProc as unknown as ChildProcess
     const runner = createShellRunner(mockSpawn)
 
@@ -1353,6 +1364,7 @@ describe('check command progress indicator', () => {
     const capturingSetInterval = ((callback: () => void) => {
       intervalCallback = callback
       return 1
+      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     }) as unknown as typeof setInterval
 
     // Create a runner that invokes the interval callback before resolving
@@ -1389,9 +1401,11 @@ describe('check command progress indicator', () => {
     })
 
     let clearedIntervalId: unknown
+    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     const trackingSetInterval = (() => 42) as unknown as typeof setInterval
     const trackingClearInterval = ((id: unknown) => {
       clearedIntervalId = id
+      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     }) as unknown as typeof clearInterval
 
     await check(

@@ -131,6 +131,7 @@ describe('defaultExchangeCode', () => {
     const stubFetch = (async () =>
       new Response(JSON.stringify({ token: 'exchanged-token' }), {
         status: 200,
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       })) as unknown as typeof fetch
 
     const token = await defaultExchangeCode('my-code', stubFetch)
@@ -140,6 +141,7 @@ describe('defaultExchangeCode', () => {
   test('throws when response is not ok', async () => {
     stubEnv('DUST_BUCKET_HOST', 'http://localhost:9999')
     const stubFetch = (async () =>
+      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       new Response('error', { status: 401 })) as unknown as typeof fetch
 
     await expect(defaultExchangeCode('bad-code', stubFetch)).rejects.toThrow(
@@ -152,6 +154,7 @@ describe('defaultExchangeCode', () => {
     const stubFetch = (async () =>
       new Response(JSON.stringify({ token: 42 }), {
         status: 200,
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       })) as unknown as typeof fetch
 
     await expect(defaultExchangeCode('my-code', stubFetch)).rejects.toThrow(
@@ -311,6 +314,7 @@ describe('authenticate', () => {
     const stubFetch = (async () =>
       new Response(JSON.stringify({ token: 'default-exchange-token' }), {
         status: 200,
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       })) as unknown as typeof fetch
 
     const authDependencies: AuthDependencies = {

@@ -1,0 +1,5 @@
+language js
+
+`$value as unknown as $target` where {
+  register_diagnostic(span=$target, message="Avoid double-casting with 'as unknown as'. Prefer typed helpers/adapters, or add a local suppression with rationale at unavoidable interop boundaries.")
+}

@@ -2,7 +2,9 @@
 
 Custom lint rules are written using [GritQL](https://docs.grit.io/tutorials/gritql), a declarative pattern matching language for code. Rules are stored in the `biome/` directory with the `.grit` extension.
 
-Example: `biome/dust-no-abbreviated-names.grit` enforces full variable names instead of abbreviations like `ctx`, `opts`, `err`.
+Examples:
+- `biome/dust-no-abbreviated-names.grit` enforces full variable names instead of abbreviations like `ctx`, `opts`, `err`.
+- `biome/no-unsafe-double-cast.grit` flags `as unknown as` in `*.test.ts` via `biome.json` overrides. Use local `// biome-ignore lint/plugin: <reason>` only for unavoidable boundaries.
 
 ## Key GritQL Concepts
 

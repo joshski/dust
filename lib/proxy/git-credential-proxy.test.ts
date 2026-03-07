@@ -42,6 +42,7 @@ function createMockSpawn(
       }
     }, 0)
 
+    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     return proc as unknown as ChildProcess
   }) as GitCredentialProxyDependencies['spawn']
 }

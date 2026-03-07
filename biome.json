@@ -28,7 +28,12 @@
       }
     }
   },
-  "overrides": [],
+  "overrides": [
+    {
+      "includes": ["**/*.test.ts"],
+      "plugins": ["./biome/no-unsafe-double-cast.grit"]
+    }
+  ],
   "formatter": {
     "enabled": true,
     "useEditorconfig": true,

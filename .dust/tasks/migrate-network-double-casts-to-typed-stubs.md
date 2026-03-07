@@ -16,7 +16,7 @@ Remove unsafe double casts from the network boundary slice. Introduce typed test
 
 ## Blocked By
 
-- [Introduce Unsafe Double-Cast Lint Guardrail](./introduce-unsafe-double-cast-lint-guardrail.md)
+(none)
 
 ## Definition of Done
 

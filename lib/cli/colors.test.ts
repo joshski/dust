@@ -14,11 +14,13 @@ describe('colors', () => {
   }
 
   beforeEach(() => {
+    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     ;(process.stdout as unknown as { isTTY: boolean }).isTTY = true
   })
 
   afterEach(() => {
     restoreEnv()
+    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     ;(process.stdout as unknown as { isTTY: boolean | undefined }).isTTY =
       originalIsTTY
   })
@@ -49,6 +51,7 @@ describe('colors', () => {
 
     it('returns true when stdout is not a TTY', () => {
       withColorFriendlyEnv(() => {
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
         ;(process.stdout as unknown as { isTTY: boolean }).isTTY = false
         expect(shouldDisableColors()).toBe(true)
       })
@@ -56,6 +59,7 @@ describe('colors', () => {
 
     it('returns true when stdout.isTTY is undefined', () => {
       withColorFriendlyEnv(() => {
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
         ;(process.stdout as unknown as { isTTY: undefined }).isTTY = undefined
         expect(shouldDisableColors()).toBe(true)
       })
@@ -95,6 +99,7 @@ describe('colors', () => {
 
     it('returns empty strings when stdout is not a TTY', () => {
       withColorFriendlyEnv(() => {
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
         ;(process.stdout as unknown as { isTTY: boolean }).isTTY = false
         const colors = getColors()
         expect(colors.reset).toBe('')

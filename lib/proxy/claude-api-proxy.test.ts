@@ -9,6 +9,7 @@ import {
 function createMockFetch(): typeof fetch {
   return (() => {
     throw new Error('fetch not implemented in test')
+    // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
   }) as unknown as typeof fetch
 }
 

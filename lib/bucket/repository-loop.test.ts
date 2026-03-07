@@ -345,6 +345,7 @@ describe('createCodexBufferRun', () => {
     }
     const mockDeps = {} as CodexRunnerDependencies
     const bufferRun = createCodexBufferRun(
+      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       mockRun as unknown as typeof import('../codex/run').run,
       mockDeps
     )
@@ -796,6 +797,7 @@ describe('runRepositoryLoop', () => {
         stderr: { on: () => {} },
       }
       return proc
+      // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
     }) as unknown as RepositoryDependencies['spawn']
 
     const repoDeps: RepositoryDependencies = {
@@ -872,6 +874,7 @@ describe('runRepositoryLoop', () => {
         }
         // git pull / other spawns - throw to stop the loop
         throw new Error('spawn failure')
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       }) as unknown as RepositoryDependencies['spawn'],
       run: async () => {},
       fileSystem: {
@@ -940,6 +943,7 @@ describe('runRepositoryLoop', () => {
           return proc
         }
         throw new Error('spawn failure')
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       }) as unknown as RepositoryDependencies['spawn'],
       run: async () => {},
       fileSystem: {
@@ -988,6 +992,7 @@ describe('runRepositoryLoop', () => {
           return proc
         }
         throw new Error('spawn failure')
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       }) as unknown as RepositoryDependencies['spawn'],
       run: async () => {},
       fileSystem: {
@@ -1052,6 +1057,7 @@ describe('runRepositoryLoop', () => {
           return proc
         }
         throw new Error('spawn failure')
+        // biome-ignore lint/plugin: Temporary interop boundary; tracked follow-up tasks migrate this to typed helpers.
       }) as unknown as RepositoryDependencies['spawn'],
       run: async () => {},
       fileSystem: {
