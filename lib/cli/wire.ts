@@ -4,6 +4,15 @@
  * This module extracts the dependency construction and wiring logic
  * so it can be tested independently of the real Node.js APIs.
  */
+import { existsSync, statSync } from 'node:fs'
+import {
+  chmod,
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  writeFile,
+} from 'node:fs/promises'
 import { createGitDirectoryFileSorter } from '../git/file-sorter'
 import { main } from './main'
 import { defaultGitRunner } from './process-runner'
@@ -99,6 +108,20 @@ export function createGlobScanner(
       }
     },
   }
+}
+
+/**
+ * Default file system primitives backed by real Node.js fs APIs.
+ */
+export const defaultFileSystemPrimitives: FileSystemPrimitives = {
+  existsSync,
+  statSync,
+  readFile,
+  writeFile,
+  mkdir,
+  readdir,
+  chmod,
+  rename,
 }
 
 /**

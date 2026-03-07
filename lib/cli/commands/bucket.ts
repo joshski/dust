@@ -116,6 +116,8 @@ export interface BucketDependencies {
   sleep: (ms: number) => Promise<void>
   getReposDir: () => string
   auth: AuthDependencies
+  /** Optional override for the agent runner (default: claudeRun). Used for testing. */
+  run?: typeof claudeRun
 }
 
 /**
@@ -336,7 +338,7 @@ function toRepositoryDependencies(
 ): RepositoryDependencies {
   return {
     spawn: bucketDeps.spawn,
-    run: claudeRun,
+    run: bucketDeps.run ?? claudeRun,
     fileSystem,
     sleep: bucketDeps.sleep,
     getReposDir: bucketDeps.getReposDir,

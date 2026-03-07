@@ -4,18 +4,9 @@
  * This is the minimal shell that passes real Node.js APIs to the wiring logic.
  * All testable logic is in wire.ts.
  */
-import { existsSync, statSync } from 'node:fs'
-import {
-  chmod,
-  mkdir,
-  readdir,
-  readFile,
-  rename,
-  writeFile,
-} from 'node:fs/promises'
 import { type CommandEventMessage, createEventEmitter } from '../command-events'
 import { createCommandEventWriter } from '../command-events-transport'
-import { wireEntry } from './wire'
+import { defaultFileSystemPrimitives, wireEntry } from './wire'
 
 const writeEvent = createCommandEventWriter(process.env, {
   fetch: (input, init) => fetch(input, init),
@@ -30,7 +21,7 @@ const emitEvent = writeEvent
   : undefined
 
 await wireEntry(
-  { existsSync, statSync, readFile, writeFile, mkdir, readdir, chmod, rename },
+  defaultFileSystemPrimitives,
   {
     argv: process.argv,
     cwd: () => process.cwd(),
