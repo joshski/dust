@@ -322,6 +322,8 @@ interface IterationOptions {
   docker?: DockerSpawnConfig
   /** Pre-formatted tools section to inject into the prompt */
   toolsSection?: string
+  /** Port of the command events proxy for this iteration */
+  proxyPort?: number
 }
 
 export async function runOneIteration(
@@ -344,7 +346,10 @@ export async function runOneIteration(
     docker,
     toolsSection = '',
   } = options
-  const baseEnv = buildUnattendedEnv({ repositoryId })
+  const baseEnv = buildUnattendedEnv({
+    repositoryId,
+    proxyPort: options.proxyPort,
+  })
 
   // Step 1: Sync with remote
   log('syncing with remote')

@@ -5,6 +5,8 @@
  * the HTTP (loop) and WebSocket (bucket) paths.
  */
 
+import type { CommandEvent } from './command-events'
+
 // The 4 agent session event types sent over the wire
 export type AgentSessionEvent =
   | {
@@ -34,7 +36,7 @@ export interface EventMessage {
   // At that point we can stop sending `repository` (full name) entirely.
   repoId?: number
   agentSessionId?: string
-  event: AgentSessionEvent
+  event: AgentSessionEvent | CommandEvent
 }
 
 /**

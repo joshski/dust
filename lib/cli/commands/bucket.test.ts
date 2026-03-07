@@ -1888,7 +1888,7 @@ describe('bucketWorker', () => {
     expect(written.some(s => s.includes('\x1b[?1049l'))).toBe(true)
   })
 
-  test('sets DUST_PROXY_PORT during run and restores previous value on exit', async () => {
+  test('does not set DUST_PROXY_PORT globally (per-iteration proxies handle it)', async () => {
     const dependencies = createDependencies()
     stubEnv('DUST_BUCKET_TOKEN', 'token')
     stubEnv('DUST_PROXY_PORT', '9999')
@@ -1907,8 +1907,9 @@ describe('bucketWorker', () => {
     const result = await bucketWorker(dependencies, bucketDependencies)
 
     expect(result.exitCode).toBe(0)
-    expect(proxyPortDuringRun).toBeDefined()
-    expect(proxyPortDuringRun).not.toBe('9999')
+    // DUST_PROXY_PORT should remain unchanged — per-iteration proxies
+    // pass the port via subprocess env, not process.env
+    expect(proxyPortDuringRun).toBe('9999')
     expect(process.env.DUST_PROXY_PORT).toBe('9999')
   })
 

@@ -11,14 +11,19 @@ export function isUnattended(
 
 export function buildUnattendedEnv(options?: {
   repositoryId?: string
+  proxyPort?: number
 }): Record<string, string> {
   const env: Record<string, string> = {
     [DUST_UNATTENDED]: '1',
     [DUST_SKIP_AGENT]: '1',
   }
-  const proxyPort = process.env[DUST_PROXY_PORT]
-  if (proxyPort) {
-    env[DUST_PROXY_PORT] = proxyPort
+  if (options?.proxyPort) {
+    env[DUST_PROXY_PORT] = String(options.proxyPort)
+  } else {
+    const proxyPort = process.env[DUST_PROXY_PORT]
+    if (proxyPort) {
+      env[DUST_PROXY_PORT] = proxyPort
+    }
   }
   if (options?.repositoryId) {
     env[DUST_REPOSITORY_ID] = options.repositoryId

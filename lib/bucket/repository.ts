@@ -12,6 +12,10 @@ import { run as claudeRun } from '../claude/run'
 import type { CommandDependencies, FileSystem } from '../cli/types'
 import type { DockerDependencies } from '../docker/docker-agent'
 import { createLogger } from '../logging'
+import type {
+  ToolExecutionRequest,
+  ToolExecutionResult,
+} from './command-events-proxy'
 import {
   type BucketEmitFn,
   type BucketErrorEvent,
@@ -87,6 +91,10 @@ export interface RepositoryDependencies {
   dockerDeps?: Partial<DockerDependencies>
   /** Function to get current tool definitions */
   getTools?: () => ToolDefinition[]
+  /** Forward tool execution requests to the bucket server */
+  forwardToolExecution?: (
+    request: ToolExecutionRequest
+  ) => Promise<ToolExecutionResult>
 }
 
 /**

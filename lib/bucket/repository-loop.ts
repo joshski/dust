@@ -36,6 +36,7 @@ import { prepareDockerConfig } from '../docker/docker-agent'
 import { createLogger } from '../logging'
 import { createClaudeApiProxyServer } from '../proxy/claude-api-proxy'
 import { createGitCredentialProxyServer } from '../proxy/git-credential-proxy'
+import { startCommandEventsProxy } from './command-events-proxy'
 import type { SendEventFn } from './events'
 import { appendLogLine, createLogLine, type LogBuffer } from './log-buffer'
 import type { RepositoryDependencies, RepositoryState } from './repository'
@@ -92,7 +93,7 @@ export function buildEventMessage(parameters: {
   sessionId: string
   repository: string
   repoId?: number
-  event: AgentSessionEvent
+  event: EventMessage['event']
   agentSessionId?: string
 }): EventMessage {
   const msg: EventMessage = {
@@ -448,6 +449,37 @@ export async function runRepositoryLoop(
     const tools = repoDeps.getTools?.() ?? []
     const toolsSection = formatToolsSection(tools)
 
+    // Start a per-iteration command events proxy so subprocesses can send
+    // command events (e.g. principles-listed, check-passed) enriched with
+    // the correct session/repository context.
+    /* v8 ignore start -- proxy callbacks only invoked by real subprocesses */
+    const proxy = await startCommandEventsProxy({
+      forwardEvent: commandEvent => {
+        if (sendEvent && sessionId) {
+          loopState.sequence++
+          sendEvent(
+            buildEventMessage({
+              sequence: loopState.sequence,
+              sessionId,
+              repository: repoName,
+              repoId: repoState.repository.id,
+              event: commandEvent.event,
+              agentSessionId: loopState.agentSessionId,
+            })
+          )
+        }
+      },
+      getTools: () => repoDeps.getTools?.() ?? [],
+      forwardToolExecution:
+        repoDeps.forwardToolExecution ??
+        (() =>
+          Promise.resolve({
+            status: 'error' as const,
+            error: 'Tool execution not available',
+          })),
+    })
+    /* v8 ignore stop */
+
     try {
       result = await runOneIteration(
         commandDeps,
@@ -461,6 +493,7 @@ export async function runRepositoryLoop(
           onRawEvent: createHeartbeatThrottler(onAgentEvent, agentType),
           docker: dockerConfig,
           toolsSection,
+          proxyPort: proxy.port,
         }
       )
     } catch (error) {
@@ -474,6 +507,7 @@ export async function runRepositoryLoop(
       await sleep(10000)
       continue
     } finally {
+      await proxy.stop()
       if (repoState.cancelCurrentIteration === cancelCurrentIteration) {
         repoState.cancelCurrentIteration = undefined
       }

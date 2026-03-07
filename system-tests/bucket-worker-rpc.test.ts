@@ -107,11 +107,14 @@ function createLlmEmulator(onComplete: () => void): typeof claudeRun {
     const cwd = spawnOpts?.cwd ?? process.cwd()
 
     // Spawn `dust check` — this emits command events through the proxy
+    // Merge the agent subprocess env (which includes DUST_PROXY_PORT from
+    // the per-iteration proxy) with process.env
+    const agentEnv = spawnOpts?.env ?? {}
     await new Promise<void>((resolve, reject) => {
       const child = spawn('bash', ['-c', `"${DUST_BIN}" check`], {
         cwd,
         stdio: ['ignore', 'pipe', 'pipe'],
-        env: { ...process.env },
+        env: { ...process.env, ...agentEnv },
       })
 
       child.stdout?.on('data', () => {})

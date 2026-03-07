@@ -44,7 +44,6 @@ import {
   type MessageHandlerState,
 } from '../../bucket/bucket-state'
 import type { ToolExecutionResult } from '../../bucket/command-events-proxy'
-import { startCommandEventsProxy } from '../../bucket/command-events-proxy'
 import {
   type BucketEmitFn,
   createEventMessageSender,
@@ -95,7 +94,6 @@ import {
   type ToolExecutionResultMessage,
 } from '../../bucket/tool-execution-protocol'
 import { run as claudeRun } from '../../claude/run'
-import { DUST_PROXY_PORT } from '../../command-events-transport'
 import { createLogger, enableFileLogs } from '../../logging'
 import { isUnattended } from '../../session'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
@@ -334,7 +332,8 @@ export function getWebSocketUrl(): string {
 function toRepositoryDependencies(
   bucketDeps: BucketDependencies,
   fileSystem: FileSystem,
-  state: BucketState
+  state: BucketState,
+  forwardToolExecution?: RepositoryDependencies['forwardToolExecution']
 ): RepositoryDependencies {
   return {
     spawn: bucketDeps.spawn,
@@ -343,6 +342,7 @@ function toRepositoryDependencies(
     sleep: bucketDeps.sleep,
     getReposDir: bucketDeps.getReposDir,
     getTools: () => state.tools,
+    forwardToolExecution,
   }
 }
 
@@ -564,7 +564,8 @@ export function connectWebSocket(
   fileSystem: FileSystem,
   useTUI: boolean,
   connectedWs?: WebSocketLike,
-  onToolExecutionResult?: (message: ToolExecutionResultMessage) => void
+  onToolExecutionResult?: (message: ToolExecutionResultMessage) => void,
+  forwardToolExecution?: RepositoryDependencies['forwardToolExecution']
 ): void {
   if (state.shuttingDown) return
 
@@ -597,7 +598,14 @@ export function connectWebSocket(
       state.reconnectDelay = result.state.reconnectDelay
       executeLifecycleEffects(
         result.effects,
-        { state, context, useTUI, bucketDependencies, fileSystem },
+        {
+          state,
+          context,
+          useTUI,
+          bucketDependencies,
+          fileSystem,
+          forwardToolExecution,
+        },
         token
       )
     }
@@ -650,6 +658,7 @@ export function connectWebSocket(
         useTUI,
         bucketDependencies,
         fileSystem,
+        forwardToolExecution,
       })
       return
     }
@@ -668,6 +677,7 @@ export function connectWebSocket(
         useTUI,
         bucketDependencies,
         fileSystem,
+        forwardToolExecution,
       })
       return
     }
@@ -684,6 +694,7 @@ export function connectWebSocket(
       useTUI,
       bucketDependencies,
       fileSystem,
+      forwardToolExecution,
     })
   }
 }
@@ -697,6 +708,7 @@ interface EffectExecutionDeps {
   useTUI: boolean
   bucketDependencies: BucketDependencies
   fileSystem: FileSystem
+  forwardToolExecution?: RepositoryDependencies['forwardToolExecution']
 }
 
 /**
@@ -707,8 +719,14 @@ function executeEffects(
   effects: Effect[],
   dependencies: EffectExecutionDeps
 ): void {
-  const { state, context, useTUI, bucketDependencies, fileSystem } =
-    dependencies
+  const {
+    state,
+    context,
+    useTUI,
+    bucketDependencies,
+    fileSystem,
+    forwardToolExecution,
+  } = dependencies
 
   for (const effect of effects) {
     switch (effect.type) {
@@ -728,7 +746,8 @@ function executeEffects(
         const repoDeps = toRepositoryDependencies(
           bucketDependencies,
           fileSystem,
-          state
+          state,
+          forwardToolExecution
         )
         const repoContext = createTUIContext(state, context, useTUI)
         const repos = effect.repositories
@@ -746,7 +765,8 @@ function executeEffects(
         const repoDeps = toRepositoryDependencies(
           bucketDependencies,
           fileSystem,
-          state
+          state,
+          forwardToolExecution
         )
         const repoState = state.repositories.get(effect.repositoryName)
         if (repoState) {
@@ -775,8 +795,14 @@ function executeLifecycleEffects(
   dependencies: EffectExecutionDeps,
   token: string
 ): void {
-  const { state, context, useTUI, bucketDependencies, fileSystem } =
-    dependencies
+  const {
+    state,
+    context,
+    useTUI,
+    bucketDependencies,
+    fileSystem,
+    forwardToolExecution,
+  } = dependencies
 
   for (const effect of effects) {
     switch (effect.type) {
@@ -792,7 +818,10 @@ function executeLifecycleEffects(
             bucketDependencies,
             context,
             fileSystem,
-            useTUI
+            useTUI,
+            undefined,
+            undefined,
+            forwardToolExecution
           )
         }, effect.delayMs)
         break
@@ -1081,8 +1110,6 @@ export async function bucketWorker(
 
   const state = createInitialState()
   const useTUI = bucketDeps.isTTY
-  const previousProxyPort = process.env[DUST_PROXY_PORT]
-  let stopCommandEventsProxy: (() => Promise<void>) | undefined
   const pendingToolExecutions = new Map<
     string,
     {
@@ -1103,88 +1130,60 @@ export async function bucketWorker(
   let cleanupKeypress: (() => void) | undefined
   let cleanupSignals: (() => void) | undefined
 
-  try {
-    try {
-      const proxy = await startCommandEventsProxy({
-        forwardEvent: message => {
-          const ws = state.ws
-          if (ws && ws.readyState === WS_OPEN) {
-            try {
-              ws.send(JSON.stringify(message))
-            } catch (error) {
-              const msg = error instanceof Error ? error.message : String(error)
-              log(`failed to forward event to WebSocket: ${msg}`)
-            }
-          } else {
-            log(`dropping event ${message.event.type}: WebSocket not connected`)
-          }
-        },
-        getTools: () => state.tools,
-        forwardToolExecution: request => {
-          const ws = state.ws
-          if (!ws || ws.readyState !== WS_OPEN) {
-            log(
-              `tool execution rejected: ${request.toolName} (WebSocket not connected)`
-            )
-            return Promise.resolve({
-              status: 'error',
-              error: 'Bucket session is not connected',
-            })
-          }
-
-          const requestId = crypto.randomUUID()
-          const message: ToolExecutionRequestMessage = {
-            type: 'tool-execution-request',
-            requestId,
-            toolName: request.toolName,
-            arguments: request.arguments,
-            repositoryId: request.repositoryId,
-          }
-
-          log(
-            `forwarding tool execution: ${request.toolName} requestId=${requestId}`
-          )
-          return new Promise<ToolExecutionResult>((resolve, reject) => {
-            const timeoutId = setTimeout(() => {
-              pendingToolExecutions.delete(requestId)
-              log(
-                `tool execution timed out: ${request.toolName} requestId=${requestId}`
-              )
-              reject(new Error('Timed out waiting for tool execution result'))
-            }, 30000)
-
-            pendingToolExecutions.set(requestId, {
-              resolve,
-              reject,
-              timeoutId,
-            })
-
-            try {
-              ws.send(JSON.stringify(message))
-            } catch (error) {
-              clearTimeout(timeoutId)
-              pendingToolExecutions.delete(requestId)
-              const messageText =
-                error instanceof Error ? error.message : String(error)
-              reject(
-                new Error(
-                  `Failed to send tool execution request: ${messageText}`
-                )
-              )
-            }
-          })
-        },
-      })
-      process.env[DUST_PROXY_PORT] = String(proxy.port)
-      stopCommandEventsProxy = proxy.stop
-    } catch (error) {
-      initialWs.close()
-      context.stderr(
-        `Failed to start command events proxy: ${(error as Error).message}`
+  const forwardToolExecution = (
+    request: import('../../bucket/command-events-proxy').ToolExecutionRequest
+  ): Promise<ToolExecutionResult> => {
+    const ws = state.ws
+    if (!ws || ws.readyState !== WS_OPEN) {
+      log(
+        `tool execution rejected: ${request.toolName} (WebSocket not connected)`
       )
-      return { exitCode: 1 }
+      return Promise.resolve({
+        status: 'error',
+        error: 'Bucket session is not connected',
+      })
     }
 
+    const requestId = crypto.randomUUID()
+    const message: ToolExecutionRequestMessage = {
+      type: 'tool-execution-request',
+      requestId,
+      toolName: request.toolName,
+      arguments: request.arguments,
+      repositoryId: request.repositoryId,
+    }
+
+    log(`forwarding tool execution: ${request.toolName} requestId=${requestId}`)
+    return new Promise<ToolExecutionResult>((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        pendingToolExecutions.delete(requestId)
+        log(
+          `tool execution timed out: ${request.toolName} requestId=${requestId}`
+        )
+        reject(new Error('Timed out waiting for tool execution result'))
+      }, 30000)
+
+      pendingToolExecutions.set(requestId, {
+        resolve,
+        reject,
+        timeoutId,
+      })
+
+      try {
+        ws.send(JSON.stringify(message))
+      } catch (error) {
+        clearTimeout(timeoutId)
+        pendingToolExecutions.delete(requestId)
+        const messageText =
+          error instanceof Error ? error.message : String(error)
+        reject(
+          new Error(`Failed to send tool execution request: ${messageText}`)
+        )
+      }
+    })
+  }
+
+  try {
     if (useTUI) {
       tuiHandle = setupTUI(state, bucketDeps)
     }
@@ -1238,7 +1237,8 @@ export async function bucketWorker(
             output: message.output,
             error: message.error,
           })
-        }
+        },
+        forwardToolExecution
       )
 
       if (!useTUI) {
@@ -1249,23 +1249,11 @@ export async function bucketWorker(
     tuiHandle?.cleanup()
     cleanupKeypress?.()
     cleanupSignals?.()
-    try {
-      await stopCommandEventsProxy?.()
-    } catch (error) {
-      context.stderr(
-        `Failed to stop command events proxy: ${(error as Error).message}`
-      )
-    }
     for (const pending of pendingToolExecutions.values()) {
       clearTimeout(pending.timeoutId)
       pending.reject(new Error('Bucket proxy shutting down'))
     }
     pendingToolExecutions.clear()
-    if (previousProxyPort === undefined) {
-      delete process.env[DUST_PROXY_PORT]
-    } else {
-      process.env[DUST_PROXY_PORT] = previousProxyPort
-    }
   }
 
   context.stdout('Goodbye!')
