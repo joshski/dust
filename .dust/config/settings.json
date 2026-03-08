@@ -17,11 +17,19 @@
       ]
     },
     {
-      "name": "lint (biome)",
-      "command": "bunx biome check .",
+      "name": "lint (oxlint)",
+      "command": "bunx oxlint .",
       "hints": [
-        "Run `bun run biome check . --write` to auto-fix lint errors",
-        "Check biome.json for rule configurations"
+        "Run `bunx oxlint .` to reproduce lint diagnostics locally",
+        "Linting uses OXC defaults rather than Biome rule-by-rule parity"
+      ]
+    },
+    {
+      "name": "lint (custom policy checks)",
+      "command": "bun run scripts/lint/policy-checks.ts",
+      "hints": [
+        "This check enforces repository-owned policies that replaced Biome GritQL plugins",
+        "See lib/lint/policy-checker.ts for rule definitions and messages"
       ]
     },
     {

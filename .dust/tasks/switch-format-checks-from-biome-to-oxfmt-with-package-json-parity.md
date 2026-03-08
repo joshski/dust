@@ -17,7 +17,7 @@ Replace Biome formatting checks with `oxfmt` while preserving current `package.j
 
 ## Blocked By
 
-- [Switch lint from Biome to oxlint with custom policy checks](./switch-lint-from-biome-to-oxlint-with-custom-policy-checks.md)
+(none)
 
 ## Definition of Done
 

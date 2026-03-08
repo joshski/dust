@@ -1,23 +1,21 @@
 # Biome Custom Rules
 
-Custom lint rules are written using [GritQL](https://docs.grit.io/tutorials/gritql), a declarative pattern matching language for code. Rules are stored in the `biome/` directory with the `.grit` extension.
+Linting now uses `oxlint` defaults plus repository-owned custom policy checks.
 
-Examples:
-- `biome/dust-no-abbreviated-names.grit` enforces full variable names instead of abbreviations like `ctx`, `opts`, `err`.
-- `biome/no-unsafe-double-cast.grit` flags `as unknown as` in `*.test.ts` via `biome.json` overrides. Use local `// biome-ignore lint/plugin: <reason>` only for unavoidable boundaries.
+The old Biome GritQL plugin intent is preserved in `lib/lint/policy-checker.ts` and run by `scripts/lint/policy-checks.ts` as part of `dust check`.
 
-## Key GritQL Concepts
+## Rule Ownership
 
-- Backtick-enclosed patterns match code literally: `` `ctx` ``
-- `register_diagnostic(span=$match, message="...")` reports violations
-- `or { }` matches multiple patterns
-- `$match` references the matched content
-- `where { }` adds conditions to patterns
+The repository-owned checker enforces these policies:
+- `dust-no-abbreviated-names` - disallows abbreviated binding names like `ctx`, `opts`, and `err`.
+- `no-vitest-mocking` - disallows `vi.mock`, `vi.spyOn`, timer mocking helpers, and `vi.fn`.
+- `no-unsafe-double-cast` - disallows `as unknown as` in `*.test.ts`.
 
-## Resources
+Design:
+- Pure analysis core: `analyzePolicyViolations(filePath, content)` returns diagnostics for one file.
+- Thin shell: `scripts/lint/policy-checks.ts` handles file discovery, IO, and CLI exit behavior.
 
-- [Biome Plugin Configuration](https://biomejs.dev/linter/plugins/) - Configuring plugins in biome.json
-- [Biome GritQL Reference](https://biomejs.dev/reference/gritql/) - Biome-specific GritQL docs
-- [GritQL Tutorial](https://docs.grit.io/tutorials/gritql) - Getting started with GritQL
-- [GritQL Patterns](https://docs.grit.io/language/patterns) - Pattern matching syntax
-- [GritQL Syntax](https://docs.grit.io/language/syntax) - Full syntax reference
+## Related Commands
+
+- `bunx oxlint .` - primary linter with OXC defaults.
+- `bun run scripts/lint/policy-checks.ts` - repository-owned lint policy enforcement.
