@@ -171,6 +171,10 @@ describe('bucket worker RPC integration', () => {
       const bucketDeps: BucketDependencies = {
         spawn,
         createWebSocket: serverEmulator.createWebSocket,
+        discoverAgentCapabilities: async () => ({
+          type: 'agent-capabilities',
+          agents: [],
+        }),
         setupKeypress: () => () => {},
         setupSignals: (onSignal: () => void) => {
           triggerShutdown = onSignal

@@ -95,6 +95,10 @@ function createBucketDependencies(
       return proc
     }),
     createWebSocket: () => createAutoConnectWebSocket(),
+    discoverAgentCapabilities: async () => ({
+      type: 'agent-capabilities',
+      agents: [],
+    }),
     setupKeypress: () => () => {},
     setupSignals: () => () => {},
     setupResize: () => () => {},
@@ -603,6 +607,70 @@ describe('connectWebSocket', () => {
     expect(context.stdoutLines.join('\n')).toContain('bucket.connected')
   })
 
+  test('sends one agent-capabilities message before processing server traffic', async () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const state = createInitialState()
+
+    const ws = createMockWebSocket()
+    const sentMessages: string[] = []
+    ws.send = (data: string) => {
+      sentMessages.push(data)
+    }
+
+    let resolveDiscovery:
+      | ((value: { type: 'agent-capabilities'; agents: [] }) => void)
+      | undefined
+    const discoveryPromise = new Promise<{
+      type: 'agent-capabilities'
+      agents: []
+    }>(resolve => {
+      resolveDiscovery = resolve
+    })
+
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => ws,
+      discoverAgentCapabilities: () => discoveryPromise,
+    })
+
+    connectWebSocket(
+      'token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false
+    )
+
+    ws.readyState = WS_OPEN
+    ws.onopen?.()
+    ws.onmessage?.({
+      data: JSON.stringify({
+        type: 'repository-list',
+        repositories: [],
+      }),
+    })
+
+    expect(context.stdoutLines.join('\n')).not.toContain(
+      'Received repository list'
+    )
+    expect(sentMessages).toHaveLength(0)
+
+    resolveDiscovery?.({ type: 'agent-capabilities', agents: [] })
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(sentMessages).toHaveLength(1)
+    expect(JSON.parse(sentMessages[0])).toEqual({
+      type: 'agent-capabilities',
+      agents: [],
+    })
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Received repository list (0 repositories):'
+    )
+  })
+
   test('uses pre-connected WebSocket when connectedWs is provided', () => {
     const dependencies = createDependencies()
     const context = dependencies.context as ReturnType<
@@ -636,6 +704,80 @@ describe('connectWebSocket', () => {
     expect(state.ws).toBe(ws)
     expect(state.reconnectDelay).toBe(1000)
     expect(context.stdoutLines.join('\n')).toContain('Connected to dustbucket')
+  })
+
+  test('sends no-capability agent-capabilities handshake on connect', async () => {
+    const dependencies = createDependencies()
+    const state = createInitialState()
+
+    const ws = createMockWebSocket()
+    const sentMessages: string[] = []
+    ws.send = (data: string) => {
+      sentMessages.push(data)
+    }
+
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => ws,
+      discoverAgentCapabilities: async () => ({
+        type: 'agent-capabilities',
+        agents: [],
+      }),
+    })
+
+    connectWebSocket(
+      'token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false
+    )
+
+    ws.readyState = WS_OPEN
+    ws.onopen?.()
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(JSON.parse(sentMessages[0])).toEqual({
+      type: 'agent-capabilities',
+      agents: [],
+    })
+  })
+
+  test('sends partial-capability agent-capabilities handshake on connect', async () => {
+    const dependencies = createDependencies()
+    const state = createInitialState()
+
+    const ws = createMockWebSocket()
+    const sentMessages: string[] = []
+    ws.send = (data: string) => {
+      sentMessages.push(data)
+    }
+
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => ws,
+      discoverAgentCapabilities: async () => ({
+        type: 'agent-capabilities',
+        agents: [{ agentType: 'codex', models: [] }],
+      }),
+    })
+
+    connectWebSocket(
+      'token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false
+    )
+
+    ws.readyState = WS_OPEN
+    ws.onopen?.()
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(JSON.parse(sentMessages[0])).toEqual({
+      type: 'agent-capabilities',
+      agents: [{ agentType: 'codex', models: [] }],
+    })
   })
 
   test('uses "none" as reason when close event has empty reason', () => {

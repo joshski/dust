@@ -131,7 +131,30 @@ interface ToolExecutionResultMessage {
 
 ## Client-to-Server Messages
 
-Clients send three categories of messages over the WebSocket:
+Clients send four categories of messages over the WebSocket:
+
+### agent-capabilities
+
+Sent exactly once on each successful WebSocket connection, immediately after connect and before the client processes subsequent server traffic. This is fire-and-forget; the client does not wait for an acknowledgment.
+
+```typescript
+interface AgentCapabilitiesMessage {
+  type: 'agent-capabilities'
+  agents: AgentCapability[]
+}
+
+interface AgentCapability {
+  agentType: 'claude' | 'codex'
+  models: string[]
+}
+```
+
+Semantics:
+
+- `agents` lists only locally available agents discovered via lightweight command probes (for example `--version` checks).
+- Claude models use hardcoded aliases.
+- Codex models are discovered live via the Codex CLI.
+- Discovery failures degrade gracefully to fewer entries or empty `models` arrays.
 
 ### Agent session events
 
@@ -178,11 +201,12 @@ The client waits up to 30 seconds for a matching `tool-execution-result` respons
 ### Connection Lifecycle
 
 1. Accept WebSocket connections with valid Bearer tokens
-2. Send `repository-list` immediately after connection
-3. Send `tool-definitions` after connection (if tools are available)
-4. Send `repository-list` when the user's repositories change
-5. Send `task-available` when a new task is created for a repository
-6. Close with code `4000` when replacing a connection from the same user
+2. Expect one client `agent-capabilities` message immediately after connection
+3. Send `repository-list` immediately after connection
+4. Send `tool-definitions` after connection (if tools are available)
+5. Send `repository-list` when the user's repositories change
+6. Send `task-available` when a new task is created for a repository
+7. Close with code `4000` when replacing a connection from the same user
 
 ### Task Signaling
 

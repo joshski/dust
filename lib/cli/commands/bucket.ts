@@ -53,6 +53,10 @@ import {
   WS_OPEN,
 } from '../../bucket/events'
 import {
+  discoverAgentCapabilities,
+  type AgentCapabilitiesMessage,
+} from '../../bucket/agent-capabilities'
+import {
   appendLogLine,
   createLogBuffer,
   createLogLine,
@@ -105,6 +109,7 @@ const DEFAULT_DUSTBUCKET_WS_URL = 'wss://dustbucket.com/agent/connect'
 export interface BucketDependencies {
   spawn: typeof nodeSpawn
   createWebSocket: (url: string, token: string) => WebSocketLike
+  discoverAgentCapabilities: () => Promise<AgentCapabilitiesMessage>
   setupKeypress: (onKey: (key: string) => void) => () => void
   setupSignals: (onSignal: () => void) => () => void
   setupResize: (onResize: (width: number, height: number) => void) => () => void
@@ -299,6 +304,10 @@ export function createDefaultBucketDependencies(): BucketDependencies {
   return {
     spawn: nodeSpawn,
     createWebSocket: defaultCreateWebSocket,
+    discoverAgentCapabilities: () =>
+      discoverAgentCapabilities({
+        spawn: nodeSpawn,
+      }),
     setupKeypress: defaultSetupKeypress,
     setupSignals: defaultSetupSignals,
     setupResize: defaultSetupResize,
@@ -605,83 +614,11 @@ export function connectWebSocket(
   if (state.shuttingDown) return
 
   const wsUrl = getWebSocketUrl()
+  const pendingServerMessages: Array<{ data: string }> = []
+  let waitingForAgentCapabilities = false
+  let readyToProcessServerMessages = false
 
-  let ws: WebSocketLike
-  if (connectedWs) {
-    ws = connectedWs
-    state.ws = ws
-    state.emit({ type: 'bucket.connected' })
-    logMessage(
-      state,
-      context,
-      useTUI,
-      formatBucketEvent({ type: 'bucket.connected' })
-    )
-    state.reconnectDelay = INITIAL_RECONNECT_DELAY_MS
-  } else {
-    logMessage(state, context, useTUI, `Connecting to ${wsUrl}...`)
-    ws = bucketDependencies.createWebSocket(wsUrl, token)
-    state.ws = ws
-
-    ws.onopen = () => {
-      state.emit({ type: 'bucket.connected' })
-      const lifecycleState: ConnectionLifecycleState = {
-        reconnectDelay: state.reconnectDelay,
-        shuttingDown: state.shuttingDown,
-      }
-      const result = handleOpen(lifecycleState)
-      state.reconnectDelay = result.state.reconnectDelay
-      executeLifecycleEffects(
-        result.effects,
-        {
-          state,
-          context,
-          useTUI,
-          bucketDependencies,
-          fileSystem,
-          forwardToolExecution,
-        },
-        token
-      )
-    }
-  }
-
-  ws.onclose = event => {
-    const disconnectEvent = {
-      type: 'bucket.disconnected' as const,
-      code: event.code,
-      reason: event.reason || 'none',
-    }
-    state.emit(disconnectEvent)
-    state.ws = null
-
-    const lifecycleState: ConnectionLifecycleState = {
-      reconnectDelay: state.reconnectDelay,
-      shuttingDown: state.shuttingDown,
-    }
-    const result = handleClose(lifecycleState, event.code, event.reason || '')
-    state.reconnectDelay = result.state.reconnectDelay
-    executeLifecycleEffects(
-      result.effects,
-      { state, context, useTUI, bucketDependencies, fileSystem },
-      token
-    )
-  }
-
-  ws.onerror = error => {
-    const lifecycleState: ConnectionLifecycleState = {
-      reconnectDelay: state.reconnectDelay,
-      shuttingDown: state.shuttingDown,
-    }
-    const result = handleError(lifecycleState, error.message)
-    executeLifecycleEffects(
-      result.effects,
-      { state, context, useTUI, bucketDependencies, fileSystem },
-      token
-    )
-  }
-
-  ws.onmessage = event => {
+  const processIncomingServerMessage = (event: { data: string }): void => {
     let rawData: unknown
     try {
       rawData = JSON.parse(event.data)
@@ -731,6 +668,124 @@ export function connectWebSocket(
       fileSystem,
       forwardToolExecution,
     })
+  }
+
+  const sendAgentCapabilities = async (): Promise<void> => {
+    waitingForAgentCapabilities = true
+    let message: AgentCapabilitiesMessage = {
+      type: 'agent-capabilities',
+      agents: [],
+    }
+
+    try {
+      message = await bucketDependencies.discoverAgentCapabilities()
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : String(error)
+      context.stderr(
+        `Failed to discover agent capabilities: ${messageText}. Continuing with no capabilities.`
+      )
+    }
+
+    try {
+      ws.send(JSON.stringify(message))
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : String(error)
+      context.stderr(
+        `Failed to send agent capabilities: ${messageText}. Continuing without handshake.`
+      )
+    } finally {
+      readyToProcessServerMessages = true
+      waitingForAgentCapabilities = false
+      for (const pendingMessage of pendingServerMessages) {
+        processIncomingServerMessage(pendingMessage)
+      }
+      pendingServerMessages.length = 0
+    }
+  }
+
+  let ws: WebSocketLike
+  if (connectedWs) {
+    ws = connectedWs
+    state.ws = ws
+    state.emit({ type: 'bucket.connected' })
+    logMessage(
+      state,
+      context,
+      useTUI,
+      formatBucketEvent({ type: 'bucket.connected' })
+    )
+    state.reconnectDelay = INITIAL_RECONNECT_DELAY_MS
+    void sendAgentCapabilities()
+  } else {
+    logMessage(state, context, useTUI, `Connecting to ${wsUrl}...`)
+    ws = bucketDependencies.createWebSocket(wsUrl, token)
+    state.ws = ws
+
+    ws.onopen = () => {
+      state.emit({ type: 'bucket.connected' })
+      const lifecycleState: ConnectionLifecycleState = {
+        reconnectDelay: state.reconnectDelay,
+        shuttingDown: state.shuttingDown,
+      }
+      const result = handleOpen(lifecycleState)
+      state.reconnectDelay = result.state.reconnectDelay
+      executeLifecycleEffects(
+        result.effects,
+        {
+          state,
+          context,
+          useTUI,
+          bucketDependencies,
+          fileSystem,
+          forwardToolExecution,
+        },
+        token
+      )
+      void sendAgentCapabilities()
+    }
+  }
+
+  ws.onclose = event => {
+    const disconnectEvent = {
+      type: 'bucket.disconnected' as const,
+      code: event.code,
+      reason: event.reason || 'none',
+    }
+    state.emit(disconnectEvent)
+    state.ws = null
+
+    const lifecycleState: ConnectionLifecycleState = {
+      reconnectDelay: state.reconnectDelay,
+      shuttingDown: state.shuttingDown,
+    }
+    const result = handleClose(lifecycleState, event.code, event.reason || '')
+    state.reconnectDelay = result.state.reconnectDelay
+    executeLifecycleEffects(
+      result.effects,
+      { state, context, useTUI, bucketDependencies, fileSystem },
+      token
+    )
+  }
+
+  ws.onerror = error => {
+    const lifecycleState: ConnectionLifecycleState = {
+      reconnectDelay: state.reconnectDelay,
+      shuttingDown: state.shuttingDown,
+    }
+    const result = handleError(lifecycleState, error.message)
+    executeLifecycleEffects(
+      result.effects,
+      { state, context, useTUI, bucketDependencies, fileSystem },
+      token
+    )
+  }
+
+  ws.onmessage = event => {
+    if (waitingForAgentCapabilities && !readyToProcessServerMessages) {
+      pendingServerMessages.push({ data: event.data })
+      return
+    }
+    processIncomingServerMessage({ data: event.data })
   }
 }
 
