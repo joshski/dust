@@ -9,14 +9,6 @@
       ]
     },
     {
-      "name": "unused code (knip)",
-      "command": "bunx knip",
-      "hints": [
-        "Run `bun run knip` to see full details",
-        "Add intentional exports to knip.json entry configuration"
-      ]
-    },
-    {
       "name": "lint (oxlint)",
       "command": "bunx oxlint .",
       "hints": [
@@ -46,6 +38,22 @@
       "hints": ["Check for TypeScript errors in the files you modified"]
     },
     {
+      "name": "unused code (knip)",
+      "command": "bunx knip",
+      "hints": [
+        "Run `bun run knip` to see full details",
+        "Add intentional exports to knip.json entry configuration"
+      ]
+    },
+    {
+      "name": "typecheck (tsc)",
+      "command": "bunx tsc -p tsconfig.json --noEmit",
+      "hints": [
+        "Check type definitions in the files you modified",
+        "Ensure all imports have proper type declarations"
+      ]
+    },
+    {
       "name": "tests (vitest)",
       "command": "bun run test:coverage",
       "hints": [
@@ -59,14 +67,6 @@
       "hints": [
         "Tests must work with both Vitest and Bun runtimes",
         "Avoid using Vitest-specific APIs like vi.stubEnv - use cross-runtime helpers in test-utilities.ts"
-      ]
-    },
-    {
-      "name": "typecheck (tsc)",
-      "command": "bunx tsc -p tsconfig.json --noEmit",
-      "hints": [
-        "Check type definitions in the files you modified",
-        "Ensure all imports have proper type declarations"
       ]
     }
   ]
