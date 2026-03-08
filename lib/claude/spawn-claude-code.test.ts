@@ -736,6 +736,31 @@ describe('buildDockerRunArguments', () => {
     else process.env.OPENAI_API_KEY = originalKey
   })
 
+  test('does not override token already present in env', () => {
+    const originalKey = process.env.OPENAI_API_KEY
+    process.env.OPENAI_API_KEY = 'from-process-env'
+
+    const dockerArguments = buildDockerRunArguments(
+      {
+        imageTag: 'dust-agent-test',
+        repoPath: '/home/user/project',
+        homeDir: '/home/user',
+      },
+      ['-p', 'test'],
+      { OPENAI_API_KEY: 'from-env-param' }
+    )
+
+    // The env param value should be used, not duplicated by pass-through
+    const matches = dockerArguments.filter(arg =>
+      arg.includes('OPENAI_API_KEY')
+    )
+    expect(matches).toEqual(['OPENAI_API_KEY=from-env-param'])
+
+    // Restore
+    if (originalKey === undefined) delete process.env.OPENAI_API_KEY
+    else process.env.OPENAI_API_KEY = originalKey
+  })
+
   test('configures git URL rewriting when gitProxyUrl is set', () => {
     const dockerArguments = buildDockerRunArguments(
       {
