@@ -8,9 +8,16 @@ The `.dust/` directory contains planning artifacts organized by type.
 ├── ideas/    # Future feature notes and proposals
 ├── tasks/    # Detailed work plans with dependencies
 ├── facts/    # Current state documentation
-└── config/   # Configuration files (settings.json)
+└── config/   # Configuration files and known subdirectories
 ```
 
 The principles, ideas, tasks, and facts directories are flat (no subdirectories) and contain only markdown files with slug-style names.
 
-The config directory contains `settings.json` which configures the `dust` CLI. See [Configuration System](./configuration-system.md) for details.
+The config directory uses a strict allowlist. Supported entries are:
+
+- `settings.json`
+- `audits/`
+- `hints/`
+- `agents/`
+
+Unknown files or subdirectories in `.dust/config/` are lint violations. See [Configuration System](./configuration-system.md) for details.

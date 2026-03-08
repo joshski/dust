@@ -2,6 +2,13 @@
 
 Dust uses a JSON configuration file at `.dust/config/settings.json` to customize behavior.
 
+The `.dust/config/` directory is strictly allowlisted by `dust lint`. Valid entries are:
+
+- `settings.json`
+- `audits/`
+- `hints/`
+- `agents/`
+
 ## Settings
 
 ### dustCommand

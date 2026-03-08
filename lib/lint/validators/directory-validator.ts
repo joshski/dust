@@ -6,6 +6,8 @@ import type { ReadableFileSystem } from '../../filesystem/types'
 import type { Violation } from './types'
 
 const EXPECTED_DIRECTORIES = ['principles', 'ideas', 'tasks', 'facts', 'config']
+const EXPECTED_CONFIG_FILES = ['settings.json']
+const EXPECTED_CONFIG_DIRECTORIES = ['audits', 'hints', 'agents']
 
 export async function validateContentDirectoryFiles(
   dirPath: string,
@@ -81,6 +83,15 @@ export async function validateDirectoryStructure(
   for (const entry of entries) {
     const entryPath = `${dustPath}/${entry}`
 
+    if (entry === 'Dockerfile') {
+      violations.push({
+        file: entryPath,
+        message:
+          '".dust/Dockerfile" is no longer supported. Move Docker-related configuration under ".dust/config/".',
+      })
+      continue
+    }
+
     if (!fileSystem.isDirectory(entryPath)) {
       continue
     }
@@ -90,6 +101,51 @@ export async function validateDirectoryStructure(
       violations.push({
         file: entryPath,
         message: `Unexpected directory "${entry}" in .dust/. Allowed directories: ${allowedList}. To allow this directory, add it to "extraDirectories" in .dust/config/settings.json`,
+      })
+    }
+  }
+
+  const configPath = `${dustPath}/config`
+  if (!fileSystem.isDirectory(configPath)) {
+    return violations
+  }
+
+  let configEntries: string[]
+  try {
+    configEntries = await fileSystem.readdir(configPath)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return violations
+    }
+    throw error
+  }
+
+  const allowedConfigFiles = new Set(EXPECTED_CONFIG_FILES)
+  const allowedConfigDirectories = new Set(EXPECTED_CONFIG_DIRECTORIES)
+  const allowedConfigList = [
+    ...EXPECTED_CONFIG_DIRECTORIES.map(directory => `${directory}/`),
+    ...EXPECTED_CONFIG_FILES,
+  ]
+    .sort()
+    .join(', ')
+
+  for (const entry of configEntries) {
+    const entryPath = `${configPath}/${entry}`
+
+    if (fileSystem.isDirectory(entryPath)) {
+      if (!allowedConfigDirectories.has(entry)) {
+        violations.push({
+          file: entryPath,
+          message: `Unexpected directory "${entry}" in .dust/config/. Allowed entries: ${allowedConfigList}`,
+        })
+      }
+      continue
+    }
+
+    if (!allowedConfigFiles.has(entry)) {
+      violations.push({
+        file: entryPath,
+        message: `Unexpected file "${entry}" in .dust/config/. Allowed entries: ${allowedConfigList}`,
       })
     }
   }

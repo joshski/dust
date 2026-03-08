@@ -1890,6 +1890,29 @@ describe('validateDirectoryStructure', () => {
     expect(violations.length).toBe(2)
   })
 
+  test('reports violation for .dust/Dockerfile with migration message', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          Dockerfile: 'FROM node:20',
+        },
+      },
+    })
+
+    const violations = await validateDirectoryStructure(
+      '/project/.dust',
+      fileSystem
+    )
+
+    expect(violations).toEqual([
+      {
+        file: '/project/.dust/Dockerfile',
+        message:
+          '".dust/Dockerfile" is no longer supported. Move Docker-related configuration under ".dust/config/".',
+      },
+    ])
+  })
+
   test('allows directories specified in extraDirectories', async () => {
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -1907,6 +1930,87 @@ describe('validateDirectoryStructure', () => {
     )
 
     expect(violations).toEqual([])
+  })
+
+  test('accepts known files and subdirectories in .dust/config/', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {
+            'settings.json': '{}',
+            audits: {
+              'security.md': '# Security',
+            },
+            hints: {
+              'build.md': '# Build',
+            },
+            agents: {
+              'codex.md': '# Codex',
+            },
+          },
+        },
+      },
+    })
+
+    const violations = await validateDirectoryStructure(
+      '/project/.dust',
+      fileSystem
+    )
+
+    expect(violations).toEqual([])
+  })
+
+  test('reports unexpected file in .dust/config/', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {
+            'settings.json': '{}',
+            'notes.txt': 'todo',
+          },
+        },
+      },
+    })
+
+    const violations = await validateDirectoryStructure(
+      '/project/.dust',
+      fileSystem
+    )
+
+    expect(violations).toEqual([
+      {
+        file: '/project/.dust/config/notes.txt',
+        message:
+          'Unexpected file "notes.txt" in .dust/config/. Allowed entries: agents/, audits/, hints/, settings.json',
+      },
+    ])
+  })
+
+  test('reports unexpected subdirectory in .dust/config/', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {
+            examples: {
+              'example.md': '# Example',
+            },
+          },
+        },
+      },
+    })
+
+    const violations = await validateDirectoryStructure(
+      '/project/.dust',
+      fileSystem
+    )
+
+    expect(violations).toEqual([
+      {
+        file: '/project/.dust/config/examples',
+        message:
+          'Unexpected directory "examples" in .dust/config/. Allowed entries: agents/, audits/, hints/, settings.json',
+      },
+    ])
   })
 
   test('ignores non-directory entries', async () => {
@@ -1954,6 +2058,65 @@ describe('validateDirectoryStructure', () => {
     })
     fileSystem.readdir = async () => {
       throw new Error('Permission denied')
+    }
+
+    await expect(
+      validateDirectoryStructure('/project/.dust', fileSystem)
+    ).rejects.toThrow('Permission denied')
+  })
+
+  test('returns existing violations when .dust/config disappears before readdir', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          task: { 'task.md': '# Task' },
+          config: {
+            'settings.json': '{}',
+          },
+        },
+      },
+    })
+    const originalReaddir = fileSystem.readdir
+    fileSystem.readdir = async path => {
+      if (path === '/project/.dust/config') {
+        const error = new Error('ENOENT: no such file or directory')
+        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
+        throw error
+      }
+      return originalReaddir(path)
+    }
+
+    const violations = await validateDirectoryStructure(
+      '/project/.dust',
+      fileSystem
+    )
+
+    expect(violations).toEqual([
+      expect.objectContaining({
+        file: '/project/.dust/task',
+        message: expect.stringContaining('Unexpected directory "task"'),
+      }),
+    ])
+  })
+
+  test('rethrows non-ENOENT errors when reading .dust/config', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {
+            'settings.json': '{}',
+          },
+        },
+      },
+    })
+    const originalReaddir = fileSystem.readdir
+    fileSystem.readdir = async path => {
+      if (path === '/project/.dust/config') {
+        const error = new Error('Permission denied')
+        ;(error as NodeJS.ErrnoException).code = 'EACCES'
+        throw error
+      }
+      return originalReaddir(path)
     }
 
     await expect(
@@ -2012,6 +2175,92 @@ This is a principle.
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain('Unexpected directory')
     expect(context.stderrLines.join('\n')).toContain('task')
+  })
+
+  test('reports migration error for .dust/Dockerfile', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          Dockerfile: 'FROM node:20',
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain(
+      '".dust/Dockerfile" is no longer supported'
+    )
+    expect(context.stderrLines.join('\n')).toContain(
+      'Move Docker-related configuration under ".dust/config/".'
+    )
+  })
+
+  test('reports unexpected entries in .dust/config/', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {
+            'settings.json': '{}',
+            'notes.txt': 'todo',
+            examples: {
+              'example.md': '# Example',
+            },
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain(
+      'Unexpected file "notes.txt" in .dust/config/'
+    )
+    expect(context.stderrLines.join('\n')).toContain(
+      'Unexpected directory "examples" in .dust/config/'
+    )
+    expect(context.stderrLines.join('\n')).toContain(
+      'Allowed entries: agents/, audits/, hints/, settings.json'
+    )
+  })
+
+  test('allows known entries in .dust/config/', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'principle.md': `# Principle
+
+This is a principle.
+
+## Parent Principle
+
+- (none)
+
+## Sub-Principles
+
+- (none)
+`,
+          },
+          config: {
+            'settings.json': '{}',
+            audits: {},
+            hints: {},
+            agents: {},
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain('All validations passed')
   })
 
   test('allows extra directories via settings', async () => {

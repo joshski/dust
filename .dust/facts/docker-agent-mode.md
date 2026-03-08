@@ -2,6 +2,8 @@
 
 When a repository contains a `.dust/Dockerfile`, dust automatically builds the image and spawns agent sessions inside Docker containers. This provides the [sandboxing](./autonomous-agents-need-sandboxes.md) recommended for autonomous agents.
 
+`dust lint` now rejects `.dust/Dockerfile` and points users to migrate Docker-related configuration under `.dust/config/`.
+
 ## Setup
 
 1. Create `.dust/Dockerfile` in your repository
