@@ -568,7 +568,7 @@ describe('check with validation', () => {
     expect(result.exitCode).toBe(0)
     expect(bufferedRunner.calls).toHaveLength(1)
     // Validation is now shown as a check result
-    expect(context.stdoutLines).toContain('✓ lint')
+    expect(context.stdoutLines).toContain('✓ lint .dust directory')
     expect(context.stdoutLines).toContain('✓ biome')
     expect(context.stdoutLines).toContain('✓ 2/2 checks passed')
   })
@@ -602,7 +602,7 @@ describe('check with validation', () => {
     expect(result.exitCode).toBe(1)
     // Checks now run in parallel, so biome still runs
     expect(bufferedRunner.calls).toHaveLength(1)
-    expect(context.stdoutLines).toContain('✗ lint')
+    expect(context.stdoutLines).toContain('✗ lint .dust directory')
     expect(context.stdoutLines).toContain('✓ biome')
     expect(context.stdoutLines).toContain('✗ 1/2 checks passed')
   })
@@ -626,7 +626,7 @@ describe('check with validation', () => {
     expect(result.exitCode).toBe(0)
     expect(bufferedRunner.calls).toHaveLength(1)
     // No validation check in results when .dust doesn't exist
-    expect(context.stdoutLines).not.toContain('✓ lint')
+    expect(context.stdoutLines).not.toContain('✓ lint .dust directory')
     expect(context.stdoutLines).toContain('✓ 1/1 checks passed')
   })
 })
@@ -923,7 +923,7 @@ describe('check command --serial flag', () => {
     )
 
     expect(result.exitCode).toBe(0)
-    expect(context.stdoutLines[0]).toBe('✓ lint')
+    expect(context.stdoutLines[0]).toBe('✓ lint .dust directory')
     expect(context.stdoutLines[1]).toBe('✓ biome')
   })
 
@@ -1106,7 +1106,10 @@ describe('check command event emission', () => {
     const startedEvents = context.emittedEvents.filter(
       e => e.type === 'check-started'
     )
-    expect(startedEvents.map(e => e.name).sort()).toEqual(['biome', 'lint'])
+    expect(startedEvents.map(e => e.name).sort()).toEqual([
+      'biome',
+      'lint .dust directory',
+    ])
   })
 
   test('check-passed includes durationMs', async () => {

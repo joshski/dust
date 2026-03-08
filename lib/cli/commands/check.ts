@@ -139,7 +139,7 @@ async function runValidationCheck(
   }
 
   log('running built-in check: dust lint')
-  emitEvent?.({ type: 'check-started', name: 'lint' })
+  emitEvent?.({ type: 'check-started', name: 'lint .dust directory' })
   const startTime = clock()
   const result = await lintMarkdown({
     ...dependencies,
@@ -151,19 +151,23 @@ async function runValidationCheck(
   log(`built-in check dust lint ${lintStatus} (${durationMs}ms)`)
   const output = outputLines.join('\n')
   if (result.exitCode === 0) {
-    emitEvent?.({ type: 'check-passed', name: 'lint', durationMs })
+    emitEvent?.({
+      type: 'check-passed',
+      name: 'lint .dust directory',
+      durationMs,
+    })
   } else {
     // Lint always produces output on failure, so we unconditionally include it
     emitEvent?.({
       type: 'check-failed',
-      name: 'lint',
+      name: 'lint .dust directory',
       durationMs,
       output,
     })
   }
 
   return {
-    name: 'lint',
+    name: 'lint .dust directory',
     command: 'dust lint',
     exitCode: result.exitCode,
     output,

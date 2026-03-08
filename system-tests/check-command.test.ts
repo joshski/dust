@@ -70,7 +70,7 @@ test('check command validates markdown files in .dust directory', async () => {
     },
     handlers: [
       { pattern: /welcome to dust/, getCommand: () => 'bin/dust check' },
-      { pattern: /✓ lint/, getCommand: () => null },
+      { pattern: /✓ lint .dust directory/, getCommand: () => null },
     ],
   })
 
@@ -81,7 +81,7 @@ test('check command validates markdown files in .dust directory', async () => {
       {
         command: 'bin/dust check',
         result: {
-          stdout: expect.stringContaining('✓ lint'),
+          stdout: expect.stringContaining('✓ lint .dust directory'),
         },
       },
     ],
@@ -111,7 +111,7 @@ test('check command fails when markdown files have validation errors', async () 
     },
     handlers: [
       { pattern: /welcome to dust/, getCommand: () => 'bin/dust check' },
-      { pattern: /✗ lint/, getCommand: () => null },
+      { pattern: /✗ lint .dust directory/, getCommand: () => null },
     ],
   })
 
@@ -123,7 +123,7 @@ test('check command fails when markdown files have validation errors', async () 
         command: 'bin/dust check',
         result: {
           exitCode: 1,
-          stdout: expect.stringContaining('✗ lint'),
+          stdout: expect.stringContaining('✗ lint .dust directory'),
         },
       },
     ],
