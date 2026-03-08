@@ -1235,12 +1235,31 @@ export async function bucketWorker(
     }
 
     const requestId = crypto.randomUUID()
+
+    // Convert positional string[] arguments to named Record using tool definitions
+    const toolDef = state.tools.find(t => t.name === request.toolName)
+    const namedArgs: Record<string, unknown> = {}
+    if (toolDef) {
+      for (
+        let i = 0;
+        i < toolDef.parameters.length && i < request.arguments.length;
+        i++
+      ) {
+        namedArgs[toolDef.parameters[i].name] = request.arguments[i]
+      }
+    } else {
+      // Fallback: pass positional args as-is if tool definition not found
+      for (let i = 0; i < request.arguments.length; i++) {
+        namedArgs[`arg${i}`] = request.arguments[i]
+      }
+    }
+
     const message: ToolExecutionRequestMessage = {
       type: 'tool-execution-request',
       requestId,
-      toolName: request.toolName,
-      arguments: request.arguments,
-      repositoryId: request.repositoryId,
+      tool: request.toolName,
+      repositoryId: Number(request.repositoryId),
+      arguments: namedArgs,
     }
 
     log(`forwarding tool execution: ${request.toolName} requestId=${requestId}`)
@@ -1317,16 +1336,37 @@ export async function bucketWorker(
             )
             return
           }
+          const resultType = message.result.type
           log(
-            `received tool execution result: requestId=${message.requestId} status=${message.status}`
+            `received tool execution result: requestId=${message.requestId} status=${resultType}`
           )
           clearTimeout(pending.timeoutId)
           pendingToolExecutions.delete(message.requestId)
-          pending.resolve({
-            status: message.status,
-            output: message.output,
-            error: message.error,
-          })
+
+          // Convert wire protocol result to proxy result format
+          switch (message.result.type) {
+            case 'success':
+              pending.resolve({
+                status: 'success',
+                output:
+                  typeof message.result.data === 'string'
+                    ? message.result.data
+                    : JSON.stringify(message.result.data),
+              })
+              break
+            case 'tool-not-found':
+              pending.resolve({
+                status: 'tool-not-found',
+                error: message.result.message,
+              })
+              break
+            case 'error':
+              pending.resolve({
+                status: 'error',
+                error: message.result.message,
+              })
+              break
+          }
         },
         forwardToolExecution
       )

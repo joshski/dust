@@ -27,3 +27,17 @@ export type {
 
 // Bucket repository
 export type { Repository } from './bucket/repository'
+
+// Tool execution protocol (wire format for bucket tool execution)
+export type {
+  ToolExecutionErrorResult,
+  ToolExecutionRequestMessage,
+  ToolExecutionResult,
+  ToolExecutionResultMessage,
+  ToolExecutionSuccessResult,
+  ToolExecutionToolNotFoundResult,
+} from './bucket/tool-execution-protocol'
+export {
+  isToolExecutionRequestMessage,
+  isToolExecutionResultMessage,
+} from './bucket/tool-execution-protocol'

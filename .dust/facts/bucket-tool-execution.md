@@ -40,11 +40,17 @@ The `dust bucket tool` subprocess:
 
 ### 5. Proxy forwards over WebSocket
 
-The command events proxy (`lib/bucket/command-events-proxy.ts`) receives the POST and calls `forwardToolExecution()`, which sends a `tool-execution-request` message over the WebSocket with a unique `requestId` and waits up to 30 seconds for a matching `tool-execution-result` response.
+The command events proxy (`lib/bucket/command-events-proxy.ts`) receives the POST and calls `forwardToolExecution()` in `bucket.ts`. This converts the positional `string[]` arguments to named `Record<string, unknown>` parameters using the tool definition, then sends a `tool-execution-request` message over the WebSocket with a unique `requestId`. It waits up to 30 seconds for a matching `tool-execution-result` response.
+
+The wire format uses named arguments (`{ tool, repositoryId, arguments: Record<string, unknown> }`) rather than the positional format used locally between the subprocess and proxy.
 
 ### 6. Result flows back
 
-The server responds with `tool-execution-result` (status: `success`, `tool-not-found`, or `error`). The proxy maps the status to an HTTP status code (200, 404, or 502) and returns JSON to the subprocess. The subprocess prints `output` to stdout on success, or `error` to stderr on failure. The agent sees the command output.
+The server responds with `tool-execution-result` containing a discriminated union result (`{ type: 'success', data }`, `{ type: 'tool-not-found', message }`, or `{ type: 'error', message }`). The proxy maps the result type to an HTTP status code (200, 404, or 502) and returns JSON to the subprocess. The subprocess prints output to stdout on success, or error to stderr on failure. The agent sees the command output.
+
+### Wire format types
+
+The protocol types (`ToolExecutionRequestMessage`, `ToolExecutionResultMessage`, etc.) are defined in `lib/bucket/tool-execution-protocol.ts` and exported from `@joshski/dust/types`. Downstream server implementations (e.g. dustbucket) should import these types and use the validation functions (`isToolExecutionRequestMessage`, `isToolExecutionResultMessage`) to ensure protocol compliance.
 
 ## Key Files
 
@@ -55,7 +61,8 @@ The server responds with `tool-execution-result` (status: `success`, `tool-not-f
 | `lib/bucket/repository-loop.ts` | Reads tools and passes `toolsSection` into each iteration |
 | `lib/cli/commands/bucket-tool.ts` | `dust bucket tool` subcommand (child process side) |
 | `lib/bucket/command-events-proxy.ts` | Local HTTP proxy that bridges to WebSocket |
-| `lib/bucket/tool-executor.ts` | WebSocket request/response correlation logic |
+| `lib/bucket/tool-execution-protocol.ts` | Wire format types for WebSocket tool execution messages |
+| `lib/bucket/tool-executor.ts` | Direct tool execution (for non-proxy paths) |
 
 ## Related Facts
 

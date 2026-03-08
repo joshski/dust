@@ -1262,12 +1262,9 @@ describe('connectWebSocket', () => {
     const bucketDependencies = createBucketDependencies({
       createWebSocket: () => ws,
     })
-    const captured: Array<{
-      requestId: string
-      status: 'success' | 'tool-not-found' | 'error'
-      output?: string
-      error?: string
-    }> = []
+    const captured: Array<
+      import('../../bucket/tool-execution-protocol').ToolExecutionResultMessage
+    > = []
 
     connectWebSocket(
       'my-token',
@@ -1286,8 +1283,10 @@ describe('connectWebSocket', () => {
       data: JSON.stringify({
         type: 'tool-execution-result',
         requestId: 'req-1',
-        status: 'success',
-        output: 'https://example.com/result.png',
+        result: {
+          type: 'success',
+          data: { url: 'https://example.com/result.png' },
+        },
       }),
     })
 
@@ -1295,8 +1294,10 @@ describe('connectWebSocket', () => {
       {
         type: 'tool-execution-result',
         requestId: 'req-1',
-        status: 'success',
-        output: 'https://example.com/result.png',
+        result: {
+          type: 'success',
+          data: { url: 'https://example.com/result.png' },
+        },
       },
     ])
   })

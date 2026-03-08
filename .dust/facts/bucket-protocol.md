@@ -117,17 +117,20 @@ On receiving this message, clients store the tool definitions for use in agent p
 
 ### tool-execution-result
 
-Sent in response to a client's `tool-execution-request` (see below).
+Sent in response to a client's `tool-execution-request` (see below). The `result` field is a discriminated union on `type`.
 
 ```typescript
 interface ToolExecutionResultMessage {
   type: 'tool-execution-result'
   requestId: string              // Matches the client's request
-  status: 'success' | 'tool-not-found' | 'error'
-  output?: string                // Tool output on success
-  error?: string                 // Error message on failure
+  result:
+    | { type: 'success'; data: unknown }
+    | { type: 'tool-not-found'; message: string }
+    | { type: 'error'; message: string }
 }
 ```
+
+These types and validation functions are exported from `@joshski/dust/types` for use by server implementations.
 
 ## Client-to-Server Messages
 
@@ -187,14 +190,18 @@ Sent when the agent invokes a server-defined tool via `dust bucket tool <name>`.
 ```typescript
 interface ToolExecutionRequestMessage {
   type: 'tool-execution-request'
-  requestId: string       // UUID for correlating the response
-  toolName: string        // Tool identifier from tool-definitions
-  arguments: string[]     // Positional arguments
-  repositoryId: string    // Repository context
+  requestId: string                  // UUID for correlating the response
+  tool: string                       // Tool identifier from tool-definitions
+  repositoryId: number               // Server-side repository ID
+  arguments: Record<string, unknown> // Named parameters matching tool definition
 }
 ```
 
+The client maps positional CLI arguments to named parameters using the tool definition's `parameters` array. The `repositoryId` is a top-level field (routing context, not a tool parameter).
+
 The client waits up to 30 seconds for a matching `tool-execution-result` response. The request flows: `dust bucket tool` subprocess → HTTP POST to proxy `/tools/:name` → proxy sends over WebSocket → server responds with `tool-execution-result` → proxy returns HTTP response to subprocess.
+
+These types and validation functions are exported from `@joshski/dust/types` for use by server implementations.
 
 ## Expected Server Behavior
 

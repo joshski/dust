@@ -13,7 +13,7 @@ When `dust bucket` starts successfully, it also starts a local HTTP server on an
 - Tool-list response: `{ "tools": ToolDefinition[] }` from the active in-memory bucket session
 - Additional endpoint: `POST /tools/:name`
 - Tool payload: `{ "arguments": string[], "repositoryId": string }`
-- Tool forwarding: proxy sends `tool-execution-request` over the active bucket WebSocket and returns HTTP JSON from the matching `tool-execution-result`
+- Tool forwarding: proxy converts positional args to named params using tool definitions, sends `tool-execution-request` over the active bucket WebSocket, and returns HTTP JSON from the matching `tool-execution-result`
 - Response codes:
   - `202` for accepted/forwarded payloads
   - `400` for invalid JSON or invalid payload shape
