@@ -741,6 +741,20 @@ describe('validateLinks', () => {
     expect(violations).toHaveLength(0)
   })
 
+  test('reports absolute links', () => {
+    const content = '[Task](/project/.dust/tasks/task.md)'
+    const fileSystem = createFileSystemEmulator()
+
+    const violations = validateLinks(
+      '/project/.dust/tasks/task.md',
+      content,
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('Absolute link not allowed')
+    expect(violations[0].message).toContain('use a relative path instead')
+  })
+
   test('includes line numbers', () => {
     const content = `Line 1
 Line 2

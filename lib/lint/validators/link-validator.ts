@@ -48,15 +48,23 @@ export function validateLinks(
         !linkTarget.startsWith('https://') &&
         !linkTarget.startsWith('#')
       ) {
-        const targetPath = linkTarget.split('#')[0]
-        const resolvedPath = resolve(fileDir, targetPath)
-
-        if (!fileSystem.exists(resolvedPath)) {
+        if (linkTarget.startsWith('/')) {
           violations.push({
             file: filePath,
-            message: `Broken link: "${linkTarget}"`,
+            message: `Absolute link not allowed: "${linkTarget}" (use a relative path instead)`,
             line: i + 1,
           })
+        } else {
+          const targetPath = linkTarget.split('#')[0]
+          const resolvedPath = resolve(fileDir, targetPath)
+
+          if (!fileSystem.exists(resolvedPath)) {
+            violations.push({
+              file: filePath,
+              message: `Broken link: "${linkTarget}"`,
+              line: i + 1,
+            })
+          }
         }
       }
       match = linkPattern.exec(line)
