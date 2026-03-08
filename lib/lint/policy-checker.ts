@@ -30,17 +30,32 @@ const ABBREVIATED_NAMES = new Map<string, string>([
   ['idx', "Avoid abbreviated name 'idx'. Use 'index' instead."],
   ['len', "Avoid abbreviated name 'len'. Use 'length' instead."],
   ['tmp', "Avoid abbreviated name 'tmp'. Use a descriptive name instead."],
-  ['str', "Avoid abbreviated name 'str'. Use 'string' or a descriptive name instead."],
-  ['num', "Avoid abbreviated name 'num'. Use 'number' or a descriptive name instead."],
+  [
+    'str',
+    "Avoid abbreviated name 'str'. Use 'string' or a descriptive name instead.",
+  ],
+  [
+    'num',
+    "Avoid abbreviated name 'num'. Use 'number' or a descriptive name instead.",
+  ],
 ])
 
 const MOCKING_METHOD_MESSAGES = new Map<string, string>([
-  ['mock', 'Avoid vi.mock(). Use dependency injection or a test helper instead.'],
-  ['spyOn', 'Avoid vi.spyOn(). Use dependency injection or a test helper instead.'],
+  [
+    'mock',
+    'Avoid vi.mock(). Use dependency injection or a test helper instead.',
+  ],
+  [
+    'spyOn',
+    'Avoid vi.spyOn(). Use dependency injection or a test helper instead.',
+  ],
   ['useFakeTimers', 'Avoid vi.useFakeTimers(). Use a test helper instead.'],
   ['useRealTimers', 'Avoid vi.useRealTimers(). Use a test helper instead.'],
   ['runAllTimers', 'Avoid vi.runAllTimers(). Use a test helper instead.'],
-  ['advanceTimersByTime', 'Avoid vi.advanceTimersByTime(). Use a test helper instead.'],
+  [
+    'advanceTimersByTime',
+    'Avoid vi.advanceTimersByTime(). Use a test helper instead.',
+  ],
   ['fn', 'Avoid vi.fn(). Use a typed test double or test helper instead.'],
 ])
 
@@ -73,7 +88,13 @@ function visitBindingName(
     const message = ABBREVIATED_NAMES.get(name.text)
     if (message) {
       diagnostics.push(
-        diagnostic(sourceFile, name, 'dust-no-abbreviated-names', filePath, message)
+        diagnostic(
+          sourceFile,
+          name,
+          'dust-no-abbreviated-names',
+          filePath,
+          message
+        )
       )
     }
     return
@@ -123,13 +144,25 @@ function checkNode(
     }
   }
 
-  if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+  if (
+    ts.isCallExpression(node) &&
+    ts.isPropertyAccessExpression(node.expression)
+  ) {
     const callTarget = node.expression
-    if (ts.isIdentifier(callTarget.expression) && callTarget.expression.text === 'vi') {
+    if (
+      ts.isIdentifier(callTarget.expression) &&
+      callTarget.expression.text === 'vi'
+    ) {
       const message = MOCKING_METHOD_MESSAGES.get(callTarget.name.text)
       if (message) {
         diagnostics.push(
-          diagnostic(sourceFile, callTarget, 'no-vitest-mocking', filePath, message)
+          diagnostic(
+            sourceFile,
+            callTarget,
+            'no-vitest-mocking',
+            filePath,
+            message
+          )
         )
       }
     }
@@ -153,7 +186,9 @@ function checkNode(
     }
   }
 
-  ts.forEachChild(node, child => checkNode(sourceFile, child, filePath, diagnostics))
+  ts.forEachChild(node, child =>
+    checkNode(sourceFile, child, filePath, diagnostics)
+  )
 }
 
 export function analyzePolicyViolations(

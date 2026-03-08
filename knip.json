@@ -11,7 +11,8 @@
     "lib/validation/index.ts",
     "lib/proxy/git-credential-proxy.ts",
     "lib/proxy/claude-api-proxy.ts",
-    "scripts/lint/policy-checks.ts"
+    "scripts/lint/policy-checks.ts",
+    "scripts/lint/check-package-json-format.ts"
   ],
-  "ignoreDependencies": ["oxlint"]
+  "ignoreDependencies": ["oxfmt", "oxlint"]
 }

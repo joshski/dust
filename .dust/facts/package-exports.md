@@ -97,7 +97,7 @@ import { biomePath } from "@joshski/dust/biome";
 // Returns: "/path/to/node_modules/@joshski/dust/biome"
 ```
 
-Or reference rules directly in biome.json:
+Or reference rules directly in your Biome config:
 
 ```json
 {

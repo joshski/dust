@@ -25,6 +25,14 @@
       ]
     },
     {
+      "name": "format (oxfmt)",
+      "command": "bunx oxfmt --check --config .oxfmtrc.json \"lib/**/*.ts\" \"scripts/**/*.ts\" \"system-tests/**/*.ts\" \"evals/**/*.ts\" \"*.ts\" \"*.json\" \"!package.json\" && bun run scripts/lint/check-package-json-format.ts",
+      "hints": [
+        "Run `bunx oxfmt --config .oxfmtrc.json <paths>` to apply OXC formatting",
+        "Run `bun run scripts/lint/check-package-json-format.ts --write` to restore package.json key ordering and formatting"
+      ]
+    },
+    {
       "name": "lint (custom policy checks)",
       "command": "bun run scripts/lint/policy-checks.ts",
       "hints": [

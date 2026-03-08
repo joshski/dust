@@ -75,6 +75,11 @@ Each check can optionally include:
 
 Checks run in parallel by default. `dust check` prints per-check status lines progressively as checks become displayable in deterministic order, and also runs `dust lint` as a built-in first check when `.dust/` exists.
 
+This repository's check pipeline includes a distinct formatting check:
+
+- `bunx oxfmt --check --config .oxfmtrc.json ...` for TypeScript/JSON code and config files
+- `bun run scripts/lint/check-package-json-format.ts` to preserve canonical `package.json` formatting and key ordering
+
 ## Implementation
 
 Settings are loaded by `lib/config/settings.ts`. The `loadSettings` function reads from `.dust/config/settings.json` and returns defaults if the file doesn't exist. Validation is performed by the exported `validateSettingsJson` function, which validates known keys (dustCommand, checks, installCommand, eventsUrl, and deprecated extraDirectories), reports unknown keys, and flags `extraDirectories` as deprecated.
