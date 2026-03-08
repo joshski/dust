@@ -21,6 +21,7 @@ import { spawn as nodeSpawn } from 'node:child_process'
 import { accessSync, statSync } from 'node:fs'
 import { chmod, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
+import { basename, resolve } from 'node:path'
 import {
   type AuthDependencies,
   authenticate,
@@ -1216,11 +1217,26 @@ export async function bucketWorker(
     state.ui.connectedHost = wsUrl
   }
 
+  function findRepoPathByRepositoryId(
+    repositories: Map<
+      string,
+      import('../../bucket/repository').RepositoryState
+    >,
+    repositoryId: number
+  ): string | undefined {
+    for (const repoState of repositories.values()) {
+      if (repoState.repository.id === repositoryId) {
+        return repoState.path
+      }
+    }
+    return undefined
+  }
+
   let tuiHandle: TUIHandle | undefined
   let cleanupKeypress: (() => void) | undefined
   let cleanupSignals: (() => void) | undefined
 
-  const forwardToolExecution = (
+  const forwardToolExecution = async (
     request: import('../../bucket/command-events-proxy').ToolExecutionRequest
   ): Promise<ToolExecutionResult> => {
     const ws = state.ws
@@ -1228,13 +1244,19 @@ export async function bucketWorker(
       log(
         `tool execution rejected: ${request.toolName} (WebSocket not connected)`
       )
-      return Promise.resolve({
+      return {
         status: 'error',
         error: 'Bucket session is not connected',
-      })
+      }
     }
 
     const requestId = crypto.randomUUID()
+
+    // Find the repo's local path for resolving relative file paths
+    const repoPath = findRepoPathByRepositoryId(
+      state.repositories,
+      Number(request.repositoryId)
+    )
 
     // Convert positional string[] arguments to named Record using tool definitions
     const toolDef = state.tools.find(t => t.name === request.toolName)
@@ -1245,7 +1267,25 @@ export async function bucketWorker(
         i < toolDef.parameters.length && i < request.arguments.length;
         i++
       ) {
-        namedArgs[toolDef.parameters[i].name] = request.arguments[i]
+        const param = toolDef.parameters[i]
+        const value = request.arguments[i]
+        if (param.type === 'file' && typeof value === 'string') {
+          const filePath = repoPath ? resolve(repoPath, value) : value
+          try {
+            const data = await readFile(filePath)
+            namedArgs[param.name] = {
+              filename: basename(value),
+              data: data.toString('base64'),
+            }
+          } catch {
+            return {
+              status: 'error',
+              error: `Unable to read file: ${value}`,
+            }
+          }
+        } else {
+          namedArgs[param.name] = value
+        }
       }
     } else {
       // Fallback: pass positional args as-is if tool definition not found

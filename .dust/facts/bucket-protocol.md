@@ -199,6 +199,8 @@ interface ToolExecutionRequestMessage {
 
 The client maps positional CLI arguments to named parameters using the tool definition's `parameters` array. The `repositoryId` is a top-level field (routing context, not a tool parameter).
 
+For parameters with `type: 'file'`, the client reads the file from disk and sends its content as a `{ filename: string, data: string }` object, where `data` is the file content encoded as base64. The server never reads files from the client's filesystem.
+
 The client waits up to 30 seconds for a matching `tool-execution-result` response. The request flows: `dust bucket tool` subprocess → HTTP POST to proxy `/tools/:name` → proxy sends over WebSocket → server responds with `tool-execution-result` → proxy returns HTTP response to subprocess.
 
 These types and validation functions are exported from `@joshski/dust/types` for use by server implementations.
