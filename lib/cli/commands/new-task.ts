@@ -57,7 +57,7 @@ function newTaskInstructions(vars: TemplateVars): string {
     '5. Add a title as the first line using an H1 heading (e.g., `# Add user authentication`)'
   )
   steps.push(
-    '6. Write a comprehensive description starting with an imperative opening sentence (e.g., "Add caching to the API layer." not "This task adds caching."). Include technical details and references to relevant files.'
+    '6. Write a comprehensive description starting with an imperative opening sentence (e.g., "Add caching to the API layer." not "This task adds caching."). The opening sentence must be 150 characters or fewer. Include technical details and references to relevant files.'
   )
   steps.push(
     '7. Add a `## Principles` section with links to relevant principles this task supports (e.g., `- [Principle Name](../principles/principle-name.md)`)'

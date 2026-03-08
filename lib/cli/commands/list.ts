@@ -134,7 +134,12 @@ function renderHierarchy(
 export async function list(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
-  const { arguments: commandArguments, context, fileSystem } = dependencies
+  const {
+    arguments: commandArguments,
+    context,
+    fileSystem,
+    settings,
+  } = dependencies
   const dustPath = `${context.cwd}/.dust`
   const colors = getColors()
 
@@ -158,6 +163,10 @@ export async function list(
   }
 
   const specificTypeRequested = commandArguments.length > 0
+  const showTaskCreationHint =
+    specificTypeRequested &&
+    typesToList.length === 1 &&
+    typesToList[0] === 'tasks'
 
   // Pre-fetch workflow tasks if we're listing ideas (to determine status)
   const workflowTasks =
@@ -270,6 +279,12 @@ export async function list(
         principles: collectedItems.map(i => ({ path: i.path, title: i.title })),
       })
     }
+  }
+
+  if (showTaskCreationHint) {
+    context.stdout('➕ Add a New Task')
+    context.stdout('')
+    context.stdout(`Run \`${settings.dustCommand} new task\``)
   }
 
   return { exitCode: 0 }

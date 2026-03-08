@@ -10,14 +10,15 @@ import { list } from './list'
 function createDependencies(
   context: CommandContext,
   fileSystem: FileSystemEmulator,
-  commandArguments: string[] = []
+  commandArguments: string[] = [],
+  dustCommand = 'dust'
 ): CommandDependencies {
   return {
     arguments: commandArguments,
     context,
     fileSystem,
     globScanner: fileSystem,
-    settings: { dustCommand: 'dust' },
+    settings: { dustCommand },
   }
 }
 
@@ -212,6 +213,42 @@ describe('list command', () => {
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('📋 Tasks')
     expect(output).toContain('No tasks found.')
+    expect(output).toContain('➕ Add a New Task')
+    expect(output).toContain('Run `dust new task`')
+  })
+
+  test('shows add task hint with active command when listing tasks', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: { 'task.md': '# My Task' },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['tasks'], 'bunx dust'))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('➕ Add a New Task')
+    expect(output).toContain('Run `bunx dust new task`')
+  })
+
+  test('does not show add task hint for non-task listings', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'idea.md': '# My Idea' },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['ideas']))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).not.toContain('➕ Add a New Task')
+    expect(output).not.toContain('new task')
   })
 
   test('shows "No ideas found." when listing ideas and none exist', async () => {
