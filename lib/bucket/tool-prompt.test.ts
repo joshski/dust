@@ -21,7 +21,10 @@ describe('formatToolsSection', () => {
 
     const result = formatToolsSection(tools)
 
-    expect(result).toContain('## Available Tools')
+    expect(result).toMatch(/\n## Available Tools/)
+    expect(result).toContain(
+      'Use these tools where it makes sense in the execution of this task:'
+    )
     expect(result).toContain('### ping')
     expect(result).toContain('Check server connectivity')
     expect(result).toContain('Usage: `dust bucket tool ping`')

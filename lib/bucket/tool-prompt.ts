@@ -42,13 +42,19 @@ function formatTool(tool: ToolDefinition): string {
  * Format tool definitions into a markdown section for agent prompts.
  * Returns an empty string if no tools are defined.
  */
+
 export function formatToolsSection(tools: ToolDefinition[]): string {
   if (tools.length === 0) {
     return ''
   }
 
   const lines: string[] = []
+  lines.push('')
   lines.push('## Available Tools')
+  lines.push('')
+  lines.push(
+    'Use these tools where it makes sense in the execution of this task:'
+  )
   lines.push('')
 
   for (const tool of tools) {
