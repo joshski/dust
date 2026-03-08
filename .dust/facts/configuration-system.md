@@ -77,4 +77,6 @@ Checks run in parallel by default. `dust check` prints per-check status lines pr
 
 ## Implementation
 
-Settings are loaded by `lib/config/settings.ts`. The `loadSettings` function reads from `.dust/config/settings.json` and returns defaults if the file doesn't exist. Validation is performed by the exported `validateSettingsJson` function, which validates all known keys (dustCommand, checks, extraDirectories, installCommand, eventsUrl) and reports unknown keys.
+Settings are loaded by `lib/config/settings.ts`. The `loadSettings` function reads from `.dust/config/settings.json` and returns defaults if the file doesn't exist. Validation is performed by the exported `validateSettingsJson` function, which validates known keys (dustCommand, checks, installCommand, eventsUrl, and deprecated extraDirectories), reports unknown keys, and flags `extraDirectories` as deprecated.
+
+`extraDirectories` no longer affects `.dust/` root path allowlisting in `dust lint`. The `.dust/` root allowlist is fixed to `principles/`, `ideas/`, `tasks/`, `facts/`, `config/`, and `repository.md`.

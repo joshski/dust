@@ -23,6 +23,7 @@ The `.dust/` root uses a strict allowlist. Supported root paths are:
 - `repository.md`
 
 Unknown files or subdirectories directly under `.dust/` are lint violations.
+`extraDirectories` in `.dust/config/settings.json` is deprecated and does not extend this allowlist.
 
 The config directory uses a strict allowlist. Supported entries are:
 

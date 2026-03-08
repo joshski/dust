@@ -126,10 +126,21 @@ function validateExtraDirectories(
   if (!('extraDirectories' in settings)) {
     return []
   }
+
+  const violations: SettingsViolation[] = [
+    {
+      message:
+        '"extraDirectories" is deprecated and ignored by lint allowlisting. Remove it from settings.json.',
+    },
+  ]
+
   if (!Array.isArray(settings.extraDirectories)) {
-    return [{ message: '"extraDirectories" must be an array of strings' }]
+    violations.push({
+      message: '"extraDirectories" must be an array of strings',
+    })
+    return violations
   }
-  const violations: SettingsViolation[] = []
+
   for (let i = 0; i < settings.extraDirectories.length; i++) {
     if (typeof settings.extraDirectories[i] !== 'string') {
       violations.push({ message: `extraDirectories[${i}] must be a string` })

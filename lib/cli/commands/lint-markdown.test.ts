@@ -1873,7 +1873,6 @@ describe('validateDirectoryStructure', () => {
     expect(violations[0].file).toBe('/project/.dust/task')
     expect(violations[0].message).toContain('Unexpected directory "task"')
     expect(violations[0].message).toContain('Allowed root paths:')
-    expect(violations[0].message).toContain('extraDirectories')
   })
 
   test('reports multiple unexpected directories', async () => {
@@ -1917,7 +1916,7 @@ describe('validateDirectoryStructure', () => {
     ])
   })
 
-  test('allows directories specified in extraDirectories', async () => {
+  test('reports directory even when extraDirectories is passed', async () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -1929,11 +1928,16 @@ describe('validateDirectoryStructure', () => {
 
     const violations = await validateDirectoryStructure(
       '/project/.dust',
-      fileSystem,
-      ['templates']
+      fileSystem
     )
 
-    expect(violations).toEqual([])
+    expect(violations).toEqual([
+      {
+        file: '/project/.dust/templates',
+        message:
+          'Unexpected directory "templates" in .dust/. Allowed root paths: config/, facts/, ideas/, principles/, tasks/, repository.md',
+      },
+    ])
   })
 
   test('accepts known files and subdirectories in .dust/config/', async () => {
@@ -2332,7 +2336,7 @@ This is a principle.
     expect(context.stdoutLines.join('\n')).toContain('All validations passed')
   })
 
-  test('allows extra directories via settings', async () => {
+  test('ignores extraDirectories in command settings', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -2362,8 +2366,10 @@ This is a principle.
       })
     )
 
-    expect(result.exitCode).toBe(0)
-    expect(context.stdoutLines.join('\n')).toContain('All validations passed')
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain(
+      'Unexpected directory "templates" in .dust/'
+    )
   })
 
   test('outputs directory structure validation step', async () => {
@@ -3830,6 +3836,43 @@ This is a principle.
     expect(result.exitCode).toBe(1)
     const output = context.stderrLines.join('\n')
     expect(output).toContain('Unknown key "check"')
+  })
+
+  test('reports extraDirectories deprecation in settings.json', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'principle.md': `# Principle
+
+This is a principle.
+
+## Parent Principle
+
+- (none)
+
+## Sub-Principles
+
+- (none)
+`,
+          },
+          config: {
+            'settings.json': JSON.stringify({
+              extraDirectories: ['templates'],
+            }),
+          },
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    const output = context.stderrLines.join('\n')
+    expect(output).toContain(
+      '"extraDirectories" is deprecated and ignored by lint allowlisting'
+    )
   })
 
   test('reports invalid checks entries in settings.json', async () => {

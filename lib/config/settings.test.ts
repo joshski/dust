@@ -998,8 +998,11 @@ describe('validateSettingsJson', () => {
       extraDirectories: 'not an array',
     })
     const violations = validateSettingsJson(settings)
-    expect(violations).toHaveLength(1)
+    expect(violations).toHaveLength(2)
     expect(violations[0].message).toBe(
+      '"extraDirectories" is deprecated and ignored by lint allowlisting. Remove it from settings.json.'
+    )
+    expect(violations[1].message).toBe(
       '"extraDirectories" must be an array of strings'
     )
   })
@@ -1009,15 +1012,23 @@ describe('validateSettingsJson', () => {
       extraDirectories: ['templates', 123],
     })
     const violations = validateSettingsJson(settings)
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toBe('extraDirectories[1] must be a string')
+    expect(violations).toHaveLength(2)
+    expect(violations[0].message).toBe(
+      '"extraDirectories" is deprecated and ignored by lint allowlisting. Remove it from settings.json.'
+    )
+    expect(violations[1].message).toBe('extraDirectories[1] must be a string')
   })
 
-  test('accepts valid extraDirectories', () => {
+  test('returns deprecation violation for valid extraDirectories', () => {
     const settings = JSON.stringify({
       extraDirectories: ['templates', 'examples'],
     })
-    expect(validateSettingsJson(settings)).toEqual([])
+    expect(validateSettingsJson(settings)).toEqual([
+      {
+        message:
+          '"extraDirectories" is deprecated and ignored by lint allowlisting. Remove it from settings.json.',
+      },
+    ])
   })
 
   test('returns violation when dustCommand is not a string', () => {
@@ -1069,13 +1080,12 @@ describe('validateSettingsJson', () => {
     ).toBe(true)
   })
 
-  test('validates all known settings keys are accepted', () => {
+  test('accepts non-deprecated known settings keys', () => {
     const settings = JSON.stringify({
       dustCommand: 'bin/dust',
       installCommand: 'bun install',
       eventsUrl: 'https://example.com',
       checks: [{ name: 'lint', command: 'npm run lint' }],
-      extraDirectories: ['templates'],
     })
     expect(validateSettingsJson(settings)).toEqual([])
   })

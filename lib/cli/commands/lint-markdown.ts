@@ -87,13 +87,7 @@ export async function lintMarkdown(
 
   // Validate directory structure
   context.stdout('Validating directory structure...')
-  violations.push(
-    ...(await validateDirectoryStructure(
-      dustPath,
-      fileSystem,
-      dependencies.settings.extraDirectories
-    ))
-  )
+  violations.push(...(await validateDirectoryStructure(dustPath, fileSystem)))
 
   // Validate settings.json schema
   const settingsPath = join(dustPath, 'config', 'settings.json')

@@ -61,8 +61,7 @@ export async function validateContentDirectoryFiles(
 
 export async function validateDirectoryStructure(
   dustPath: string,
-  fileSystem: ReadableFileSystem,
-  extraDirectories: string[] = []
+  fileSystem: ReadableFileSystem
 ): Promise<Violation[]> {
   const violations: Violation[] = []
 
@@ -76,10 +75,7 @@ export async function validateDirectoryStructure(
     throw error
   }
 
-  const allowedDirectories = new Set([
-    ...EXPECTED_DIRECTORIES,
-    ...extraDirectories,
-  ])
+  const allowedDirectories = new Set(EXPECTED_DIRECTORIES)
   const allowedRootFiles = new Set(EXPECTED_ROOT_FILES)
   const allowedRootList = [
     ...[...allowedDirectories].sort().map(directory => `${directory}/`),
@@ -114,7 +110,7 @@ export async function validateDirectoryStructure(
     if (!allowedDirectories.has(entry)) {
       violations.push({
         file: entryPath,
-        message: `Unexpected directory "${entry}" in .dust/. Allowed root paths: ${allowedRootList}. To allow this directory, add it to "extraDirectories" in .dust/config/settings.json`,
+        message: `Unexpected directory "${entry}" in .dust/. Allowed root paths: ${allowedRootList}`,
       })
     }
   }
