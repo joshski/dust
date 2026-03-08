@@ -13,6 +13,17 @@ The `.dust/` directory contains planning artifacts organized by type.
 
 The principles, ideas, tasks, and facts directories are flat (no subdirectories) and contain only markdown files with slug-style names.
 
+The `.dust/` root uses a strict allowlist. Supported root paths are:
+
+- `principles/`
+- `ideas/`
+- `tasks/`
+- `facts/`
+- `config/`
+- `repository.md`
+
+Unknown files or subdirectories directly under `.dust/` are lint violations.
+
 The config directory uses a strict allowlist. Supported entries are:
 
 - `settings.json`

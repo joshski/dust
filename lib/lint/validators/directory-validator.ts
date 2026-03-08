@@ -6,6 +6,7 @@ import type { ReadableFileSystem } from '../../filesystem/types'
 import type { Violation } from './types'
 
 const EXPECTED_DIRECTORIES = ['principles', 'ideas', 'tasks', 'facts', 'config']
+const EXPECTED_ROOT_FILES = ['repository.md']
 const EXPECTED_CONFIG_FILES = ['settings.json']
 const EXPECTED_CONFIG_DIRECTORIES = ['audits', 'hints', 'agents']
 
@@ -79,6 +80,11 @@ export async function validateDirectoryStructure(
     ...EXPECTED_DIRECTORIES,
     ...extraDirectories,
   ])
+  const allowedRootFiles = new Set(EXPECTED_ROOT_FILES)
+  const allowedRootList = [
+    ...[...allowedDirectories].sort().map(directory => `${directory}/`),
+    ...EXPECTED_ROOT_FILES,
+  ].join(', ')
 
   for (const entry of entries) {
     const entryPath = `${dustPath}/${entry}`
@@ -92,15 +98,23 @@ export async function validateDirectoryStructure(
       continue
     }
 
-    if (!fileSystem.isDirectory(entryPath)) {
+    const isDirectory = fileSystem.isDirectory(entryPath)
+
+    if (!isDirectory) {
+      if (allowedRootFiles.has(entry)) {
+        continue
+      }
+      violations.push({
+        file: entryPath,
+        message: `Unexpected file "${entry}" in .dust/. Allowed root paths: ${allowedRootList}`,
+      })
       continue
     }
 
     if (!allowedDirectories.has(entry)) {
-      const allowedList = [...allowedDirectories].sort().join(', ')
       violations.push({
         file: entryPath,
-        message: `Unexpected directory "${entry}" in .dust/. Allowed directories: ${allowedList}. To allow this directory, add it to "extraDirectories" in .dust/config/settings.json`,
+        message: `Unexpected directory "${entry}" in .dust/. Allowed root paths: ${allowedRootList}. To allow this directory, add it to "extraDirectories" in .dust/config/settings.json`,
       })
     }
   }

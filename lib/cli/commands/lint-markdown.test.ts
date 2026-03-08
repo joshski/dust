@@ -976,9 +976,8 @@ Implement the task functionality.
     )
   })
 
-  test('skips non-markdown files outside content directories', async () => {
+  test('reports non-markdown files in .dust root', async () => {
     const context = createContextEmulator()
-    // Non-.md files outside content directories (principles, ideas, tasks, facts) should be ignored
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -1017,8 +1016,13 @@ Implement the task functionality.
 
     const result = await lintMarkdown(createDependencies(context, fileSystem))
 
-    expect(result.exitCode).toBe(0)
-    expect(context.stdoutLines.join('\n')).toContain('All validations passed')
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain(
+      'Unexpected file "some-file.txt" in .dust/'
+    )
+    expect(context.stderrLines.join('\n')).toContain(
+      'Unexpected file ".gitkeep" in .dust/'
+    )
   })
 
   test('displays violations with line numbers correctly', async () => {
@@ -1868,7 +1872,7 @@ describe('validateDirectoryStructure', () => {
     expect(violations.length).toBe(1)
     expect(violations[0].file).toBe('/project/.dust/task')
     expect(violations[0].message).toContain('Unexpected directory "task"')
-    expect(violations[0].message).toContain('Allowed directories:')
+    expect(violations[0].message).toContain('Allowed root paths:')
     expect(violations[0].message).toContain('extraDirectories')
   })
 
@@ -2013,13 +2017,44 @@ describe('validateDirectoryStructure', () => {
     ])
   })
 
-  test('ignores non-directory entries', async () => {
+  test('reports unexpected root files', async () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
           principles: { 'principle.md': '# Principle' },
           'README.md': '# Readme',
           '.gitkeep': '',
+        },
+      },
+    })
+
+    const violations = await validateDirectoryStructure(
+      '/project/.dust',
+      fileSystem
+    )
+
+    expect(violations).toHaveLength(2)
+    expect(violations).toEqual(
+      expect.arrayContaining([
+        {
+          file: '/project/.dust/.gitkeep',
+          message:
+            'Unexpected file ".gitkeep" in .dust/. Allowed root paths: config/, facts/, ideas/, principles/, tasks/, repository.md',
+        },
+        {
+          file: '/project/.dust/README.md',
+          message:
+            'Unexpected file "README.md" in .dust/. Allowed root paths: config/, facts/, ideas/, principles/, tasks/, repository.md',
+        },
+      ])
+    )
+  })
+
+  test('allows .dust/repository.md at root', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          'repository.md': '# Repository',
         },
       },
     })
@@ -2140,7 +2175,7 @@ describe('validateDirectoryStructure', () => {
 
     expect(violations.length).toBe(1)
     expect(violations[0].message).toContain(
-      'config, facts, ideas, principles, tasks'
+      'config/, facts/, ideas/, principles/, tasks/, repository.md'
     )
   })
 })
@@ -2175,6 +2210,40 @@ This is a principle.
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain('Unexpected directory')
     expect(context.stderrLines.join('\n')).toContain('task')
+  })
+
+  test('reports unexpected root files in .dust/', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'principle.md': `# Principle
+
+This is a principle.
+
+## Parent Principle
+
+- (none)
+
+## Sub-Principles
+
+- (none)
+`,
+          },
+          'README.md': '# Notes',
+        },
+      },
+    })
+
+    const result = await lintMarkdown(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('Unexpected file')
+    expect(context.stderrLines.join('\n')).toContain('README.md')
+    expect(context.stderrLines.join('\n')).toContain(
+      'Allowed root paths: config/, facts/, ideas/, principles/, tasks/, repository.md'
+    )
   })
 
   test('reports migration error for .dust/Dockerfile', async () => {
@@ -3411,7 +3480,9 @@ This is a principle.
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          'readme.md': '# Readme',
+          facts: {
+            'readme.md': '# Readme',
+          },
         },
       },
     })

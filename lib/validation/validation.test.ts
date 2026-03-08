@@ -134,6 +134,77 @@ describe('validatePatch', () => {
     expect(result.valid).toBe(true)
   })
 
+  test('rejects unexpected root directory introduced by patch', async () => {
+    const fileSystem = makeFs()
+    const result = await validatePatch(fileSystem, dustPath, {
+      files: {
+        'templates/template.md': '# Template\n\nTemplate content.',
+      },
+    })
+
+    expect(result.valid).toBe(false)
+    expect(result.violations).toContainEqual({
+      file: '/project/.dust/templates',
+      message:
+        'Unexpected directory "templates" in .dust/. Allowed root paths: config/, facts/, ideas/, principles/, tasks/, repository.md',
+    })
+  })
+
+  test('rejects unexpected root file introduced by patch', async () => {
+    const fileSystem = makeFs()
+    const result = await validatePatch(fileSystem, dustPath, {
+      files: {
+        'notes.md': '# Notes\n\nSome notes.',
+      },
+    })
+
+    expect(result.valid).toBe(false)
+    expect(result.violations).toContainEqual({
+      file: '/project/.dust/notes.md',
+      message:
+        'Unexpected file "notes.md" in .dust/. Allowed root paths: config/, facts/, ideas/, principles/, tasks/, repository.md',
+    })
+  })
+
+  test('allows updating .dust/repository.md via patch', async () => {
+    const fileSystem = makeFs()
+    const result = await validatePatch(fileSystem, dustPath, {
+      files: {
+        'repository.md': '# Repository\n\nProject context.',
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.violations).toEqual([])
+  })
+
+  test('ignores empty relative paths in patch map', async () => {
+    const fileSystem = makeFs()
+    const result = await validatePatch(fileSystem, dustPath, {
+      files: {
+        '': 'ignored',
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.violations).toEqual([])
+  })
+
+  test('reports an unexpected root directory only once per directory', async () => {
+    const fileSystem = makeFs()
+    const result = await validatePatch(fileSystem, dustPath, {
+      files: {
+        'templates/a.md': '# A\n\nA.',
+        'templates/b.md': '# B\n\nB.',
+      },
+    })
+
+    expect(result.valid).toBe(false)
+    expect(
+      result.violations.filter(v => v.file === '/project/.dust/templates')
+    ).toHaveLength(1)
+  })
+
   test('deleting an existing file is valid', async () => {
     const fileSystem = makeFs({
       'facts/old-fact.md': '# Old Fact\n\nThis fact is being removed.',

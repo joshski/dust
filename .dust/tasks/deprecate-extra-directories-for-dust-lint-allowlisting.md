@@ -16,7 +16,7 @@ Document the deprecation behavior.
 
 ## Blocked By
 
-- [Implement strict .dust root allowlist validation](./implement-strict-dust-root-allowlist-validation.md)
+(none)
 
 ## Definition of Done
 

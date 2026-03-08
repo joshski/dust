@@ -18,7 +18,7 @@ const result = await validatePatch(fileSystem, dustPath, {
 
 ## How It Works
 
-The `validatePatch` function creates an overlay filesystem that merges patch files on top of the existing filesystem. This allows link validation to resolve references to both existing and new files. It runs the same validators as `dust lint` but only on the files in the patch.
+The `validatePatch` function creates an overlay filesystem that merges patch files on top of the existing filesystem. This allows link validation to resolve references to both existing and new files. It runs the same validators as `dust lint` but only on the files in the patch, and rejects patch entries that introduce non-allowlisted `.dust/` root paths.
 
 Cross-file validators (principle bidirectional links, cycle detection) run across all principles — both existing and patched.
 

@@ -50,6 +50,66 @@ export interface ValidationResult {
   violations: Violation[]
 }
 
+const ALLOWED_ROOT_DIRECTORIES = [
+  'config',
+  'facts',
+  'ideas',
+  'principles',
+  'tasks',
+]
+const ALLOWED_ROOT_FILES = ['repository.md']
+const ALLOWED_ROOT_PATHS = [
+  ...ALLOWED_ROOT_DIRECTORIES.map(directory => `${directory}/`),
+  ...ALLOWED_ROOT_FILES,
+].join(', ')
+
+function validatePatchRootEntries(
+  fileSystem: ReadableFileSystem,
+  dustPath: string,
+  patch: ArtifactPatch
+): Violation[] {
+  const violations: Violation[] = []
+  const sortedPaths = Object.keys(patch.files).sort()
+  const reportedUnexpectedRootDirectories = new Set<string>()
+
+  for (const relativePath of sortedPaths) {
+    const content = patch.files[relativePath]
+    if (content === null) continue
+
+    const [rootEntry] = relativePath.split('/')
+    if (!rootEntry) continue
+    if (
+      ALLOWED_ROOT_DIRECTORIES.includes(rootEntry) ||
+      ALLOWED_ROOT_FILES.includes(rootEntry)
+    ) {
+      continue
+    }
+
+    const rootEntryPath = `${dustPath}/${rootEntry}`
+
+    if (relativePath.includes('/')) {
+      if (
+        !reportedUnexpectedRootDirectories.has(rootEntry) &&
+        !fileSystem.isDirectory(rootEntryPath)
+      ) {
+        violations.push({
+          file: rootEntryPath,
+          message: `Unexpected directory "${rootEntry}" in .dust/. Allowed root paths: ${ALLOWED_ROOT_PATHS}`,
+        })
+        reportedUnexpectedRootDirectories.add(rootEntry)
+      }
+      continue
+    }
+
+    violations.push({
+      file: rootEntryPath,
+      message: `Unexpected file "${rootEntry}" in .dust/. Allowed root paths: ${ALLOWED_ROOT_PATHS}`,
+    })
+  }
+
+  return violations
+}
+
 /**
  * Validates a patch of artifact changes against existing .dust/ content.
  *
@@ -82,6 +142,8 @@ export async function validatePatch(
   )
 
   const violations: Violation[] = []
+  violations.push(...validatePatchRootEntries(fileSystem, dustPath, patch))
+
   const contentDirs = ['principles', 'facts', 'ideas', 'tasks']
 
   // Validate content directory files for directories that have patch files
