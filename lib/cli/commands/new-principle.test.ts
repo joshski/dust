@@ -12,12 +12,16 @@ describe('new-principle', () => {
   })
 
   test('outputs principle creation instructions', async () => {
+    stubEnv('CLAUDECODE', undefined)
+    stubEnv('CLAUDE_CODE_REMOTE', undefined)
     const { context, dependencies } = createCommandDependencies()
     const result = await newPrinciple(dependencies)
 
     expect(result.exitCode).toBe(0)
-    expect(context.stdoutLines.join('\n')).toContain('Adding a New Principle')
-    expect(context.stdoutLines.join('\n')).toContain('Follow these steps')
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('Adding a New Principle')
+    expect(output).toContain('Follow these steps:')
+    expect(output).not.toContain('todo list')
   })
 
   test('uses todo list phrasing for Claude Code Web', async () => {
