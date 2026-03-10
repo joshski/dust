@@ -19,6 +19,19 @@ describe('new-task', () => {
     expect(context.stdoutLines.join('\n')).toContain('Adding a New Task')
   })
 
+  test('renders non-web content with push step', async () => {
+    stubEnv('CLAUDECODE', undefined)
+    stubEnv('CLAUDE_CODE_REMOTE', undefined)
+    const { context, dependencies } = createCommandDependencies()
+    const result = await newTask(dependencies)
+
+    expect(result.exitCode).toBe(0)
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('Follow these steps:')
+    expect(output).toContain('Push your commit')
+    expect(output).not.toContain('sub-agent')
+  })
+
   test('renders full content correctly for Claude Code Web', async () => {
     stubEnv('CLAUDECODE', '1')
     stubEnv('CLAUDE_CODE_REMOTE', 'true')
