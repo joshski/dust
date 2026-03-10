@@ -21,3 +21,4 @@ Each sub-principle represents a different aspect of the ideal agent developer se
 - [Context-Optimised Code](context-optimised-code.md)
 - [Exploratory Tooling](exploratory-tooling.md)
 - [Debugging Tooling](debugging-tooling.md)
+- [Self-Contained Repository](self-contained-repository.md)
