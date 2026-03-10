@@ -59,6 +59,10 @@ function createTestRepo(): string {
     cwd: repoDir,
     stdio: 'ignore',
   })
+  spawnSync('git', ['config', 'commit.gpgsign', 'false'], {
+    cwd: repoDir,
+    stdio: 'ignore',
+  })
 
   mkdirSync(join(repoDir, '.dust', 'tasks'), { recursive: true })
   mkdirSync(join(repoDir, '.dust', 'config'), { recursive: true })
