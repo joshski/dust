@@ -17,7 +17,7 @@ describe('new-principle', () => {
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines.join('\n')).toContain('Adding a New Principle')
-    expect(context.stdoutLines.join('\n')).toContain('Follow these steps:')
+    expect(context.stdoutLines.join('\n')).toContain('Follow these steps')
   })
 
   test('uses todo list phrasing for Claude Code Web', async () => {
