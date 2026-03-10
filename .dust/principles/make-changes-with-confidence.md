@@ -19,4 +19,5 @@ Tests, type checking, and other automated verification enable safe refactoring a
 - [Stop the Line](stop-the-line.md)
 - [Keep Unit Tests Pure](keep-unit-tests-pure.md)
 - [Test Isolation](test-isolation.md)
+- [Self-Diagnosing Tests](self-diagnosing-tests.md)
 - [Unit Test Coverage](unit-test-coverage.md)

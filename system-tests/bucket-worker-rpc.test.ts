@@ -247,10 +247,11 @@ describe('bucket worker RPC integration', () => {
             ).type as string
         )
       expect(commandEvents).toContain('check-started')
-      expect(
-        commandEvents.includes('check-passed') ||
-          commandEvents.includes('check-failed')
-      ).toBe(true)
+      expect(commandEvents).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(/^check-passed|check-failed$/),
+        ])
+      )
 
       // Auth token was forwarded
       expect(serverEmulator.token).toBe('test-token')
