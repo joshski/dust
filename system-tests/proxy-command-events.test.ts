@@ -134,7 +134,7 @@ describe('command event emission via DUST_PROXY_PORT', () => {
         )
 
         expect(result.status).not.toBeNull()
-        expect(requests.length).toBe(1)
+        expect(requests).toHaveLength(1)
         expect(requests[0].path).toBe('/events')
         const payload = JSON.parse(requests[0].body) as CommandEventMessage
         expect(payload.event.type).toBe('tasks-listed')
@@ -177,15 +177,10 @@ describe('command event emission via DUST_PROXY_PORT', () => {
         const events = requests.map(request =>
           JSON.parse(request.body)
         ) as CommandEventMessage[]
-        expect(events.some(event => event.event.type === 'check-started')).toBe(
-          true
-        )
-        expect(events.some(event => event.event.type === 'check-passed')).toBe(
-          true
-        )
-        expect(events.some(event => event.event.type === 'tasks-listed')).toBe(
-          true
-        )
+        const eventTypes = events.map(event => event.event.type)
+        expect(eventTypes).toContain('check-started')
+        expect(eventTypes).toContain('check-passed')
+        expect(eventTypes).toContain('tasks-listed')
       } finally {
         rmSync(tempDir, { recursive: true, force: true })
       }

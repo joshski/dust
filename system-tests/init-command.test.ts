@@ -88,10 +88,8 @@ test('init command creates settings.json', async () => {
     '/project/.dust/config/settings.json'
   )
   expect(settings).toBeDefined()
-  if (settings) {
-    const parsed = JSON.parse(settings)
-    expect(parsed.dustCommand).toBeDefined()
-  }
+  const parsed = JSON.parse(settings!)
+  expect(parsed.dustCommand).toBeDefined()
 })
 
 test('init command creates initial fact about using dust', async () => {
