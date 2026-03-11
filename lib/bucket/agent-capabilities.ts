@@ -30,6 +30,8 @@ interface AgentCapabilityDecisionInput {
 
 export interface AgentCapabilitiesDependencies {
   spawn: typeof nodeSpawn
+  fetchCodexModelsFromApi?: (apiKey: string) => Promise<string[]>
+  getEnv?: (name: string) => string | undefined
 }
 
 export function parseCodexModelsOutput(stdout: string): string[] {
@@ -76,6 +78,35 @@ export function selectAgentCapabilities(
   return agents
 }
 
+export async function fetchCodexModelsFromApi(
+  apiKey: string
+): Promise<string[]> {
+  try {
+    const response = await fetch('https://api.openai.com/v1/models', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    })
+    if (!response.ok) {
+      log(`OpenAI models API returned ${response.status}`)
+      return []
+    }
+    const body = (await response.json()) as {
+      data?: { id: string }[]
+    }
+    if (!body.data || !Array.isArray(body.data)) {
+      return []
+    }
+    return body.data
+      .map(m => m.id)
+      .filter(id => id.includes('codex'))
+      .sort()
+  } catch (error) {
+    log(
+      `OpenAI models API fetch failed: ${error instanceof Error ? error.message : String(error)}`
+    )
+    return []
+  }
+}
+
 export async function discoverAgentCapabilities(
   dependencies: AgentCapabilitiesDependencies
 ): Promise<AgentCapabilitiesMessage> {
@@ -86,11 +117,19 @@ export async function discoverAgentCapabilities(
 
   let codexModelsProbe: CommandProbeResult | null = null
   if (codexVersionProbe.success) {
-    // Live discovery path for Codex models.
-    codexModelsProbe = await probeCommand(dependencies.spawn, 'codex', [
-      'models',
-      '--json',
-    ])
+    const getEnv = dependencies.getEnv ?? (name => process.env[name])
+    const apiKey = getEnv('OPENAI_API_KEY')
+    if (apiKey) {
+      const fetcher =
+        dependencies.fetchCodexModelsFromApi ?? fetchCodexModelsFromApi
+      const models = await fetcher(apiKey)
+      if (models.length > 0) {
+        codexModelsProbe = {
+          success: true,
+          stdout: JSON.stringify(models),
+        }
+      }
+    }
   }
 
   return {

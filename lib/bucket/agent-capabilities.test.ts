@@ -1,9 +1,11 @@
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
-import { asChildProcessStub } from '../test/test-utilities'
+import { asChildProcessStub, stubEnv } from '../test/test-utilities'
+import { stubFetch } from '../test-support/stub-fetch'
 import {
   CLAUDE_MODEL_ALIASES,
   discoverAgentCapabilities,
+  fetchCodexModelsFromApi,
   parseCodexModelsOutput,
   selectAgentCapabilities,
   type AgentCapabilitiesDependencies,
@@ -123,22 +125,148 @@ describe('selectAgentCapabilities', () => {
   })
 })
 
+describe('fetchCodexModelsFromApi', () => {
+  test('filters models containing codex and sorts them', async () => {
+    const models = await stubFetch(
+      async () =>
+        new Response(
+          JSON.stringify({
+            data: [
+              { id: 'gpt-4o' },
+              { id: 'gpt-5.1-codex' },
+              { id: 'gpt-5-codex' },
+              { id: 'o3' },
+            ],
+          })
+        ),
+      () => fetchCodexModelsFromApi('sk-test')
+    )
+    expect(models).toEqual(['gpt-5-codex', 'gpt-5.1-codex'])
+  })
+
+  test('returns empty array on non-ok response', async () => {
+    const models = await stubFetch(
+      async () => new Response('unauthorized', { status: 401 }),
+      () => fetchCodexModelsFromApi('bad-key')
+    )
+    expect(models).toEqual([])
+  })
+
+  test('returns empty array when response has no data property', async () => {
+    const models = await stubFetch(
+      async () => new Response(JSON.stringify({ status: 'ok' })),
+      () => fetchCodexModelsFromApi('sk-test')
+    )
+    expect(models).toEqual([])
+  })
+
+  test('returns empty array on fetch error', async () => {
+    const models = await stubFetch(
+      async () => {
+        throw new Error('network error')
+      },
+      () => fetchCodexModelsFromApi('sk-test')
+    )
+    expect(models).toEqual([])
+  })
+
+  test('returns empty array on non-Error fetch throw', async () => {
+    const models = await stubFetch(
+      async () => {
+        throw 'connection refused'
+      },
+      () => fetchCodexModelsFromApi('sk-test')
+    )
+    expect(models).toEqual([])
+  })
+})
+
 describe('discoverAgentCapabilities', () => {
-  test('discovers both agents and codex models via command probes', async () => {
+  test('discovers both agents with codex models from OpenAI API', async () => {
     const spawn = createSpawnByCommand({
       'claude --version': { code: 0, stdout: 'claude 1.0.0' },
       'codex --version': { code: 0, stdout: 'codex 0.10.0' },
-      'codex models --json': {
-        code: 0,
-        stdout: JSON.stringify({ models: [{ id: 'o3' }, { id: 'o4-mini' }] }),
-      },
     })
 
-    await expect(discoverAgentCapabilities({ spawn })).resolves.toEqual({
+    const result = await discoverAgentCapabilities({
+      spawn,
+      getEnv: name => (name === 'OPENAI_API_KEY' ? 'sk-test' : undefined),
+      fetchCodexModelsFromApi: async () => ['gpt-5-codex', 'gpt-5.1-codex'],
+    })
+
+    expect(result).toEqual({
       type: 'agent-capabilities',
       agents: [
         { agentType: 'claude', models: [...CLAUDE_MODEL_ALIASES] },
-        { agentType: 'codex', models: ['o3', 'o4-mini'] },
+        { agentType: 'codex', models: ['gpt-5-codex', 'gpt-5.1-codex'] },
+      ],
+    })
+  })
+
+  test('returns codex with empty models when no API key', async () => {
+    const spawn = createSpawnByCommand({
+      'claude --version': { code: 0, stdout: 'claude 1.0.0' },
+      'codex --version': { code: 0, stdout: 'codex 0.10.0' },
+    })
+
+    const result = await discoverAgentCapabilities({
+      spawn,
+      getEnv: () => undefined,
+    })
+
+    expect(result).toEqual({
+      type: 'agent-capabilities',
+      agents: [
+        { agentType: 'claude', models: [...CLAUDE_MODEL_ALIASES] },
+        { agentType: 'codex', models: [] },
+      ],
+    })
+  })
+
+  test('returns codex with empty models when API returns no models', async () => {
+    const spawn = createSpawnByCommand({
+      'claude --version': { code: 0, stdout: 'claude 1.0.0' },
+      'codex --version': { code: 0, stdout: 'codex 0.10.0' },
+    })
+
+    const result = await discoverAgentCapabilities({
+      spawn,
+      getEnv: name => (name === 'OPENAI_API_KEY' ? 'sk-test' : undefined),
+      fetchCodexModelsFromApi: async () => [],
+    })
+
+    expect(result).toEqual({
+      type: 'agent-capabilities',
+      agents: [
+        { agentType: 'claude', models: [...CLAUDE_MODEL_ALIASES] },
+        { agentType: 'codex', models: [] },
+      ],
+    })
+  })
+
+  test('uses process.env and real fetcher by default', async () => {
+    const spawn = createSpawnByCommand({
+      'claude --version': { code: 0, stdout: 'claude 1.0.0' },
+      'codex --version': { code: 0, stdout: 'codex 0.10.0' },
+    })
+
+    const result = await stubEnv('OPENAI_API_KEY', 'sk-test', () =>
+      stubFetch(
+        async () =>
+          new Response(
+            JSON.stringify({
+              data: [{ id: 'gpt-5-codex' }, { id: 'gpt-4o' }],
+            })
+          ),
+        () => discoverAgentCapabilities({ spawn })
+      )
+    )
+
+    expect(result).toEqual({
+      type: 'agent-capabilities',
+      agents: [
+        { agentType: 'claude', models: [...CLAUDE_MODEL_ALIASES] },
+        { agentType: 'codex', models: ['gpt-5-codex'] },
       ],
     })
   })
