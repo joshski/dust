@@ -98,12 +98,83 @@ describe('createRefineIdeaTask', () => {
     )
   })
 
+  test('includes open question responses as a Resolved Questions section', async () => {
+    const fileSystem = createFileSystem()
+    const responses: OpenQuestionResponse[] = [
+      {
+        question: 'Should we use WebSockets?',
+        chosenOption: 'Yes',
+      },
+      {
+        question: 'How should errors be handled?',
+        chosenOption: 'Retry automatically',
+      },
+    ]
+    const result = await createRefineIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting',
+      undefined,
+      responses
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('## Resolved Questions')
+    expect(content).toContain('### Should we use WebSockets?')
+    expect(content).toContain('**Decision:** Yes')
+    expect(content).toContain('### How should errors be handled?')
+    expect(content).toContain('**Decision:** Retry automatically')
+  })
+
+  test('includes both description and open question responses', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createRefineIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting',
+      'Focus on real-time updates.',
+      [{ question: 'Which protocol?', chosenOption: 'WebSockets' }]
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('Focus on real-time updates.')
+    expect(content).toContain('## Resolved Questions')
+    expect(content).toContain('**Decision:** WebSockets')
+  })
+
+  test('omits Resolved Questions section when no responses provided', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createRefineIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).not.toContain('## Resolved Questions')
+  })
+
+  test('omits Resolved Questions section when responses array is empty', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createRefineIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting',
+      undefined,
+      []
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).not.toContain('## Resolved Questions')
+  })
+
   test('uses custom dustCommand in template', async () => {
     const fileSystem = createFileSystem()
     const result = await createRefineIdeaTask(
       fileSystem,
       '/project/.dust',
       'progress-broadcasting',
+      undefined,
       undefined,
       'bin/dust'
     )

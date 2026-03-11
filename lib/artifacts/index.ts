@@ -77,6 +77,7 @@ export interface ArtifactsRepository {
   createRefineIdeaTask(options: {
     ideaSlug: string
     description?: string
+    openQuestionResponses?: OpenQuestionResponse[]
     dustCommand?: string
   }): Promise<CreateIdeaTransitionTaskResult>
   createDecomposeIdeaTask(
@@ -178,6 +179,7 @@ export function buildArtifactsRepository(
     async createRefineIdeaTask(options: {
       ideaSlug: string
       description?: string
+      openQuestionResponses?: OpenQuestionResponse[]
       dustCommand?: string
     }): Promise<CreateIdeaTransitionTaskResult> {
       return createRefineIdeaTaskImpl(
@@ -185,6 +187,7 @@ export function buildArtifactsRepository(
         dustPath,
         options.ideaSlug,
         options.description,
+        options.openQuestionResponses,
         options.dustCommand
       )
     },

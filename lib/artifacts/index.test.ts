@@ -172,6 +172,22 @@ describe('buildArtifactsRepository', () => {
       const content = fileSystem.writtenFiles.get(result.filePath) as string
       expect(content).toContain('Focus on WebSocket approach.')
     })
+
+    test('includes open question responses', async () => {
+      const fileSystem = createFileSystem()
+      const repository = buildArtifactsRepository(fileSystem, '/project/.dust')
+
+      const result = await repository.createRefineIdeaTask({
+        ideaSlug: 'progress-broadcasting',
+        openQuestionResponses: [
+          { question: 'Which protocol?', chosenOption: 'WebSockets' },
+        ],
+      })
+
+      const content = fileSystem.writtenFiles.get(result.filePath) as string
+      expect(content).toContain('## Resolved Questions')
+      expect(content).toContain('**Decision:** WebSockets')
+    })
   })
 
   describe('createDecomposeIdeaTask', () => {

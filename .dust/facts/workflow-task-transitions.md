@@ -2,6 +2,8 @@
 
 Transition tasks operate on an existing idea and use `IDEA_TRANSITION_PREFIXES`.
 
+`createRefineIdeaTask(...)` accepts optional `openQuestionResponses` and renders a `## Resolved Questions` section when provided with one or more responses.
+
 ## Prefixes and Filenames
 
 - `Refine Idea: <Idea Title>` -> `refine-idea-<idea-title>.md`

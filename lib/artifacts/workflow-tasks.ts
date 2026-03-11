@@ -345,6 +345,7 @@ export async function createRefineIdeaTask(
   dustPath: string,
   ideaSlug: string,
   description?: string,
+  openQuestionResponses?: OpenQuestionResponse[],
   dustCommand?: string
 ): Promise<CreateIdeaTransitionTaskResult> {
   const cmd = dustCommand ?? 'dust'
@@ -363,7 +364,10 @@ export async function createRefineIdeaTask(
       'Idea file is updated with findings',
     ],
     'Refines Idea',
-    { description }
+    {
+      description,
+      resolvedQuestions: openQuestionResponses,
+    }
   )
 }
 

@@ -5,7 +5,7 @@
 ## Write Methods
 
 - `createIdeaTask({ title, description, expedite?, dustCommand? })`
-- `createRefineIdeaTask({ ideaSlug, description?, dustCommand? })`
+- `createRefineIdeaTask({ ideaSlug, description?, openQuestionResponses?, dustCommand? })`
 - `createDecomposeIdeaTask({ ideaSlug, description?, openQuestionResponses?, dustCommand? })`
 - `createShelveIdeaTask({ ideaSlug, description?, dustCommand? })`
 
