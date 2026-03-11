@@ -1,6 +1,6 @@
 # Allow resolving open questions during refinement
 
-Add an optional `openQuestionResponses` parameter to `createRefineIdeaTask` so users can resolve open questions when creating a refine-idea task, matching the existing pattern in `decomposeIdea`.
+Add an optional `openQuestionResponses` parameter to `createRefineIdeaTask`. This matches the existing pattern in `decomposeIdea` for resolving open questions at task creation time.
 
 ## Background
 
