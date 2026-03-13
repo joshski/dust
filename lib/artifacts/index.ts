@@ -27,6 +27,7 @@ import {
   type OpenQuestionResponse,
   type ParsedCaptureIdeaTask,
   parseCaptureIdeaTask as parseCaptureIdeaTaskImpl,
+  parseResolvedQuestions,
   type WorkflowTaskMatch,
   type WorkflowTaskType,
 } from './workflow-tasks'
@@ -59,7 +60,12 @@ export interface TaskGraph {
 }
 
 // Re-export constants and standalone functions
-export { CAPTURE_IDEA_PREFIX, findAllWorkflowTasks, parseOpenQuestions }
+export {
+  CAPTURE_IDEA_PREFIX,
+  findAllWorkflowTasks,
+  parseOpenQuestions,
+  parseResolvedQuestions,
+}
 export type { IdeaInProgress }
 
 export type ArtifactType = 'ideas' | 'tasks' | 'principles' | 'facts'

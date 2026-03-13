@@ -51,7 +51,24 @@ export function parseOpenQuestions(content: string): IdeaOpenQuestion[] {
     }
   }
 
+  let inCodeFence = false
+
   for (const line of lines) {
+    if (line.startsWith('```')) {
+      inCodeFence = !inCodeFence
+      if (currentOption) {
+        descriptionLines.push(line)
+      }
+      continue
+    }
+
+    if (inCodeFence) {
+      if (currentOption) {
+        descriptionLines.push(line)
+      }
+      continue
+    }
+
     // h2 heading: enters or exits the Open Questions section
     if (line.startsWith('## ')) {
       if (inOpenQuestions) {

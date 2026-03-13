@@ -12,6 +12,7 @@ import {
   IDEA_TRANSITION_PREFIXES,
   type OpenQuestionResponse,
   parseCaptureIdeaTask,
+  parseResolvedQuestions,
   titleToFilename,
 } from './workflow-tasks'
 
@@ -802,6 +803,7 @@ describe('findWorkflowTaskForIdea', () => {
       type: 'refine-idea',
       ideaSlug: 'progress-broadcasting',
       taskSlug: 'refine-idea-progress-broadcasting',
+      resolvedQuestions: [],
     })
   })
 
@@ -819,6 +821,7 @@ describe('findWorkflowTaskForIdea', () => {
       type: 'decompose-idea',
       ideaSlug: 'progress-broadcasting',
       taskSlug: 'decompose-idea-progress-broadcasting',
+      resolvedQuestions: [],
     })
   })
 
@@ -838,6 +841,7 @@ describe('findWorkflowTaskForIdea', () => {
       type: 'shelve-idea',
       ideaSlug: 'progress-broadcasting',
       taskSlug: 'shelve-idea-progress-broadcasting',
+      resolvedQuestions: [],
     })
   })
 
@@ -919,6 +923,7 @@ Do something.
       type: 'refine-idea',
       ideaSlug: 'progress-broadcasting',
       taskSlug: 'some-unrelated-name',
+      resolvedQuestions: [],
     })
   })
 
@@ -959,6 +964,7 @@ Do something.
       type: 'decompose-idea',
       ideaSlug: 'my-idea',
       taskSlug: 'custom-task-name',
+      resolvedQuestions: [],
     })
   })
 
@@ -999,6 +1005,7 @@ Archive this idea.
       type: 'shelve-idea',
       ideaSlug: 'my-idea',
       taskSlug: 'archive-task',
+      resolvedQuestions: [],
     })
   })
 
@@ -1069,6 +1076,40 @@ Do something.
 ## Refines Idea
 
 - [External Link](https://example.com/my-idea)
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await findWorkflowTaskForIdea(
+      fileSystem,
+      '/project/.dust',
+      'my-idea'
+    )
+    expect(result).toBeNull()
+  })
+
+  test('ignores links inside code fences in body section', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea\n\nDescription.',
+          },
+          tasks: {
+            'some-task.md': `# Some Task
+
+Do something.
+
+## Refines Idea
+
+\`\`\`markdown
+- [My Idea](../ideas/my-idea.md)
+\`\`\`
 
 ## Blocked By
 
@@ -1378,11 +1419,13 @@ describe('findAllWorkflowTasks', () => {
       type: 'refine-idea',
       ideaSlug: 'idea-a',
       taskSlug: 'refine-idea-idea-a',
+      resolvedQuestions: [],
     })
     expect(result.workflowTasksByIdeaSlug.get('idea-b')).toEqual({
       type: 'shelve-idea',
       ideaSlug: 'idea-b',
       taskSlug: 'shelve-idea-idea-b',
+      resolvedQuestions: [],
     })
   })
 
@@ -1412,6 +1455,220 @@ describe('findAllWorkflowTasks', () => {
       type: 'decompose-idea',
       ideaSlug: 'existing-idea',
       taskSlug: 'decompose-idea-existing-idea',
+      resolvedQuestions: [],
+    })
+  })
+})
+
+describe('parseResolvedQuestions', () => {
+  test('returns empty array when no Resolved Questions section', () => {
+    const content = `# Some Task
+
+Do something.
+
+## Blocked By
+
+(none)
+`
+    expect(parseResolvedQuestions(content)).toEqual([])
+  })
+
+  test('returns empty array when Resolved Questions section is empty', () => {
+    const content = `# Some Task
+
+Do something.
+
+## Resolved Questions
+
+## Blocked By
+
+(none)
+`
+    expect(parseResolvedQuestions(content)).toEqual([])
+  })
+
+  test('parses a single resolved question', () => {
+    const content = `# Some Task
+
+## Resolved Questions
+
+### Should we use WebSockets?
+
+**Decision:** Yes, use WebSockets for real-time updates
+
+## Blocked By
+
+(none)
+`
+    expect(parseResolvedQuestions(content)).toEqual([
+      {
+        question: 'Should we use WebSockets?',
+        chosenOption: 'Yes, use WebSockets for real-time updates',
+      },
+    ])
+  })
+
+  test('parses multiple resolved questions', () => {
+    const content = `# Some Task
+
+## Resolved Questions
+
+### Should we use WebSockets?
+
+**Decision:** Yes, use WebSockets
+
+### Which database?
+
+**Decision:** PostgreSQL
+
+## Blocked By
+
+(none)
+`
+    expect(parseResolvedQuestions(content)).toEqual([
+      {
+        question: 'Should we use WebSockets?',
+        chosenOption: 'Yes, use WebSockets',
+      },
+      { question: 'Which database?', chosenOption: 'PostgreSQL' },
+    ])
+  })
+
+  test('ignores headings inside code fences', () => {
+    const content = `# Some Task
+
+## Resolved Questions
+
+### Real question
+
+**Decision:** Yes
+
+\`\`\`markdown
+### Fake question
+
+**Decision:** No
+\`\`\`
+
+## Blocked By
+
+(none)
+`
+    expect(parseResolvedQuestions(content)).toEqual([
+      { question: 'Real question', chosenOption: 'Yes' },
+    ])
+  })
+
+  test('stops parsing at H1 heading', () => {
+    const content = `# Some Task
+
+## Resolved Questions
+
+### Answered question
+
+**Decision:** Yes
+
+# Another Top-Level Heading
+
+### Not a resolved question
+
+**Decision:** No
+`
+    expect(parseResolvedQuestions(content)).toEqual([
+      { question: 'Answered question', chosenOption: 'Yes' },
+    ])
+  })
+
+  test('ignores question with no decision before section ends', () => {
+    const content = `# Some Task
+
+## Resolved Questions
+
+### Answered question
+
+**Decision:** Yes
+
+### Unanswered question
+
+## Blocked By
+
+(none)
+`
+    expect(parseResolvedQuestions(content)).toEqual([
+      { question: 'Answered question', chosenOption: 'Yes' },
+    ])
+  })
+
+  test('round-trips with renderResolvedQuestions via task creation', async () => {
+    const responses: OpenQuestionResponse[] = [
+      { question: 'Use caching?', chosenOption: 'Yes, Redis' },
+      { question: 'Auth strategy?', chosenOption: 'JWT tokens' },
+    ]
+    const fileSystem = createFileSystem()
+    await createRefineIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting',
+      undefined,
+      responses
+    )
+    const taskContent = await fileSystem.readFile(
+      '/project/.dust/tasks/refine-idea-progress-broadcasting.md'
+    )
+    expect(parseResolvedQuestions(taskContent)).toEqual(responses)
+  })
+})
+
+describe('resolvedQuestions in finder functions', () => {
+  test('findWorkflowTaskForIdea returns populated resolvedQuestions', async () => {
+    const responses: OpenQuestionResponse[] = [
+      { question: 'Use caching?', chosenOption: 'Yes, Redis' },
+    ]
+    const fileSystem = createFileSystem()
+    await createRefineIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting',
+      undefined,
+      responses
+    )
+    const result = await findWorkflowTaskForIdea(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+    expect(result).toEqual({
+      type: 'refine-idea',
+      ideaSlug: 'progress-broadcasting',
+      taskSlug: 'refine-idea-progress-broadcasting',
+      resolvedQuestions: responses,
+    })
+  })
+
+  test('findAllWorkflowTasks returns populated resolvedQuestions', async () => {
+    const responses: OpenQuestionResponse[] = [
+      { question: 'Storage backend?', chosenOption: 'S3' },
+      { question: 'Region?', chosenOption: 'us-east-1' },
+    ]
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea\n\nDescription.',
+          },
+          tasks: {},
+        },
+      },
+    })
+    await decomposeIdea(fileSystem, '/project/.dust', {
+      ideaSlug: 'my-idea',
+      openQuestionResponses: responses,
+    })
+    const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
+    expect(result.workflowTasksByIdeaSlug.get('my-idea')).toEqual({
+      type: 'decompose-idea',
+      ideaSlug: 'my-idea',
+      taskSlug: 'decompose-idea-my-idea',
+      resolvedQuestions: responses,
     })
   })
 })

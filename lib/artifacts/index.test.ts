@@ -303,6 +303,7 @@ describe('buildArtifactsRepository', () => {
         type: 'refine-idea',
         ideaSlug: 'progress-broadcasting',
         taskSlug: 'refine-idea-progress-broadcasting',
+        resolvedQuestions: [],
       })
     })
   })

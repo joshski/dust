@@ -67,6 +67,7 @@ export interface WorkflowTaskMatch {
   type: WorkflowTaskType
   ideaSlug: string
   taskSlug: string
+  resolvedQuestions: OpenQuestionResponse[]
 }
 
 const WORKFLOW_SECTION_HEADINGS: { type: WorkflowTaskType; heading: string }[] =
@@ -82,8 +83,16 @@ function extractIdeaSlugFromSection(
 ): string | null {
   const lines = content.split('\n')
   let inSection = false
+  let inCodeFence = false
 
   for (const line of lines) {
+    if (line.startsWith('```')) {
+      inCodeFence = !inCodeFence
+      continue
+    }
+
+    if (inCodeFence) continue
+
     if (line.startsWith('## ')) {
       inSection = line.trimEnd() === `## ${sectionHeading}`
       continue
@@ -154,6 +163,7 @@ export async function findAllWorkflowTasks(
           type,
           ideaSlug: linkedSlug,
           taskSlug,
+          resolvedQuestions: parseResolvedQuestions(content),
         })
       }
     }
@@ -188,7 +198,12 @@ export async function findWorkflowTaskForIdea(
       const linkedSlug = extractIdeaSlugFromSection(content, heading)
       if (linkedSlug === ideaSlug) {
         const taskSlug = file.replace(/\.md$/, '')
-        return { type, ideaSlug, taskSlug }
+        return {
+          type,
+          ideaSlug,
+          taskSlug,
+          resolvedQuestions: parseResolvedQuestions(content),
+        }
       }
     }
   }
@@ -236,6 +251,54 @@ function renderResolvedQuestions(responses: OpenQuestionResponse[]): string {
     r => `### ${r.question}\n\n**Decision:** ${r.chosenOption}`
   )
   return `## Resolved Questions\n\n${sections.join('\n\n')}\n`
+}
+
+export function parseResolvedQuestions(
+  content: string
+): OpenQuestionResponse[] {
+  const lines = content.split('\n')
+  const results: OpenQuestionResponse[] = []
+  let inSection = false
+  let currentQuestion: string | null = null
+
+  let inCodeFence = false
+
+  for (const line of lines) {
+    if (line.startsWith('```')) {
+      inCodeFence = !inCodeFence
+      continue
+    }
+
+    if (inCodeFence) continue
+
+    if (line.startsWith('## ')) {
+      inSection = line.trimEnd() === '## Resolved Questions'
+      currentQuestion = null
+      continue
+    }
+
+    if (!inSection) continue
+
+    if (line.startsWith('# ')) break
+
+    if (line.startsWith('### ')) {
+      currentQuestion = line.slice(4).trimEnd()
+      continue
+    }
+
+    if (currentQuestion !== null) {
+      const decisionMatch = line.match(/^\*\*Decision:\*\*\s*(.+)$/)
+      if (decisionMatch) {
+        results.push({
+          question: currentQuestion,
+          chosenOption: decisionMatch[1].trimEnd(),
+        })
+        currentQuestion = null
+      }
+    }
+  }
+
+  return results
 }
 
 interface IdeaSection {

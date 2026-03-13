@@ -160,6 +160,57 @@ This section is not part of Open Questions.
     ])
   })
 
+  test('ignores headings inside code fences', () => {
+    const content = `# My Idea
+
+A great idea.
+
+## Open Questions
+
+### Real question?
+
+#### Real option
+
+Here is an example:
+
+\`\`\`markdown
+## Open Questions
+
+### Fake question?
+
+#### Fake option
+
+Not a real option.
+\`\`\`
+
+#### Another real option
+
+This is real.
+`
+    const questions = parseOpenQuestions(content)
+    expect(questions).toHaveLength(1)
+    expect(questions[0].question).toBe('Real question?')
+    expect(questions[0].options).toHaveLength(2)
+    expect(questions[0].options[0].name).toBe('Real option')
+    expect(questions[0].options[0].description).toContain('Here is an example:')
+    expect(questions[0].options[0].description).toContain('### Fake question?')
+    expect(questions[0].options[1].name).toBe('Another real option')
+  })
+
+  test('does not treat code fence as opening a new section', () => {
+    const content = `# My Idea
+
+\`\`\`markdown
+## Open Questions
+
+### Not a real question?
+
+#### Not a real option
+\`\`\`
+`
+    expect(parseOpenQuestions(content)).toEqual([])
+  })
+
   test('ignores orphan options that appear before any question', () => {
     const content = `# My Idea
 
