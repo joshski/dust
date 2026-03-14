@@ -4,7 +4,7 @@ Detect when a repository has CI workflows (like GitHub Actions) but none of them
 
 ## Context
 
-The `dust check` command runs the quality gate checks configured in `.dust/config/settings.json`. For dust to be effective, this check should run both locally and in CI. When CI doesn't run `dust check`, there's no safety net catching issues that slip past local development.
+The `dust check` command runs the quality gate checks configured in [`.dust/config/settings.json`](../config/settings.json). For dust to be effective, this check should run both locally and in CI. When CI doesn't run `dust check`, there's no safety net catching issues that slip past local development.
 
 Currently, dust has no way to know whether CI is configured to run its checks. A repository could adopt dust locally but never integrate it into CI, leaving a gap in the feedback loop.
 
@@ -18,20 +18,20 @@ The warning could be triggered by:
 2. Searching those files for references to `dust check`
 3. Warning if workflows exist but none reference `dust check`
 
-This would be a lint check, similar to how `dust lint` validates `.dust/` markdown files. It could be part of an expanded `dust lint` or a dedicated CI validation.
+This would be a lint check, similar to how `dust lint` validates [`.dust/`](..) markdown files. It could be part of an expanded `dust lint` or a dedicated CI validation.
 
 ## Related Code
 
-- `.github/workflows/ci.yml:27` - This repo's CI runs `./bin/dust check --serial`
+- [`.github/workflows/ci.yml:27`](../../.github/workflows/ci.yml) - This repo's CI runs `./bin/dust check --serial`
 - `lib/cli/commands/lint.ts` - The `dust lint` command implementation
-- `lib/cli/commands/check.ts` - The `dust check` command implementation
-- `lib/config/settings.ts` - Settings loading including check configuration
+- [`lib/cli/commands/check.ts`](../../lib/cli/commands/check.ts) - The `dust check` command implementation
+- [`lib/config/settings.ts`](../../lib/config/settings.ts) - Settings loading including check configuration
 
 ## Potential Warning Triggers
 
 - CI workflow files exist but don't mention `dust check`, `dust check`, or the dust executable
 - CI workflow files reference other checks (npm test, lint) but not dust
-- CI workflow files exist and the repository has a `.dust/` directory (indicating dust adoption)
+- CI workflow files exist and the repository has a [`.dust/`](..) directory (indicating dust adoption)
 
 ## Considerations
 

@@ -6,9 +6,9 @@ By capturing a complexity estimate in tasks, downstream systems could choose a m
 
 ## Context
 
-Currently, tasks have no metadata indicating their expected difficulty. The `SpawnOptions` in `lib/claude/types.ts` already supports a `model` parameter, allowing callers to specify which model to use. However, there is no mechanism within task files themselves to suggest an appropriate model based on complexity.
+Currently, tasks have no metadata indicating their expected difficulty. The `SpawnOptions` in [`lib/claude/types.ts`](../../lib/claude/types.ts) already supports a `model` parameter, allowing callers to specify which model to use. However, there is no mechanism within task files themselves to suggest an appropriate model based on complexity.
 
-The existing task file format (defined in `.dust/facts/task-file-format.md`) requires three sections: `## Principles`, `## Blocked By`, and `## Definition of Done`. A new `## Complexity` section would be an optional addition that agents or orchestration systems could use to inform model selection.
+The existing task file format (defined in [`.dust/facts/task-file-format.md`](../facts/task-file-format.md)) requires three sections: `## Principles`, `## Blocked By`, and `## Definition of Done`. A new `## Complexity` section would be an optional addition that agents or orchestration systems could use to inform model selection.
 
 Related ideas like [Task priority](task-priority.md) add metadata to tasks for ordering; complexity differs in that it relates to capability requirements rather than urgency.
 

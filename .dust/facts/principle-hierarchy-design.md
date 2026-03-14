@@ -24,4 +24,4 @@ The hierarchy has one root principle: **Enable Flow State** (with `## Parent Pri
 
 ## Example
 
-See `.dust/principles/small-units.md` for a principle that has Agent Autonomy as its primary parent but includes a note about its relationship to Lightweight Planning.
+See [`.dust/principles/small-units.md`](../principles/small-units.md) for a principle that has Agent Autonomy as its primary parent but includes a note about its relationship to Lightweight Planning.

@@ -20,9 +20,9 @@ The related idea [Alternative names for dust bucket](alternative-names-for-dust-
 ## Current Usage
 
 The command appears in:
-- CLI registration: `lib/cli/main.ts:63` as `'bucket worker': bucketWorker`
-- Implementation: `lib/cli/commands/bucket.ts:853` as `bucketWorker()`
-- Documentation: `.dust/facts/docker-agent-mode.md:35` mentions "dust bucket worker"
+- CLI registration: [`lib/cli/main.ts:63`](../../lib/cli/main.ts) as `'bucket worker': bucketWorker`
+- Implementation: [`lib/cli/commands/bucket.ts:853`](../../lib/cli/commands/bucket.ts) as `bucketWorker()`
+- Documentation: [`.dust/facts/docker-agent-mode.md:35`](../facts/docker-agent-mode.md) mentions "dust bucket worker"
 - Other ideas reference "dust bucket worker" (e.g., proxy-servers-for-docker-containers.md)
 
 ## Naming Considerations

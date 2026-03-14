@@ -15,7 +15,7 @@ Currently, `createCaptureIdeaTask` in `lib/workflow-tasks.ts` creates a task fil
 2. Read the codebase for relevant context
 3. Flesh out the description
 4. Identify ambiguity and add open questions
-5. Review `.dust/principles/` and `.dust/facts/` for context
+5. Review [`.dust/principles/`](../principles) and [`.dust/facts/`](../facts) for context
 
 This is a fixed level of analysis depth. The task description always says "Research this idea thoroughly" regardless of whether the idea needs deep research or is already well-understood.
 

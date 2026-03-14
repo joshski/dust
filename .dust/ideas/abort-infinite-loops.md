@@ -4,7 +4,7 @@ If a repository becomes corrupted or misconfigured, a loop may keep running iter
 
 ## Context
 
-The `dust loop claude` command (`lib/loop/loop.ts`) and `dust bucket` (`lib/bucket/repository-loop.ts`) both run continuous loops that:
+The `dust loop claude` command ([`lib/cli/commands/loop.ts`](../../lib/cli/commands/loop.ts)) and `dust bucket` ([[[`lib/bucket/repository.ts`](../../lib/bucket/repository.ts)](../../lib/bucket/repository.ts)](../../lib/bucket/repository.ts)) both run continuous loops that:
 
 1. Sync with remote (`git pull`)
 2. Check for available tasks via `findUnblockedTasks`
@@ -22,79 +22,68 @@ This relates to [Kill inactive process in dust loop claude](kill-inactive-proces
 
 The [Stop the Line](../principles/stop-the-line.md) principle applies here: detecting a problem early and halting rather than continuing to waste resources.
 
-## Proposed Implementation
+## Implementation Considerations
 
-### Detection Mechanism
+The detection mechanism needs to track whether task files are being deleted across iterations. Possible approaches:
 
-Track the task file path selected at each iteration. If the same task file is picked N consecutive times without being deleted, the loop is stuck.
+- **Before/after task count comparison**: At iteration start, record which task files exist. At iteration end, check if any were deleted. This requires minimal state but doesn't distinguish between "task completed" and "task file corrupted and unreadable."
 
-The existing `runOneIteration` function in `lib/loop/iteration.ts` picks the first task from `findUnblockedTasks` and returns a result type (`ran_claude`, `claude_error`, etc.). The calling code in `lib/loop/loop.ts` already tracks iterations. Add state to track:
+- **Track specific task file across iterations**: If the same task file is picked N times in a row without being deleted, that specific task is stuck. This is more precise but requires tracking state across iterations.
 
-1. The path of the last-picked task
-2. A consecutive failure counter for that task
+- **Track total progress over time window**: If the total task count doesn't decrease over N iterations, something is wrong. This handles the case where different tasks keep getting picked but none complete.
 
-After each iteration where the agent ran (`ran_claude` or `claude_error`):
-1. Check if the task file still exists
-2. If it's the same task as the previous iteration and still exists, increment the counter
-3. If a different task was picked or the task was deleted, reset the counter
-4. If the counter reaches the threshold (3), abort
+For bucket mode, the response to detecting an infinite loop could be:
+- Stop the repository's loop but keep other repos running
+- Emit an event (`bucket.repository_stuck`) for external monitoring
+- Flag the repository for human review
 
-### Abort Behavior
+For standalone `dust loop claude`, the response could be:
+- Exit with a non-zero status code
+- Log a clear message explaining why the loop was aborted
 
-When the threshold is reached:
-
-1. Run `git reset --hard` to discard any partial changes
-2. Log a clear message explaining why the loop was aborted, including the stuck task path
-3. Exit with a non-zero status code (standalone) or stop the repository loop (bucket mode)
-
-Both standalone loop and bucket mode use the same detection and abort logic. For bucket mode, stopping one repository's loop is equivalent to the standalone loop exiting - other repositories continue running.
-
-### Events
-
-Emit a new event type when aborting:
-
-```typescript
-interface LoopAbortedEvent {
-  type: 'loop.aborted'
-  reason: 'stuck_task'
-  taskPath: string
-  consecutiveFailures: number
-}
-```
-
-This provides visibility for monitoring and debugging. The event is local-only (not sent over the wire), consistent with other `LoopEvent` types.
-
-## Resolved Questions
+## Open Questions
 
 ### What threshold should trigger the abort?
 
-**Decision:** Fixed iteration count (e.g., 3 consecutive failures)
+#### Fixed iteration count (e.g., 3 consecutive failures)
 
-A simple threshold that's easy to implement and reason about. Three consecutive failures gives the agent a fair chance to complete legitimately difficult tasks while catching infinite loops quickly.
+A simple threshold: if 3 consecutive iterations run Claude but the picked task isn't deleted, abort. This is easy to implement and reason about. The risk is false positives when tasks are legitimately hard and take multiple iterations. The current "abandon tasks that are too hard" mechanism could interact here.
+
+#### Configurable via settings.json
+
+Add a `maxConsecutiveStuckIterations` setting. Projects with complex tasks could set a higher threshold. This adds configuration surface but accommodates different workflows.
+
+#### No iteration limit, only time-based
+
+Instead of counting iterations, track wall-clock time with no progress. A loop running for hours with no completions is clearly stuck regardless of how many iterations ran. This is robust to variation in task complexity but harder to configure meaningfully.
 
 ### What counts as "no progress"?
 
-**Decision:** Track whether the same task file is picked consecutively and still exists after the iteration.
+#### Same task file exists after iteration
 
-The existing event system provides what's needed:
-- `agent-session-started` includes the task title and prompt
-- After the iteration, check if the task file still exists using the file system
+The simplest check: did the task we just worked on get deleted? If not, that's one "stuck" count. This is precise but may miss cases where the loop alternates between multiple stuck tasks.
 
-This is more precise than total task count comparison and handles the specific failure mode of a single stuck task.
+#### Total task count unchanged
+
+If there were N tasks before the iteration and still N tasks after, no progress was made. This catches the alternating-stuck-tasks case but could false-positive if a new task was created while an old one was deleted.
+
+#### Same tasks exist (set comparison)
+
+Track the set of task file paths. If the set is identical before and after the iteration, no progress was made. This handles new tasks being created but is more complex to track.
 
 ### Should the abort be different in bucket mode vs standalone loop?
 
-**Decision:** Same behavior in both
+#### Same behavior in both
 
-Both modes use the same detection logic and abort by stopping the loop. For bucket mode, this means the repository's loop stops but other repositories continue. This keeps the implementation simple and consistent.
+Both modes abort after the same threshold. For bucket mode, stopping one repository's loop is equivalent to the standalone loop exiting. This is simpler to implement and reason about.
 
-### Should there be a `git reset --hard` when aborting?
+#### Bucket mode disables the repository; standalone loop exits
 
-**Decision:** Yes, reset to clean state
+In bucket mode, a repository could be marked as "disabled" rather than fully removed. The loop stops but the repository state remains, allowing human review of what went wrong. The server could be notified and potentially re-enable the repo after intervention.
 
-When aborting due to infinite loop, run `git reset --hard` to discard any partial changes. This aligns with the [inactivity timeout](kill-inactive-process-in-dust-loop-claude.md) behavior and ensures a clean repository state. Sandboxed environments (per [Autonomous Agents Need Sandboxes](../facts/autonomous-agents-need-sandboxes.md)) make this safe.
+#### Bucket mode retries after cooldown
 
-## Open Questions
+When a bucket repository is detected as stuck, stop the loop for a cooldown period (e.g., 10 minutes), then try again. Someone might have pushed a fix in the meantime. This is more resilient but risks burning resources on a persistently broken repo.
 
 ### Should stuck detection interact with the "abandon tasks" mechanism?
 
@@ -104,14 +93,14 @@ The stuck detection aborts the entire loop. The abandon mechanism is guidance fo
 
 #### Stuck detection triggers forced abandon
 
-After 3 stuck iterations on the same task, automatically create a blocking task that describes the problem ("This task has failed 3 consecutive times") and add it as a blocker. This uses the existing mechanism but adds automation. The task could then be picked up on the next `git pull` if someone pushed a fix for the underlying issue.
+After N stuck iterations on the same task, automatically create a blocking task that describes the problem ("This task has failed N consecutive times") and add it as a blocker. This uses the existing mechanism but adds automation. The risk is generating unhelpful blocker tasks if Claude genuinely can't diagnose the problem.
 
-### Should the bucket server be notified when a loop aborts?
+### Should there be a `git reset --hard` when aborting?
 
-#### Emit event locally only
+#### Yes, reset to clean state
 
-The `loop.aborted` event is local-only like other `LoopEvent` types. The bucket server learns about the issue indirectly through the agent session ending or the repository becoming inactive.
+When aborting due to infinite loop, run `git reset --hard` to discard any partial changes. This aligns with the inactivity timeout behavior and ensures a clean repository state.
 
-#### Send a wire event to the bucket server
+#### No, preserve changes for debugging
 
-Add a new wire event type `repository-stuck` that the bucket server can act on. This enables server-side monitoring and potentially automatic actions (disabling the repository, notifying the user, etc.).
+Stuck loops may leave useful diagnostic information in the uncommitted changes. Resetting discards this. Alternatively, stash the changes before aborting so they can be reviewed later.

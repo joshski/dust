@@ -10,7 +10,7 @@ After WebSocket connection, the bucket server sends a `tool-definitions` message
 
 ### 2. Tools are injected into the agent prompt
 
-At each repository loop iteration, `formatToolsSection()` (`lib/bucket/tool-prompt.ts`) renders the current tools as a markdown section with descriptions, parameters, and usage instructions. This section is included in the prompt given to the agent (Claude or Codex). Example output:
+At each repository loop iteration, `formatToolsSection()` ([`lib/bucket/tool-prompt.ts`](../../lib/bucket/tool-prompt.ts)) renders the current tools as a markdown section with descriptions, parameters, and usage instructions. This section is included in the prompt given to the agent (Claude or Codex). Example output:
 
 ```
 ## Available Tools
@@ -26,7 +26,7 @@ Usage: `dust bucket tool asset-upload <file>`
 
 ### 3. Agent runs `dust bucket tool <name> [args...]`
 
-The agent sees the usage instructions in its prompt and executes the shell command. The `dust bucket tool` subcommand (`lib/cli/commands/bucket-tool.ts`) reads two environment variables set by the parent bucket worker:
+The agent sees the usage instructions in its prompt and executes the shell command. The `dust bucket tool` subcommand ([`lib/cli/commands/bucket-tool.ts`](../../lib/cli/commands/bucket-tool.ts)) reads two environment variables set by the parent bucket worker:
 
 - `DUST_PROXY_PORT` — the local command events proxy port
 - `DUST_REPOSITORY_ID` — the repository context for the tool call
@@ -73,7 +73,7 @@ The `getRevealedFamilies` callback in `RepositoryDependencies` provides access t
 
 ### 5. Proxy forwards over WebSocket
 
-The command events proxy (`lib/bucket/command-events-proxy.ts`) receives the POST and calls `forwardToolExecution()` in `bucket.ts`. This converts the positional `string[]` arguments to named `Record<string, unknown>` parameters using the tool definition, then sends a `tool-execution-request` message over the WebSocket with a unique `requestId`. It waits up to 30 seconds for a matching `tool-execution-result` response.
+The command events proxy ([`lib/bucket/command-events-proxy.ts`](../../lib/bucket/command-events-proxy.ts)) receives the POST and calls `forwardToolExecution()` in `bucket.ts`. This converts the positional `string[]` arguments to named `Record<string, unknown>` parameters using the tool definition, then sends a `tool-execution-request` message over the WebSocket with a unique `requestId`. It waits up to 30 seconds for a matching `tool-execution-result` response.
 
 The wire format uses named arguments (`{ tool, repositoryId, arguments: Record<string, unknown> }`) rather than the positional format used locally between the subprocess and proxy.
 
@@ -83,19 +83,19 @@ The server responds with `tool-execution-result` containing a discriminated unio
 
 ### Wire format types
 
-The protocol types (`ToolExecutionRequestMessage`, `ToolExecutionResultMessage`, etc.) are defined in `lib/bucket/tool-execution-protocol.ts` and exported from `@joshski/dust/types`. Downstream server implementations (e.g. dustbucket) should import these types and use the validation functions (`isToolExecutionRequestMessage`, `isToolExecutionResultMessage`) to ensure protocol compliance.
+The protocol types (`ToolExecutionRequestMessage`, `ToolExecutionResultMessage`, etc.) are defined in [`lib/bucket/tool-execution-protocol.ts`](../../lib/bucket/tool-execution-protocol.ts) and exported from `@joshski/dust/types`. Downstream server implementations (e.g. dustbucket) should import these types and use the validation functions (`isToolExecutionRequestMessage`, `isToolExecutionResultMessage`) to ensure protocol compliance.
 
 ## Key Files
 
 | File | Role |
 |------|------|
-| `lib/bucket/server-messages.ts` | `ToolDefinition` type and `tool-definitions` message parsing |
-| `lib/bucket/tool-prompt.ts` | Formats tool definitions into markdown for agent prompts |
-| `lib/bucket/repository-loop.ts` | Reads tools and passes `toolsSection` into each iteration |
-| `lib/cli/commands/bucket-tool.ts` | `dust bucket tool` subcommand (child process side) |
-| `lib/bucket/command-events-proxy.ts` | Local HTTP proxy that bridges to WebSocket |
-| `lib/bucket/tool-execution-protocol.ts` | Wire format types for WebSocket tool execution messages |
-| `lib/bucket/tool-executor.ts` | Direct tool execution (for non-proxy paths) |
+| [`lib/bucket/server-messages.ts`](../../lib/bucket/server-messages.ts) | `ToolDefinition` type and `tool-definitions` message parsing |
+| [`lib/bucket/tool-prompt.ts`](../../lib/bucket/tool-prompt.ts) | Formats tool definitions into markdown for agent prompts |
+| [`lib/bucket/repository-loop.ts`](../../lib/bucket/repository-loop.ts) | Reads tools and passes `toolsSection` into each iteration |
+| [`lib/cli/commands/bucket-tool.ts`](../../lib/cli/commands/bucket-tool.ts) | `dust bucket tool` subcommand (child process side) |
+| [`lib/bucket/command-events-proxy.ts`](../../lib/bucket/command-events-proxy.ts) | Local HTTP proxy that bridges to WebSocket |
+| [`lib/bucket/tool-execution-protocol.ts`](../../lib/bucket/tool-execution-protocol.ts) | Wire format types for WebSocket tool execution messages |
+| [`lib/bucket/tool-executor.ts`](../../lib/bucket/tool-executor.ts) | Direct tool execution (for non-proxy paths) |
 
 ## Related Facts
 

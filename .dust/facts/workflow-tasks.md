@@ -7,7 +7,7 @@ Dust models workflow tasks in two groups:
 - Capture tasks (`Add Idea` and `Expedite Idea`) that start from a title and description.
 - Idea transition tasks (`Refine Idea`, `Decompose Idea`, `Shelve Idea`) that operate on an existing idea file.
 
-Implementation lives in `lib/artifacts/workflow-tasks.ts` and is exposed through `buildArtifactsRepository(...)` in `lib/artifacts/index.ts`.
+Implementation lives in [`lib/artifacts/workflow-tasks.ts`](../../lib/artifacts/workflow-tasks.ts) and is exposed through `buildArtifactsRepository(...)` in [`lib/artifacts/index.ts`](../../lib/artifacts/index.ts).
 
 For focused details and examples, see:
 

@@ -6,22 +6,22 @@ Agent output may include ANSI colour codes without a reset sequence, causing sub
 
 The codebase already has comprehensive ANSI colour handling:
 
-- `lib/cli/colors.ts` defines colour codes and the reset sequence (`\x1b[0m`)
-- `lib/bucket/terminal-ui.ts` uses `ANSI.RESET` consistently when rendering its own UI elements
+- [[`lib/cli/colors.ts`](../../lib/cli/colors.ts)](../../lib/cli/colors.ts) defines colour codes and the reset sequence (`\x1b[0m`)
+- [[`lib/bucket/terminal-ui.ts`](../../lib/bucket/terminal-ui.ts)](../../lib/bucket/terminal-ui.ts) uses `ANSI.RESET` consistently when rendering its own UI elements
 
 However, agent output (the actual responses from Claude or other agents) passes through without sanitisation. If an agent outputs something like `\x1b[31mError: something failed` without a closing reset, all subsequent text renders in red.
 
 ## Affected Code Paths
 
-**Loop command (`lib/loop/events.ts`):**
+**Loop command ([`lib/cli/commands/loop.ts`](../../lib/cli/commands/loop.ts)):**
 - `formatLoopEvent()` returns formatted strings that get written to stdout
 - Agent output is streamed directly to stdout via the `run` function
 
-**Bucket repository loop (`lib/bucket/repository-loop.ts`):**
+**Bucket repository loop ([[`lib/bucket/repository-loop.ts`](../../lib/bucket/repository-loop.ts)](../../lib/bucket/repository-loop.ts)):**
 - `createStdoutSink()` captures agent output and appends it to the log buffer
 - `onLoopEvent` and `onAgentEvent` format and append system messages to the log buffer
 
-**Terminal UI (`lib/bucket/terminal-ui.ts`):**
+**Terminal UI ([[`lib/bucket/terminal-ui.ts`](../../lib/bucket/terminal-ui.ts)](../../lib/bucket/terminal-ui.ts)):**
 - `formatLogLine()` renders log lines for display
 - Already applies `ANSI.RESET` after its own formatting, but doesn't neutralise colours that may be present in the log line content
 
@@ -38,10 +38,10 @@ Option 1 would add overhead to every line but guarantees no leakage. Option 2 is
 
 ## Related Code
 
-- `lib/bucket/terminal-ui.ts:25` - `ANSI.RESET` constant
-- `lib/cli/colors.ts:18` - `reset: '\x1b[0m'` in colour definitions
-- `lib/bucket/repository-loop.ts:76-103` - `createStdoutSink` that captures agent output
-- `lib/loop/events.ts` - `formatLoopEvent` that formats system messages
+- [[`lib/bucket/terminal-ui.ts:25`](../../lib/bucket/terminal-ui.ts)](../../lib/bucket/terminal-ui.ts) - `ANSI.RESET` constant
+- [[`lib/cli/colors.ts:18`](../../lib/cli/colors.ts)](../../lib/cli/colors.ts) - `reset: '\x1b[0m'` in colour definitions
+- [[`lib/bucket/repository-loop.ts:76-103`](../../lib/bucket/repository-loop.ts)](../../lib/bucket/repository-loop.ts) - `createStdoutSink` that captures agent output
+- [`lib/cli/commands/loop.ts:132-155`](../../lib/cli/commands/loop.ts) - `formatLoopEvent` that formats system messages
 
 ## Open Questions
 

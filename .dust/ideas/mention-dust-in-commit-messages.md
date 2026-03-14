@@ -19,9 +19,9 @@ Currently, there is no easy way to identify whether a commit was made in a dust-
 
 ### Relevant code
 
-- `lib/cli/commands/init.ts` — Generates CLAUDE.md and AGENTS.md content with dust instructions
-- `lib/loop/iteration.ts` — Runs agents unattended with `DUST_UNATTENDED=1` environment variable
-- `lib/cli/commands/focus.ts` — `buildImplementationInstructions()` generates the prompt sent to agents
+- [[`lib/cli/commands/init.ts`](../../lib/cli/commands/init.ts)](../../lib/cli/commands/init.ts) — Generates CLAUDE.md and AGENTS.md content with dust instructions
+- [`lib/cli/commands/loop.ts`](../../lib/cli/commands/loop.ts) — Runs agents unattended with `DUST_UNATTENDED=1` environment variable
+- [[`lib/cli/commands/focus.ts`](../../lib/cli/commands/focus.ts)](../../lib/cli/commands/focus.ts) — `buildImplementationInstructions()` generates the prompt sent to agents
 
 ### Related ideas
 

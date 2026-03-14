@@ -4,7 +4,7 @@ Make dust's own principles available to downstream users as read-only "core prin
 
 ## Context
 
-Dust ships with a comprehensive set of principles in `.dust/principles/` that guide development practices. These principles cover topics like:
+Dust ships with a comprehensive set of principles in [`.dust/principles/`](../principles) that guide development practices. These principles cover topics like:
 
 - **Agent-AI collaboration**: Context-optimised code, agent autonomy, agent context inference
 - **Code quality**: Small units, atomic commits, lint everything, co-located tests
@@ -15,7 +15,7 @@ Currently, dust's principles are not included in the npm package (`package.json:
 
 ## Proposed Solution
 
-Expose dust's principles as read-only "core principles" through both CLI and programmatic interfaces. The "core" namespace clearly distinguishes these built-in principles from a user's local `.dust/principles/` directory.
+Expose dust's principles as read-only "core principles" through both CLI and programmatic interfaces. The "core" namespace clearly distinguishes these built-in principles from a user's local [`.dust/principles/`](../principles) directory.
 
 ### CLI Interface
 
@@ -69,7 +69,7 @@ const principle = await readCorePrinciple('atomic-commits');
 
 ### Distribution
 
-Include `.dust/principles/` in the npm package by adding it to the `files` array in `package.json`. The principles directory will be bundled with the package, ensuring:
+Include [`.dust/principles/`](../principles) in the npm package by adding it to the `files` array in `package.json`. The principles directory will be bundled with the package, ensuring:
 
 - Principles are always available locally (no network requests)
 - Version-locked to the dust version (consistency)
@@ -77,10 +77,10 @@ Include `.dust/principles/` in the npm package by adding it to the `files` array
 
 ### Implementation Approach
 
-1. **Add `.dust/principles/` to package.json files array** - ensures principles ship with the package
+1. **Add [`.dust/principles/`](../principles) to package.json files array** - ensures principles ship with the package
 2. **Create `lib/artifacts/core-principles.ts`** - new module exposing core principles:
-   - Uses existing `Principle` type and parsing logic from `lib/artifacts/principles.ts`
-   - Builds a `ReadableFileSystem` that reads from the package's `.dust/principles/` directory
+   - Uses existing `Principle` type and parsing logic from [`lib/artifacts/principles.ts`](../../lib/artifacts/principles.ts)
+   - Builds a `ReadableFileSystem` that reads from the package's [`.dust/principles/`](../principles) directory
    - Exports `getCorePrincipleTree()`, `listCorePrinciples()`, `readCorePrinciple(slug)`
 3. **Add CLI commands** - register `'core principles'` and `'read core principle'` in the command registry
 4. **Add package.json export** - expose `@joshski/dust/core-principles`
@@ -106,7 +106,7 @@ The following are separate concerns for future ideas:
 
 #### Option: Return parsed Principle objects
 
-Use the existing `Principle` type from `lib/artifacts/principles.ts`:
+Use the existing `Principle` type from [`lib/artifacts/principles.ts`](../../lib/artifacts/principles.ts):
 
 ```typescript
 interface Principle {

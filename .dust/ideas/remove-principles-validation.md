@@ -12,7 +12,7 @@ The validators have already caught up with this change. In `content-validator.ts
 
 However, there are outdated references elsewhere:
 
-1. **`capture-complexity-estimate-in-tasks.md`** (line 11) states: "The existing task file format (defined in `.dust/facts/task-file-format.md`) requires three sections: `## Principles`, `## Blocked By`, and `## Definition of Done`." This is incorrect - principles is optional.
+1. **`capture-complexity-estimate-in-tasks.md`** (line 11) states: "The existing task file format (defined in [`.dust/facts/task-file-format.md`](../facts/task-file-format.md)) requires three sections: `## Principles`, `## Blocked By`, and `## Definition of Done`." This is incorrect - principles is optional.
 
 2. **Workflow task templates** in `workflow-tasks.ts:343` include "Task's Principles section links to relevant principles from .dust/principles/" as a suggested Definition of Done item for decompose idea tasks. This is guidance rather than a requirement, but it could be reconsidered for consistency.
 

@@ -4,13 +4,13 @@ Expose an API to delete a task and remove its references from other task files.
 
 ## Context
 
-The repository API in `lib/artifacts/index.ts` currently exposes task creation and read/query operations (`createIdeaTask`, `createRefineIdeaTask`, `createDecomposeIdeaTask`, `createShelveIdeaTask`, `parseTask`, `listTasks`, `buildTaskGraph`) but no task deletion method.
+The repository API in [`lib/artifacts/index.ts`](../../lib/artifacts/index.ts) currently exposes task creation and read/query operations (`createIdeaTask`, `createRefineIdeaTask`, `createDecomposeIdeaTask`, `createShelveIdeaTask`, `parseTask`, `listTasks`, `buildTaskGraph`) but no task deletion method.
 
-Today, task completion is done by deleting the task markdown file directly. `dust next` treats a missing blocker as completed (`lib/cli/commands/next.ts`), so downstream tasks unblock as soon as the blocker file disappears.
+Today, task completion is done by deleting the task markdown file directly. `dust next` treats a missing blocker as completed ([`lib/cli/commands/next.ts`](../../lib/cli/commands/next.ts)), so downstream tasks unblock as soon as the blocker file disappears.
 
-However, link validation still enforces referential integrity. `validateLinks` in `lib/lint/validators/link-validator.ts` reports broken links when remaining task files still point to a deleted task. This creates a gap between "task completion" and "link-safe repository state".
+However, link validation still enforces referential integrity. `validateLinks` in [`lib/lint/validators/link-validator.ts`](../../lib/lint/validators/link-validator.ts) reports broken links when remaining task files still point to a deleted task. This creates a gap between "task completion" and "link-safe repository state".
 
-There is already a patch-style API (`validatePatch` in `lib/validation/index.ts`) that supports deletion (`null` values) and validates the resulting overlay filesystem before changes are applied. This is close to a changeset API, but it does not provide a task-specific operation that rewrites references.
+There is already a patch-style API (`validatePatch` in [`lib/validation/index.ts`](../../lib/validation/index.ts)) that supports deletion (`null` values) and validates the resulting overlay filesystem before changes are applied. This is close to a changeset API, but it does not provide a task-specific operation that rewrites references.
 
 ## Problem
 
@@ -20,7 +20,7 @@ The current API surface makes this harder than task creation:
 
 - Creation has dedicated methods on `ArtifactsRepository`.
 - Deletion requires custom filesystem operations outside the repository abstraction.
-- `FileSystem` currently has no delete primitive in `lib/filesystem/types.ts`, so write-path APIs cannot delete files directly without further design changes.
+- `FileSystem` currently has no delete primitive in [`lib/filesystem/types.ts`](../../lib/filesystem/types.ts), so write-path APIs cannot delete files directly without further design changes.
 
 ## Idea
 
@@ -63,7 +63,7 @@ Cons:
 
 ### Direction C: dedicated utility in validation/workflow layer
 
-Introduce a helper near `lib/validation` that computes and validates a delete patch without changing repository interface.
+Introduce a helper near [`lib/validation`](../../lib/validation) that computes and validates a delete patch without changing repository interface.
 
 Pros:
 - Minimal surface-area change.
@@ -75,10 +75,10 @@ Cons:
 
 ## Design constraints from current code
 
-- Task dependency semantics are link-based (`## Blocked By`) and file-existence-based for scheduling (`lib/cli/commands/next.ts`).
-- Semantic link rules require `## Blocked By` links to point into `.dust/tasks/` (`lib/lint/validators/link-validator.ts`).
-- `validatePatch` already models deletion and catches resulting broken links (`lib/validation/validation.test.ts` includes deletion scenarios).
-- `FileSystem` abstraction supports write/rename but not unlink (`lib/filesystem/types.ts`).
+- Task dependency semantics are link-based (`## Blocked By`) and file-existence-based for scheduling ([`lib/cli/commands/next.ts`](../../lib/cli/commands/next.ts)).
+- Semantic link rules require `## Blocked By` links to point into `.dust/tasks/` ([`lib/lint/validators/link-validator.ts`](../../lib/lint/validators/link-validator.ts)).
+- `validatePatch` already models deletion and catches resulting broken links ([`lib/validation/validation.test.ts`](../../lib/validation/validation.test.ts) includes deletion scenarios).
+- `FileSystem` abstraction supports write/rename but not unlink ([`lib/filesystem/types.ts`](../../lib/filesystem/types.ts)).
 
 ## Suggested rollout shape
 
@@ -118,7 +118,7 @@ Treat dependency links as the only semantic references to rewrite; leave narrati
 
 Rewrite any task-file markdown link targeting the deleted task, regardless of section.
 
-#### Option: All links across `.dust/` artifacts
+#### Option: All links across [`.dust/`](..) artifacts
 
 Rewrite links in tasks, ideas, facts, and principles to ensure global link integrity after deletion.
 

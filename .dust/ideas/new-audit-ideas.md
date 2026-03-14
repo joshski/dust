@@ -4,7 +4,7 @@ Proposals for new stock audits that address gaps in the current audit suite, ali
 
 ## Context
 
-The current stock audits (`lib/audits/stock-audits.ts`) cover 15 areas: agent developer experience, component reuse, coverage exclusions, data access, dead code, error handling, facts verification, ideas from commits, ideas from principles, performance, refactoring opportunities, security, stale ideas, test coverage, and ubiquitous language.
+The current stock audits ([[`lib/audits/stock-audits.ts`](../../lib/audits/stock-audits.ts)](../../lib/audits/stock-audits.ts)) cover 15 areas: agent developer experience, component reuse, coverage exclusions, data access, dead code, error handling, facts verification, ideas from commits, ideas from principles, performance, refactoring opportunities, security, stale ideas, test coverage, and ubiquitous language.
 
 Reviewing these against dust's principles and goals reveals several gaps where new audits would provide value.
 
@@ -14,21 +14,59 @@ Reviewing these against dust's principles and goals reveals several gaps where n
 
 Now available as a stock audit: `bin/dust audit error-handling`
 
-### ~~Dependency Health Audit~~ (Implemented)
+### Dependency Health Audit
 
-Now available as a stock audit: `bin/dust audit dependency-health`
+Review project dependencies for maintenance and security concerns beyond CVE scanning.
 
-### ~~Documentation Drift Audit~~ (Implemented)
+**Why this matters:** The security-review audit checks for CVE vulnerabilities, but healthy dependencies require more than security patches. Unmaintained packages, version drift, and unnecessary dependencies all impact project health.
 
-Now available as a stock audit: `bin/dust audit documentation-drift`
+**Scope:**
+- Packages with no recent releases (potential abandonment)
+- Major version drift from latest (missing features, eventual migration pain)
+- Unused dependencies (already covered by dead-code, but dependency-specific checks)
+- Deprecated packages still in use
+- Packages with better-maintained alternatives
 
-### ~~Feedback Loop Speed Audit~~ (Implemented)
+### Documentation Drift Audit
 
-Now available as a stock audit: `bin/dust audit feedback-loop-speed`
+Review code documentation for accuracy against current implementation.
 
-### ~~Agent Instruction Quality Audit~~ (Implemented)
+**Why this matters:** The facts-verification audit checks [`.dust/facts/`](../facts), but code-level documentation (JSDoc, README sections, inline comments) can also drift from reality. Outdated docs mislead agents.
 
-Now available as a stock audit: `bin/dust audit agent-instruction-quality`
+**Scope:**
+- JSDoc descriptions that no longer match function behavior
+- README code examples that don't compile
+- Parameter documentation for removed/renamed parameters
+- Return type documentation that contradicts actual types
+- Inline comments describing code that has changed
+
+### Feedback Loop Speed Audit
+
+Measure and report on check/test execution times to identify bottlenecks.
+
+**Why this matters:** The [Fast Feedback Loops](../principles/fast-feedback-loops.md) principle emphasizes that agents benefit from quick feedback. The performance-review audit covers general performance, but a focused audit on the development feedback loop would directly address agent productivity.
+
+**Scope:**
+- Time to run `dust check` (aggregate and per-check)
+- Test suite execution time (total and slowest tests)
+- Type checking duration
+- Linting duration
+- Build time
+- Identify checks that dominate total time
+- Track trends over time to catch regression
+
+### Agent Instruction Quality Audit
+
+Review agent instruction files (AGENTS.md, CLAUDE.md) for clarity and completeness.
+
+**Why this matters:** Agent instruction files directly impact agent effectiveness. Poor instructions lead to wasted context, confusion, and suboptimal decisions. This complements the agent-developer-experience audit with a focus on the instruction artifacts themselves.
+
+**Scope:**
+- Contradictory instructions across files
+- Instructions that reference removed code/features
+- Missing context that agents frequently need
+- Overly verbose instructions wasting context window
+- Instructions that could be replaced by linter rules
 
 ### Commit Message Quality Audit
 

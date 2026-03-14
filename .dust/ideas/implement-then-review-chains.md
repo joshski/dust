@@ -9,17 +9,17 @@ This umbrella idea is too broad as written. We should not implement it as a sing
 `dust loop` currently performs one agent session per picked task and gives that session instructions to complete the full lifecycle (check, implement, commit, push). There is no concept of per-task phase progression.
 
 Relevant code paths:
-- `lib/loop/iteration.ts` builds a single prompt and runs one session with `purpose: 'task'`
-- `lib/cli/commands/focus.ts` hardcodes instructions that include commit and push in the same run
-- `lib/cli/commands/next.ts` only selects unblocked task files; it does not track in-progress phase state
+- [`lib/cli/commands/loop.ts`](../../lib/cli/commands/loop.ts) builds a single prompt and runs one session with `purpose: 'task'`
+- [[`lib/cli/commands/focus.ts`](../../lib/cli/commands/focus.ts)](../../lib/cli/commands/focus.ts) hardcodes instructions that include commit and push in the same run
+- [[`lib/cli/commands/next.ts`](../../lib/cli/commands/next.ts)](../../lib/cli/commands/next.ts) only selects unblocked task files; it does not track in-progress phase state
 
 ### Existing artifact model has no place for chain state
 
-Task parsing supports blockers, principles, and definition-of-done (`lib/artifacts/tasks.ts`). Workflow tasks support refine/decompose/shelve transitions (`lib/artifacts/workflow-tasks.ts`). Neither supports resumable, phase-based execution for a single task.
+Task parsing supports blockers, principles, and definition-of-done ([[`lib/artifacts/tasks.ts`](../../lib/artifacts/tasks.ts)](../../lib/artifacts/tasks.ts)). Workflow tasks support refine/decompose/shelve transitions ([[`lib/artifacts/workflow-tasks.ts`](../../lib/artifacts/workflow-tasks.ts)](../../lib/artifacts/workflow-tasks.ts)). Neither supports resumable, phase-based execution for a single task.
 
 ### Settings model cannot express a review chain
 
-`lib/config/settings.ts` validates a closed set of keys and does not include any chain/review policy key. Adding chain configuration would require schema and docs updates, not just loop changes.
+[[`lib/config/settings.ts`](../../lib/config/settings.ts)](../../lib/config/settings.ts) validates a closed set of keys and does not include any chain/review policy key. Adding chain configuration would require schema and docs updates, not just loop changes.
 
 ### This overlaps with branch-based review work
 
@@ -50,7 +50,7 @@ Do not include configurable review personas or branch workflow in this idea.
 
 ### Where should per-task phase state live?
 
-#### State file under `.dust/`
+#### State file under [`.dust/`](..)
 
 Store phase progression in a dedicated state file (for example, `.dust/state/task-phases.json`).
 

@@ -6,15 +6,15 @@ Stock audits would benefit from mentioning dust commands (e.g., `dust principles
 
 ### Current State
 
-Stock audits in `lib/audits/stock-audits.ts` reference artifact directories directly:
+Stock audits in [`lib/audits/stock-audits.ts`](../../lib/audits/stock-audits.ts) reference artifact directories directly:
 
-- `factsVerification()`: "Read each fact file in `.dust/facts/`"
-- `ideasFromPrinciples()`: "Read each principle file in `.dust/principles/`"
-- `ideasHint` constant: "Review existing ideas in `./.dust/ideas/`..."
+- `factsVerification()`: "Read each fact file in [`.dust/facts/`](../facts)"
+- `ideasFromPrinciples()`: "Read each principle file in [`.dust/principles/`](../principles)"
+- `ideasHint` constant: "Review existing ideas in [`./.dust/ideas/`]()..."
 
 ### Runtime Detection
 
-The codebase has runtime detection for the appropriate dust command in `lib/config/settings.ts`:
+The codebase has runtime detection for the appropriate dust command in [`lib/config/settings.ts`](../../lib/config/settings.ts):
 
 ```typescript
 export function detectDustCommand(cwd, fileSystem): string {
@@ -41,7 +41,7 @@ Downstream consumers (e.g., a web app using the GitHub API) receive static audit
 
 ### Related Implementation
 
-Workflow task templates now use dust commands (e.g., `dust principles`, `dust facts`) instead of directory paths. This is implemented via the `dustCommand` parameter in `lib/artifacts/workflow-tasks.ts`. The pattern aligns with `TemplateVars.bin` used in `lib/cli/commands/agent-shared.ts`.
+Workflow task templates now use dust commands (e.g., `dust principles`, `dust facts`) instead of directory paths. This is implemented via the `dustCommand` parameter in [`lib/artifacts/workflow-tasks.ts`](../../lib/artifacts/workflow-tasks.ts). The pattern aligns with `TemplateVars.bin` used in [`lib/cli/commands/agent-shared.ts`](../../lib/cli/commands/agent-shared.ts).
 
 ## Proposed Approaches
 

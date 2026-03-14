@@ -252,19 +252,26 @@ export function validateInlineCodePaths(
 
     if (inFencedCodeBlock) continue
 
+    // Strip markdown links to avoid matching backtick paths inside link text
+    const lineWithoutLinks = line.replace(
+      new RegExp(MARKDOWN_LINK_PATTERN.source, 'g'),
+      ''
+    )
+
     const pattern = new RegExp(INLINE_CODE_PATH_PATTERN.source, 'g')
-    let match: RegExpExecArray | null = pattern.exec(line)
+    let match: RegExpExecArray | null = pattern.exec(lineWithoutLinks)
 
     while (match) {
       const pathRef = match[1]
 
-      // Skip URLs and home-relative paths
+      // Skip URLs, home-relative paths, and directory references
       if (
         pathRef.startsWith('http://') ||
         pathRef.startsWith('https://') ||
-        pathRef.startsWith('~')
+        pathRef.startsWith('~') ||
+        pathRef.endsWith('/')
       ) {
-        match = pattern.exec(line)
+        match = pattern.exec(lineWithoutLinks)
         continue
       }
 
@@ -281,7 +288,7 @@ export function validateInlineCodePaths(
         })
       }
 
-      match = pattern.exec(line)
+      match = pattern.exec(lineWithoutLinks)
     }
   }
 

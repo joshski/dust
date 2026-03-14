@@ -6,9 +6,9 @@ Add explicit opening-sentence and lint checks to workflow task templates that as
 
 Workflow tasks are often the only instructions an agent reads before creating artifacts.
 
-- `lib/artifacts/workflow-tasks.ts` generates capture (`createIdeaTask`) and transition tasks (`createRefineIdeaTask`, `decomposeIdea`).
+- [`lib/artifacts/workflow-tasks.ts`](../../lib/artifacts/workflow-tasks.ts) generates capture (`createIdeaTask`) and transition tasks (`createRefineIdeaTask`, `decomposeIdea`).
 - Current templates strongly guide research and Open Questions format, but do not consistently remind agents about opening-sentence constraints enforced by lint.
-- Lint validators (`lib/lint/validators/content-validator.ts`) apply opening-sentence and length checks to all artifact content files, and imperative checks to tasks.
+- Lint validators ([`lib/lint/validators/content-validator.ts`](../../lib/lint/validators/content-validator.ts)) apply opening-sentence and length checks to all artifact content files, and imperative checks to tasks.
 
 Result: agents can satisfy workflow-template instructions while still violating lint rules.
 
@@ -41,7 +41,7 @@ Before finalizing generated artifacts:
 
 ## Implementation Notes
 
-- `lib/artifacts/workflow-tasks.test.ts` has exact string assertions for template output and will require updates.
+- [`lib/artifacts/workflow-tasks.test.ts`](../../lib/artifacts/workflow-tasks.test.ts) has exact string assertions for template output and will require updates.
 - Keep this checklist concise; workflow opening sentences already carry substantial instruction text.
 - Use the same wording source as CLI instructions if a shared helper is introduced by related work.
 

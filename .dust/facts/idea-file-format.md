@@ -1,6 +1,6 @@
 # Idea file format
 
-Idea files live in `.dust/ideas/` as markdown files. The filename is a kebab-case slug with `.md` extension (e.g., `my-feature.md`).
+Idea files live in [`.dust/ideas/`](../ideas) as markdown files. The filename is a kebab-case slug with `.md` extension (e.g., `my-feature.md`).
 
 ## Structure
 
@@ -31,7 +31,7 @@ Simpler to implement and debug.
 
 ## Parsed representation
 
-The `parseIdea()` function in `lib/artifacts/ideas.ts` returns an `Idea` object:
+The `parseIdea()` function in [`lib/artifacts/ideas.ts`](../../lib/artifacts/ideas.ts) returns an `Idea` object:
 
 ```typescript
 interface Idea {

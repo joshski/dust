@@ -6,17 +6,17 @@ The `dust bucket` command connects to a dustbucket server, clones repositories, 
 
 The `dust bucket` command works as follows:
 
-1. Authenticates with the dustbucket service (`lib/bucket/auth.ts`)
-2. Connects via WebSocket to receive a list of repositories (`lib/cli/commands/bucket.ts:155-180`)
-3. Clones each repository to a temp directory (`lib/bucket/repository.ts:148`)
-4. Discovers tasks by scanning `.dust/tasks/` directories (`lib/cli/commands/next.ts:59-73`)
-5. Invokes Claude directly via the `run()` function (`lib/loop/iteration.ts`), not via the `dust` CLI
-6. Sets `DUST_SKIP_AGENT: '1'` to prevent nested dust invocations (`lib/loop/iteration.ts`)
+1. Authenticates with the dustbucket service ([[`lib/bucket/auth.ts`](../../lib/bucket/auth.ts)](../../lib/bucket/auth.ts))
+2. Connects via WebSocket to receive a list of repositories ([[`lib/cli/commands/bucket.ts:155-180`](../../lib/cli/commands/bucket.ts)](../../lib/cli/commands/bucket.ts))
+3. Clones each repository to a temp directory ([[`lib/bucket/repository.ts:148`](../../lib/bucket/repository.ts)](../../lib/bucket/repository.ts))
+4. Discovers tasks by scanning `.dust/tasks/` directories ([[`lib/cli/commands/next.ts:59-73`](../../lib/cli/commands/next.ts)](../../lib/cli/commands/next.ts))
+5. Invokes Claude directly via the `run()` function ([`lib/cli/commands/loop.ts:383`](../../lib/cli/commands/loop.ts)), not via the `dust` CLI
+6. Sets `DUST_SKIP_AGENT: '1'` to prevent nested dust invocations ([`lib/cli/commands/loop.ts:387`](../../lib/cli/commands/loop.ts))
 
 The key insight is that `dust bucket` calls Claude directly using the SDK rather than spawning `dust` as a subprocess. The target repository only needs:
 
 - A `.dust/tasks/` directory with task files
-- Optionally, a `.dust/config/settings.json` for configuration
+- Optionally, a [[`.dust/config/settings.json`](../config/settings.json)](../config/settings.json) for configuration
 
 This means `dust bucket` can already process repositories that don't have dust installed as a dependency.
 
@@ -24,7 +24,7 @@ This means `dust bucket` can already process repositories that don't have dust i
 
 For repositories that have never used dust, `dust bucket` could potentially bootstrap them by:
 
-1. Creating the `.dust/` directory structure via Claude
+1. Creating the [`.dust/`](..) directory structure via Claude
 2. Setting up initial configuration
 3. Creating starter tasks
 
@@ -38,15 +38,15 @@ It also relates to [Agent-Agnostic Design](../principles/agent-agnostic-design.m
 
 ## Open Questions
 
-### Should dust bucket support repos with no `.dust/` directory at all?
+### Should dust bucket support repos with no [`.dust/`](..) directory at all?
 
 #### Yes, with automatic initialization
 
-When a repository lacks a `.dust/` directory, `dust bucket` could run `dust init` equivalent logic to create the directory structure before looking for tasks. This lowers the barrier for adding new repos to the bucket.
+When a repository lacks a [`.dust/`](..) directory, `dust bucket` could run `dust init` equivalent logic to create the directory structure before looking for tasks. This lowers the barrier for adding new repos to the bucket.
 
 #### No, require minimal setup
 
-Repositories should at least have a `.dust/` directory (even if empty) to signal intent to use dust. This prevents accidental processing of unrelated repositories.
+Repositories should at least have a [`.dust/`](..) directory (even if empty) to signal intent to use dust. This prevents accidental processing of unrelated repositories.
 
 ### How should dust bucket discover tasks in repos without dust installed?
 
@@ -68,11 +68,11 @@ Add a special task type (e.g., `dust-bootstrap`) that instructs Claude to run `b
 
 Installing dependencies changes the repository in ways that might surprise users. Keep dust bucket's scope limited to running tasks that already exist.
 
-### What happens when CLAUDE.md references `bin/dust` commands?
+### What happens when CLAUDE.md references [[`bin/dust`](../../bin/dust)](../../bin/dust) commands?
 
 #### Claude should handle the error gracefully
 
-Many repositories (including dust itself) have `CLAUDE.md` files that instruct agents to run `bin/dust` commands. When `bin/dust` fails because dust isn't installed, Claude can report this and potentially offer to install it.
+Many repositories (including dust itself) have `CLAUDE.md` files that instruct agents to run [[`bin/dust`](../../bin/dust)](../../bin/dust) commands. When [[`bin/dust`](../../bin/dust)](../../bin/dust) fails because dust isn't installed, Claude can report this and potentially offer to install it.
 
 #### Provide dust commands via environment
 

@@ -908,6 +908,24 @@ Check \`lib/cli/main.ts\` for details.`
     )
     expect(violations).toHaveLength(0)
   })
+
+  test('ignores backtick paths already inside markdown links', () => {
+    const content =
+      'Check [`lib/cli/main.ts`](../../lib/cli/main.ts) for details.'
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        lib: { cli: { 'main.ts': 'content' } },
+      },
+    })
+
+    const violations = validateInlineCodePaths(
+      '/project/.dust/ideas/my-idea.md',
+      content,
+      fileSystem,
+      '/project'
+    )
+    expect(violations).toHaveLength(0)
+  })
 })
 
 describe('validateSemanticLinks', () => {

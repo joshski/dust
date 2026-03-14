@@ -1,10 +1,10 @@
 # Refactor test env stubbing to avoid global state
 
-Replace the module-level `originalEnvValues` Map in `lib/test/test-utilities.ts` with explicit state management to enable parallel test execution.
+Replace the module-level `originalEnvValues` Map in [[`lib/test/test-utilities.ts`](../../lib/test/test-utilities.ts)](../../lib/test/test-utilities.ts) with explicit state management to enable parallel test execution.
 
 ## Current State
 
-The `stubEnv()` and `restoreEnv()` functions in `lib/test/test-utilities.ts:79-145` use a module-level Map to track original environment variable values:
+The `stubEnv()` and `restoreEnv()` functions in [[`lib/test/test-utilities.ts:79-145`](../../lib/test/test-utilities.ts)](../../lib/test/test-utilities.ts) use a module-level Map to track original environment variable values:
 
 ```typescript
 const originalEnvValues = new Map<string, string | undefined>()
@@ -21,10 +21,10 @@ The callback form of `stubEnv(name, value, callback)` already avoids these issue
 ## Related Issues
 
 Several test files manually stub and restore `process.env` without using the shared utilities:
-- `lib/cli/main.test.ts:359-380`
-- `lib/loop/*.test.ts`
+- [[`lib/cli/main.test.ts:359-380`](../../lib/cli/main.test.ts)](../../lib/cli/main.test.ts)
+- [`lib/cli/commands/loop.test.ts:1751-1822`](../../lib/cli/commands/loop.test.ts)
 - `lib/cli/commands/bucket.test.ts:354-362,536-544`
-- `lib/claude/spawn-claude-code.test.ts:541-590`
+- [[`lib/claude/spawn-claude-code.test.ts:541-590`](../../lib/claude/spawn-claude-code.test.ts)](../../lib/claude/spawn-claude-code.test.ts)
 
 These follow inconsistent patterns (some use `delete`, some restore to `undefined`).
 
@@ -46,7 +46,7 @@ Migration: Update callers from `stubEnv(); ...; restoreEnv()` to `const restore 
 
 #### Create EnvEmulator class
 
-Add an `EnvEmulator` to `lib/test/test-utilities.ts` that wraps `process.env` access. Each test creates its own instance. Aligns with existing emulator patterns (FileSystemEmulator, ContextEmulator).
+Add an `EnvEmulator` to [[`lib/test/test-utilities.ts`](../../lib/test/test-utilities.ts)](../../lib/test/test-utilities.ts) that wraps `process.env` access. Each test creates its own instance. Aligns with existing emulator patterns (FileSystemEmulator, ContextEmulator).
 
 Migration: Tests would instantiate `new EnvEmulator()` and pass it to code under test. Requires code changes to accept injected env objects.
 

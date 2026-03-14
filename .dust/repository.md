@@ -4,7 +4,7 @@ Dust is a planning and workflow tool for AI-assisted software development. It gi
 
 ## What It Does
 
-Dust maintains a `.dust/` directory in a repository containing planning artifacts — principles, ideas, tasks, and facts — all as simple markdown files. A CLI (`dust`) lets agents and humans create, query, and act on these artifacts. The tool is installed as an npm package and invoked via `dust <command>`.
+Dust maintains a [`.dust/`]() directory in a repository containing planning artifacts — principles, ideas, tasks, and facts — all as simple markdown files. A CLI (`dust`) lets agents and humans create, query, and act on these artifacts. The tool is installed as an npm package and invoked via `dust <command>`.
 
 The core insight is that AI coding agents work best when they have structured context: clear goals, defined scope, quality gates, and background knowledge. Dust provides this structure while keeping everything human-readable and version-controlled.
 
@@ -56,7 +56,7 @@ Because autonomous agents can modify files and execute code, dust recommends run
 
 ## Checks and Quality Gates
 
-Projects configure checks in `.dust/config/settings.json` — typically test suites, linters, type-checkers, and build commands. Each check has a name, a shell command, and optional failure hints that help agents diagnose issues.
+Projects configure checks in [`.dust/config/settings.json`](config/settings.json) — typically test suites, linters, type-checkers, and build commands. Each check has a name, a shell command, and optional failure hints that help agents diagnose issues.
 
 Checks run in parallel before a task is considered complete, ensuring that agent-produced changes meet the project's quality bar. The built-in `dust lint` command also runs as part of checks, validating that all dust artifacts follow the expected structure (correct headings, valid cross-references, proper naming conventions). The `dust pre-push` command can run checks as a git hook.
 
@@ -88,7 +88,7 @@ Evals are semantically evaluated — a smaller model judges whether the agent's 
 
 ## Artifact Validation
 
-Dust validates its own artifacts through a linting system. The `dust lint` command checks that all markdown files in `.dust/` follow the expected structure: tasks have required headings, links resolve to real files, principles maintain valid parent-child relationships, and naming conventions are followed.
+Dust validates its own artifacts through a linting system. The `dust lint` command checks that all markdown files in [`.dust/`]() follow the expected structure: tasks have required headings, links resolve to real files, principles maintain valid parent-child relationships, and naming conventions are followed.
 
 A patch validation API is also available for external integrations. It can validate proposed artifact changes against existing content before they're applied, catching structural issues early.
 
@@ -102,7 +102,7 @@ The system is designed to be self-improving. Audits surface issues, which become
 
 - **Markdown-first** — all artifacts are human-readable markdown files, no databases or proprietary formats
 - **Agent-friendly** — designed for AI coding agents to consume and produce, with structured formats that are easy to parse
-- **Convention over configuration** — sensible defaults with optional customisation via `.dust/config/`
+- **Convention over configuration** — sensible defaults with optional customisation via [`.dust/config/`](config)
 - **Incremental adoption** — `dust init` bootstraps the directory structure, individual features are opt-in
 - **Version-controlled planning** — planning artifacts live alongside code in git, so they evolve together and have full history
 - **Self-improving** — audits and reviews feed back into the planning cycle, creating a continuous improvement loop

@@ -4,7 +4,7 @@ Provide built-in lints for codebase aspects that affect agent developer experien
 
 ## Background
 
-The [Context-Optimised Code](../principles/context-optimised-code.md) principle states that "dust should help projects identify files that are too large, modules that are too tangled, and patterns that make agent comprehension harder than it needs to be." Currently, dust only lints its own `.dust/` markdown files via `dust lint`. To check code quality metrics, users must configure external tools (FTA, ESLint complexity rules, etc.) in their `settings.json` checks.
+The [Context-Optimised Code](../principles/context-optimised-code.md) principle states that "dust should help projects identify files that are too large, modules that are too tangled, and patterns that make agent comprehension harder than it needs to be." Currently, dust only lints its own [`.dust/`](..) markdown files via `dust lint`. To check code quality metrics, users must configure external tools (FTA, ESLint complexity rules, etc.) in their `settings.json` checks.
 
 This creates friction for new adopters. The [Easy Adoption](../principles/easy-adoption.md) principle emphasizes that "a developer should be able to bootstrap Dust in their repository with a single command, without needing to install dependencies, configure build tools, or understand the internals."
 
@@ -60,7 +60,7 @@ Implement file count, function length, nesting depth, and import count. Provides
 
 #### Fixed defaults with settings.json overrides
 
-Ship sensible defaults (e.g., 500 lines per file). Users can override in `.dust/config/settings.json`. Balances simplicity with flexibility.
+Ship sensible defaults (e.g., 500 lines per file). Users can override in [`.dust/config/settings.json`](../config/settings.json). Balances simplicity with flexibility.
 
 #### No configurability initially
 

@@ -47,7 +47,7 @@ If the idea file does not exist, it throws. If no matching section link is found
 
 ## Validation Rules
 
-`lib/lint/validators/idea-validator.ts` validates that:
+[`lib/lint/validators/idea-validator.ts`](../../lib/lint/validators/idea-validator.ts) validates that:
 
 1. The idea title after a transition prefix maps to an existing `.dust/ideas/*.md` file.
 2. The required operation section exists (`Refines/Decomposes/Shelves/Expedites Idea`).

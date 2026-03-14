@@ -4,7 +4,7 @@ Allow `dust bucket` to run multiple concurrent loops per repository. This enable
 
 ## Context
 
-The current `dust bucket` architecture (`lib/bucket/repository.ts`) runs exactly one loop per repository. The `RepositoryState` tracks a single `loopPromise` and `agentStatus` ('idle' | 'busy'). The `runRepositoryLoop` function runs a sequential loop: check for a task, run Claude, wait if no tasks, repeat.
+The current `dust bucket` architecture ([[`lib/bucket/repository.ts`](../../lib/bucket/repository.ts)](../../lib/bucket/repository.ts)) runs exactly one loop per repository. The `RepositoryState` tracks a single `loopPromise` and `agentStatus` ('idle' | 'busy'). The `runRepositoryLoop` function runs a sequential loop: check for a task, run Claude, wait if no tasks, repeat.
 
 This means:
 - If an analysis task (like "Add Idea: Foo" or "Refine Idea: Bar") is created while another task is running, it waits in the queue
@@ -16,9 +16,9 @@ The idea workflow tasks (defined in `lib/workflow-tasks.ts`) include several tas
 - `Refine Idea: <title>` - Research and clarify an existing idea
 - `Decompose Idea: <title>` - Break down an idea into tasks
 
-These tasks don't modify production code; they create or update markdown files in `.dust/ideas/` and `.dust/tasks/`. This makes them safer for parallel execution than implementation tasks that might conflict.
+These tasks don't modify production code; they create or update markdown files in [`.dust/ideas/`]() and `.dust/tasks/`. This makes them safer for parallel execution than implementation tasks that might conflict.
 
-The current event protocol (`lib/agent-events.ts` and `.dust/facts/dust-event-protocol.md`) already supports multiple agent sessions via `agentSessionId`. Each session has a unique UUID, and events are tagged with both the session ID and sequence numbers.
+The current event protocol ([[`lib/agent-events.ts`](../../lib/agent-events.ts)](../../lib/agent-events.ts) and [[`.dust/facts/dust-event-protocol.md`](../facts/dust-event-protocol.md)](../facts/dust-event-protocol.md)) already supports multiple agent sessions via `agentSessionId`. Each session has a unique UUID, and events are tagged with both the session ID and sequence numbers.
 
 ## Motivation
 
@@ -53,7 +53,7 @@ interface LoopState {
 
 ### Task claiming
 
-With multiple loops, two loops might pick the same task. The current `findUnblockedTasks` in `lib/cli/commands/next.ts` returns the first unblocked task, so without coordination both loops would start the same task.
+With multiple loops, two loops might pick the same task. The current `findUnblockedTasks` in [[`lib/cli/commands/next.ts`](../../lib/cli/commands/next.ts)](../../lib/cli/commands/next.ts) returns the first unblocked task, so without coordination both loops would start the same task.
 
 Options:
 - **Filesystem locks**: Create a `.lock` file next to the task file when claiming it
@@ -62,7 +62,7 @@ Options:
 
 ### Git conflicts
 
-Multiple loops writing to the same repository could create git conflicts. The current architecture handles conflicts by spawning Claude to resolve them (`lib/loop/iteration.ts`), but with parallel loops this becomes more complex:
+Multiple loops writing to the same repository could create git conflicts. The current architecture handles conflicts by spawning Claude to resolve them ([`lib/cli/commands/loop.ts`](../../lib/cli/commands/loop.ts)), but with parallel loops this becomes more complex:
 - Two loops might both try to push, creating conflicts
 - One loop might be resolving a conflict while another creates a new one
 
@@ -83,7 +83,7 @@ Idea workflow tasks are explicitly research-focused and produce markdown files, 
 
 #### Any task that doesn't modify source code
 
-Expand to any task where analysis shows it won't touch `src/`, `lib/`, or other code directories. This requires inspecting the task definition to determine its scope, which adds complexity.
+Expand to any task where analysis shows it won't touch `src/`, [`lib/`](../../lib), or other code directories. This requires inspecting the task definition to determine its scope, which adds complexity.
 
 #### All tasks, with conflict resolution
 

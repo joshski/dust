@@ -54,7 +54,7 @@ claude --continue \
 During each turn, examine:
 
 - **Tool uses**: What commands did Claude run? Look for `{"type":"tool_use",...}`
-- **Bash commands**: Did Claude execute `bin/dust` correctly?
+- **Bash commands**: Did Claude execute [`bin/dust`](../../bin/dust) correctly?
 - **File operations**: What was created or modified in the test directory?
 - **Context retention**: Does Claude remember previous turns?
 - **Error handling**: How are failures communicated?

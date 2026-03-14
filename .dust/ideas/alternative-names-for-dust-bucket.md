@@ -9,11 +9,11 @@ The `dust bucket` command:
 - Establishes a WebSocket connection to receive repository lists and task signals
 - Clones repositories locally and runs agent loops on them
 - Reports events back to the cloud service over WebSocket
-- Presents a TUI with "✨ dust bucket" branding (see `lib/bucket/terminal-ui.ts:506`)
+- Presents a TUI with "✨ dust bucket" branding (see [`lib/bucket/terminal-ui.ts:506`](../../lib/bucket/terminal-ui.ts))
 
 The name "bucket" appears extensively:
 - CLI command: `dust bucket`
-- Module directory: `lib/bucket/`
+- Module directory: [`lib/bucket/`](../../lib/bucket)
 - Environment variables: `DUST_BUCKET_TOKEN`, `DUST_BUCKET_HOST`, `DUST_BUCKET_AGENT_CONNECT_URL`
 - Cloud service: dustbucket.com
 - Events: `bucket.connected`, `bucket.disconnected`, `bucket.repository_added`, etc.
@@ -80,4 +80,4 @@ Add a new command name as the primary, keep `dust bucket` as an alias, and event
 
 #### Option: Only rename the CLI command
 
-Keep internal module names as `lib/bucket/` but change the user-facing command. This minimizes churn while improving the UX.
+Keep internal module names as [`lib/bucket/`](../../lib/bucket) but change the user-facing command. This minimizes churn while improving the UX.

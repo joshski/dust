@@ -1,6 +1,6 @@
 # Dust Event Protocol
 
-When `eventsUrl` is configured in `.dust/config/settings.json`, dust commands will HTTP POST events to that URL. The same event format is used over WebSocket connections from dustbucket.
+When `eventsUrl` is configured in [`.dust/config/settings.json`](../config/settings.json), dust commands will HTTP POST events to that URL. The same event format is used over WebSocket connections from dustbucket.
 
 ## Configuration
 
@@ -76,7 +76,7 @@ The following event categories exist in the codebase but are never sent over the
 
 ## Raw Event Conversion
 
-The `rawEventToAgentEvent()` function in `lib/agent-events.ts` converts raw Claude streaming events to wire events:
+The `rawEventToAgentEvent()` function in [`lib/agent-events.ts`](../../lib/agent-events.ts) converts raw Claude streaming events to wire events:
 
 | Raw Event | Wire Event | Notes |
 |-----------|------------|-------|

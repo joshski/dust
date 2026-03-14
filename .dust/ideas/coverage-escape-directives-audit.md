@@ -8,14 +8,14 @@ A stock `coverage-exclusions` audit already exists, but it focuses on config-lev
 
 Current state in runtime code (`lib/**`, excluding tests):
 - 23 inline escape directives (`v8 ignore` / `biome-ignore`)
-- Highest concentration in `lib/bucket/terminal-ui.ts` (5) and `lib/proxy/claude-api-proxy.ts` (4)
+- Highest concentration in [`lib/bucket/terminal-ui.ts`](../../lib/bucket/terminal-ui.ts) (5) and [`lib/proxy/claude-api-proxy.ts`](../../lib/proxy/claude-api-proxy.ts) (4)
 - Additional directives in `bucket`, `proxy`, and CLI integration boundaries
 
 Many are justified wrappers around native or integration-only paths, but concentration can still indicate refactoring opportunities.
 
 ## Proposed Audit
 
-Add a stock audit named `coverage-escape-directives` in `lib/audits/stock-audits.ts`.
+Add a stock audit named `coverage-escape-directives` in [`lib/audits/stock-audits.ts`](../../lib/audits/stock-audits.ts).
 
 Template focus:
 1. Inventory all inline `v8 ignore` and `biome-ignore` usage

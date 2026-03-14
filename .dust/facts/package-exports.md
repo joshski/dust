@@ -90,7 +90,7 @@ export default defineConfig({
 
 ### @joshski/dust/biome
 
-Path export for accessing dust's custom GritQL lint rules. The `biome/` directory contains rules like `dust-no-abbreviated-names.grit` that enforce coding standards.
+Path export for accessing dust's custom GritQL lint rules. The [`biome/`](../../biome) directory contains rules like `dust-no-abbreviated-names.grit` that enforce coding standards.
 
 ```typescript
 import { biomePath } from "@joshski/dust/biome";

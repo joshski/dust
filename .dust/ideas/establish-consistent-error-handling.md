@@ -4,7 +4,7 @@ Add a top-level error handler in `wireEntry` to catch unhandled errors from comm
 
 **Note:** A repeatable audit for error handling is now available: `bin/dust audit error-handling`.
 
-Currently, `wireEntry` in `lib/cli/wire.ts` does not catch unhandled rejections. If an infrastructure error (filesystem failure, network error, etc.) propagates up from a command, the process crashes with an unhandled rejection rather than showing a clean error message.
+Currently, `wireEntry` in [`lib/cli/wire.ts`](../../lib/cli/wire.ts) does not catch unhandled rejections. If an infrastructure error (filesystem failure, network error, etc.) propagates up from a command, the process crashes with an unhandled rejection rather than showing a clean error message.
 
 The codebase already follows two appropriate patterns:
 1. **User input errors** → `context.stderr()` + `return { exitCode: 1 }`
@@ -23,7 +23,7 @@ The codebase already handles errors appropriately in most places:
 
 ### Debug logging is appropriately best-effort
 
-`lib/logging/sink.ts` silently swallows errors because logging should never crash the application. This is an appropriate exception to "no error swallowing" since:
+[`lib/logging/sink.ts`](../../lib/logging/sink.ts) silently swallows errors because logging should never crash the application. This is an appropriate exception to "no error swallowing" since:
 - It's explicitly documented ("Best-effort — never crash the caller")
 - Logging is non-critical infrastructure
 - Failing to log is recoverable (the app continues working)
@@ -53,7 +53,7 @@ The agent instructions file is optional enhancement. Failing silently means the 
 
 ### Where should the convention be documented?
 
-#### In a fact file (`.dust/facts/`)
+#### In a fact file ([`.dust/facts/`](../facts))
 
 Aligns with how other design decisions are recorded in this project.
 

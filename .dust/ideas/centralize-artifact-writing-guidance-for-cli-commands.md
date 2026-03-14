@@ -6,10 +6,10 @@ Create one shared guidance block for artifact opening-sentence rules in `dust ne
 
 Artifact lint rules are enforced centrally but taught inconsistently in CLI authoring instructions:
 
-- `lib/lint/validators/content-validator.ts` requires an opening sentence after the H1 for all content files and enforces a 150-character maximum for that sentence.
-- `lib/lint/validators/content-validator.ts` also enforces imperative opening sentences for task files.
-- `lib/cli/commands/new-task.ts` teaches imperative task openings, but does not mention the 150-character cap or the requirement that the first non-blank line after H1 must be a plain paragraph sentence.
-- `lib/cli/commands/new-idea.ts` does not teach opening-sentence constraints at all.
+- [`lib/lint/validators/content-validator.ts`](../../lib/lint/validators/content-validator.ts) requires an opening sentence after the H1 for all content files and enforces a 150-character maximum for that sentence.
+- [`lib/lint/validators/content-validator.ts`](../../lib/lint/validators/content-validator.ts) also enforces imperative opening sentences for task files.
+- [`lib/cli/commands/new-task.ts`](../../lib/cli/commands/new-task.ts) teaches imperative task openings, but does not mention the 150-character cap or the requirement that the first non-blank line after H1 must be a plain paragraph sentence.
+- [`lib/cli/commands/new-idea.ts`](../../lib/cli/commands/new-idea.ts) does not teach opening-sentence constraints at all.
 
 This creates preventable lint failures for agents following command instructions literally.
 
@@ -38,8 +38,8 @@ Opening sentence checklist:
 
 ## Implementation Notes
 
-- `new-task.ts` currently has snapshot-like full-output assertions in `lib/cli/commands/new-task.test.ts`; these will need updates for exact text changes.
-- `new-idea.ts` currently has minimal test coverage in `lib/cli/commands/new-idea.test.ts`; add assertions for the new checklist text.
+- `new-task.ts` currently has snapshot-like full-output assertions in [`lib/cli/commands/new-task.test.ts`](../../lib/cli/commands/new-task.test.ts); these will need updates for exact text changes.
+- `new-idea.ts` currently has minimal test coverage in [`lib/cli/commands/new-idea.test.ts`](../../lib/cli/commands/new-idea.test.ts); add assertions for the new checklist text.
 - Keep command-specific guidance in command files, but source the repeated checklist from one helper to avoid drift.
 
 ## Open Questions

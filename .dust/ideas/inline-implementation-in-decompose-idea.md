@@ -19,7 +19,7 @@ This workflow provides traceability via the [Task-First Workflow](../principles/
 - Creating a task file only to immediately pick it up adds friction
 - For simple, well-defined ideas, this overhead doesn't improve outcomes
 
-The existing "Expedite Idea" pattern (see `EXPEDITE_IDEA_PREFIX` in `lib/artifacts/workflow-tasks.ts:11`) demonstrates that direct implementation is sometimes appropriate. Expedite Idea tasks instruct agents to "implement directly and commit" if "confident the implementation is straightforward".
+The existing "Expedite Idea" pattern (see `EXPEDITE_IDEA_PREFIX` in [`lib/artifacts/workflow-tasks.ts:11`](../../lib/artifacts/workflow-tasks.ts)) demonstrates that direct implementation is sometimes appropriate. Expedite Idea tasks instruct agents to "implement directly and commit" if "confident the implementation is straightforward".
 
 ## Concept
 

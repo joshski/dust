@@ -4,7 +4,7 @@ The `dust loop` and `dust bucket` commands have special logic to handle git pull
 
 ## Context
 
-When `runOneIteration` (in `lib/loop/iteration.ts`) runs, it first attempts a `git pull`. If the pull fails (e.g., merge conflicts, uncommitted local changes), rather than failing immediately, it spawns Claude with a prompt to resolve the issue:
+When `runOneIteration` (in [`lib/cli/commands/loop.ts:311-363`](../../lib/cli/commands/loop.ts)) runs, it first attempts a `git pull`. If the pull fails (e.g., merge conflicts, uncommitted local changes), rather than failing immediately, it spawns Claude with a prompt to resolve the issue:
 
 ```typescript
 const prompt = `Note: Do NOT run \`dust agent\`.
@@ -53,8 +53,8 @@ The recovery logic handles scenarios where the working copy diverges from the re
 
 - [Kill inactive process in dust loop claude](kill-inactive-process-in-dust-loop-claude.md) — proposes `git reset --hard` as recovery for stuck agents
 - [Bucket dead loop recovery](bucket-dead-loop-recovery.md) — discusses "reset git" as one recovery option
-- `lib/loop/iteration.ts` — the current git recovery implementation
-- `lib/bucket/repository-loop.ts` — calls `runOneIteration`, inheriting this behavior
+- [`lib/cli/commands/loop.ts:311-363`](../../lib/cli/commands/loop.ts) — the current git recovery implementation
+- [[`lib/bucket/repository-loop.ts`](../../lib/bucket/repository-loop.ts)](../../lib/bucket/repository-loop.ts) — calls `runOneIteration`, inheriting this behavior
 
 ## Open Questions
 

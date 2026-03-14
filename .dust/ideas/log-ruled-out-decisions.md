@@ -6,7 +6,7 @@ There's no natural place to record decisions about what was considered and rejec
 
 When an agent (or human) decides NOT to do something, no action is taken, so:
 - No code changes → no git commit
-- WIP artifacts get deleted → no trace in `.dust/`
+- WIP artifacts get deleted → no trace in [`.dust/`](..)
 - The reasoning behind "we won't do X" is lost
 
 ## Examples of Ruled-Out Decisions

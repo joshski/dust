@@ -14,7 +14,7 @@ The terminology is split across different contexts:
 | Function | `findWorkflowTaskForIdea`, `findAllWorkflowTasks`, `validateWorkflowTaskBodySection` | 3 |
 | Internal function | `createIdeaTransitionTask`, `validateIdeaTransitionTitle` | 2 |
 | Type | `WorkflowTaskMatch`, `WorkflowTaskType`, `AllWorkflowTasks` | 3 |
-| Documentation | `.dust/repository.md`, `.dust/facts/workflow-tasks.md` | "workflow task" throughout |
+| Documentation | [`.dust/repository.md`](../repository.md), [`.dust/facts/workflow-tasks.md`](../facts/workflow-tasks.md) | "workflow task" throughout |
 | Test descriptions | "transition task" in 3 tests | 3 |
 | Error messages | `Idea transition task references...` | 1 |
 | Error messages | `Workflow task with "..." prefix...` | 1 |

@@ -6,4 +6,4 @@ This follows the familiar pattern of tools like `git` and `docker`, supporting [
 
 ## Implementation
 
-Each command is implemented as a separate TypeScript module in `lib/cli/commands/` with unit tests. Commands receive injected dependencies (`FileSystem`, `CommandContext`) for testability without spawning processes.
+Each command is implemented as a separate TypeScript module in [`lib/cli/commands/`](../../lib/cli/commands) with unit tests. Commands receive injected dependencies (`FileSystem`, `CommandContext`) for testability without spawning processes.

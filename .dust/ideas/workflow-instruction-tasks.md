@@ -36,7 +36,7 @@ These would complement the existing programmatic task creation. An agent could e
 
 ## Implementation Considerations
 
-The `dust new task` command (`lib/cli/commands/new-task.ts`) provides a template for this pattern. It emits numbered instructions that guide agents through a multi-step process.
+The `dust new task` command ([`lib/cli/commands/new-task.ts`](../../lib/cli/commands/new-task.ts)) provides a template for this pattern. It emits numbered instructions that guide agents through a multi-step process.
 
 Workflow instructions would need to:
 1. Read the target idea file to understand its current state

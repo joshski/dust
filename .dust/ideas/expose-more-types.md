@@ -16,11 +16,11 @@ The `/types` entry point exports:
 
 ### Core Artifact Types
 
-**`Fact`** and **`Principle`** are the other two core artifact types alongside `Idea` and `Task`. They are defined in `lib/artifacts/facts.ts` and `lib/artifacts/principles.ts` but not exported from `/types`. A consumer wanting to build a dashboard showing all artifact types cannot currently import `Fact` or `Principle` from the types package.
+**`Fact`** and **`Principle`** are the other two core artifact types alongside `Idea` and `Task`. They are defined in [`lib/artifacts/facts.ts`](../../lib/artifacts/facts.ts) and [`lib/artifacts/principles.ts`](../../lib/artifacts/principles.ts) but not exported from `/types`. A consumer wanting to build a dashboard showing all artifact types cannot currently import `Fact` or `Principle` from the types package.
 
 ### Configuration Types
 
-**`DustSettings`** and **`CheckConfig`** define the schema for `.dust/config/settings.json`. These are useful for consumers building configuration tools or validation, but are only available internally.
+**`DustSettings`** and **`CheckConfig`** define the schema for [`.dust/config/settings.json`](../config/settings.json). These are useful for consumers building configuration tools or validation, but are only available internally.
 
 ### Validation Types
 

@@ -113,7 +113,7 @@ Require the agent service to be named `agent` or `dust-agent`. Simple and requir
 
 #### Explicit configuration in settings.json
 
-Add an `agentService` key to `.dust/config/settings.json` specifying the service name. More flexible but adds configuration burden.
+Add an `agentService` key to [`.dust/config/settings.json`](../config/settings.json) specifying the service name. More flexible but adds configuration burden.
 
 #### Service label
 

@@ -69,7 +69,7 @@ Add settings to control how dust artifacts appear in commits:
 
 Document that dust's commit style includes artifact transitions as a feature, not a bug. Users who want "clean" history can use `git log --oneline -- ':(exclude).dust/'` or similar filters. The archaeology value outweighs the aesthetic concern.
 
-**Trade-off**: Doesn't address the user concern directly. Some CI/CD tools or code review workflows may struggle with file changes in `.dust/`.
+**Trade-off**: Doesn't address the user concern directly. Some CI/CD tools or code review workflows may struggle with file changes in [`.dust/`](..).
 
 ## Open Questions
 

@@ -4,7 +4,7 @@ Improve consistency and reduce noise in principle files by enforcing stricter fo
 
 ## Context
 
-Dust's principle files in `.dust/principles/` follow a standard structure with `## Parent Principle` and `## Sub-Principles` sections for hierarchy relationships. The current format has two inconsistencies:
+Dust's principle files in [`.dust/principles/`](../principles) follow a standard structure with `## Parent Principle` and `## Sub-Principles` sections for hierarchy relationships. The current format has two inconsistencies:
 
 ### Empty Sub-Principles sections
 
@@ -20,7 +20,7 @@ These add visual noise without conveying useful information. Leaf principles in 
 
 ### Section ordering
 
-Currently, `## Parent Principle` and `## Sub-Principles` are required sections (validated in `lib/lint/validators/principle-hierarchy.ts:11`), but their position within the document is not enforced. These hierarchy sections should appear at the end of the principle file, after the descriptive content.
+Currently, `## Parent Principle` and `## Sub-Principles` are required sections (validated in [`lib/lint/validators/principle-hierarchy.ts:11`](../../lib/lint/validators/principle-hierarchy.ts)), but their position within the document is not enforced. These hierarchy sections should appear at the end of the principle file, after the descriptive content.
 
 ## Proposed Changes
 
@@ -29,8 +29,8 @@ Currently, `## Parent Principle` and `## Sub-Principles` are required sections (
 Update validation to make `## Sub-Principles` optional. A principle with no sub-principles should have no `## Sub-Principles` section at all.
 
 **Files to update:**
-- `lib/lint/validators/principle-hierarchy.ts:11` - Change `REQUIRED_PRINCIPLE_HEADINGS` to only require `## Parent Principle`
-- `lib/artifacts/principles.ts:92` - `extractLinksFromSection` already returns an empty array when the section doesn't exist, so parsing should work unchanged
+- [`lib/lint/validators/principle-hierarchy.ts:11`](../../lib/lint/validators/principle-hierarchy.ts) - Change `REQUIRED_PRINCIPLE_HEADINGS` to only require `## Parent Principle`
+- [`lib/artifacts/principles.ts:92`](../../lib/artifacts/principles.ts) - `extractLinksFromSection` already returns an empty array when the section doesn't exist, so parsing should work unchanged
 - All 37 principle files with `## Sub-Principles\n\n- (none)` - remove these sections
 
 ### 2. Enforce section ordering
@@ -38,7 +38,7 @@ Update validation to make `## Sub-Principles` optional. A principle with no sub-
 Add validation that `## Parent Principle` and `## Sub-Principles` (if present) are the last sections in the document, appearing after all other content.
 
 **Implementation approach:**
-- Add a new validator function in `lib/lint/validators/principle-hierarchy.ts` that checks section order
+- Add a new validator function in [`lib/lint/validators/principle-hierarchy.ts`](../../lib/lint/validators/principle-hierarchy.ts) that checks section order
 - The validator should ensure no other `##` headings appear after `## Parent Principle` or `## Sub-Principles`
 
 ## Open Questions
@@ -55,7 +55,7 @@ Maintain the current behavior where every principle has a `## Parent Principle` 
 - (none)
 ```
 
-Pros: Consistent structure, explicit about being a root. The hierarchy parsing code in `lib/artifacts/principles.ts:88-91` expects this section.
+Pros: Consistent structure, explicit about being a root. The hierarchy parsing code in [`lib/artifacts/principles.ts:88-91`](../../lib/artifacts/principles.ts) expects this section.
 
 Cons: Adds visual noise to root principles, inconsistent with proposed removal of empty Sub-Principles.
 

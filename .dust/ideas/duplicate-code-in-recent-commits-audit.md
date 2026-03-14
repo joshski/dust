@@ -12,7 +12,7 @@ The `ideas-from-commits` audit already analyzes recent commit history but focuse
 
 ## Proposed Implementation
 
-Add a stock audit called `duplicate-code` in `lib/audits/stock-audits.ts`:
+Add a stock audit called `duplicate-code` in [`lib/audits/stock-audits.ts`](../../lib/audits/stock-audits.ts):
 
 ```
 # Duplicate Code in Recent Commits

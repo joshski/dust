@@ -87,7 +87,7 @@ Embed the guide text directly in the lint output code. Faster to display and doe
 
 #### Reference and display fact files
 
-Read and display relevant fact files (e.g., `.dust/facts/task-file-format.md`). Keeps guidance in sync with documentation but adds file I/O and depends on fact file formatting being suitable for display.
+Read and display relevant fact files (e.g., [`.dust/facts/task-file-format.md`](../facts/task-file-format.md)). Keeps guidance in sync with documentation but adds file I/O and depends on fact file formatting being suitable for display.
 
 #### Link to fact files without displaying
 

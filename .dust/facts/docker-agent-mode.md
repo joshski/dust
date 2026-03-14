@@ -2,7 +2,7 @@
 
 When a repository contains a `.dust/Dockerfile`, dust automatically builds the image and spawns agent sessions inside Docker containers. This provides the [sandboxing](./autonomous-agents-need-sandboxes.md) recommended for autonomous agents.
 
-Note: `dust lint` rejects `.dust/Dockerfile` because the `.dust/` root directory has a strict allowlist. However, the Docker agent functionality still reads from `.dust/Dockerfile`. This creates a conflict where the feature works but lint fails. See [Support Docker Compose](../ideas/support-docker-compose.md) for the planned migration to `.dust/config/container/`.
+`dust lint` now rejects `.dust/Dockerfile` and points users to migrate Docker-related configuration under [`.dust/config/`](../config).
 
 ## Setup
 

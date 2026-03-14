@@ -15,7 +15,7 @@ bun run eval add-task-from-prompt
 
 ## Creating an Eval
 
-Each eval lives in its own directory under `evals/` and requires two files:
+Each eval lives in its own directory under [`evals/`](../../evals) and requires two files:
 
 ### eval.json
 Defines the prompt and expected behavior:
@@ -33,9 +33,9 @@ Creates an isolated test environment. The script receives two environment variab
 
 The setup script should:
 1. Initialize a git repository (required by dust)
-2. Create the `.dust/` directory structure
+2. Create the [`.dust/`](..) directory structure
 3. Create a `CLAUDE.md` file with instructions
-4. Create a `bin/dust` wrapper that calls the actual dust binary
+4. Create a [`bin/dust`](../../bin/dust) wrapper that calls the actual dust binary
 
 ## How It Works
 

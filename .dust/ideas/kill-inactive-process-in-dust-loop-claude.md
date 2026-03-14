@@ -4,7 +4,7 @@ When a `dust loop claude` process has not emitted any events for some time, kill
 
 ## Context
 
-The `dust loop claude` command runs Claude Code repeatedly to complete tasks autonomously. Each iteration spawns a Claude process via `lib/claude/run.ts`, which streams events through `lib/claude/streamer.ts`. The loop tracks events through the `onRawEvent` callback, which emits `claude.raw_event` events for each piece of output from Claude.
+The `dust loop claude` command runs Claude Code repeatedly to complete tasks autonomously. Each iteration spawns a Claude process via [`lib/claude/run.ts`](../../lib/claude/run.ts), which streams events through [`lib/claude/streamer.ts`](../../lib/claude/streamer.ts). The loop tracks events through the `onRawEvent` callback, which emits `claude.raw_event` events for each piece of output from Claude.
 
 Occasionally, a Claude process may become unresponsive — stuck waiting for something that will never happen, or in an infinite loop that produces no output. In these cases, the loop hangs indefinitely. The process consumes resources without making progress, and the task remains incomplete.
 

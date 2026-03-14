@@ -1,6 +1,6 @@
 # GitHub Wiki Generation
 
-A command to synchronize `.dust/` content to a repository's GitHub wiki, suitable for GitHub Actions.
+A command to synchronize [`.dust/`](..) content to a repository's GitHub wiki, suitable for GitHub Actions.
 
 ## How GitHub Wikis Work
 
@@ -21,7 +21,7 @@ Key constraints:
 The command would:
 
 1. Clone the wiki repository to a temporary directory
-2. Transform `.dust/` content into wiki-friendly format:
+2. Transform [`.dust/`](..) content into wiki-friendly format:
    - Generate `Home.md` as an index/table of contents
    - Convert principles, facts, ideas, and tasks into linked wiki pages
    - Preserve or generate meaningful sidebar navigation (`_Sidebar.md`)

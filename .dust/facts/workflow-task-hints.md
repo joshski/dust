@@ -1,6 +1,6 @@
 # Workflow Task Hints
 
-Workflow task templates can be extended with optional hint files in `.dust/config/hints/`.
+Workflow task templates can be extended with optional hint files in [`.dust/config/hints/`](../config/hints).
 
 Supported files:
 - `refine-idea.md`

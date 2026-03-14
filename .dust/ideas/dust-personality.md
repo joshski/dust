@@ -16,11 +16,11 @@ Since developers might work with dust all day, the character of these interactio
 
 User-facing messages flow through several places:
 
-- **Agent greeting** (`lib/cli/commands/agent.ts:16-50`): Welcome message and command routing
-- **Help text** (`lib/cli/commands/help.ts:8-50`): Command reference and agent guide
-- **List commands** (`lib/cli/commands/list.ts`): Task, idea, principle, and fact listings
-- **Event formatting** (`lib/agent-events.ts:54-73`): Session started/ended messages
-- **Focus output** (`lib/cli/commands/focus.ts`): Current objective confirmation
+- **Agent greeting** ([`lib/cli/commands/agent.ts:16-50`](../../lib/cli/commands/agent.ts)): Welcome message and command routing
+- **Help text** ([`lib/cli/commands/help.ts:8-50`](../../lib/cli/commands/help.ts)): Command reference and agent guide
+- **List commands** ([`lib/cli/commands/list.ts`](../../lib/cli/commands/list.ts)): Task, idea, principle, and fact listings
+- **Event formatting** ([`lib/agent-events.ts:54-73`](../../lib/agent-events.ts)): Session started/ended messages
+- **Focus output** ([`lib/cli/commands/focus.ts`](../../lib/cli/commands/focus.ts)): Current objective confirmation
 - **Error messages**: Various commands produce failure messages
 
 Each location uses emojis (🤖, ✨, 🎯, 📋, 💡) and consistent but neutral phrasing.
@@ -38,7 +38,7 @@ The current templates use a neutral, documentation-style voice. Teams might pref
 
 ### Configuration Entry Point
 
-The existing settings system in `.dust/config/settings.json` handles `dustCommand`, `installCommand`, `checks`, `eventsUrl`, and `extraDirectories`. A `personality` setting would fit naturally here.
+The existing settings system in [`.dust/config/settings.json`](../config/settings.json) handles `dustCommand`, `installCommand`, `checks`, `eventsUrl`, and `extraDirectories`. A `personality` setting would fit naturally here.
 
 Agent-specific instructions already support customization through `.dust/config/agents/{agent-type}.md` files, which are appended to the agent greeting. This demonstrates the pattern for per-agent customization.
 
@@ -51,7 +51,7 @@ Agent-specific instructions already support customization through `.dust/config/
 
 ## How it could work
 
-A `personality` setting in `.dust/config/settings.json` would select from built-in presets or allow custom configuration:
+A `personality` setting in [`.dust/config/settings.json`](../config/settings.json) would select from built-in presets or allow custom configuration:
 
 ```json
 {

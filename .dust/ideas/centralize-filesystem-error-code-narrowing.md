@@ -7,11 +7,11 @@ Error-code checks for `ENOENT` and `EEXIST` are implemented via repeated `as Nod
 ### Repeated errno assertions in production code
 
 `rg "as NodeJS.ErrnoException" lib -g"*.ts" -g"!*.test.ts"` returns 28 matches. These appear in key paths including:
-- `lib/cli/commands/lint-markdown.ts`
-- `lib/cli/commands/init.ts`
-- `lib/git/hooks.ts`
-- `lib/config/settings.ts`
-- `lib/validation/index.ts`
+- [`lib/cli/commands/lint-markdown.ts`](../../lib/cli/commands/lint-markdown.ts)
+- [`lib/cli/commands/init.ts`](../../lib/cli/commands/init.ts)
+- [`lib/git/hooks.ts`](../../lib/git/hooks.ts)
+- [`lib/config/settings.ts`](../../lib/config/settings.ts)
+- [`lib/validation/index.ts`](../../lib/validation/index.ts)
 
 Most call sites check `error.code` for `ENOENT` or `EEXIST`, then continue or rethrow.
 
@@ -63,7 +63,7 @@ Define small helpers near each subsystem to avoid a new cross-cutting module. Th
 
 #### Add test utility for errno errors
 
-Create a helper in `lib/test/test-utilities.ts` for constructing typed errors with `code` set. Reduces repeated test casting and aligns runtime/test patterns.
+Create a helper in [`lib/test/test-utilities.ts`](../../lib/test/test-utilities.ts) for constructing typed errors with `code` set. Reduces repeated test casting and aligns runtime/test patterns.
 
 #### Keep tests as-is for now
 

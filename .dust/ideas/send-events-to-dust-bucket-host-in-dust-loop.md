@@ -4,7 +4,7 @@ Integrate `dust loop` with the bucket service so events are sent automatically u
 
 ## Background
 
-Currently, `dust loop claude` and `dust loop codex` can send events over HTTP POST to an arbitrary URL via the `eventsUrl` setting (`.dust/config/settings.json`) or the `DUST_EVENTS_URL` environment variable. This is a low-level escape hatch that requires users to configure their own endpoint.
+Currently, `dust loop claude` and `dust loop codex` can send events over HTTP POST to an arbitrary URL via the `eventsUrl` setting ([[`.dust/config/settings.json`](../config/settings.json)](../config/settings.json)) or the `DUST_EVENTS_URL` environment variable. This is a low-level escape hatch that requires users to configure their own endpoint.
 
 The bucket service (`dustbucket.com`) already provides a WebSocket-based event stream used by `dust bucket`. The idea is to bring that integration into `dust loop`, so events are sent directly to the bucket service using authenticated HTTP POST calls — instead of a bare, unauthenticated URL.
 
@@ -24,20 +24,20 @@ The bucket service (`dustbucket.com`) already provides a WebSocket-based event s
 4. **Event delivery** uses a WebSocket connection to the bucket service (same transport as `dust bucket`). This also enables the server to push `task-available` signals, so `dust loop` can sleep indefinitely between iterations instead of polling on a fixed interval.
 
 5. **Remove `DUST_EVENTS_URL` env var and `eventsUrl` settings** — the bucket service replaces this mechanism. This includes:
-   - `settings.eventsUrl` field and `validateDustEventsUrl()` in `lib/config/settings.ts`
+   - `settings.eventsUrl` field and `validateDustEventsUrl()` in [[`lib/config/settings.ts`](../../lib/config/settings.ts)](../../lib/config/settings.ts)
    - All three `DUST_EVENTS_URL` env var overrides in `loadSettings`
-   - `PostEventFn` / `createPostEvent` / `createWireEventSender` in `lib/loop/wire-events.ts` (replaced by bucket-aware sender)
+   - `PostEventFn` / `defaultPostEvent` / `createWireEventSender` in [`lib/cli/commands/loop.ts`](../../lib/cli/commands/loop.ts) (replaced by bucket-aware sender)
    - References in the `dust-event-protocol.md` fact file and the `configuration-system.md` fact file
 
 ### Shared WebSocket infrastructure
 
-`dust bucket` already implements WebSocket connection management in `lib/cli/commands/bucket.ts`: `connectWebSocket()` handles connect, reconnect with exponential backoff, and message dispatch. This logic is currently interleaved with bucket-specific state (`BucketState`, TUI, repository management).
+`dust bucket` already implements WebSocket connection management in [[`lib/cli/commands/bucket.ts`](../../lib/cli/commands/bucket.ts)](../../lib/cli/commands/bucket.ts): `connectWebSocket()` handles connect, reconnect with exponential backoff, and message dispatch. This logic is currently interleaved with bucket-specific state (`BucketState`, TUI, repository management).
 
 To share the WebSocket transport between `dust loop` and `dust bucket`, extract a reusable connection manager into `lib/bucket/connection.ts` (or similar) that handles:
 
 - **Connect with auth** — `WebSocketLike` creation with `Authorization: Bearer` header
 - **Reconnect with backoff** — exponential backoff from 1s to 30s (currently hardcoded in `bucket.ts` as `INITIAL_RECONNECT_DELAY_MS` / `MAX_RECONNECT_DELAY_MS`)
-- **Send events** — `createEventMessageSender()` already exists in `lib/bucket/events.ts` and is transport-agnostic (takes `() => WebSocketLike | null`)
+- **Send events** — `createEventMessageSender()` already exists in [[`lib/bucket/events.ts`](../../lib/bucket/events.ts)](../../lib/bucket/events.ts) and is transport-agnostic (takes `() => WebSocketLike | null`)
 - **Receive messages** — dispatch parsed server messages to a callback; `dust loop` only needs `task-available`, while `dust bucket` also handles `repository-list`
 
 The extracted interface might look like:
@@ -54,13 +54,13 @@ interface BucketConnection {
 
 ### Relevant code
 
-- `lib/loop/loop.ts` — `runLoop()`; `lib/loop/wire-events.ts` — `createWireEventSender()`; `lib/loop/iteration.ts` — `createDefaultDependencies()`; currently reads `settings.eventsUrl` to decide whether to send events
-- `lib/cli/commands/bucket.ts` — `connectWebSocket()`, `waitForConnection()`, `resolveToken()`, reconnect logic; candidates for extraction
-- `lib/bucket/events.ts` — `createEventMessageSender()`, `WebSocketLike`, `SendEventFn`; already reusable
-- `lib/bucket/server-messages.ts` — `parseServerMessage()`, `ServerMessage` types; already reusable
-- `lib/bucket/auth.ts` — `loadStoredToken()`, `storeToken()`, `authenticate()`, `getDustbucketHost()`
-- `lib/config/settings.ts` — `eventsUrl` setting, `validateDustEventsUrl()`, `DUST_EVENTS_URL` overrides (to be removed)
-- `lib/bucket/terminal-ui.ts` — existing hand-rolled ANSI terminal UI (tabs, key input, status dots); a simpler menu component would follow the same pattern (no external library)
+- [`lib/cli/commands/loop.ts`](../../lib/cli/commands/loop.ts) — `loopClaude()`, `createWireEventSender()`, `createDefaultDependencies()`; currently reads `settings.eventsUrl` to decide whether to send events
+- [[`lib/cli/commands/bucket.ts`](../../lib/cli/commands/bucket.ts)](../../lib/cli/commands/bucket.ts) — `connectWebSocket()`, `waitForConnection()`, `resolveToken()`, reconnect logic; candidates for extraction
+- [[`lib/bucket/events.ts`](../../lib/bucket/events.ts)](../../lib/bucket/events.ts) — `createEventMessageSender()`, `WebSocketLike`, `SendEventFn`; already reusable
+- [[`lib/bucket/server-messages.ts`](../../lib/bucket/server-messages.ts)](../../lib/bucket/server-messages.ts) — `parseServerMessage()`, `ServerMessage` types; already reusable
+- [[`lib/bucket/auth.ts`](../../lib/bucket/auth.ts)](../../lib/bucket/auth.ts) — `loadStoredToken()`, `storeToken()`, `authenticate()`, `getDustbucketHost()`
+- [[`lib/config/settings.ts`](../../lib/config/settings.ts)](../../lib/config/settings.ts) — `eventsUrl` setting, `validateDustEventsUrl()`, `DUST_EVENTS_URL` overrides (to be removed)
+- [[`lib/bucket/terminal-ui.ts`](../../lib/bucket/terminal-ui.ts)](../../lib/bucket/terminal-ui.ts) — existing hand-rolled ANSI terminal UI (tabs, key input, status dots); a simpler menu component would follow the same pattern (no external library)
 
 ### Principles alignment
 

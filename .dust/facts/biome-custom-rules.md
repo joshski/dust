@@ -2,7 +2,7 @@
 
 Linting now uses `oxlint` defaults plus repository-owned custom policy checks.
 
-The old Biome GritQL plugin intent is preserved in `lib/lint/policy-checker.ts` and run by `scripts/lint/policy-checks.ts` as part of `dust check`.
+The old Biome GritQL plugin intent is preserved in [`lib/lint/policy-checker.ts`](../../lib/lint/policy-checker.ts) and run by [`scripts/lint/policy-checks.ts`](../../scripts/lint/policy-checks.ts) as part of `dust check`.
 
 ## Rule Ownership
 
@@ -13,7 +13,7 @@ The repository-owned checker enforces these policies:
 
 Design:
 - Pure analysis core: `analyzePolicyViolations(filePath, content)` returns diagnostics for one file.
-- Thin shell: `scripts/lint/policy-checks.ts` handles file discovery, IO, and CLI exit behavior.
+- Thin shell: [`scripts/lint/policy-checks.ts`](../../scripts/lint/policy-checks.ts) handles file discovery, IO, and CLI exit behavior.
 
 ## Related Commands
 

@@ -8,9 +8,9 @@ When `dust bucket` or `dust loop` clones a repository to process tasks, the clon
 
 ### Current state
 
-The existing hook system (`lib/git/hooks.ts`) manages `pre-push` hooks with a `# BEGIN DUST HOOK` / `# END DUST HOOK` section. The hook invokes the configured `dustCommand` (e.g., `bin/dust`, `npx dust`) to run pre-push checks.
+The existing hook system ([`lib/git/hooks.ts`](../../lib/git/hooks.ts)) manages `pre-push` hooks with a `# BEGIN DUST HOOK` / `# END DUST HOOK` section. The hook invokes the configured `dustCommand` (e.g., [`bin/dust`](../../bin/dust), `npx dust`) to run pre-push checks.
 
-The `dustCommand` setting (`lib/config/settings.ts`) is auto-detected from lockfiles:
+The `dustCommand` setting ([`lib/config/settings.ts`](../../lib/config/settings.ts)) is auto-detected from lockfiles:
 - `bun.lockb` → `bunx dust`
 - `pnpm-lock.yaml` → `pnpx dust`
 - `package-lock.json` → `npx dust`
@@ -21,11 +21,11 @@ The [Could we run dust on repos without dust installed?](could-we-run-dust-on-re
 
 ### Relevant code
 
-- `lib/git/hooks.ts` — Existing hook management for `pre-push` hooks; could be extended to install aliases
-- `lib/cli/commands/bucket.ts:319-326` — `toRepositoryDependencies()` passes dependencies into the loop
-- `lib/bucket/repository.ts` — Clones repos and starts agent loops
-- `lib/session.ts` — Defines environment variables like `DUST_UNATTENDED`, `DUST_SKIP_AGENT`
-- `lib/cli/commands/agent.ts:59` — Detects `DUST_SKIP_AGENT` to modify behavior in automated contexts
+- [`lib/git/hooks.ts`](../../lib/git/hooks.ts) — Existing hook management for `pre-push` hooks; could be extended to install aliases
+- [`lib/cli/commands/bucket.ts:319-326`](../../lib/cli/commands/bucket.ts) — `toRepositoryDependencies()` passes dependencies into the loop
+- [`lib/bucket/repository.ts`](../../lib/bucket/repository.ts) — Clones repos and starts agent loops
+- [`lib/session.ts`](../../lib/session.ts) — Defines environment variables like `DUST_UNATTENDED`, `DUST_SKIP_AGENT`
+- [`lib/cli/commands/agent.ts:59`](../../lib/cli/commands/agent.ts) — Detects `DUST_SKIP_AGENT` to modify behavior in automated contexts
 
 ### Relevant principles
 
@@ -57,7 +57,7 @@ Set an environment variable like `DUST_BIN=/path/to/dust` that the agent can use
 
 #### Option: Symlink dust binary into repository
 
-Create a `bin/dust` symlink in the cloned repository pointing to the orchestrator's dust binary. This makes `bin/dust` commands work without modification to agent instructions. However, it modifies the repository state, which could cause issues with git status checks.
+Create a [`bin/dust`](../../bin/dust) symlink in the cloned repository pointing to the orchestrator's dust binary. This makes [`bin/dust`](../../bin/dust) commands work without modification to agent instructions. However, it modifies the repository state, which could cause issues with git status checks.
 
 #### Option: Prepend to PATH
 

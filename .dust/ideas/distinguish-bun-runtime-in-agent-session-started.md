@@ -4,7 +4,7 @@ The `runtimeVersion` field in `agent-session-started` events always uses `proces
 
 ## Context
 
-The `getEnvironmentContext` function in `lib/loop/iteration.ts` builds environment metadata for agent session events:
+The `getEnvironmentContext` function in [`lib/cli/commands/loop.ts:44-58`](../../lib/cli/commands/loop.ts) builds environment metadata for agent session events:
 
 ```typescript
 function getEnvironmentContext(cwd: string): {
@@ -24,7 +24,7 @@ function getEnvironmentContext(cwd: string): {
 }
 ```
 
-This data flows into `agent-session-started` events sent to `eventsUrl` via the dust event protocol (see `.dust/facts/dust-event-protocol.md`).
+This data flows into `agent-session-started` events sent to `eventsUrl` via the dust event protocol (see [[`.dust/facts/dust-event-protocol.md`](../facts/dust-event-protocol.md)](../facts/dust-event-protocol.md)).
 
 ### Bun detection
 
@@ -33,9 +33,9 @@ Bun exposes its version via `Bun.version` (a string like `"1.3.8"`). The presenc
 ### Current usage
 
 The `runtimeVersion` field appears in:
-- `lib/agent-events.ts` - Type definition
-- `lib/loop/iteration.ts` - `getEnvironmentContext` function
-- `.dust/facts/dust-event-protocol.md` - Documentation and examples
+- [[`lib/agent-events.ts`](../../lib/agent-events.ts)](../../lib/agent-events.ts) - Type definition
+- [`lib/cli/commands/loop.ts`](../../lib/cli/commands/loop.ts) - `getEnvironmentContext` function
+- [[`.dust/facts/dust-event-protocol.md`](../facts/dust-event-protocol.md)](../facts/dust-event-protocol.md) - Documentation and examples
 
 ## Proposed Change
 

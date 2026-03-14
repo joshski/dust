@@ -1,6 +1,6 @@
 # Dust Directory Structure
 
-The `.dust/` directory contains planning artifacts organized by type.
+The [`.dust/`](..) directory contains planning artifacts organized by type.
 
 ```
 .dust/
@@ -13,7 +13,7 @@ The `.dust/` directory contains planning artifacts organized by type.
 
 The principles, ideas, tasks, and facts directories are flat (no subdirectories) and contain only markdown files with slug-style names.
 
-The `.dust/` root uses a strict allowlist. Supported root paths are:
+The [`.dust/`](..) root uses a strict allowlist. Supported root paths are:
 
 - `principles/`
 - `ideas/`
@@ -22,8 +22,8 @@ The `.dust/` root uses a strict allowlist. Supported root paths are:
 - `config/`
 - `repository.md`
 
-Unknown files or subdirectories directly under `.dust/` are lint violations.
-`extraDirectories` in `.dust/config/settings.json` is deprecated and does not extend this allowlist.
+Unknown files or subdirectories directly under [`.dust/`](..) are lint violations.
+`extraDirectories` in [`.dust/config/settings.json`](../config/settings.json) is deprecated and does not extend this allowlist.
 
 The config directory uses a strict allowlist. Supported entries are:
 
@@ -32,4 +32,4 @@ The config directory uses a strict allowlist. Supported entries are:
 - `hints/`
 - `agents/`
 
-Unknown files or subdirectories in `.dust/config/` are lint violations. See [Configuration System](./configuration-system.md) for details.
+Unknown files or subdirectories in [`.dust/config/`](../config) are lint violations. See [Configuration System](./configuration-system.md) for details.

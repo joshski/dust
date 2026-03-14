@@ -6,7 +6,7 @@ Agents running in `dust bucket` and `dust loop` modes can access and potentially
 
 ### Token Storage and Usage
 
-The bucket access token is stored in `~/.dust/credentials.json` (`lib/bucket/auth.ts:27-29`) and can also be provided via the `DUST_BUCKET_TOKEN` environment variable (`lib/cli/commands/bucket.ts:822`).
+The bucket access token is stored in `~/.dust/credentials.json` ([`lib/bucket/auth.ts:27-29`](../../lib/bucket/auth.ts)) and can also be provided via the `DUST_BUCKET_TOKEN` environment variable ([`lib/cli/commands/bucket.ts:822`](../../lib/cli/commands/bucket.ts)).
 
 When the `dust bucket` command runs:
 1. Token is loaded from env var or stored credentials
@@ -15,7 +15,7 @@ When the `dust bucket` command runs:
 
 ### Agent Environment Inheritance
 
-Agent processes are spawned via `spawnClaudeCode()` (`lib/claude/spawn-claude-code.ts:63-67`):
+Agent processes are spawned via `spawnClaudeCode()` ([`lib/claude/spawn-claude-code.ts:63-67`](../../lib/claude/spawn-claude-code.ts)):
 
 ```typescript
 const proc = dependencies.spawn('claude', claudeArguments, {
@@ -48,7 +48,7 @@ Run agents behind a network proxy that blocks outbound connections to non-allowl
 
 ### Remove token from agent environment
 
-Filter sensitive variables when spawning agent processes. Currently `buildUnattendedEnv()` in `lib/session.ts` builds the env passed to agents. This could be extended to explicitly exclude `DUST_BUCKET_TOKEN` and similar sensitive variables.
+Filter sensitive variables when spawning agent processes. Currently `buildUnattendedEnv()` in [`lib/session.ts`](../../lib/session.ts) builds the env passed to agents. This could be extended to explicitly exclude `DUST_BUCKET_TOKEN` and similar sensitive variables.
 
 However, this doesn't prevent reading `~/.dust/credentials.json` from the filesystem.
 

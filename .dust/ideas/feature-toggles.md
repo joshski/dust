@@ -1,6 +1,6 @@
 # Feature Toggles
 
-Support arbitrary feature toggles in `.dust/config/settings.json` to enable or disable experimental or optional behavior.
+Support arbitrary feature toggles in [`.dust/config/settings.json`](../config/settings.json) to enable or disable experimental or optional behavior.
 
 ## Proposed Format
 
@@ -14,14 +14,14 @@ Support arbitrary feature toggles in `.dust/config/settings.json` to enable or d
 
 ## Context
 
-The `DustSettings` type (in `lib/cli/types.ts:33-39`) currently supports these keys:
+The `DustSettings` type (in [`lib/cli/types.ts:33-39`](../../lib/cli/types.ts)) currently supports these keys:
 - `dustCommand` - command to invoke dust
 - `installCommand` - command to install dependencies
 - `checks` - array of quality gate checks
 - `eventsUrl` - URL for event streaming
 - `extraDirectories` - additional directories to scan
 
-Settings are loaded by `loadSettings` in `lib/config/settings.ts` and validated by `validateSettingsJson`. The `KNOWN_SETTINGS_KEYS` set controls which keys are recognized, and unknown keys produce validation errors.
+Settings are loaded by `loadSettings` in [`lib/config/settings.ts`](../../lib/config/settings.ts) and validated by `validateSettingsJson`. The `KNOWN_SETTINGS_KEYS` set controls which keys are recognized, and unknown keys produce validation errors.
 
 ## Use Cases
 
@@ -32,10 +32,10 @@ Settings are loaded by `loadSettings` in `lib/config/settings.ts` and validated 
 ## Implementation Notes
 
 To add feature toggles:
-1. Add `featureToggles` to `KNOWN_SETTINGS_KEYS` in `lib/config/settings.ts`
+1. Add `featureToggles` to `KNOWN_SETTINGS_KEYS` in [`lib/config/settings.ts`](../../lib/config/settings.ts)
 2. Add validation logic for the `featureToggles` object structure
 3. Add `featureToggles?: Record<string, string>` to the `DustSettings` type
-4. Update the Configuration System fact (`lib/config/settings.ts` implementation section mentions which keys are validated)
+4. Update the Configuration System fact ([`lib/config/settings.ts`](../../lib/config/settings.ts) implementation section mentions which keys are validated)
 
 ## Open Questions
 

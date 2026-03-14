@@ -6,19 +6,19 @@ Claude stream events enter the system as untyped JSON and stay loosely typed thr
 
 ### Raw Claude events are broad records
 
-`lib/claude/types.ts` defines `RawEvent` as `Record<string, unknown>` and `ToolUseEvent.input` as `Record<string, unknown>`. This is the root type for Claude streaming data.
+[`lib/claude/types.ts`](../../lib/claude/types.ts) defines `RawEvent` as `Record<string, unknown>` and `ToolUseEvent.input` as `Record<string, unknown>`. This is the root type for Claude streaming data.
 
 ### Event parsing relies on inline shape assertions
 
-`lib/claude/event-parser.ts` repeatedly casts `raw` to inline object shapes before reading nested fields. The parser does runtime checks (for example `block.type === 'tool_use'` and `block.id`) but many property reads still happen through asserted shapes rather than reusable typed guards.
+[`lib/claude/event-parser.ts`](../../lib/claude/event-parser.ts) repeatedly casts `raw` to inline object shapes before reading nested fields. The parser does runtime checks (for example `block.type === 'tool_use'` and `block.id`) but many property reads still happen through asserted shapes rather than reusable typed guards.
 
 ### Tool formatters cast individual fields
 
-`lib/claude/tool-formatters.ts` accepts `Record<string, unknown>` for every tool formatter (`Write`, `Edit`, `Read`, `Bash`, `TodoWrite`, `Grep`, `Glob`, `Task`) and casts expected fields (`as string | undefined`, `as number | undefined`, etc.). This catches unknown keys at runtime but gives little compile-time protection against misspelled known keys.
+[`lib/claude/tool-formatters.ts`](../../lib/claude/tool-formatters.ts) accepts `Record<string, unknown>` for every tool formatter (`Write`, `Edit`, `Read`, `Bash`, `TodoWrite`, `Grep`, `Glob`, `Task`) and casts expected fields (`as string | undefined`, `as number | undefined`, etc.). This catches unknown keys at runtime but gives little compile-time protection against misspelled known keys.
 
 ### Agent event forwarding remains loosely typed
 
-`lib/agent-events.ts` represents forwarded raw payloads as `Record<string, unknown>` and exposes `rawEventToAgentEvent(...)` / `createHeartbeatThrottler(...)` with this shape. This keeps the transport flexible, but typed narrowing cannot be reused across parser and forwarding layers.
+[`lib/agent-events.ts`](../../lib/agent-events.ts) represents forwarded raw payloads as `Record<string, unknown>` and exposes `rawEventToAgentEvent(...)` / `createHeartbeatThrottler(...)` with this shape. This keeps the transport flexible, but typed narrowing cannot be reused across parser and forwarding layers.
 
 ## Findings
 

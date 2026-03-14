@@ -4,7 +4,7 @@ When a repository loop exits in `dust bucket`, the repository becomes permanentl
 
 ## Context
 
-The `dust bucket` repository loop (`lib/bucket/repository.ts:321`) runs `while (!repoState.stopRequested)`. If the loop exits for any reason other than `stopRequested` — an unhandled exception, a future "abort after N failures" mechanism, or any other early exit — the repository becomes a zombie:
+The `dust bucket` repository loop ([`lib/bucket/repository.ts:321`](../../lib/bucket/repository.ts)) runs `while (!repoState.stopRequested)`. If the loop exits for any reason other than `stopRequested` — an unhandled exception, a future "abort after N failures" mechanism, or any other early exit — the repository becomes a zombie:
 
 1. The `loopPromise` resolves (or rejects), but nothing monitors it
 2. The repository remains in `manager.repositories`, so `handleRepositoryList` (line 464) skips it on subsequent reconciliation: `if (!manager.repositories.has(name))` means the remote can't restart it by re-sending the same `repository-list`
@@ -16,10 +16,10 @@ This is especially relevant to [Run dust check before starting agent session](ru
 
 ## Related Code
 
-- `lib/bucket/repository.ts:321-338` - The repository loop (`while (!repoState.stopRequested)`)
-- `lib/bucket/repository.ts:447-475` - `handleRepositoryList` which reconciles repos but skips already-known ones
-- `lib/bucket/repository.ts:415-442` - `removeRepositoryFromManager` which sets `stopRequested`
-- `lib/cli/commands/bucket.ts:537-573` - WebSocket message handler that receives `repository-list`
+- [`lib/bucket/repository.ts:321-338`](../../lib/bucket/repository.ts) - The repository loop (`while (!repoState.stopRequested)`)
+- [`lib/bucket/repository.ts:447-475`](../../lib/bucket/repository.ts) - `handleRepositoryList` which reconciles repos but skips already-known ones
+- [`lib/bucket/repository.ts:415-442`](../../lib/bucket/repository.ts) - `removeRepositoryFromManager` which sets `stopRequested`
+- [`lib/cli/commands/bucket.ts:537-573`](../../lib/cli/commands/bucket.ts) - WebSocket message handler that receives `repository-list`
 
 ## Implementation Considerations
 

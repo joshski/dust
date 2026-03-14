@@ -4,14 +4,14 @@ Add a `dust how to audit` command that guides agents through audit workflows.
 
 ## Context
 
-The audit system (`lib/audits/stock-audits.ts`) provides 11 stock audits covering different aspects of codebase health. When an agent picks up an audit task, it receives the audit template content which includes scope, principles, and a definition of done checklist. However, the template doesn't explain:
+The audit system ([`lib/audits/stock-audits.ts`](../../lib/audits/stock-audits.ts)) provides 11 stock audits covering different aspects of codebase health. When an agent picks up an audit task, it receives the audit template content which includes scope, principles, and a definition of done checklist. However, the template doesn't explain:
 
 1. How to determine when this audit was last run
 2. How to consider results from previous audits
 3. How to navigate the general audit workflow
 4. How to create ideas from findings
 
-The existing `dust new idea` command (`lib/cli/commands/new-idea.ts:15-64`) provides a pattern for this: it emits step-by-step instructions using template variables (like `${vars.bin}`) so agents know exactly how to invoke dust commands in their environment. The `TemplateVars` interface in `agent-shared.ts` already supports `bin` (the dust command), `agentName`, and other context-aware values.
+The existing `dust new idea` command ([`lib/cli/commands/new-idea.ts:15-64`](../../lib/cli/commands/new-idea.ts)) provides a pattern for this: it emits step-by-step instructions using template variables (like `${vars.bin}`) so agents know exactly how to invoke dust commands in their environment. The `TemplateVars` interface in `agent-shared.ts` already supports `bin` (the dust command), `agentName`, and other context-aware values.
 
 ### Related ideas
 
@@ -33,7 +33,7 @@ Output would include step-by-step instructions:
 4. How to create ideas from findings (reference `dust new idea`)
 5. How to mark the audit as complete (delete task file, commit with "Audit: <name>" prefix)
 
-The command would use `TemplateVars` to include the correct dust command (e.g., `bin/dust`, `npx dust`) in its instructions, following the pattern established by `dust new idea` and `dust new task`.
+The command would use `TemplateVars` to include the correct dust command (e.g., [`bin/dust`](../../bin/dust), `npx dust`) in its instructions, following the pattern established by `dust new idea` and `dust new task`.
 
 ### Implementation approach
 

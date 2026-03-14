@@ -1,6 +1,6 @@
 # Windows support in openBrowser
 
-The `openBrowser` function in `lib/bucket/auth-server.ts` doesn't support Windows.
+The `openBrowser` function in [`lib/bucket/auth-server.ts`](../../lib/bucket/auth-server.ts) doesn't support Windows.
 
 ## Current State
 

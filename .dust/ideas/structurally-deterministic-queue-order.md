@@ -10,8 +10,8 @@ Currently, the `dust next` command determines queue order through a two-tier sys
 2. **Timestamp sort**: Among unblocked tasks, ordering uses git commit timestamps (oldest first, FIFO)
 
 The timestamp logic lives in two places:
-- `lib/cli/commands/next.ts:83-87` — fallback using `fileSystem.getFileCreationTime()`
-- `lib/git/file-sorter.ts` — production sorter using `git log -1 --format=%ct` to get commit timestamps
+- [`lib/cli/commands/next.ts:83-87`](../../lib/cli/commands/next.ts) — fallback using `fileSystem.getFileCreationTime()`
+- [`lib/git/file-sorter.ts`](../../lib/git/file-sorter.ts) — production sorter using `git log -1 --format=%ct` to get commit timestamps
 
 This approach has drawbacks:
 - **External dependency**: Relies on git history, which can be rewritten, missing, or inconsistent across clones

@@ -7,14 +7,14 @@ Add a stock audit that finds large interfaces/types that mix unrelated concerns.
 There is no stock audit dedicated to oversized or mixed-concern type contracts.
 
 Current examples:
-- `TerminalUIState` in `lib/bucket/terminal-ui.ts` (`140-160`) has 10 fields spanning repository data, UI selection state, scrolling, layout, and connection metadata.
-- `BucketState` in `lib/cli/commands/bucket.ts` similarly coordinates connection lifecycle, repositories, pending tool execution, and UI integration.
+- `TerminalUIState` in [`lib/bucket/terminal-ui.ts`](../../lib/bucket/terminal-ui.ts) (`140-160`) has 10 fields spanning repository data, UI selection state, scrolling, layout, and connection metadata.
+- `BucketState` in [`lib/cli/commands/bucket.ts`](../../lib/cli/commands/bucket.ts) similarly coordinates connection lifecycle, repositories, pending tool execution, and UI integration.
 
 Large cross-cutting interfaces increase coupling and make change-scoping harder.
 
 ## Proposed Audit
 
-Add a stock audit named `interface-bloat` in `lib/audits/stock-audits.ts`.
+Add a stock audit named `interface-bloat` in [`lib/audits/stock-audits.ts`](../../lib/audits/stock-audits.ts).
 
 Template focus:
 1. Interfaces/types with high field counts and mixed domains

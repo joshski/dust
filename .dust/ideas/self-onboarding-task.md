@@ -4,9 +4,9 @@ When running `dust init` in a new repository, automatically create a task that g
 
 ## Context
 
-The `dust init` command (`lib/cli/commands/init.ts:58-191`) currently performs these setup steps:
+The `dust init` command ([`lib/cli/commands/init.ts:58-191`](../../lib/cli/commands/init.ts)) currently performs these setup steps:
 
-1. Creates `.dust/` directory structure (principles, ideas, tasks, facts, config)
+1. Creates [`.dust/`](..) directory structure (principles, ideas, tasks, facts, config)
 2. Creates an initial fact file (`use-dust-for-planning.md`)
 3. Creates `settings.json` with auto-detected `dustCommand` and `checks` (test command)
 4. Creates or warns about `CLAUDE.md` and `AGENTS.md` with agent instructions
@@ -33,7 +33,7 @@ This aligns with the [Task-First Workflow](../principles/task-first-workflow.md)
 
 ## Implementation Notes
 
-Changes required in `lib/cli/commands/init.ts`:
+Changes required in [`lib/cli/commands/init.ts`](../../lib/cli/commands/init.ts):
 
 1. Add a new function to generate the onboarding task content
 2. Write the task file alongside other initialization artifacts

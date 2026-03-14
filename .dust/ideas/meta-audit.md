@@ -4,7 +4,7 @@ A stock audit that analyzes recent commits and creates ideas for relevant follow
 
 ## Context
 
-The current audit system (`lib/audits/stock-audits.ts`) provides 16 stock audits covering different aspects of codebase health. Each audit is independent and runs in isolation when invoked via `dust audit <name>`.
+The current audit system ([`lib/audits/stock-audits.ts`](../../lib/audits/stock-audits.ts)) provides 16 stock audits covering different aspects of codebase health. Each audit is independent and runs in isolation when invoked via `dust audit <name>`.
 
 Currently, selecting which audit to run is a manual decision. A user or agent must know what audits are available and which ones are relevant to recent work.
 
@@ -12,7 +12,7 @@ The `ideas-from-commits` audit already reviews recent commit history (last 20 co
 
 ## Proposed Implementation
 
-Add a new stock audit called `suggest-audits` in `lib/audits/stock-audits.ts`:
+Add a new stock audit called `suggest-audits` in [`lib/audits/stock-audits.ts`](../../lib/audits/stock-audits.ts):
 
 ```
 # Suggest Audits Based On Commits
@@ -58,7 +58,7 @@ For each suggested audit, create an idea file explaining why that audit is relev
 
 ## Implementation Details
 
-The implementation follows the existing stock audit pattern in `lib/audits/stock-audits.ts`:
+The implementation follows the existing stock audit pattern in [`lib/audits/stock-audits.ts`](../../lib/audits/stock-audits.ts):
 
 1. Add a `suggestAudits()` function that returns the audit template
 2. Register it in `stockAuditFunctions` with key `'suggest-audits'`

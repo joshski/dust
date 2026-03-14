@@ -6,7 +6,7 @@ Agents need more guidance when working in repositories with few established feat
 
 The dust system currently treats all ideas and tasks uniformly regardless of repository maturity or feature scope. An agent working in a fresh repository with no established patterns has the same instructions as one working in a mature codebase with hundreds of files. Similarly, an ambitious multi-feature request gets the same treatment as a small bug fix.
 
-The existing `createCaptureIdeaTask` function in `lib/artifacts/workflow-tasks.ts:274-350` generates task content that instructs agents to "research this idea thoroughly" but doesn't vary its guidance based on:
+The existing `createCaptureIdeaTask` function in [`lib/artifacts/workflow-tasks.ts:274-350`](../../lib/artifacts/workflow-tasks.ts) generates task content that instructs agents to "research this idea thoroughly" but doesn't vary its guidance based on:
 - Repository maturity (new vs established)
 - Feature scope (ambitious vs incremental)
 - Existing patterns (presence or absence of tech stack decisions)
@@ -114,7 +114,7 @@ Cons: Instructions can be ignored; adds to instruction length
 
 #### In task file templates
 
-The task templates in `lib/artifacts/workflow-tasks.ts` would include conditional guidance based on detected context signals.
+The task templates in [`lib/artifacts/workflow-tasks.ts`](../../lib/artifacts/workflow-tasks.ts) would include conditional guidance based on detected context signals.
 
 Pros: Guidance is directly in the task the agent is working on
 Cons: Requires passing context signals through the task creation pipeline
