@@ -98,6 +98,42 @@ describe('validatePatch', () => {
     expect(result.valid).toBe(true)
   })
 
+  test('patch with inline code path pointing to existing file', async () => {
+    const tree = {
+      project: {
+        '.dust': {
+          principles: {} as Record<string, string>,
+          facts: {} as Record<string, string>,
+          ideas: {} as Record<string, string>,
+          tasks: {} as Record<string, string>,
+        },
+        lib: { cli: { 'main.ts': 'content' } },
+      },
+    }
+    const fileSystem = createFileSystemEmulator(tree)
+    const result = await validatePatch(fileSystem, dustPath, {
+      files: {
+        'ideas/my-idea.md':
+          '# My Idea\n\nCheck `lib/cli/main.ts` for details.',
+      },
+    })
+    expect(result.valid).toBe(false)
+    expect(
+      result.violations.some(v => v.message.includes('should be a markdown link'))
+    ).toBe(true)
+  })
+
+  test('patch with inline code path to nonexistent file is valid', async () => {
+    const fileSystem = makeFs()
+    const result = await validatePatch(fileSystem, dustPath, {
+      files: {
+        'ideas/my-idea.md':
+          '# My Idea\n\nCheck `lib/cli/nonexistent.ts` for details.',
+      },
+    })
+    expect(result.violations.some(v => v.message.includes('should be a markdown link'))).toBe(false)
+  })
+
   test('principle patch with hierarchy validation', async () => {
     const fileSystem = makeFs({
       'principles/parent.md':

@@ -24,6 +24,7 @@ import {
   validateWorkflowTaskBodySection,
 } from '../../lint/validators/idea-validator'
 import {
+  validateInlineCodePaths,
   validateLinks,
   validatePrincipleHierarchyLinks,
   validateSemanticLinks,
@@ -120,6 +121,9 @@ export async function lintMarkdown(
     try {
       const content = await fileSystem.readFile(filePath)
       violations.push(...validateLinks(filePath, content, fileSystem))
+      violations.push(
+        ...validateInlineCodePaths(filePath, content, fileSystem, context.cwd)
+      )
     } catch (error) {
       // File may have been deleted between scan and read - skip it
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {

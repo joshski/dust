@@ -24,6 +24,7 @@ import {
   validateWorkflowTaskBodySection,
 } from '../lint/validators/idea-validator'
 import {
+  validateInlineCodePaths,
   validateLinks,
   validatePrincipleHierarchyLinks,
   validateSemanticLinks,
@@ -203,6 +204,10 @@ export async function validatePatch(
 
     // Link validation (uses overlay fs so links to existing files resolve)
     violations.push(...validateLinks(filePath, content, overlayFs))
+    const repoRoot = dustPath.replace(/\/.dust$/, '')
+    violations.push(
+      ...validateInlineCodePaths(filePath, content, overlayFs, repoRoot)
+    )
 
     // Content validation for content directories
     if (contentDirs.includes(dir)) {

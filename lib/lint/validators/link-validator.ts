@@ -7,6 +7,13 @@ import type { ReadableFileSystem } from '../../filesystem/types'
 import { MARKDOWN_LINK_PATTERN } from '../../markdown/markdown-utilities'
 import type { Violation } from './types'
 
+/**
+ * Pattern for backtick-quoted strings that look like file paths.
+ * Matches paths containing a `/` that aren't URLs or home-relative paths.
+ * Captures the path content inside the backticks.
+ */
+const INLINE_CODE_PATH_PATTERN = /`([^`\s]+\/[^`\s]*)`/g
+
 interface SemanticRule {
   section: string
   requiredPath: string
@@ -218,6 +225,63 @@ export function validatePrincipleHierarchyLinks(
         })
       }
       match = linkPattern.exec(line)
+    }
+  }
+
+  return violations
+}
+
+export function validateInlineCodePaths(
+  filePath: string,
+  content: string,
+  fileSystem: ReadableFileSystem,
+  repoRoot: string
+): Violation[] {
+  const violations: Violation[] = []
+  const lines = content.split('\n')
+
+  let inFencedCodeBlock = false
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+
+    if (line.trimStart().startsWith('```')) {
+      inFencedCodeBlock = !inFencedCodeBlock
+      continue
+    }
+
+    if (inFencedCodeBlock) continue
+
+    const pattern = new RegExp(INLINE_CODE_PATH_PATTERN.source, 'g')
+    let match: RegExpExecArray | null = pattern.exec(line)
+
+    while (match) {
+      const pathRef = match[1]
+
+      // Skip URLs and home-relative paths
+      if (
+        pathRef.startsWith('http://') ||
+        pathRef.startsWith('https://') ||
+        pathRef.startsWith('~')
+      ) {
+        match = pattern.exec(line)
+        continue
+      }
+
+      // Strip line number suffix (e.g. :16, :16-50)
+      const cleanPath = pathRef.replace(/:\d+(-\d+)?$/, '')
+
+      const resolvedPath = resolve(repoRoot, cleanPath)
+
+      if (fileSystem.exists(resolvedPath)) {
+        violations.push({
+          file: filePath,
+          message: `Inline code reference \`${pathRef}\` points to an existing file and should be a markdown link to ensure it stays valid`,
+          line: i + 1,
+        })
+      }
+
+      match = pattern.exec(line)
     }
   }
 

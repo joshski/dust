@@ -23,6 +23,7 @@ import {
   validateWorkflowTaskBodySection,
 } from '../../lint/validators/idea-validator'
 import {
+  validateInlineCodePaths,
   validateLinks,
   validatePrincipleHierarchyLinks,
   validateSemanticLinks,
@@ -769,6 +770,143 @@ Line 2
       fileSystem
     )
     expect(violations[0].line).toBe(3)
+  })
+})
+
+describe('validateInlineCodePaths', () => {
+  test('reports backtick path that points to an existing file', () => {
+    const content = 'Check `lib/cli/main.ts` for details.'
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        lib: { cli: { 'main.ts': 'content' } },
+      },
+    })
+
+    const violations = validateInlineCodePaths(
+      '/project/.dust/ideas/my-idea.md',
+      content,
+      fileSystem,
+      '/project'
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('lib/cli/main.ts')
+    expect(violations[0].message).toContain('should be a markdown link')
+  })
+
+  test('no violation when backtick path does not exist', () => {
+    const content = 'Check `lib/cli/nonexistent.ts` for details.'
+    const fileSystem = createFileSystemEmulator()
+
+    const violations = validateInlineCodePaths(
+      '/project/.dust/ideas/my-idea.md',
+      content,
+      fileSystem,
+      '/project'
+    )
+    expect(violations).toHaveLength(0)
+  })
+
+  test('strips line number suffix before checking', () => {
+    const content = 'See `lib/cli/main.ts:16-50` for the implementation.'
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        lib: { cli: { 'main.ts': 'content' } },
+      },
+    })
+
+    const violations = validateInlineCodePaths(
+      '/project/.dust/ideas/my-idea.md',
+      content,
+      fileSystem,
+      '/project'
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('lib/cli/main.ts:16-50')
+  })
+
+  test('skips URLs in backticks', () => {
+    const content = 'Visit `https://example.com/path/to/page` for docs.'
+    const fileSystem = createFileSystemEmulator()
+
+    const violations = validateInlineCodePaths(
+      '/project/.dust/ideas/my-idea.md',
+      content,
+      fileSystem,
+      '/project'
+    )
+    expect(violations).toHaveLength(0)
+  })
+
+  test('skips home-relative paths', () => {
+    const content = 'Stored in `~/.dust/credentials.json` by default.'
+    const fileSystem = createFileSystemEmulator()
+
+    const violations = validateInlineCodePaths(
+      '/project/.dust/ideas/my-idea.md',
+      content,
+      fileSystem,
+      '/project'
+    )
+    expect(violations).toHaveLength(0)
+  })
+
+  test('skips content inside fenced code blocks', () => {
+    const content = `Some text.
+
+\`\`\`typescript
+const path = 'lib/cli/main.ts'
+\`\`\`
+
+More text.`
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        lib: { cli: { 'main.ts': 'content' } },
+      },
+    })
+
+    const violations = validateInlineCodePaths(
+      '/project/.dust/ideas/my-idea.md',
+      content,
+      fileSystem,
+      '/project'
+    )
+    expect(violations).toHaveLength(0)
+  })
+
+  test('includes line numbers in violations', () => {
+    const content = `# My Idea
+
+Some intro text.
+
+Check \`lib/cli/main.ts\` for details.`
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        lib: { cli: { 'main.ts': 'content' } },
+      },
+    })
+
+    const violations = validateInlineCodePaths(
+      '/project/.dust/ideas/my-idea.md',
+      content,
+      fileSystem,
+      '/project'
+    )
+    expect(violations[0].line).toBe(5)
+  })
+
+  test('ignores backtick content without slashes', () => {
+    const content = 'Use `settings.json` to configure.'
+    const fileSystem = createFileSystemEmulator({
+      project: { 'settings.json': '{}' },
+    })
+
+    const violations = validateInlineCodePaths(
+      '/project/.dust/ideas/my-idea.md',
+      content,
+      fileSystem,
+      '/project'
+    )
+    expect(violations).toHaveLength(0)
   })
 })
 
