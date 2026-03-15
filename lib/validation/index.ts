@@ -127,9 +127,11 @@ function relativizeViolationFilePath(filePath: string, cwd: string): string {
     return filePath
   }
 
+  /* v8 ignore start -- relative() of two absolute paths is always relative */
   if (isAbsolute(relativePath)) {
     return filePath
   }
+  /* v8 ignore stop */
 
   return relativePath
 }

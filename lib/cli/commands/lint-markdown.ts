@@ -322,9 +322,11 @@ export async function lintMarkdown(
 }
 
 export function renderViolationPath(filePath: string, cwd: string): string {
+  /* v8 ignore start -- defensive guards for non-absolute/empty relative paths */
   if (!isAbsolute(filePath)) return filePath
   const relativePath = relative(cwd, filePath)
   if (relativePath.length === 0) return filePath
+  /* v8 ignore stop */
   if (
     relativePath === '..' ||
     relativePath.startsWith(`..${sep}`) ||

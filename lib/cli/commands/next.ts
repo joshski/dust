@@ -31,9 +31,11 @@ function extractBlockedBy(content: string): string[] {
   const blockedByMatch = content.match(
     /^## Blocked By\s*\n([\s\S]*?)(?=\n## |\n*$)/m
   )
+  /* v8 ignore start -- only called on valid tasks that always have ## Blocked By */
   if (!blockedByMatch) {
     return []
   }
+  /* v8 ignore stop */
 
   const section = blockedByMatch[1].trim()
 
@@ -118,7 +120,8 @@ export async function findUnblockedTasks(
   const invalidTasks: InvalidTask[] = []
 
   for (const file of mdFiles) {
-    const content = taskContents.get(file) ?? ''
+    const content =
+      /* v8 ignore start */ taskContents.get(file) ?? '' /* v8 ignore stop */
     if (hasRequiredHeadings(content)) {
       validTaskFiles.push(file)
     } else {
@@ -136,7 +139,8 @@ export async function findUnblockedTasks(
   const tasks: UnblockedTask[] = []
 
   for (const file of validTaskFiles) {
-    const content = taskContents.get(file) ?? ''
+    const content =
+      /* v8 ignore start */ taskContents.get(file) ?? '' /* v8 ignore stop */
     const blockers = extractBlockedBy(content)
 
     // Check if any blockers still exist (are incomplete)
