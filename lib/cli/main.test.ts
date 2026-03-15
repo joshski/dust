@@ -447,7 +447,14 @@ describe('multi-word command routing', () => {
   test('routes pick task correctly', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
-      project: { '.dust': { tasks: { 'a.md': '# A' } } },
+      project: {
+        '.dust': {
+          tasks: {
+            'a.md':
+              '# A\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
+        },
+      },
     })
 
     const result = await main({

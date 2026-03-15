@@ -20,6 +20,36 @@ function createDependencies(
   }
 }
 
+function createTaskContent(options: {
+  title?: string
+  description?: string
+  blockedBy?: string
+  definitionOfDone?: string
+}): string {
+  const {
+    title,
+    description,
+    blockedBy = '(none)',
+    definitionOfDone = '- [ ] Done',
+  } = options
+
+  const sections: string[] = []
+  if (title !== undefined) {
+    sections.push(`# ${title}`)
+  }
+
+  if (description) {
+    sections.push(description)
+  }
+
+  sections.push('## Blocked By')
+  sections.push(blockedBy)
+  sections.push('## Definition of Done')
+  sections.push(definitionOfDone)
+
+  return sections.join('\n\n')
+}
+
 describe('next command', () => {
   test('fails if .dust directory not found', async () => {
     const context = createContextEmulator()
@@ -62,12 +92,18 @@ describe('next command', () => {
     expect(context.stdoutLines).toHaveLength(0)
   })
 
-  test('lists tasks with no blockers section', async () => {
+  test('skips tasks missing required headings and keeps valid tasks', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          tasks: { 'simple-task.md': '# Simple Task\n\nJust do it.' },
+          tasks: {
+            'simple-task.md': createTaskContent({
+              title: 'Simple Task',
+              description: 'Just do it.',
+            }),
+            'malformed-task.md': '# Malformed Task\n\nMissing headings.',
+          },
         },
       },
     })
@@ -80,6 +116,7 @@ describe('next command', () => {
     expect(output).toContain('# Simple Task')
     expect(output).toContain('.dust/tasks/simple-task.md')
     expect(output).toContain('Just do it.')
+    expect(output).not.toContain('.dust/tasks/malformed-task.md')
   })
 
   test('filters out tasks with incomplete blockers', async () => {
@@ -88,9 +125,14 @@ describe('next command', () => {
       project: {
         '.dust': {
           tasks: {
-            'blocked-task.md':
-              '# Blocked Task\n\n## Blocked By\n\n- [Blocker](blocker-task.md)',
-            'blocker-task.md': '# Blocker Task\n\nDo first.',
+            'blocked-task.md': createTaskContent({
+              title: 'Blocked Task',
+              blockedBy: '- [Blocker](blocker-task.md)',
+            }),
+            'blocker-task.md': createTaskContent({
+              title: 'Blocker Task',
+              description: 'Do first.',
+            }),
           },
         },
       },
@@ -111,8 +153,11 @@ describe('next command', () => {
       project: {
         '.dust': {
           tasks: {
-            'unblocked-task.md':
-              '# Unblocked Task\n\nThis task is now unblocked.\n\n## Blocked By\n\n- [Completed Task](completed-task.md)',
+            'unblocked-task.md': createTaskContent({
+              title: 'Unblocked Task',
+              description: 'This task is now unblocked.',
+              blockedBy: '- [Completed Task](completed-task.md)',
+            }),
           },
         },
       },
@@ -133,8 +178,10 @@ describe('next command', () => {
       project: {
         '.dust': {
           tasks: {
-            'ready-task.md':
-              '# Ready Task\n\nThis task is ready to work on.\n\n## Blocked By\n\n(none)',
+            'ready-task.md': createTaskContent({
+              title: 'Ready Task',
+              description: 'This task is ready to work on.',
+            }),
           },
         },
       },
@@ -154,7 +201,11 @@ describe('next command', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          tasks: { 'no-title-task.md': 'This task has no heading' },
+          tasks: {
+            'no-title-task.md': createTaskContent({
+              description: 'This task has no heading',
+            }),
+          },
         },
       },
     })
@@ -174,8 +225,14 @@ describe('next command', () => {
       project: {
         '.dust': {
           tasks: {
-            'task-a.md': '# Task A\n\n## Blocked By\n\n- [Task B](task-b.md)',
-            'task-b.md': '# Task B\n\n## Blocked By\n\n- [Task A](task-a.md)',
+            'task-a.md': createTaskContent({
+              title: 'Task A',
+              blockedBy: '- [Task B](task-b.md)',
+            }),
+            'task-b.md': createTaskContent({
+              title: 'Task B',
+              blockedBy: '- [Task A](task-a.md)',
+            }),
           },
         },
       },
@@ -194,9 +251,13 @@ describe('next command', () => {
       project: {
         '.dust': {
           tasks: {
-            'multi-blocked.md':
-              '# Multi Blocked\n\n## Blocked By\n\n- [Done](done.md), [Still Exists](still-exists.md)',
-            'still-exists.md': '# Still Exists',
+            'multi-blocked.md': createTaskContent({
+              title: 'Multi Blocked',
+              blockedBy: '- [Done](done.md), [Still Exists](still-exists.md)',
+            }),
+            'still-exists.md': createTaskContent({
+              title: 'Still Exists',
+            }),
           },
         },
       },
@@ -222,9 +283,9 @@ describe('next command', () => {
       project: {
         '.dust': {
           tasks: {
-            'a-task.md': '# A Task',
-            'b-task.md': '# B Task',
-            'c-task.md': '# C Task',
+            'a-task.md': createTaskContent({ title: 'A Task' }),
+            'b-task.md': createTaskContent({ title: 'B Task' }),
+            'c-task.md': createTaskContent({ title: 'C Task' }),
           },
         },
       },
@@ -246,6 +307,26 @@ describe('next command', () => {
     ])
   })
 
+  test('returns empty when all tasks are invalid', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: {
+            'missing-blocked-by.md':
+              '# Missing Blocked By\n\n## Definition of Done',
+            'missing-dod.md': '# Missing DoD\n\n## Blocked By\n\n(none)',
+          },
+        },
+      },
+    })
+
+    const result = await next(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines).toHaveLength(0)
+  })
+
   test('lists multiple unblocked tasks sorted by creation time (FIFO)', async () => {
     const context = createContextEmulator()
     // Files are inserted in this order: zebra, alpha, middle
@@ -254,9 +335,9 @@ describe('next command', () => {
       project: {
         '.dust': {
           tasks: {
-            'zebra-task.md': '# Zebra Task',
-            'alpha-task.md': '# Alpha Task',
-            'middle-task.md': '# Middle Task',
+            'zebra-task.md': createTaskContent({ title: 'Zebra Task' }),
+            'alpha-task.md': createTaskContent({ title: 'Alpha Task' }),
+            'middle-task.md': createTaskContent({ title: 'Middle Task' }),
           },
         },
       },
@@ -286,8 +367,8 @@ describe('next command event emission', () => {
       project: {
         '.dust': {
           tasks: {
-            'first-task.md': '# First Task',
-            'second-task.md': '# Second Task',
+            'first-task.md': createTaskContent({ title: 'First Task' }),
+            'second-task.md': createTaskContent({ title: 'Second Task' }),
           },
         },
       },
@@ -319,7 +400,9 @@ describe('next command event emission', () => {
       project: {
         '.dust': {
           tasks: {
-            'no-title-task.md': 'This task has no heading',
+            'no-title-task.md': createTaskContent({
+              description: 'This task has no heading',
+            }),
           },
         },
       },
@@ -374,9 +457,14 @@ describe('next command event emission', () => {
       project: {
         '.dust': {
           tasks: {
-            'blocked-task.md':
-              '# Blocked Task\n\n## Blocked By\n\n- [Blocker](blocker-task.md)',
-            'blocker-task.md': '# Blocker Task\n\nDo first.',
+            'blocked-task.md': createTaskContent({
+              title: 'Blocked Task',
+              blockedBy: '- [Blocker](blocker-task.md)',
+            }),
+            'blocker-task.md': createTaskContent({
+              title: 'Blocker Task',
+              description: 'Do first.',
+            }),
           },
         },
       },
@@ -403,7 +491,10 @@ describe('next command event emission', () => {
       project: {
         '.dust': {
           tasks: {
-            'my-task.md': '# My Task\n\nDo this thing.',
+            'my-task.md': createTaskContent({
+              title: 'My Task',
+              description: 'Do this thing.',
+            }),
           },
         },
       },

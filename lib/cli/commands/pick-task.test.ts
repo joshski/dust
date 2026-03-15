@@ -8,6 +8,21 @@ import {
 import type { CommandDependencies } from '../types'
 import { pickTask } from './pick-task'
 
+function createTaskContent(title: string, description?: string): string {
+  const sections = [`# ${title}`]
+
+  if (description) {
+    sections.push(description)
+  }
+
+  sections.push('## Blocked By')
+  sections.push('(none)')
+  sections.push('## Definition of Done')
+  sections.push('- [ ] Done')
+
+  return sections.join('\n\n')
+}
+
 function createDependencies(fileSystemTree: FileSystemTree = {}): {
   context: ReturnType<typeof createContextEmulator>
   dependencies: CommandDependencies
@@ -32,7 +47,10 @@ describe('pick-task', () => {
       project: {
         '.dust': {
           tasks: {
-            'add-logging.md': '# Add Logging\n\nAdd structured logging.',
+            'add-logging.md': createTaskContent(
+              'Add Logging',
+              'Add structured logging.'
+            ),
           },
         },
       },
@@ -53,8 +71,8 @@ describe('pick-task', () => {
       project: {
         '.dust': {
           tasks: {
-            'task-a.md': '# Task A',
-            'task-b.md': '# Task B',
+            'task-a.md': createTaskContent('Task A'),
+            'task-b.md': createTaskContent('Task B'),
           },
         },
       },
@@ -96,7 +114,9 @@ describe('pick-task', () => {
     const { context, dependencies } = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'my-task.md': '# My Task\n\nDo the thing.' },
+          tasks: {
+            'my-task.md': createTaskContent('My Task', 'Do the thing.'),
+          },
         },
       },
     })

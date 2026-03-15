@@ -10,7 +10,7 @@ Surface clear diagnostics for tasks skipped by queue validation so operators can
 
 ## Blocked By
 
-- [Skip tasks missing required headings in next queue](./skip-tasks-missing-required-headings-in-next-queue.md)
+(none)
 
 ## Definition of Done
 

@@ -18,6 +18,13 @@ import type {
   FileSystem,
 } from '../types'
 
+function hasRequiredHeadings(content: string): boolean {
+  return (
+    /^## Blocked By\s*$/m.test(content) &&
+    /^## Definition of Done\s*$/m.test(content)
+  )
+}
+
 function extractBlockedBy(content: string): string[] {
   // Find the "## Blocked By" section
   const blockedByMatch = content.match(
@@ -91,14 +98,27 @@ export async function findUnblockedTasks(
     return { tasks: [] }
   }
 
-  // Create a set of existing task files for quick lookup
-  const existingTasks = new Set(mdFiles)
+  const taskContents = new Map<string, string>()
+  for (const file of mdFiles) {
+    const filePath = `${tasksPath}/${file}`
+    taskContents.set(file, await fileSystem.readFile(filePath))
+  }
+
+  const validTaskFiles = mdFiles.filter(file =>
+    hasRequiredHeadings(taskContents.get(file) ?? '')
+  )
+
+  if (validTaskFiles.length === 0) {
+    return { tasks: [] }
+  }
+
+  // Only valid task files participate in blocker evaluation.
+  const existingTasks = new Set(validTaskFiles)
 
   const tasks: UnblockedTask[] = []
 
-  for (const file of mdFiles) {
-    const filePath = `${tasksPath}/${file}`
-    const content = await fileSystem.readFile(filePath)
+  for (const file of validTaskFiles) {
+    const content = taskContents.get(file) ?? ''
     const blockers = extractBlockedBy(content)
 
     // Check if any blockers still exist (are incomplete)

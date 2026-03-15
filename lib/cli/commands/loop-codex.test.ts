@@ -11,6 +11,16 @@ import type { CommandDependencies } from '../types'
 import type { LoopDependencies } from './loop'
 import { createCodexDependencies, loopCodex } from './loop-codex'
 
+const VALID_TASK_CONTENT = `# Task
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- [ ] Done`
+
 function createDependencies(
   tree: Parameters<typeof createFileSystemEmulator>[0] = {}
 ): CommandDependencies {
@@ -107,7 +117,7 @@ describe('loopCodex', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: { 'task.md': VALID_TASK_CONTENT },
         },
       },
     })
@@ -128,7 +138,7 @@ describe('loopCodex', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: { 'task.md': VALID_TASK_CONTENT },
         },
       },
     })
@@ -151,7 +161,7 @@ describe('loopCodex', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: { 'task.md': VALID_TASK_CONTENT },
         },
       },
     })
