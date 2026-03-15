@@ -568,7 +568,8 @@ describe('createExpediteIdeaTask', () => {
           tasks: {},
           config: {
             hints: {
-              'expedite-idea.md': 'Check for existing tests before implementing.',
+              'expedite-idea.md':
+                'Check for existing tests before implementing.',
             },
           },
         },
