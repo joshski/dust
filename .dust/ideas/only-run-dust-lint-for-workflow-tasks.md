@@ -36,19 +36,12 @@ Workflow tasks only modify files within `.dust/` (ideas, tasks, facts, principle
 
 ## Proposed Changes
 
-### 1. Modify git pre-push hook behavior
+### Modify git pre-push hook behavior
 
 In `lib/cli/commands/pre-push.ts`, when the commits being pushed only contain `.dust/` file changes:
 
 - Run `lintMarkdown()` instead of `check()` (both from `lib/cli/commands/`)
 - Add a new `analyzeChangesForDustOnlyPattern()` function similar to the existing `analyzeChangesForTaskOnlyPattern()`
-
-### 2. Optionally modify `focus` command output
-
-When an agent runs `dust focus "<workflow task name>"`, detect if it's a workflow task and provide different instructions:
-
-- Run `dust lint` instead of `dust check`
-- Include a note that only `.dust/` files should be modified
 
 ## Resolved Questions
 
@@ -77,9 +70,8 @@ This idea supports:
 
 ## Implementation Notes
 
-Key files to modify:
+Key file to modify:
 
-1. **`lib/cli/commands/pre-push.ts`** - Add `.dust/`-only detection via `analyzeChangesForDustOnlyPattern()`, conditionally call `lintMarkdown()` instead of `check()`
-2. **`lib/cli/commands/focus.ts`** (optional) - Detect workflow tasks and provide tailored instructions
+**`lib/cli/commands/pre-push.ts`** - Add `.dust/`-only detection via `analyzeChangesForDustOnlyPattern()`, conditionally call `lintMarkdown()` instead of `check()`
 
 The existing `analyzeChangesForTaskOnlyPattern()` in `pre-push.ts` can serve as a template for the new `analyzeChangesForDustOnlyPattern()` function that checks if all changes are within `.dust/`.
