@@ -1049,8 +1049,8 @@ describe('check command event emission', () => {
 
     expect(startedEvents).toHaveLength(2)
     expect(passedEvents).toHaveLength(2)
-    expect(startedEvents.map(e => e.name).sort()).toEqual(['lint', 'test'])
-    expect(passedEvents.map(e => e.name).sort()).toEqual(['lint', 'test'])
+    expect(startedEvents.map(e => e.name).toSorted()).toEqual(['lint', 'test'])
+    expect(passedEvents.map(e => e.name).toSorted()).toEqual(['lint', 'test'])
   })
 
   test('emits check-started and check-failed for failing checks', async () => {
@@ -1106,7 +1106,7 @@ describe('check command event emission', () => {
     const startedEvents = context.emittedEvents.filter(
       e => e.type === 'check-started'
     )
-    expect(startedEvents.map(e => e.name).sort()).toEqual([
+    expect(startedEvents.map(e => e.name).toSorted()).toEqual([
       'biome',
       'lint .dust directory',
     ])

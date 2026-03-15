@@ -79,7 +79,7 @@ function normalizePackageJson(rawPackage: Record<string, unknown>): string {
 
   if (isObject(normalized.devDependencies)) {
     normalized.devDependencies = Object.fromEntries(
-      Object.entries(normalized.devDependencies).sort(([a], [b]) =>
+      Object.entries(normalized.devDependencies).toSorted(([a], [b]) =>
         a.localeCompare(b)
       )
     )

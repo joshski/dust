@@ -84,7 +84,7 @@ describe('createOverlayFileSystem', () => {
         ])
       )
       const entries = await overlay.readdir('dir')
-      expect(entries.sort()).toEqual(['file1.md', 'file2.md'])
+      expect(entries.toSorted()).toEqual(['file1.md', 'file2.md'])
     })
 
     test('includes entries from base filesystem', async () => {
@@ -107,7 +107,7 @@ describe('createOverlayFileSystem', () => {
         new Map([['dir/patch.md', 'patch content']])
       )
       const entries = await overlay.readdir('dir')
-      expect(entries.sort()).toEqual(['base.md', 'patch.md'])
+      expect(entries.toSorted()).toEqual(['base.md', 'patch.md'])
     })
 
     test('excludes deleted entries from base', async () => {

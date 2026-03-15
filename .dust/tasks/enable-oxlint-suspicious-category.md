@@ -22,7 +22,6 @@ The change involves updating the oxlint command in the check configuration to in
 
 ## Blocked By
 
-- [Fix no-array-sort Violations](fix-no-array-sort-violations.md)
 - [Fix prefer-add-event-listener Violations](fix-prefer-add-event-listener-violations.md)
 - [Fix consistent-function-scoping Violations](fix-consistent-function-scoping-violations.md)
 - [Fix no-shadow Violations](fix-no-shadow-violations.md)

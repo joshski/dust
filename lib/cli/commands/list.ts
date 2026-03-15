@@ -186,7 +186,7 @@ export async function list(
 
     const dirExists = fileSystem.exists(dirPath)
     const files = dirExists ? await fileSystem.readdir(dirPath) : []
-    const mdFiles = files.filter(f => f.endsWith('.md')).sort()
+    const mdFiles = files.filter(f => f.endsWith('.md')).toSorted()
 
     if (mdFiles.length === 0) {
       if (specificTypeRequested) {

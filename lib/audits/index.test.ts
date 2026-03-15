@@ -82,7 +82,7 @@ describe('buildAuditsRepository', () => {
       const audits = await repository.listAudits()
       const names = audits.map(a => a.name)
 
-      expect(names).toEqual([...names].sort())
+      expect(names).toEqual([...names].toSorted())
     })
   })
 

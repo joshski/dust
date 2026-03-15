@@ -74,7 +74,7 @@ function validatePatchRootEntries(
   patch: ArtifactPatch
 ): Violation[] {
   const violations: Violation[] = []
-  const sortedPaths = Object.keys(patch.files).sort()
+  const sortedPaths = Object.keys(patch.files).toSorted()
   const reportedUnexpectedRootDirectories = new Set<string>()
 
   for (const relativePath of sortedPaths) {

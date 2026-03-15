@@ -137,7 +137,7 @@ export function buildArtifactsRepository(
       return files
         .filter(f => f.endsWith('.md'))
         .map(f => f.replace(/\.md$/, ''))
-        .sort()
+        .toSorted()
     },
 
     async parsePrinciple(options: { slug: string }): Promise<Principle> {
@@ -153,7 +153,7 @@ export function buildArtifactsRepository(
       return files
         .filter(f => f.endsWith('.md'))
         .map(f => f.replace(/\.md$/, ''))
-        .sort()
+        .toSorted()
     },
 
     async parseFact(options: { slug: string }): Promise<Fact> {
@@ -169,7 +169,7 @@ export function buildArtifactsRepository(
       return files
         .filter(f => f.endsWith('.md'))
         .map(f => f.replace(/\.md$/, ''))
-        .sort()
+        .toSorted()
     },
 
     async parseTask(options: { slug: string }): Promise<Task> {
@@ -185,7 +185,7 @@ export function buildArtifactsRepository(
       return files
         .filter(f => f.endsWith('.md'))
         .map(f => f.replace(/\.md$/, ''))
-        .sort()
+        .toSorted()
     },
 
     async createRefineIdeaTask(options: {
@@ -330,7 +330,7 @@ export function buildReadOnlyArtifactsRepository(
       return files
         .filter(f => f.endsWith('.md'))
         .map(f => f.replace(/\.md$/, ''))
-        .sort()
+        .toSorted()
     },
 
     async parsePrinciple(options: { slug: string }): Promise<Principle> {
@@ -346,7 +346,7 @@ export function buildReadOnlyArtifactsRepository(
       return files
         .filter(f => f.endsWith('.md'))
         .map(f => f.replace(/\.md$/, ''))
-        .sort()
+        .toSorted()
     },
 
     async parseFact(options: { slug: string }): Promise<Fact> {
@@ -362,7 +362,7 @@ export function buildReadOnlyArtifactsRepository(
       return files
         .filter(f => f.endsWith('.md'))
         .map(f => f.replace(/\.md$/, ''))
-        .sort()
+        .toSorted()
     },
 
     async parseTask(options: { slug: string }): Promise<Task> {
@@ -378,7 +378,7 @@ export function buildReadOnlyArtifactsRepository(
       return files
         .filter(f => f.endsWith('.md'))
         .map(f => f.replace(/\.md$/, ''))
-        .sort()
+        .toSorted()
     },
 
     async findWorkflowTaskForIdea(options: {

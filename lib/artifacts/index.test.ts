@@ -776,7 +776,7 @@ Deploy the application.
     const graph = await repository.buildTaskGraph()
 
     expect(graph.nodes).toHaveLength(3)
-    expect(graph.nodes.map(n => n.task.slug).sort()).toEqual([
+    expect(graph.nodes.map(n => n.task.slug).toSorted()).toEqual([
       'add-tests',
       'deploy',
       'setup-ci',

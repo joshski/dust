@@ -1102,7 +1102,7 @@ const stockAuditFunctions: Record<string, () => string> = {
 
 export function loadStockAudits(): StockAudit[] {
   return Object.entries(stockAuditFunctions)
-    .sort(([a], [b]) => a.localeCompare(b))
+    .toSorted(([a], [b]) => a.localeCompare(b))
     .map(([name, render]) => {
       const template = render()
       const description = extractOpeningSentence(template)

@@ -53,7 +53,7 @@ function validateCheckEntry(
   for (const key of Object.keys(checkObj)) {
     if (!KNOWN_CHECK_KEYS.has(key)) {
       violations.push({
-        message: `Unknown key "${key}" in ${checkPath}. Known keys: ${[...KNOWN_CHECK_KEYS].sort().join(', ')}`,
+        message: `Unknown key "${key}" in ${checkPath}. Known keys: ${[...KNOWN_CHECK_KEYS].toSorted().join(', ')}`,
       })
     }
   }
@@ -184,7 +184,7 @@ export function validateSettingsJson(content: string): SettingsViolation[] {
   for (const key of Object.keys(settings)) {
     if (!KNOWN_SETTINGS_KEYS.has(key)) {
       violations.push({
-        message: `Unknown key "${key}" in settings.json. Known keys: ${[...KNOWN_SETTINGS_KEYS].sort().join(', ')}`,
+        message: `Unknown key "${key}" in settings.json. Known keys: ${[...KNOWN_SETTINGS_KEYS].toSorted().join(', ')}`,
       })
     }
   }

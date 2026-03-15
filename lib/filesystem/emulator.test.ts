@@ -53,6 +53,6 @@ describe('createFileSystemEmulator with flatFiles', () => {
     )
 
     const entries = await fileSystem.readdir('.dust/config/audits')
-    expect(entries.sort()).toEqual(['dead-code.md', 'security.md'])
+    expect(entries.toSorted()).toEqual(['dead-code.md', 'security.md'])
   })
 })

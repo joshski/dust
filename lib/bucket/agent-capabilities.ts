@@ -98,7 +98,7 @@ export async function fetchCodexModelsFromApi(
     return body.data
       .map(m => m.id)
       .filter(id => id.includes('codex'))
-      .sort()
+      .toSorted()
   } catch (error) {
     log(
       `OpenAI models API fetch failed: ${error instanceof Error ? error.message : String(error)}`

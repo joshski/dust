@@ -78,7 +78,7 @@ export async function validateDirectoryStructure(
   const allowedDirectories = new Set(EXPECTED_DIRECTORIES)
   const allowedRootFiles = new Set(EXPECTED_ROOT_FILES)
   const allowedRootList = [
-    ...[...allowedDirectories].sort().map(directory => `${directory}/`),
+    ...[...allowedDirectories].toSorted().map(directory => `${directory}/`),
     ...EXPECTED_ROOT_FILES,
   ].join(', ')
 
@@ -136,7 +136,7 @@ export async function validateDirectoryStructure(
     ...EXPECTED_CONFIG_DIRECTORIES.map(directory => `${directory}/`),
     ...EXPECTED_CONFIG_FILES,
   ]
-    .sort()
+    .toSorted()
     .join(', ')
 
   for (const entry of configEntries) {

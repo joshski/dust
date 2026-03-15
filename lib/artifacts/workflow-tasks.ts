@@ -140,7 +140,7 @@ export async function findAllWorkflowTasks(
 
   const files = await fileSystem.readdir(tasksPath)
 
-  for (const file of files.filter(f => f.endsWith('.md')).sort()) {
+  for (const file of files.filter(f => f.endsWith('.md')).toSorted()) {
     const content = await fileSystem.readFile(`${tasksPath}/${file}`)
     const titleMatch = content.match(/^#\s+(.+)$/m)
     if (!titleMatch) continue
@@ -197,7 +197,7 @@ export async function findWorkflowTaskForIdea(
 
   const files = await fileSystem.readdir(tasksPath)
 
-  for (const file of files.filter(f => f.endsWith('.md')).sort()) {
+  for (const file of files.filter(f => f.endsWith('.md')).toSorted()) {
     const content = await fileSystem.readFile(`${tasksPath}/${file}`)
 
     for (const { type, heading } of WORKFLOW_SECTION_HEADINGS) {

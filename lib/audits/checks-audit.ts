@@ -472,7 +472,7 @@ export function detectTechStack(projectFiles: string[]): TechStackDetection[] {
     detections.push(detection)
   }
 
-  return detections.sort((a, b) => a.ecosystem.localeCompare(b.ecosystem))
+  return detections.toSorted((a, b) => a.ecosystem.localeCompare(b.ecosystem))
 }
 
 /**

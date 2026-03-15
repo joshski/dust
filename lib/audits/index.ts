@@ -94,7 +94,7 @@ export function buildAuditsRepository(
     // Then, add user-configured audits (these take precedence)
     if (fileSystem.exists(userAuditsPath)) {
       const files = await fileSystem.readdir(userAuditsPath)
-      const mdFiles = files.filter(f => f.endsWith('.md')).sort()
+      const mdFiles = files.filter(f => f.endsWith('.md')).toSorted()
 
       for (const file of mdFiles) {
         const name = basename(file, '.md')
@@ -120,7 +120,7 @@ export function buildAuditsRepository(
   return {
     async listAudits(): Promise<Audit[]> {
       const auditsMap = await loadAllAudits()
-      return Array.from(auditsMap.values()).sort((a, b) =>
+      return Array.from(auditsMap.values()).toSorted((a, b) =>
         a.name.localeCompare(b.name)
       )
     },
