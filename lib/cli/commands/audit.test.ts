@@ -244,11 +244,11 @@ describe('audit command', () => {
     expect(names).toContain('ubiquitous-language')
     expect(names).toContain('ux-audit')
 
-    for (const audit of audits) {
-      expect(typeof audit.name).toBe('string')
-      expect(typeof audit.description).toBe('string')
-      expect(typeof audit.template).toBe('string')
-      expect(audit.template).toContain('# ')
+    for (const stockAudit of audits) {
+      expect(typeof stockAudit.name).toBe('string')
+      expect(typeof stockAudit.description).toBe('string')
+      expect(typeof stockAudit.template).toBe('string')
+      expect(stockAudit.template).toContain('# ')
     }
   })
 
@@ -277,15 +277,15 @@ describe('audit command', () => {
       'ux-audit',
     ]
     const audits = loadStockAudits()
-    for (const audit of audits) {
-      const goalsMatch = audit.template.match(
+    for (const stockAudit of audits) {
+      const goalsMatch = stockAudit.template.match(
         /## Principles\n\n([\s\S]*?)(?=\n## |\n*$)/
       )
       expect(
         goalsMatch,
-        `${audit.name} should have a Principles section`
+        `${stockAudit.name} should have a Principles section`
       ).not.toBeNull()
-      if (auditsWithPrinciples.includes(audit.name)) {
+      if (auditsWithPrinciples.includes(stockAudit.name)) {
         expect(goalsMatch?.[1].trim()).not.toBe('(none)')
       } else {
         expect(goalsMatch?.[1].trim()).toBe('(none)')
@@ -295,7 +295,7 @@ describe('audit command', () => {
 
   test('naming-consistency audit enforces factory-constructor high-confidence contract', () => {
     const namingConsistencyAudit = loadStockAudits().find(
-      audit => audit.name === 'naming-consistency'
+      a => a.name === 'naming-consistency'
     )
 
     expect(namingConsistencyAudit).toBeDefined()
@@ -324,7 +324,7 @@ describe('audit command', () => {
 
   test('primitive-obsession audit enforces existing-type and numeric high-confidence contract', () => {
     const primitiveObsessionAudit = loadStockAudits().find(
-      audit => audit.name === 'primitive-obsession'
+      a => a.name === 'primitive-obsession'
     )
 
     expect(primitiveObsessionAudit).toBeDefined()
@@ -358,7 +358,7 @@ describe('audit command', () => {
 
   test('single-responsibility-violations audit enforces responsibility-count high-confidence contract', () => {
     const singleResponsibilityAudit = loadStockAudits().find(
-      audit => audit.name === 'single-responsibility-violations'
+      a => a.name === 'single-responsibility-violations'
     )
 
     expect(singleResponsibilityAudit).toBeDefined()

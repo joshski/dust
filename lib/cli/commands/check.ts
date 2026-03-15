@@ -85,41 +85,41 @@ export function flushCompletedInDisplayOrder<T>(
 }
 
 async function runSingleCheck(
-  check: CheckConfig,
+  checkConfig: CheckConfig,
   cwd: string,
   runner: ShellRunner,
   emitEvent?: CommandContext['emitEvent'],
   clock: Clock = Date.now
 ): Promise<CheckResult> {
-  const timeoutMs = check.timeoutMilliseconds ?? DEFAULT_CHECK_TIMEOUT_MS
-  log(`running check ${check.name}: ${check.command}`)
-  emitEvent?.({ type: 'check-started', name: check.name })
+  const timeoutMs = checkConfig.timeoutMilliseconds ?? DEFAULT_CHECK_TIMEOUT_MS
+  log(`running check ${checkConfig.name}: ${checkConfig.command}`)
+  emitEvent?.({ type: 'check-started', name: checkConfig.name })
   const startTime = clock()
-  const result = await runner.run(check.command, cwd, timeoutMs)
+  const result = await runner.run(checkConfig.command, cwd, timeoutMs)
   const durationMs = clock() - startTime
   const status = result.timedOut
     ? 'timed out'
     : result.exitCode === 0
       ? 'passed'
       : 'failed'
-  log(`check ${check.name} ${status} (${durationMs}ms)`)
+  log(`check ${checkConfig.name} ${status} (${durationMs}ms)`)
   if (result.exitCode === 0) {
-    emitEvent?.({ type: 'check-passed', name: check.name, durationMs })
+    emitEvent?.({ type: 'check-passed', name: checkConfig.name, durationMs })
   } else {
     const failedEvent: Parameters<NonNullable<typeof emitEvent>>[0] = {
       type: 'check-failed',
-      name: check.name,
+      name: checkConfig.name,
       durationMs,
     }
     if (result.output) failedEvent.output = result.output
     emitEvent?.(failedEvent)
   }
   return {
-    name: check.name,
-    command: check.command,
+    name: checkConfig.name,
+    command: checkConfig.command,
     exitCode: result.exitCode,
     output: result.output,
-    hints: check.hints,
+    hints: checkConfig.hints,
     durationMs,
     timedOut: result.timedOut ?? false,
     timeoutSeconds: timeoutMs / 1000,

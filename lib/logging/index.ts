@@ -117,12 +117,12 @@ export function createLoggingService(
       activeFileSink = sinkForTesting ?? new FileSink(path)
     },
 
-    createLogger(name: string, options?: LoggerOptions): LogFn {
+    createLogger(name: string, loggerOptions?: LoggerOptions): LogFn {
       let perLoggerSink: LogSink | null | undefined
-      if (options?.file === false) {
+      if (loggerOptions?.file === false) {
         perLoggerSink = null
-      } else if (typeof options?.file === 'string') {
-        perLoggerSink = getOrCreateFileSink(options.file)
+      } else if (typeof loggerOptions?.file === 'string') {
+        perLoggerSink = getOrCreateFileSink(loggerOptions.file)
       }
 
       return (...messages: unknown[]) => {

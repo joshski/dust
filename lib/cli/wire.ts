@@ -99,11 +99,11 @@ export function createFileSystem(primitives: FileSystemPrimitives): FileSystem {
  * Creates a GlobScanner implementation from the readdir primitive
  */
 export function createGlobScanner(
-  readdir: FileSystemPrimitives['readdir']
+  readdirFn: FileSystemPrimitives['readdir']
 ): GlobScanner {
   return {
     scan: async function* (dir) {
-      for (const entry of await readdir(dir, { recursive: true })) {
+      for (const entry of await readdirFn(dir, { recursive: true })) {
         if (entry.endsWith('.md')) yield entry
       }
     },

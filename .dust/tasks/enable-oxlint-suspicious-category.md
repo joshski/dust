@@ -24,7 +24,6 @@ The change involves updating the oxlint command in the check configuration to in
 
 - [Fix prefer-add-event-listener Violations](fix-prefer-add-event-listener-violations.md)
 - [Fix consistent-function-scoping Violations](fix-consistent-function-scoping-violations.md)
-- [Fix no-shadow Violations](fix-no-shadow-violations.md)
 - [Fix require-yield Violations](fix-require-yield-violations.md)
 - [Fix no-control-regex Violations](fix-no-control-regex-violations.md)
 - [Fix no-unsafe-optional-chaining Violations](fix-no-unsafe-optional-chaining-violations.md)

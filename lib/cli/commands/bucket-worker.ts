@@ -454,11 +454,11 @@ export function waitForConnection(
   const wsUrl = getWebSocketUrl()
   const ws = bucketDeps.createWebSocket(wsUrl, token)
 
-  return new Promise((resolve, reject) => {
-    ws.onopen = () => resolve(ws)
-    ws.onerror = error => reject(new Error(error.message))
+  return new Promise((onConnect, onFail) => {
+    ws.onopen = () => onConnect(ws)
+    ws.onerror = error => onFail(new Error(error.message))
     ws.onclose = event =>
-      reject(new Error(`Connection closed (code ${event.code})`))
+      onFail(new Error(`Connection closed (code ${event.code})`))
   })
 }
 
@@ -1173,18 +1173,18 @@ export async function bucketWorker(
     }
 
     log(`forwarding tool execution: ${request.toolName} requestId=${requestId}`)
-    return new Promise<ToolExecutionResult>((resolve, reject) => {
+    return new Promise<ToolExecutionResult>((onSuccess, onError) => {
       const timeoutId = setTimeout(() => {
         pendingToolExecutions.delete(requestId)
         log(
           `tool execution timed out: ${request.toolName} requestId=${requestId}`
         )
-        reject(new Error('Timed out waiting for tool execution result'))
+        onError(new Error('Timed out waiting for tool execution result'))
       }, 30000)
 
       pendingToolExecutions.set(requestId, {
-        resolve,
-        reject,
+        resolve: onSuccess,
+        reject: onError,
         timeoutId,
       })
 
@@ -1195,7 +1195,7 @@ export async function bucketWorker(
         pendingToolExecutions.delete(requestId)
         const messageText =
           error instanceof Error ? error.message : String(error)
-        reject(
+        onError(
           new Error(`Failed to send tool execution request: ${messageText}`)
         )
       }
@@ -1208,10 +1208,10 @@ export async function bucketWorker(
       tuiHandle = setupTUI(state, bucketDeps)
     }
 
-    await new Promise<void>(resolve => {
+    await new Promise<void>(onComplete => {
       const doShutdown = async () => {
         await shutdown(state, bucketDeps, context)
-        resolve()
+        onComplete()
       }
 
       // Setup keypress handler
