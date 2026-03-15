@@ -18,12 +18,11 @@ import type { DockerSpawnConfig, OutputSink } from '../claude/types'
 import { manageGitHooks } from '../cli/commands/agent-shared'
 import {
   formatLoopEvent,
-  type LoopDependencies,
   type LoopEmitFn,
   type LoopEvent,
-  runOneIteration,
-  type SendAgentEventFn,
-} from '../cli/commands/loop'
+} from '../loop/events'
+import { type LoopDependencies, runOneIteration } from '../loop/iteration'
+import type { SendAgentEventFn } from '../loop/wire-events'
 import type { CommandDependencies } from '../cli/types'
 import {
   type RunnerDependencies as CodexRunnerDependencies,

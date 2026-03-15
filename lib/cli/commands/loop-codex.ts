@@ -7,12 +7,12 @@
  */
 
 import { run as codexRun } from '../../codex/run'
-import type { CommandDependencies, CommandResult } from '../types'
 import {
   createDefaultDependencies,
   type LoopDependencies,
-  loopClaude,
-} from './loop'
+} from '../../loop/iteration'
+import { runLoop } from '../../loop/loop'
+import type { CommandDependencies, CommandResult } from '../types'
 
 export function createCodexDependencies(
   overrides: Partial<LoopDependencies> = {}
@@ -29,7 +29,7 @@ export async function loopCodex(
   dependencies: CommandDependencies,
   loopDependencies: LoopDependencies = createCodexDependencies()
 ): Promise<CommandResult> {
-  return loopClaude(dependencies, {
+  return runLoop(dependencies, {
     ...loopDependencies,
     agentType: 'codex',
   })

@@ -8,7 +8,7 @@ import {
   stubEnv,
 } from '../../test/test-utilities'
 import type { CommandDependencies } from '../types'
-import type { LoopDependencies } from './loop'
+import type { LoopDependencies } from '../../loop/iteration'
 import { createCodexDependencies, loopCodex } from './loop-codex'
 
 const VALID_TASK_CONTENT = `# Task
