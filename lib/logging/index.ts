@@ -76,12 +76,15 @@ const DUST_LOG_FILE = 'DUST_LOG_FILE'
  * encapsulated inside the returned object.
  */
 export interface LoggingServiceOptions {
-  stdout?: (line: string) => boolean
   /**
    * Logging configuration from environment.
-   * When provided, uses these values instead of reading process.env directly.
+   * Required - callers must pass configuration explicitly.
    */
-  config?: LoggingConfig
+  config: LoggingConfig
+  /**
+   * Custom stdout writer (defaults to process.stdout.write).
+   */
+  stdout?: (line: string) => boolean
   /**
    * Current working directory for default log path resolution.
    * Defaults to process.cwd().
@@ -95,14 +98,14 @@ export interface LoggingServiceOptions {
 }
 
 export function createLoggingService(
-  options?: LoggingServiceOptions
+  options: LoggingServiceOptions
 ): LoggingService {
+  const { config } = options
   const writeStdout =
-    options?.stdout ?? process.stdout.write.bind(process.stdout)
-  const config = options?.config
-  const getCwd = options?.cwd ?? (() => process.cwd())
+    options.stdout ?? process.stdout.write.bind(process.stdout)
+  const getCwd = options.cwd ?? (() => process.cwd())
   const setLogFileEnv =
-    options?.setLogFileEnv ??
+    options.setLogFileEnv ??
     ((path: string) => (process.env[DUST_LOG_FILE] = path))
 
   let patterns: RegExp[] | null = null
@@ -113,8 +116,7 @@ export function createLoggingService(
   function init(): void {
     if (initialized) return
     initialized = true
-    const debugValue = config?.debug ?? process.env.DEBUG
-    const parsed = parsePatterns(debugValue)
+    const parsed = parsePatterns(config.debug)
     patterns = parsed.length > 0 ? parsed : null
   }
 
@@ -129,9 +131,8 @@ export function createLoggingService(
 
   return {
     enableFileLogs(scope: string, sinkForTesting?: LogSink): void {
-      const existing = config?.logFile ?? process.env[DUST_LOG_FILE]
-      const logDir =
-        config?.logDir ?? process.env.DUST_LOG_DIR ?? join(getCwd(), 'log')
+      const existing = config.logFile
+      const logDir = config.logDir ?? join(getCwd(), 'log')
       const path = existing ?? join(logDir, `${scope}.log`)
 
       if (!existing) {
@@ -175,7 +176,13 @@ export function createLoggingService(
 }
 
 /** Default service instance used by the module-level convenience exports. */
-const defaultService = createLoggingService()
+const defaultService = createLoggingService({
+  config: {
+    debug: process.env.DEBUG,
+    logDir: process.env.DUST_LOG_DIR,
+    logFile: process.env.DUST_LOG_FILE,
+  },
+})
 
 /**
  * Activate file logging for this command. See {@link LoggingService.enableFileLogs}.
