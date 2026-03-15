@@ -5,7 +5,7 @@
  * using the same validators as `dust lint`.
  */
 
-import { isAbsolute, relative } from 'node:path'
+import { relative } from 'node:path'
 import type { ReadableFileSystem } from '../filesystem/types'
 import {
   validateImperativeOpeningSentence,
@@ -126,12 +126,6 @@ function relativizeViolationFilePath(filePath: string, cwd: string): string {
   ) {
     return filePath
   }
-
-  /* v8 ignore start -- relative() of two absolute paths is always relative */
-  if (isAbsolute(relativePath)) {
-    return filePath
-  }
-  /* v8 ignore stop */
 
   return relativePath
 }
