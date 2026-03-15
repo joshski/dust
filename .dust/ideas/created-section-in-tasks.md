@@ -32,7 +32,7 @@ The `computeExecutionOrder` function in dustbucket (`src/lib/execution-order.ts`
 ## Related ideas
 
 - [Structurally deterministic queue order](structurally-deterministic-queue-order.md) — the broader idea of content-based ordering; this is a specific mechanism for tiebreaking among peers
-- [Skip invalid tasks in queue](skip-invalid-tasks-in-queue.md) — complements this by ensuring tasks have valid structure before entering the queue
+- [Skip tasks missing required headings in next queue](../tasks/skip-tasks-missing-required-headings-in-next-queue.md) — complements this by ensuring tasks have valid structure before entering the queue
 
 ## Open Questions
 
