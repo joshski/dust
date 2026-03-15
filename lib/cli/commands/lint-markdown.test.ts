@@ -3621,10 +3621,13 @@ This is a principle.
       },
     })
     // Make the scan function throw a non-ENOENT error
-    // biome-ignore lint/correctness/useYield: Intentionally throwing before yielding to test error handling
-    fileSystem.scan = async function* () {
-      throw new Error('Permission denied')
-    }
+    fileSystem.scan = (): AsyncIterable<string> => ({
+      [Symbol.asyncIterator]: () => ({
+        async next(): Promise<IteratorResult<string>> {
+          throw new Error('Permission denied')
+        },
+      }),
+    })
 
     await expect(
       lintMarkdown(createDependencies(context, fileSystem))

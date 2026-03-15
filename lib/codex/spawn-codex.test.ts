@@ -292,6 +292,7 @@ describe('spawnCodex', () => {
       createInterface: () => ({
         close: () => {},
         async *[Symbol.asyncIterator]() {
+          yield* []
           await new Promise(resolve => setTimeout(resolve, 0))
         },
       }),

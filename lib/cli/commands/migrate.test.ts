@@ -191,12 +191,15 @@ describe('migrate command', () => {
       },
     })
     // Simulate scan error after rename
-    // biome-ignore lint/correctness/useYield: throwing before yield intentionally
-    fileSystem.scan = async function* (_dir: string): AsyncGenerator<string> {
-      const error = new Error('ENOENT') as NodeJS.ErrnoException
-      error.code = 'ENOENT'
-      throw error
-    }
+    fileSystem.scan = (_dir: string): AsyncIterable<string> => ({
+      [Symbol.asyncIterator]: () => ({
+        async next() {
+          const error = new Error('ENOENT') as NodeJS.ErrnoException
+          error.code = 'ENOENT'
+          throw error
+        },
+      }),
+    })
 
     const result = await migrate(createDependencies(context, fileSystem))
 
@@ -216,10 +219,13 @@ describe('migrate command', () => {
       },
     })
     // Simulate a non-ENOENT scan error
-    // biome-ignore lint/correctness/useYield: throwing before yield intentionally
-    fileSystem.scan = async function* (_dir: string): AsyncGenerator<string> {
-      throw new Error('Permission denied')
-    }
+    fileSystem.scan = (_dir: string): AsyncIterable<string> => ({
+      [Symbol.asyncIterator]: () => ({
+        async next(): Promise<IteratorResult<string>> {
+          throw new Error('Permission denied')
+        },
+      }),
+    })
 
     await expect(
       migrate(createDependencies(context, fileSystem))
