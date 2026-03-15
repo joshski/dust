@@ -22,7 +22,7 @@ The settings module (`lib/config/settings.ts`) reads `BUN_INSTALL` and `DUST_EVE
 
 ## Blocked By
 
-- [Centralize Env Config Type](centralize-env-config-type.md)
+(none)
 
 ## Definition of Done
 

@@ -27,7 +27,7 @@ Some of these already accept `env` as a parameter with a default of `process.env
 
 ## Blocked By
 
-- [Centralize Env Config Type](centralize-env-config-type.md)
+(none)
 
 ## Definition of Done
 

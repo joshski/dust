@@ -21,7 +21,7 @@ The logging module (`lib/logging/index.ts`) currently reads `DEBUG`, `DUST_LOG_D
 
 ## Blocked By
 
-- [Centralize Env Config Type](centralize-env-config-type.md)
+(none)
 
 ## Definition of Done
 

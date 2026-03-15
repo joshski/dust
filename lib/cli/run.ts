@@ -6,7 +6,11 @@
  */
 import { type CommandEventMessage, createEventEmitter } from '../command-events'
 import { createCommandEventWriter } from '../command-events-transport'
+import { readEnvConfig } from '../env-config'
 import { defaultFileSystemPrimitives, wireEntry } from './wire'
+
+// Read environment configuration once at startup (imperative shell)
+const envConfig = readEnvConfig(process.env)
 
 const writeEvent = createCommandEventWriter(process.env, {
   fetch: (input, init) => fetch(input, init),

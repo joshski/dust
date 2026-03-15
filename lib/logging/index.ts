@@ -47,6 +47,7 @@
  */
 
 import { join } from 'node:path'
+import type { LoggingConfig } from '../env-config'
 import { formatLine, matchesAny, parsePatterns } from './match'
 import { FileSink, type LogSink } from './sink'
 
@@ -76,6 +77,21 @@ const DUST_LOG_FILE = 'DUST_LOG_FILE'
  */
 export interface LoggingServiceOptions {
   stdout?: (line: string) => boolean
+  /**
+   * Logging configuration from environment.
+   * When provided, uses these values instead of reading process.env directly.
+   */
+  config?: LoggingConfig
+  /**
+   * Current working directory for default log path resolution.
+   * Defaults to process.cwd().
+   */
+  cwd?: () => string
+  /**
+   * Function to set DUST_LOG_FILE for child process inheritance.
+   * Defaults to setting process.env[DUST_LOG_FILE].
+   */
+  setLogFileEnv?: (path: string) => void
 }
 
 export function createLoggingService(
@@ -83,6 +99,12 @@ export function createLoggingService(
 ): LoggingService {
   const writeStdout =
     options?.stdout ?? process.stdout.write.bind(process.stdout)
+  const config = options?.config
+  const getCwd = options?.cwd ?? (() => process.cwd())
+  const setLogFileEnv =
+    options?.setLogFileEnv ??
+    ((path: string) => (process.env[DUST_LOG_FILE] = path))
+
   let patterns: RegExp[] | null = null
   let initialized = false
   let activeFileSink: LogSink | null = null
@@ -91,7 +113,8 @@ export function createLoggingService(
   function init(): void {
     if (initialized) return
     initialized = true
-    const parsed = parsePatterns(process.env.DEBUG)
+    const debugValue = config?.debug ?? process.env.DEBUG
+    const parsed = parsePatterns(debugValue)
     patterns = parsed.length > 0 ? parsed : null
   }
 
@@ -106,12 +129,13 @@ export function createLoggingService(
 
   return {
     enableFileLogs(scope: string, sinkForTesting?: LogSink): void {
-      const existing = process.env[DUST_LOG_FILE]
-      const logDir = process.env.DUST_LOG_DIR ?? join(process.cwd(), 'log')
+      const existing = config?.logFile ?? process.env[DUST_LOG_FILE]
+      const logDir =
+        config?.logDir ?? process.env.DUST_LOG_DIR ?? join(getCwd(), 'log')
       const path = existing ?? join(logDir, `${scope}.log`)
 
       if (!existing) {
-        process.env[DUST_LOG_FILE] = path
+        setLogFileEnv(path)
       }
 
       activeFileSink = sinkForTesting ?? new FileSink(path)

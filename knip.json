@@ -2,6 +2,7 @@
   "entry": [
     "lib/cli/run.ts",
     "lib/types.ts",
+    "lib/env-config.ts",
     "lib/logging/index.ts",
     "lib/agents/detection.ts",
     "lib/artifacts/index.ts",

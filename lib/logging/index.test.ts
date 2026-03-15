@@ -335,3 +335,72 @@ describe('isEnabled', () => {
     })
   })
 })
+
+describe('createLoggingService with config option', () => {
+  test('uses config.debug instead of process.env.DEBUG', () => {
+    // Even without DEBUG set in process.env, config.debug enables logging
+    return stubEnv('DEBUG', undefined, () => {
+      const lines: string[] = []
+      const service = createLoggingService({
+        stdout: fakeStdout(lines),
+        config: { debug: '*', logDir: undefined, logFile: undefined },
+      })
+      const log = service.createLogger('dust:test')
+      log('hello')
+      expect(lines).toHaveLength(1)
+      expect(lines[0]).toContain('[dust:test]')
+    })
+  })
+
+  test('uses config.logDir instead of process.env.DUST_LOG_DIR', () => {
+    return stubEnv('DUST_LOG_FILE', undefined, () => {
+      return stubEnv('DUST_LOG_DIR', '/ignored', () => {
+        const captured: string[] = []
+        const service = createLoggingService({
+          config: {
+            debug: undefined,
+            logDir: '/custom/logs',
+            logFile: undefined,
+          },
+          setLogFileEnv: path => captured.push(path),
+        })
+        service.enableFileLogs('loop', fakeSink([]))
+        expect(captured).toHaveLength(1)
+        expect(captured[0]).toBe('/custom/logs/loop.log')
+      })
+    })
+  })
+
+  test('uses config.logFile instead of process.env.DUST_LOG_FILE', () => {
+    return stubEnv('DUST_LOG_FILE', '/ignored/path.log', () => {
+      const captured: string[] = []
+      const service = createLoggingService({
+        config: {
+          debug: undefined,
+          logDir: undefined,
+          logFile: '/inherited/check.log',
+        },
+        setLogFileEnv: path => captured.push(path),
+      })
+      service.enableFileLogs('loop', fakeSink([]))
+      // When logFile is set, setLogFileEnv should not be called
+      expect(captured).toHaveLength(0)
+    })
+  })
+
+  test('uses cwd option for default log directory', () => {
+    return stubEnv('DUST_LOG_FILE', undefined, () => {
+      return stubEnv('DUST_LOG_DIR', undefined, () => {
+        const captured: string[] = []
+        const service = createLoggingService({
+          config: { debug: undefined, logDir: undefined, logFile: undefined },
+          cwd: () => '/my/project',
+          setLogFileEnv: path => captured.push(path),
+        })
+        service.enableFileLogs('test', fakeSink([]))
+        expect(captured).toHaveLength(1)
+        expect(captured[0]).toBe('/my/project/log/test.log')
+      })
+    })
+  })
+})
