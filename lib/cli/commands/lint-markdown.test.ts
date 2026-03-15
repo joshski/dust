@@ -2876,11 +2876,12 @@ describe('validateIdeaTransitionTitle', () => {
 })
 
 describe('IDEA_TRANSITION_PREFIXES', () => {
-  test('exports the three known prefixes', () => {
+  test('exports the four known prefixes', () => {
     expect(IDEA_TRANSITION_PREFIXES).toEqual([
       'Refine Idea: ',
       'Decompose Idea: ',
       'Shelve Idea: ',
+      'Expedite Idea: ',
     ])
   })
 })

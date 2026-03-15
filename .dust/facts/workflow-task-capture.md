@@ -22,6 +22,8 @@ Example:
 - Filename: `expedite-idea-smarter-error-recovery.md`
 - Definition of done allows either direct implementation or decomposition into narrowly scoped tasks.
 
+Expedite tasks can also be created as transition tasks via `createExpediteIdeaTask(...)`, which adds an "Expedites Idea" back-reference section linking to the source idea. These transition-style expedite tasks are tracked by `findAllWorkflowTasks` and `findWorkflowTaskForIdea`.
+
 ## Parsing Existing Capture Tasks
 
 `parseCaptureIdeaTask({ taskSlug })`:

@@ -8,6 +8,7 @@
 - `createRefineIdeaTask({ ideaSlug, description?, openQuestionResponses?, dustCommand? })`
 - `createDecomposeIdeaTask({ ideaSlug, description?, openQuestionResponses?, dustCommand? })`
 - `createShelveIdeaTask({ ideaSlug, description?, dustCommand? })`
+- `createExpediteIdeaTask({ ideaSlug, description?, dustCommand? })`
 
 ## Read Methods
 

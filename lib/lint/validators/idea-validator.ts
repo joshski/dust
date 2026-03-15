@@ -17,6 +17,7 @@ const WORKFLOW_PREFIX_TO_SECTION: Record<string, string> = {
   'Refine Idea: ': 'Refines Idea',
   'Decompose Idea: ': 'Decomposes Idea',
   'Shelve Idea: ': 'Shelves Idea',
+  'Expedite Idea: ': 'Expedites Idea',
 }
 
 export function validateIdeaOpenQuestions(

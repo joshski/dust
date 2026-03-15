@@ -5,6 +5,7 @@ export const IDEA_TRANSITION_PREFIXES = [
   'Refine Idea: ',
   'Decompose Idea: ',
   'Shelve Idea: ',
+  'Expedite Idea: ',
 ]
 
 export const CAPTURE_IDEA_PREFIX = 'Add Idea: '
@@ -40,7 +41,11 @@ export function titleToFilename(title: string): string {
     .replace(/^-|-$/g, '')}.md`
 }
 
-export type WorkflowTaskType = 'refine-idea' | 'decompose-idea' | 'shelve-idea'
+export type WorkflowTaskType =
+  | 'refine-idea'
+  | 'decompose-idea'
+  | 'shelve-idea'
+  | 'expedite-idea'
 type WorkflowHintType = WorkflowTaskType | 'add-idea' | 'expedite-idea'
 
 const WORKFLOW_HINT_PATHS: Record<WorkflowHintType, string> = {
@@ -75,6 +80,7 @@ const WORKFLOW_SECTION_HEADINGS: { type: WorkflowTaskType; heading: string }[] =
     { type: 'refine-idea', heading: 'Refines Idea' },
     { type: 'decompose-idea', heading: 'Decomposes Idea' },
     { type: 'shelve-idea', heading: 'Shelves Idea' },
+    { type: 'expedite-idea', heading: 'Expedites Idea' },
   ]
 
 function extractIdeaSlugFromSection(
@@ -479,6 +485,32 @@ export async function createShelveIdeaTask(
       `Archive this idea and remove it from the active backlog. See [${ideaTitle}](../ideas/${ideaSlug}.md).`,
     ['Idea file is deleted', 'Rationale is recorded in the commit message'],
     'Shelves Idea',
+    { description }
+  )
+}
+
+export async function createExpediteIdeaTask(
+  fileSystem: FileSystem,
+  dustPath: string,
+  ideaSlug: string,
+  description?: string,
+  dustCommand?: string
+): Promise<CreateIdeaTransitionTaskResult> {
+  const cmd = dustCommand ?? 'dust'
+  return createIdeaTransitionTask(
+    fileSystem,
+    dustPath,
+    'expedite-idea',
+    'Expedite Idea: ',
+    ideaSlug,
+    ideaTitle =>
+      `Research this idea briefly. If confident the implementation is straightforward (clear scope, minimal risk, no open questions), implement directly and commit. Otherwise, create one or more narrowly-scoped task files in \`.dust/tasks/\`. Run \`${cmd} principles\` and \`${cmd} facts\` for relevant context. See [${ideaTitle}](../ideas/${ideaSlug}.md).`,
+    [
+      'Idea is implemented directly OR one or more new tasks are created in `.dust/tasks/`',
+      'If tasks were created, they link to relevant principles from `.dust/principles/`',
+      'Changes are committed with a clear commit message',
+    ],
+    'Expedites Idea',
     { description }
   )
 }

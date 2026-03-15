@@ -19,10 +19,15 @@ import type {
   ReadableFileSystem,
 } from '../types'
 
-type IdeaStatus = 'draft' | 'refining' | 'decomposing' | 'shelving'
+type IdeaStatus =
+  | 'draft'
+  | 'refining'
+  | 'decomposing'
+  | 'shelving'
+  | 'expediting'
 
 function workflowTypeToStatus(
-  type: 'refine-idea' | 'decompose-idea' | 'shelve-idea'
+  type: 'refine-idea' | 'decompose-idea' | 'shelve-idea' | 'expedite-idea'
 ): IdeaStatus {
   switch (type) {
     case 'refine-idea':
@@ -31,6 +36,8 @@ function workflowTypeToStatus(
       return 'decomposing'
     case 'shelve-idea':
       return 'shelving'
+    case 'expedite-idea':
+      return 'expediting'
   }
 }
 

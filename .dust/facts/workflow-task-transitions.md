@@ -9,6 +9,7 @@ Transition tasks operate on an existing idea and use `IDEA_TRANSITION_PREFIXES`.
 - `Refine Idea: <Idea Title>` -> `refine-idea-<idea-title>.md`
 - `Decompose Idea: <Idea Title>` -> `decompose-idea-<idea-title>.md`
 - `Shelve Idea: <Idea Title>` -> `shelve-idea-<idea-title>.md`
+- `Expedite Idea: <Idea Title>` -> `expedite-idea-<idea-title>.md`
 
 Filename generation uses `titleToFilename(...)`:
 - Lowercases text
@@ -28,6 +29,7 @@ Association is section-based, not title-based.
 - `## Refines Idea`
 - `## Decomposes Idea`
 - `## Shelves Idea`
+- `## Expedites Idea`
 
 Then it extracts the first markdown link in that section.
 
@@ -48,5 +50,5 @@ If the idea file does not exist, it throws. If no matching section link is found
 `lib/lint/validators/idea-validator.ts` validates that:
 
 1. The idea title after a transition prefix maps to an existing `.dust/ideas/*.md` file.
-2. The required operation section exists (`Refines/Decomposes/Shelves Idea`).
+2. The required operation section exists (`Refines/Decomposes/Shelves/Expedites Idea`).
 3. The operation section links to an existing idea file.

@@ -4,6 +4,7 @@ import {
   CAPTURE_IDEA_PREFIX,
   createIdeaTask,
   createRefineIdeaTask,
+  createExpediteIdeaTask,
   createShelveIdeaTask,
   decomposeIdea,
   EXPEDITE_IDEA_PREFIX,
@@ -22,6 +23,7 @@ describe('IDEA_TRANSITION_PREFIXES', () => {
       'Refine Idea: ',
       'Decompose Idea: ',
       'Shelve Idea: ',
+      'Expedite Idea: ',
     ])
   })
 })
@@ -504,6 +506,101 @@ describe('createShelveIdeaTask', () => {
   })
 })
 
+describe('createExpediteIdeaTask', () => {
+  test('creates an expedite-idea task with auto-filled defaults', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createExpediteIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+
+    expect(result.filePath).toBe(
+      '/project/.dust/tasks/expedite-idea-progress-broadcasting.md'
+    )
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('# Expedite Idea: Progress Broadcasting')
+    expect(content).toContain(
+      'See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
+    )
+    expect(content).toContain('## Blocked By\n\n(none)')
+    expect(content).toContain(
+      '- Idea is implemented directly OR one or more new tasks are created in `.dust/tasks/`'
+    )
+  })
+
+  test('includes Expedites Idea section with link to target idea', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createExpediteIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('## Expedites Idea')
+    expect(content).toContain(
+      '- [Progress Broadcasting](../ideas/progress-broadcasting.md)'
+    )
+  })
+
+  test('includes optional description as a new paragraph', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createExpediteIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting',
+      'Focus on the WebSocket approach.'
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('Focus on the WebSocket approach.')
+  })
+
+  test('renders workflow hint in Repository Hints section when expedite-idea.md hint file exists', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'progress-broadcasting.md':
+              '# Progress Broadcasting\n\nA great idea.',
+          },
+          tasks: {},
+          config: {
+            hints: {
+              'expedite-idea.md': 'Check for existing tests before implementing.',
+            },
+          },
+        },
+      },
+    })
+    const result = await createExpediteIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('## Repository Hints')
+    expect(content).toContain('Check for existing tests before implementing.')
+  })
+
+  test('uses custom dust command in opening sentence', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createExpediteIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting',
+      undefined,
+      'bin/dust'
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('`bin/dust principles`')
+    expect(content).toContain('`bin/dust facts`')
+  })
+})
+
 describe('createIdeaTask', () => {
   test('creates a capture-idea task with title and description', async () => {
     const fileSystem = createFileSystem()
@@ -839,6 +936,26 @@ describe('findWorkflowTaskForIdea', () => {
       type: 'shelve-idea',
       ideaSlug: 'progress-broadcasting',
       taskSlug: 'shelve-idea-progress-broadcasting',
+      resolvedQuestions: [],
+    })
+  })
+
+  test('finds an expedite task', async () => {
+    const fileSystem = createFileSystem()
+    await createExpediteIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+    const result = await findWorkflowTaskForIdea(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+    expect(result).toEqual({
+      type: 'expedite-idea',
+      ideaSlug: 'progress-broadcasting',
+      taskSlug: 'expedite-idea-progress-broadcasting',
       resolvedQuestions: [],
     })
   })
@@ -1188,6 +1305,17 @@ describe('generated tasks pass lint rules', () => {
     expect(lintTaskFile(result.filePath, content)).toEqual([])
   })
 
+  test('createExpediteIdeaTask produces a valid task file', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createExpediteIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(lintTaskFile(result.filePath, content)).toEqual([])
+  })
+
   test('createIdeaTask produces a valid task file', async () => {
     const fileSystem = createFileSystem()
     const result = await createIdeaTask(fileSystem, '/project/.dust', {
@@ -1423,6 +1551,27 @@ describe('findAllWorkflowTasks', () => {
       type: 'shelve-idea',
       ideaSlug: 'idea-b',
       taskSlug: 'shelve-idea-idea-b',
+      resolvedQuestions: [],
+    })
+  })
+
+  test('includes expedite tasks in workflow task map', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'idea-c.md': '# Idea C\n\nDescription.',
+          },
+          tasks: {},
+        },
+      },
+    })
+    await createExpediteIdeaTask(fileSystem, '/project/.dust', 'idea-c')
+    const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
+    expect(result.workflowTasksByIdeaSlug.get('idea-c')).toEqual({
+      type: 'expedite-idea',
+      ideaSlug: 'idea-c',
+      taskSlug: 'expedite-idea-idea-c',
       resolvedQuestions: [],
     })
   })

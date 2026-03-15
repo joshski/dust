@@ -17,6 +17,7 @@ import {
   CAPTURE_IDEA_PREFIX,
   type CreateIdeaTransitionTaskResult,
   createIdeaTask as createIdeaTaskImpl,
+  createExpediteIdeaTask as createExpediteIdeaTaskImpl,
   createRefineIdeaTask as createRefineIdeaTaskImpl,
   createShelveIdeaTask as createShelveIdeaTaskImpl,
   type DecomposeIdeaOptions,
@@ -90,6 +91,11 @@ export interface ArtifactsRepository {
     options: DecomposeIdeaOptions & { dustCommand?: string }
   ): Promise<CreateIdeaTransitionTaskResult>
   createShelveIdeaTask(options: {
+    ideaSlug: string
+    description?: string
+    dustCommand?: string
+  }): Promise<CreateIdeaTransitionTaskResult>
+  createExpediteIdeaTask(options: {
     ideaSlug: string
     description?: string
     dustCommand?: string
@@ -215,6 +221,20 @@ export function buildArtifactsRepository(
       dustCommand?: string
     }): Promise<CreateIdeaTransitionTaskResult> {
       return createShelveIdeaTaskImpl(
+        fileSystem,
+        dustPath,
+        options.ideaSlug,
+        options.description,
+        options.dustCommand
+      )
+    },
+
+    async createExpediteIdeaTask(options: {
+      ideaSlug: string
+      description?: string
+      dustCommand?: string
+    }): Promise<CreateIdeaTransitionTaskResult> {
+      return createExpediteIdeaTaskImpl(
         fileSystem,
         dustPath,
         options.ideaSlug,
