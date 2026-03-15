@@ -134,11 +134,11 @@ export async function startCommandEventsProxy(
           handlers.forwardEvent(parsedBody)
           log(`forwarded event: ${parsedBody.event.type}`)
           response.writeHead(202).end('Accepted')
-        } catch (error) /* v8 ignore start */ {
+        } catch (error) {
           const msg = error instanceof Error ? error.message : String(error)
           log(`event forwarding failed: ${msg}`)
           response.writeHead(PROXY_ERROR_STATUS).end('Event forwarding failed')
-        } /* v8 ignore stop */
+        }
         return
       }
 

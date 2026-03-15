@@ -185,10 +185,25 @@ describe('startCommandEventsProxy', () => {
     expect(response.statusCode).toBe(413)
   })
 
-  test('returns 502 when forward handler throws', async () => {
+  test('returns 502 when forward handler throws an Error', async () => {
     await createProxy({
       forwardEvent: () => {
         throw new Error('cannot forward')
+      },
+    })
+    const response = await postJson(
+      getProxyPort(),
+      '/events',
+      'POST',
+      JSON.stringify(testMessage)
+    )
+    expect(response.statusCode).toBe(502)
+  })
+
+  test('returns 502 when forward handler throws a non-Error', async () => {
+    await createProxy({
+      forwardEvent: () => {
+        throw 'string error'
       },
     })
     const response = await postJson(
