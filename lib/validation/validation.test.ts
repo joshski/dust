@@ -39,14 +39,23 @@ describe('validatePatch', () => {
 
   test('patch with filename validation error', async () => {
     const fileSystem = makeFs()
-    const result = await validatePatch(fileSystem, dustPath, {
-      files: {
-        'tasks/My Task.md': '# My Task\n\nDo something important.',
+    const result = await validatePatch(
+      fileSystem,
+      dustPath,
+      {
+        files: {
+          'tasks/My Task.md': '# My Task\n\nDo something important.',
+        },
       },
-    })
+      {
+        cwd: '/project',
+      }
+    )
     expect(result.valid).toBe(false)
-    expect(result.violations.some(v => v.file.includes('My Task.md'))).toBe(
-      true
+    expect(result.violations).toContainEqual(
+      expect.objectContaining({
+        file: '.dust/tasks/My Task.md',
+      })
     )
   })
 
@@ -136,15 +145,22 @@ describe('validatePatch', () => {
 
   test('rejects unexpected root directory introduced by patch', async () => {
     const fileSystem = makeFs()
-    const result = await validatePatch(fileSystem, dustPath, {
-      files: {
-        'templates/template.md': '# Template\n\nTemplate content.',
+    const result = await validatePatch(
+      fileSystem,
+      dustPath,
+      {
+        files: {
+          'templates/template.md': '# Template\n\nTemplate content.',
+        },
       },
-    })
+      {
+        cwd: '/project',
+      }
+    )
 
     expect(result.valid).toBe(false)
     expect(result.violations).toContainEqual({
-      file: '/project/.dust/templates',
+      file: '.dust/templates',
       message:
         'Unexpected directory "templates" in .dust/. Allowed root paths: config/, facts/, ideas/, principles/, tasks/, repository.md',
     })
@@ -152,15 +168,22 @@ describe('validatePatch', () => {
 
   test('rejects unexpected root file introduced by patch', async () => {
     const fileSystem = makeFs()
-    const result = await validatePatch(fileSystem, dustPath, {
-      files: {
-        'notes.md': '# Notes\n\nSome notes.',
+    const result = await validatePatch(
+      fileSystem,
+      dustPath,
+      {
+        files: {
+          'notes.md': '# Notes\n\nSome notes.',
+        },
       },
-    })
+      {
+        cwd: '/project',
+      }
+    )
 
     expect(result.valid).toBe(false)
     expect(result.violations).toContainEqual({
-      file: '/project/.dust/notes.md',
+      file: '.dust/notes.md',
       message:
         'Unexpected file "notes.md" in .dust/. Allowed root paths: config/, facts/, ideas/, principles/, tasks/, repository.md',
     })
@@ -192,16 +215,23 @@ describe('validatePatch', () => {
 
   test('reports an unexpected root directory only once per directory', async () => {
     const fileSystem = makeFs()
-    const result = await validatePatch(fileSystem, dustPath, {
-      files: {
-        'templates/a.md': '# A\n\nA.',
-        'templates/b.md': '# B\n\nB.',
+    const result = await validatePatch(
+      fileSystem,
+      dustPath,
+      {
+        files: {
+          'templates/a.md': '# A\n\nA.',
+          'templates/b.md': '# B\n\nB.',
+        },
       },
-    })
+      {
+        cwd: '/project',
+      }
+    )
 
     expect(result.valid).toBe(false)
     expect(
-      result.violations.filter(v => v.file === '/project/.dust/templates')
+      result.violations.filter(v => v.file === '.dust/templates')
     ).toHaveLength(1)
   })
 
@@ -370,20 +400,49 @@ describe('validatePatch', () => {
       'principles/parent.md':
         '# Parent\n\nThis is the parent.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
     })
-    const result = await validatePatch(fileSystem, dustPath, {
-      files: {
-        'principles/child.md':
-          '# Child\n\nThis is the child.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
+    const result = await validatePatch(
+      fileSystem,
+      dustPath,
+      {
+        files: {
+          'principles/child.md':
+            '# Child\n\nThis is the child.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
+        },
       },
-    })
+      {
+        cwd: '/project',
+      }
+    )
     // The non-.md file generates a lint violation but doesn't crash the validation
     expect(result.violations).toEqual([
       {
-        file: '/project/.dust/principles/notes.txt',
+        file: '.dust/principles/notes.txt',
         message: 'Non-markdown file "notes.txt" found in content directory',
       },
     ])
     expect(result.valid).toBe(false)
+  })
+
+  test('keeps absolute paths when violation files are outside cwd', async () => {
+    const fileSystem = makeFs()
+    const result = await validatePatch(
+      fileSystem,
+      dustPath,
+      {
+        files: {
+          'templates/template.md': '# Template\n\nTemplate content.',
+        },
+      },
+      {
+        cwd: '/workspace',
+      }
+    )
+
+    expect(result.violations).toContainEqual({
+      file: '/project/.dust/templates',
+      message:
+        'Unexpected directory "templates" in .dust/. Allowed root paths: config/, facts/, ideas/, principles/, tasks/, repository.md',
+    })
   })
 
   test('missing opening sentence in content file', async () => {

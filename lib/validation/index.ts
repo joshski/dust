@@ -5,6 +5,7 @@
  * using the same validators as `dust lint`.
  */
 
+import { isAbsolute, relative } from 'node:path'
 import type { ReadableFileSystem } from '../filesystem/types'
 import {
   validateImperativeOpeningSentence,
@@ -48,6 +49,10 @@ export interface ArtifactPatch {
 export interface ValidationResult {
   valid: boolean
   violations: Violation[]
+}
+
+export interface ValidatePatchOptions {
+  cwd?: string
 }
 
 const ALLOWED_ROOT_DIRECTORIES = [
@@ -110,6 +115,35 @@ function validatePatchRootEntries(
   return violations
 }
 
+function relativizeViolationFilePath(filePath: string, cwd: string): string {
+  const relativePath = relative(cwd, filePath)
+  if (
+    relativePath === '' ||
+    relativePath === '.' ||
+    relativePath === '..' ||
+    relativePath.startsWith('../') ||
+    relativePath.startsWith('..\\')
+  ) {
+    return filePath
+  }
+
+  if (isAbsolute(relativePath)) {
+    return filePath
+  }
+
+  return relativePath
+}
+
+function relativizeViolations(
+  violations: Violation[],
+  cwd: string
+): Violation[] {
+  return violations.map(violation => ({
+    ...violation,
+    file: relativizeViolationFilePath(violation.file, cwd),
+  }))
+}
+
 /**
  * Validates a patch of artifact changes against existing .dust/ content.
  *
@@ -120,8 +154,10 @@ function validatePatchRootEntries(
 export async function validatePatch(
   fileSystem: ReadableFileSystem,
   dustPath: string,
-  patch: ArtifactPatch
+  patch: ArtifactPatch,
+  options: ValidatePatchOptions = {}
 ): Promise<ValidationResult> {
+  const cwd = options.cwd ?? process.cwd()
   // Convert relative patch paths to absolute, separating additions from deletions
   const absolutePatchFiles = new Map<string, string>()
   const deletedPaths = new Set<string>()
@@ -262,6 +298,6 @@ export async function validatePatch(
 
   return {
     valid: violations.length === 0,
-    violations,
+    violations: relativizeViolations(violations, cwd),
   }
 }

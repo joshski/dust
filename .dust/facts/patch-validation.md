@@ -10,11 +10,13 @@ import { validatePatch } from '@joshski/dust/validation'
 const result = await validatePatch(fileSystem, dustPath, {
   files: {
     'facts/my-fact.md': '# My Fact\n\nContent here.', // add or update
-    'facts/old-fact.md': null,                         // delete
+    'facts/old-fact.md': null, // delete
   },
 })
 // result: { valid: boolean, violations: Violation[] }
 ```
+
+`ValidationResult.violations[].file` is returned relative to the current working directory by default, or relative to `options.cwd` when you pass a fourth argument to `validatePatch`. If a violation path falls outside that cwd, the API keeps the original absolute path.
 
 ## How It Works
 
