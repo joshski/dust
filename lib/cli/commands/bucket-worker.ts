@@ -316,7 +316,7 @@ export function syncUIWithRepoList(
   }
 
   // Remove repos no longer in the list from UI
-  for (const name of [...state.ui.repositories]) {
+  for (const name of Array.from(state.ui.repositories)) {
     if (name !== 'system' && !incomingNames.has(name)) {
       state.logBuffers.delete(name)
       removeRepoFromUI(state.ui, name)

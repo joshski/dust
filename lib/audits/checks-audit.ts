@@ -423,7 +423,7 @@ const CHECK_CATEGORIES: CheckCategory[] = [
 
 // --- CI Configuration Patterns ---
 
-const CI_FILES = [
+const _CI_FILES = [
   '.github/workflows/*.yml',
   '.github/workflows/*.yaml',
   '.gitlab-ci.yml',

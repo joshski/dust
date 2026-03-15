@@ -300,7 +300,7 @@ describe('next command', () => {
     })
 
     const reverseSorter = async (_dir: string, files: string[]) =>
-      [...files].reverse()
+      files.toReversed()
 
     const result = await findUnblockedTasks(
       '/project',

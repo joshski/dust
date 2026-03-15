@@ -24,7 +24,6 @@ The change involves updating the oxlint command in the check configuration to in
 
 - [Fix prefer-add-event-listener Violations](fix-prefer-add-event-listener-violations.md)
 - [Fix consistent-function-scoping Violations](fix-consistent-function-scoping-violations.md)
-- [Fix Remaining suspicious Violations](fix-remaining-suspicious-violations.md)
 
 ## Definition of Done
 

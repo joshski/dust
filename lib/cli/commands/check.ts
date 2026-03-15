@@ -285,9 +285,9 @@ export async function check(
     )
   }
 
-  const resultsByDisplayOrder: CheckResult[] = new Array(
-    orderedCheckExecutions.length
-  )
+  const resultsByDisplayOrder: CheckResult[] = Array.from({
+    length: orderedCheckExecutions.length,
+  })
 
   if (serial) {
     for (let index = 0; index < orderedCheckExecutions.length; index += 1) {
