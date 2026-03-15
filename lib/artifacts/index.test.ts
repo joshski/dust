@@ -240,6 +240,23 @@ describe('buildArtifactsRepository', () => {
     })
   })
 
+  describe('createExpediteIdeaTask', () => {
+    test('creates an expedite-idea task', async () => {
+      const fileSystem = createFileSystem()
+      const repository = buildArtifactsRepository(fileSystem, '/project/.dust')
+
+      const result = await repository.createExpediteIdeaTask({
+        ideaSlug: 'progress-broadcasting',
+      })
+
+      expect(result.filePath).toBe(
+        '/project/.dust/tasks/expedite-idea-progress-broadcasting.md'
+      )
+      const content = fileSystem.writtenFiles.get(result.filePath) as string
+      expect(content).toContain('# Expedite Idea: Progress Broadcasting')
+    })
+  })
+
   describe('createIdeaTask', () => {
     test('creates a capture-idea task', async () => {
       const fileSystem = createFileSystem()

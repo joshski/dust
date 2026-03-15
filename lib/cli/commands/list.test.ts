@@ -712,6 +712,51 @@ Shelve this idea.
     })
   })
 
+  test('emits ideas-listed event with expediting status when expedite task exists', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea',
+          },
+          tasks: {
+            'expedite-idea-my-idea.md': `# Expedite Idea: My Idea
+
+Expedite this idea.
+
+## Expedites Idea
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- Done
+`,
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['ideas']))
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'ideas-listed',
+      ideas: [
+        {
+          path: '.dust/ideas/my-idea.md',
+          title: 'My Idea',
+          status: 'expediting',
+        },
+      ],
+    })
+  })
+
   test('emits principles-listed event when listing principles', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
