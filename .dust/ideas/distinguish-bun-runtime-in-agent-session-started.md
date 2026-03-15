@@ -4,7 +4,7 @@ The `runtimeVersion` field in `agent-session-started` events always uses `proces
 
 ## Context
 
-The `getEnvironmentContext` function in `lib/cli/commands/loop.ts:44-58` builds environment metadata for agent session events:
+The `getEnvironmentContext` function in `lib/loop/iteration.ts` builds environment metadata for agent session events:
 
 ```typescript
 function getEnvironmentContext(cwd: string): {
@@ -34,7 +34,7 @@ Bun exposes its version via `Bun.version` (a string like `"1.3.8"`). The presenc
 
 The `runtimeVersion` field appears in:
 - `lib/agent-events.ts` - Type definition
-- `lib/cli/commands/loop.ts` - `getEnvironmentContext` function
+- `lib/loop/iteration.ts` - `getEnvironmentContext` function
 - `.dust/facts/dust-event-protocol.md` - Documentation and examples
 
 ## Proposed Change

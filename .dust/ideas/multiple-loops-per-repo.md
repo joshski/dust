@@ -62,7 +62,7 @@ Options:
 
 ### Git conflicts
 
-Multiple loops writing to the same repository could create git conflicts. The current architecture handles conflicts by spawning Claude to resolve them (`lib/cli/commands/loop.ts`), but with parallel loops this becomes more complex:
+Multiple loops writing to the same repository could create git conflicts. The current architecture handles conflicts by spawning Claude to resolve them (`lib/loop/iteration.ts`), but with parallel loops this becomes more complex:
 - Two loops might both try to push, creating conflicts
 - One loop might be resolving a conflict while another creates a new one
 

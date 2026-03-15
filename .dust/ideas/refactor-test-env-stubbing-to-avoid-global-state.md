@@ -22,7 +22,7 @@ The callback form of `stubEnv(name, value, callback)` already avoids these issue
 
 Several test files manually stub and restore `process.env` without using the shared utilities:
 - `lib/cli/main.test.ts:359-380`
-- `lib/cli/commands/loop.test.ts:1751-1822`
+- `lib/loop/*.test.ts`
 - `lib/cli/commands/bucket.test.ts:354-362,536-544`
 - `lib/claude/spawn-claude-code.test.ts:541-590`
 

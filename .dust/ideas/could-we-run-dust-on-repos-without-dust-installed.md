@@ -10,8 +10,8 @@ The `dust bucket` command works as follows:
 2. Connects via WebSocket to receive a list of repositories (`lib/cli/commands/bucket.ts:155-180`)
 3. Clones each repository to a temp directory (`lib/bucket/repository.ts:148`)
 4. Discovers tasks by scanning `.dust/tasks/` directories (`lib/cli/commands/next.ts:59-73`)
-5. Invokes Claude directly via the `run()` function (`lib/cli/commands/loop.ts:383`), not via the `dust` CLI
-6. Sets `DUST_SKIP_AGENT: '1'` to prevent nested dust invocations (`lib/cli/commands/loop.ts:387`)
+5. Invokes Claude directly via the `run()` function (`lib/loop/iteration.ts`), not via the `dust` CLI
+6. Sets `DUST_SKIP_AGENT: '1'` to prevent nested dust invocations (`lib/loop/iteration.ts`)
 
 The key insight is that `dust bucket` calls Claude directly using the SDK rather than spawning `dust` as a subprocess. The target repository only needs:
 

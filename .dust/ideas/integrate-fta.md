@@ -15,7 +15,7 @@ Running `bunx fta-cli lib` or `npx fta-cli lib` produces identical results. Curr
 | OK (<50) | 37 | Most files |
 
 Top offenders:
-- `cli/commands/loop.test.ts` - 67.21
+- `loop/*.test.ts` - 67.21
 - `cli/wire.test.ts` - 63.11
 - `claude/vcr.test.ts` - 58.68
 - `cli/commands/lint-markdown.ts` - 58.47

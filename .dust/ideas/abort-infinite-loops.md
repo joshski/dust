@@ -4,7 +4,7 @@ If a repository becomes corrupted or misconfigured, a loop may keep running iter
 
 ## Context
 
-The `dust loop claude` command (`lib/cli/commands/loop.ts`) and `dust bucket` (`lib/bucket/repository.ts`) both run continuous loops that:
+The `dust loop claude` command (`lib/loop/loop.ts`) and `dust bucket` (`lib/bucket/repository.ts`) both run continuous loops that:
 
 1. Sync with remote (`git pull`)
 2. Check for available tasks via `findUnblockedTasks`

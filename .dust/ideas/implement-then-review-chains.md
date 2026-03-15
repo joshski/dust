@@ -9,7 +9,7 @@ This umbrella idea is too broad as written. We should not implement it as a sing
 `dust loop` currently performs one agent session per picked task and gives that session instructions to complete the full lifecycle (check, implement, commit, push). There is no concept of per-task phase progression.
 
 Relevant code paths:
-- `lib/cli/commands/loop.ts` builds a single prompt and runs one session with `purpose: 'task'`
+- `lib/loop/iteration.ts` builds a single prompt and runs one session with `purpose: 'task'`
 - `lib/cli/commands/focus.ts` hardcodes instructions that include commit and push in the same run
 - `lib/cli/commands/next.ts` only selects unblocked task files; it does not track in-progress phase state
 

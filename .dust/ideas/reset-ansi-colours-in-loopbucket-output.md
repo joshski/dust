@@ -13,7 +13,7 @@ However, agent output (the actual responses from Claude or other agents) passes 
 
 ## Affected Code Paths
 
-**Loop command (`lib/cli/commands/loop.ts`):**
+**Loop command (`lib/loop/events.ts`):**
 - `formatLoopEvent()` returns formatted strings that get written to stdout
 - Agent output is streamed directly to stdout via the `run` function
 
@@ -41,7 +41,7 @@ Option 1 would add overhead to every line but guarantees no leakage. Option 2 is
 - `lib/bucket/terminal-ui.ts:25` - `ANSI.RESET` constant
 - `lib/cli/colors.ts:18` - `reset: '\x1b[0m'` in colour definitions
 - `lib/bucket/repository-loop.ts:76-103` - `createStdoutSink` that captures agent output
-- `lib/cli/commands/loop.ts:132-155` - `formatLoopEvent` that formats system messages
+- `lib/loop/events.ts` - `formatLoopEvent` that formats system messages
 
 ## Open Questions
 

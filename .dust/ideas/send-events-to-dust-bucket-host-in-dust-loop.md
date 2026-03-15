@@ -26,7 +26,7 @@ The bucket service (`dustbucket.com`) already provides a WebSocket-based event s
 5. **Remove `DUST_EVENTS_URL` env var and `eventsUrl` settings** — the bucket service replaces this mechanism. This includes:
    - `settings.eventsUrl` field and `validateDustEventsUrl()` in `lib/config/settings.ts`
    - All three `DUST_EVENTS_URL` env var overrides in `loadSettings`
-   - `PostEventFn` / `defaultPostEvent` / `createWireEventSender` in `lib/cli/commands/loop.ts` (replaced by bucket-aware sender)
+   - `PostEventFn` / `createPostEvent` / `createWireEventSender` in `lib/loop/wire-events.ts` (replaced by bucket-aware sender)
    - References in the `dust-event-protocol.md` fact file and the `configuration-system.md` fact file
 
 ### Shared WebSocket infrastructure
@@ -54,7 +54,7 @@ interface BucketConnection {
 
 ### Relevant code
 
-- `lib/cli/commands/loop.ts` — `loopClaude()`, `createWireEventSender()`, `createDefaultDependencies()`; currently reads `settings.eventsUrl` to decide whether to send events
+- `lib/loop/loop.ts` — `runLoop()`; `lib/loop/wire-events.ts` — `createWireEventSender()`; `lib/loop/iteration.ts` — `createDefaultDependencies()`; currently reads `settings.eventsUrl` to decide whether to send events
 - `lib/cli/commands/bucket.ts` — `connectWebSocket()`, `waitForConnection()`, `resolveToken()`, reconnect logic; candidates for extraction
 - `lib/bucket/events.ts` — `createEventMessageSender()`, `WebSocketLike`, `SendEventFn`; already reusable
 - `lib/bucket/server-messages.ts` — `parseServerMessage()`, `ServerMessage` types; already reusable

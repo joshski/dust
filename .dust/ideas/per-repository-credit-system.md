@@ -4,7 +4,7 @@ Each repository has a number of "iteration credits" that limit how many agent se
 
 ## Context
 
-Currently, `dust loop claude` (`lib/cli/commands/loop.ts`) uses a `maxIterations` parameter to cap the number of iterations before exiting. This is a local safeguard against runaway loops but doesn't provide external control. The `dust bucket` command (`lib/cli/commands/bucket.ts`) runs repositories indefinitely via the loop in `lib/bucket/repository-loop.ts` — there's no per-repository limit mechanism.
+Currently, `dust loop claude` (`lib/loop/loop.ts`) uses a `maxIterations` parameter to cap the number of iterations before exiting. This is a local safeguard against runaway loops but doesn't provide external control. The `dust bucket` command (`lib/cli/commands/bucket.ts`) runs repositories indefinitely via the loop in `lib/bucket/repository-loop.ts` — there's no per-repository limit mechanism.
 
 A credit system would:
 
@@ -15,7 +15,7 @@ A credit system would:
 
 ### Relevant code
 
-- `lib/cli/commands/loop.ts` — `loopClaude()` has `maxIterations` counter; credits would be a similar mechanism but externally managed
+- `lib/loop/loop.ts` — `runLoop()` has `maxIterations` counter; credits would be a similar mechanism but externally managed
 - `lib/bucket/repository-loop.ts` — `runRepositoryLoop()` runs indefinitely while `!repoState.stopRequested`; would need to check credits before each iteration
 - `lib/bucket/repository.ts` — `RepositoryState` type; credit balance would be stored here
 - `lib/bucket/events.ts` — Event protocol for WebSocket communication; credit updates would use this channel

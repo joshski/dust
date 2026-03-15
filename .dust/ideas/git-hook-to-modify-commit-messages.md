@@ -25,7 +25,7 @@ Either hook could append a dust marker (e.g., a trailer or prefix) to commits ma
 
 - `lib/git/hooks.ts` — Existing hook management infrastructure for `pre-push` hooks
 - `lib/cli/commands/agent-shared.ts` — Uses `manageGitHooks()` to install hooks at session start
-- `lib/cli/commands/loop.ts` — Sets `DUST_UNATTENDED=1` environment variable for autonomous sessions
+- `lib/loop/iteration.ts` — Sets `DUST_UNATTENDED=1` environment variable for autonomous sessions
 
 The existing `HooksManager` pattern could be extended to support multiple hook types (`pre-push`, `commit-msg`, `prepare-commit-msg`).
 

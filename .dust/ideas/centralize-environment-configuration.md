@@ -14,7 +14,7 @@ The codebase accesses `process.env` in 12+ files across different subsystems:
 - `lib/logging/index.ts:94,110` - `DEBUG` patterns, `DUST_LOG_DIR`/`DUST_LOG_FILE`
 - `lib/cli/run.ts:20-21` - `DUST_EVENTS_FD` for event streaming
 - `lib/claude/vcr.ts:66` - `CLAUDE_CODE_VCR_MODE` for test recording
-- `lib/bucket/repository-loop.ts:423`, `lib/cli/commands/loop.ts:585` - `CLAUDE_CODE_OAUTH_TOKEN` check
+- `lib/bucket/repository-loop.ts`, `lib/loop/loop.ts` - `CLAUDE_CODE_OAUTH_TOKEN` check
 - `lib/cli/commands/bucket.ts:315,985` - `DUST_BUCKET_AGENT_CONNECT_URL`, `DUST_BUCKET_TOKEN`
 - `lib/cli/commands/bucket-asset-upload.ts:148` - `DUST_BUCKET_TOKEN`
 
