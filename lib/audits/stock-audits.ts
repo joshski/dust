@@ -7,6 +7,7 @@
 
 import { dedent } from '../cli/dedent'
 import { extractOpeningSentence } from '../markdown/markdown-utilities'
+import { checksAuditTemplate } from './checks-audit'
 
 interface StockAudit {
   name: string
@@ -1075,6 +1076,7 @@ function uxAudit(): string {
 
 const stockAuditFunctions: Record<string, () => string> = {
   'agent-developer-experience': agentDeveloperExperience,
+  'checks-audit': checksAuditTemplate,
   'component-reuse': componentReuse,
   'coverage-exclusions': coverageExclusions,
   'data-access-review': dataAccessReview,

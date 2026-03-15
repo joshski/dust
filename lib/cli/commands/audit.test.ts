@@ -219,10 +219,11 @@ describe('audit command', () => {
   test('loadStockAudits loads audits from markdown files', () => {
     const audits = loadStockAudits()
     expect(audits).toBeInstanceOf(Array)
-    expect(audits.length).toBe(22)
+    expect(audits.length).toBe(23)
 
     const names = audits.map(a => a.name)
     expect(names).toContain('agent-developer-experience')
+    expect(names).toContain('checks-audit')
     expect(names).toContain('component-reuse')
     expect(names).toContain('coverage-exclusions')
     expect(names).toContain('data-access-review')
@@ -254,12 +255,14 @@ describe('audit command', () => {
   test('stock audits have no principles because they are designed for downstream projects', () => {
     // component-reuse references the reasonably-dry principle to help agents avoid over-extraction
     // coverage-exclusions references decoupling and test coverage principles
+    // checks-audit references batteries-included, easy-adoption, stop-the-line, lint-everything, comprehensive-test-coverage
     // error-handling references actionable-errors, debugging-tooling, stop-the-line principles
     // global-state references dependency-injection, decoupled-code, test-isolation principles
     // refactoring-opportunities references boy scout rule, make the change easy, etc.
     // ubiquitous-language references naming principles that are universally applicable
     // ux-audit references actionable-errors and unsurprising-ux principles
     const auditsWithPrinciples = [
+      'checks-audit',
       'component-reuse',
       'coverage-exclusions',
       'data-access-review',
