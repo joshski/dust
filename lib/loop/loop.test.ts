@@ -984,7 +984,7 @@ describe('integration: HTTP event posting', () => {
       )
       expect(claudeEvent).toBeDefined()
       expect(
-        (claudeEvent?.event as { rawEvent: Record<string, unknown> }).rawEvent
+        (claudeEvent!.event as { rawEvent: Record<string, unknown> }).rawEvent
       ).toEqual({
         type: 'text_delta',
         text: 'Integration test',
@@ -998,8 +998,8 @@ describe('integration: HTTP event posting', () => {
         e => e.event.type === 'agent-session-ended'
       )
       expect(sessionStarted).toBeDefined()
-      expect((sessionStarted?.event as { title?: string }).title).toBe('Task')
-      expect(sessionStarted?.agentSessionId).toBeDefined()
+      expect((sessionStarted!.event as { title?: string }).title).toBe('Task')
+      expect(sessionStarted!.agentSessionId).toBeDefined()
       expect(sessionEnded).toBeDefined()
 
       // Verify no loop.* events were posted
