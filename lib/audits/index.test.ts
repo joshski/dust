@@ -18,7 +18,7 @@ Focus on custom areas.
 
 ## Definition of Done
 
-- [ ] Custom things reviewed
+- Custom things reviewed
 `,
             'dead-code.md': `# Custom Dead Code Audit
 
@@ -26,7 +26,7 @@ A customized version of the dead code audit.
 
 ## Definition of Done
 
-- [ ] Dead code identified
+- Dead code identified
 `,
           },
         },

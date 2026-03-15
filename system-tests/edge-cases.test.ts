@@ -128,7 +128,7 @@ test('task list handles tasks with no title gracefully', async () => {
 
 ## Definition of Done
 
-- [ ] Done
+- Done
 `,
           },
         },

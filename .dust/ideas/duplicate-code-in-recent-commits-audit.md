@@ -56,10 +56,10 @@ For each duplicate pattern identified:
 
 ## Definition of Done
 
-- [ ] Analyzed diffs from the last 20 commits
-- [ ] Identified functions or code blocks that were copy-pasted
-- [ ] Distinguished intentional parallel implementations from accidental duplication
-- [ ] Created ideas for extraction opportunities worth pursuing
+- Analyzed diffs from the last 20 commits
+- Identified functions or code blocks that were copy-pasted
+- Distinguished intentional parallel implementations from accidental duplication
+- Created ideas for extraction opportunities worth pursuing
 ```
 
 ## Relationship to Existing Audits

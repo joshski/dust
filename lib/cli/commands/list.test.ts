@@ -600,7 +600,7 @@ Refine this idea.
 
 ## Definition of Done
 
-- [ ] Done
+- Done
 `,
           },
         },
@@ -645,7 +645,7 @@ Decompose this idea.
 
 ## Definition of Done
 
-- [ ] Done
+- Done
 `,
           },
         },
@@ -690,7 +690,7 @@ Shelve this idea.
 
 ## Definition of Done
 
-- [ ] Done
+- Done
 `,
           },
         },

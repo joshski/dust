@@ -48,7 +48,7 @@ Opening sentence in imperative form (e.g., "Add X", not "This adds X"). Max 150 
 Links to tasks that must complete first, or "(none)" if no blockers.
 
 ## Definition of Done
-- [ ] Checklist of completion criteria
+- Checklist of completion criteria
 
 ## Principles (optional)
 Links to principle documents this task supports.

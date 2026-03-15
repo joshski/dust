@@ -18,7 +18,7 @@ function createTaskContent(title: string, description?: string): string {
   sections.push('## Blocked By')
   sections.push('(none)')
   sections.push('## Definition of Done')
-  sections.push('- [ ] Done')
+  sections.push('- Done')
 
   return sections.join('\n\n')
 }

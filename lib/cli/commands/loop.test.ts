@@ -372,7 +372,7 @@ describe('findAvailableTasks', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -588,7 +588,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -617,7 +617,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\nDo the thing.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\nDo the thing.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -656,7 +656,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -680,7 +680,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -705,7 +705,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -733,7 +733,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -763,7 +763,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -791,7 +791,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -823,7 +823,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# My Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# My Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -855,7 +855,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              'No heading here\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              'No heading here\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -887,7 +887,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -918,7 +918,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -950,7 +950,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              'No heading here\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              'No heading here\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -977,7 +977,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1009,7 +1009,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1083,7 +1083,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1122,7 +1122,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1147,7 +1147,7 @@ describe('runOneIteration', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1183,7 +1183,7 @@ Usage: \`dust bucket tool asset-upload <file>\``
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1368,7 +1368,7 @@ describe('loopClaude', () => {
         if (sleepCalls.length === 1) {
           fileSystem.files.set(
             '/project/.dust/tasks/task.md',
-            '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done'
+            '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done'
           )
         }
       },
@@ -1423,7 +1423,7 @@ describe('loopClaude', () => {
         if (sleepCalls.length === 1) {
           fileSystem.files.set(
             '/project/.dust/tasks/task.md',
-            '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done'
+            '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done'
           )
         }
       },
@@ -1443,7 +1443,7 @@ describe('loopClaude', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1472,7 +1472,7 @@ describe('loopClaude', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1522,7 +1522,7 @@ describe('loopClaude', () => {
         if (sleepCount === 1) {
           fileSystem.files.set(
             '/project/.dust/tasks/task.md',
-            '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done'
+            '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done'
           )
         }
       },
@@ -1543,7 +1543,7 @@ describe('loopClaude', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1570,7 +1570,7 @@ describe('loopClaude', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1598,7 +1598,7 @@ describe('loopClaude', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1637,7 +1637,7 @@ describe('loopClaude', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1684,7 +1684,7 @@ describe('loopClaude', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1709,7 +1709,7 @@ describe('loopClaude', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1743,7 +1743,7 @@ describe('loopClaude', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1777,7 +1777,7 @@ describe('loopClaude', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1804,7 +1804,7 @@ describe('loopClaude', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1839,7 +1839,7 @@ describe('loopClaude', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1893,7 +1893,7 @@ describe('loopClaude', () => {
         '.dust': {
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1949,7 +1949,7 @@ describe('loopClaude', () => {
           Dockerfile: 'FROM node:20',
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -1991,7 +1991,7 @@ describe('loopClaude', () => {
           Dockerfile: 'FROM node:20',
           tasks: {
             'task.md':
-              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },
@@ -2134,7 +2134,7 @@ describe('integration: HTTP event posting', () => {
           '.dust': {
             tasks: {
               'task.md':
-                '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+                '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
             },
           },
         },

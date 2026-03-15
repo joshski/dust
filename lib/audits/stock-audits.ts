@@ -66,13 +66,13 @@ function dataAccessReview(): string {
 
     ## Definition of Done
 
-    - [ ] Searched for N+1 query patterns (loops with data access)
-    - [ ] Reviewed database schemas for missing indexes (if applicable)
-    - [ ] Identified over-fetching or under-fetching patterns
-    - [ ] Found repeated lookups that could be cached
-    - [ ] Checked for sequential operations that could be batched
-    - [ ] Verified connection/resource cleanup is handled properly
-    - [ ] Proposed ideas for any data access improvements identified
+    - Searched for N+1 query patterns (loops with data access)
+    - Reviewed database schemas for missing indexes (if applicable)
+    - Identified over-fetching or under-fetching patterns
+    - Found repeated lookups that could be cached
+    - Checked for sequential operations that could be batched
+    - Verified connection/resource cleanup is handled properly
+    - Proposed ideas for any data access improvements identified
   `
 }
 
@@ -107,11 +107,11 @@ function coverageExclusions(): string {
 
     ## Definition of Done
 
-    - [ ] Identified all coverage exclusions in the project
-    - [ ] Documented the reason each exclusion exists
-    - [ ] Evaluated whether each exclusion is still necessary
-    - [ ] Identified exclusions that could be removed through decoupling
-    - [ ] Proposed ideas for refactoring where feasible
+    - Identified all coverage exclusions in the project
+    - Documented the reason each exclusion exists
+    - Evaluated whether each exclusion is still necessary
+    - Identified exclusions that could be removed through decoupling
+    - Proposed ideas for refactoring where feasible
   `
 }
 
@@ -144,11 +144,11 @@ function componentReuse(): string {
 
     ## Definition of Done
 
-    - [ ] Searched for repeated patterns across the codebase
-    - [ ] Identified copy-pasted or near-duplicate code
-    - [ ] Evaluated each case for whether extraction would be beneficial
-    - [ ] Considered whether similar code serves different purposes that may evolve independently
-    - [ ] Proposed ideas only for extractions where duplication is truly about the same concept
+    - Searched for repeated patterns across the codebase
+    - Identified copy-pasted or near-duplicate code
+    - Evaluated each case for whether extraction would be beneficial
+    - Considered whether similar code serves different purposes that may evolve independently
+    - Proposed ideas only for extractions where duplication is truly about the same concept
   `
 }
 
@@ -180,11 +180,11 @@ function agentDeveloperExperience(): string {
 
     ## Definition of Done
 
-    - [ ] Reviewed file sizes and organization for context window fit
-    - [ ] Verified test coverage is sufficient for agent verification
-    - [ ] Measured feedback loop speed (time from change to check result)
-    - [ ] Confirmed debugging tools and structured logging are in place
-    - [ ] Proposed ideas for any improvements identified
+    - Reviewed file sizes and organization for context window fit
+    - Verified test coverage is sufficient for agent verification
+    - Measured feedback loop speed (time from change to check result)
+    - Confirmed debugging tools and structured logging are in place
+    - Proposed ideas for any improvements identified
   `
 }
 
@@ -216,13 +216,13 @@ function deadCode(): string {
 
     ## Definition of Done
 
-    - [ ] Ran static analysis tools to find unused exports
-    - [ ] Identified files with no incoming imports
-    - [ ] Listed unused dependencies
-    - [ ] Reviewed commented-out code blocks
-    - [ ] Created list of code safe to remove
-    - [ ] Verified removal won't break dynamic imports or reflection
-    - [ ] Proposed ideas for any dead code worth removing
+    - Ran static analysis tools to find unused exports
+    - Identified files with no incoming imports
+    - Listed unused dependencies
+    - Reviewed commented-out code blocks
+    - Created list of code safe to remove
+    - Verified removal won't break dynamic imports or reflection
+    - Proposed ideas for any dead code worth removing
   `
 }
 
@@ -253,12 +253,12 @@ function factsVerification(): string {
 
     ## Definition of Done
 
-    - [ ] Read each fact file in \`.dust/facts/\`
-    - [ ] Verified each fact against current codebase
-    - [ ] Identified outdated or inaccurate facts
-    - [ ] Listed missing facts that would help agents
-    - [ ] Updated or removed stale facts
-    - [ ] Proposed ideas for any facts improvements needed
+    - Read each fact file in \`.dust/facts/\`
+    - Verified each fact against current codebase
+    - Identified outdated or inaccurate facts
+    - Listed missing facts that would help agents
+    - Updated or removed stale facts
+    - Proposed ideas for any facts improvements needed
   `
 }
 
@@ -289,11 +289,11 @@ function ideasFromCommits(): string {
 
     ## Definition of Done
 
-    - [ ] Reviewed commits from the last 20 commits
-    - [ ] Identified patterns or shortcuts worth addressing
-    - [ ] Listed TODO comments added in recent commits
-    - [ ] Noted areas where changes could be generalized
-    - [ ] Proposed follow-up ideas for any issues identified
+    - Reviewed commits from the last 20 commits
+    - Identified patterns or shortcuts worth addressing
+    - Listed TODO comments added in recent commits
+    - Noted areas where changes could be generalized
+    - Proposed follow-up ideas for any issues identified
   `
 }
 
@@ -324,10 +324,10 @@ function ideasFromPrinciples(): string {
 
     ## Definition of Done
 
-    - [ ] Read each principle file in \`.dust/principles/\`
-    - [ ] Analyzed codebase for alignment with each principle
-    - [ ] Listed gaps between current state and principle intent
-    - [ ] Proposed new ideas for unmet or underserved principles
+    - Read each principle file in \`.dust/principles/\`
+    - Analyzed codebase for alignment with each principle
+    - Listed gaps between current state and principle intent
+    - Proposed new ideas for unmet or underserved principles
   `
 }
 
@@ -374,11 +374,11 @@ function refactoringOpportunities(): string {
 
     ## Definition of Done
 
-    - [ ] Identified high-churn files (modified in 3+ commits since last audit)
-    - [ ] Flagged files exceeding 300 lines that grew significantly
-    - [ ] Noted commits with concerning message patterns
-    - [ ] Provided specific refactoring suggestions for each opportunity
-    - [ ] Created ideas for any substantial refactoring work identified
+    - Identified high-churn files (modified in 3+ commits since last audit)
+    - Flagged files exceeding 300 lines that grew significantly
+    - Noted commits with concerning message patterns
+    - Provided specific refactoring suggestions for each opportunity
+    - Created ideas for any substantial refactoring work identified
   `
 }
 
@@ -410,11 +410,11 @@ function performanceReview(): string {
 
     ## Definition of Done
 
-    - [ ] Measured startup time for common commands
-    - [ ] Profiled memory usage during typical operations
-    - [ ] Identified slow commands or operations
-    - [ ] Listed optimization opportunities by impact
-    - [ ] Proposed ideas for any performance improvements identified
+    - Measured startup time for common commands
+    - Profiled memory usage during typical operations
+    - Identified slow commands or operations
+    - Listed optimization opportunities by impact
+    - Proposed ideas for any performance improvements identified
   `
 }
 
@@ -446,13 +446,13 @@ function securityReview(): string {
 
     ## Definition of Done
 
-    - [ ] Searched for hardcoded secrets (API keys, passwords, tokens)
-    - [ ] Reviewed input validation and sanitization
-    - [ ] Checked authentication and authorization logic
-    - [ ] Verified sensitive data is not logged or exposed
-    - [ ] Ran dependency audit for known vulnerabilities
-    - [ ] Documented any findings with severity ratings
-    - [ ] Proposed ideas for any security issues found
+    - Searched for hardcoded secrets (API keys, passwords, tokens)
+    - Reviewed input validation and sanitization
+    - Checked authentication and authorization logic
+    - Verified sensitive data is not logged or exposed
+    - Ran dependency audit for known vulnerabilities
+    - Documented any findings with severity ratings
+    - Proposed ideas for any security issues found
   `
 }
 
@@ -483,11 +483,11 @@ function staleIdeas(): string {
 
     ## Definition of Done
 
-    - [ ] Listed all ideas with their last modification date
-    - [ ] Identified ideas unchanged for 50+ commits
-    - [ ] Reviewed each stale idea for current relevance
-    - [ ] Promoted actionable ideas to tasks
-    - [ ] Deleted ideas that are no longer relevant
+    - Listed all ideas with their last modification date
+    - Identified ideas unchanged for 50+ commits
+    - Reviewed each stale idea for current relevance
+    - Promoted actionable ideas to tasks
+    - Deleted ideas that are no longer relevant
   `
 }
 
@@ -519,10 +519,10 @@ function testCoverage(): string {
 
     ## Definition of Done
 
-    - [ ] Identified modules with low or no test coverage
-    - [ ] Listed critical paths that lack tests
-    - [ ] Prioritized areas by risk and importance
-    - [ ] Proposed ideas for any test coverage gaps identified
+    - Identified modules with low or no test coverage
+    - Listed critical paths that lack tests
+    - Prioritized areas by risk and importance
+    - Proposed ideas for any test coverage gaps identified
   `
 }
 
@@ -572,12 +572,12 @@ function errorHandling(): string {
 
     ## Definition of Done
 
-    - [ ] Searched for empty catch blocks and silent error swallowing
-    - [ ] Identified patterns that discard error details
-    - [ ] Found fire-and-forget promises without error handling
-    - [ ] Reviewed error messages for actionability
-    - [ ] Compared error handling consistency across similar operations
-    - [ ] Proposed ideas for any error handling improvements identified
+    - Searched for empty catch blocks and silent error swallowing
+    - Identified patterns that discard error details
+    - Found fire-and-forget promises without error handling
+    - Reviewed error messages for actionability
+    - Compared error handling consistency across similar operations
+    - Proposed ideas for any error handling improvements identified
   `
 }
 
@@ -628,13 +628,13 @@ function globalState(): string {
 
     ## Definition of Done
 
-    - [ ] Searched for module-level mutable variables (let/var outside functions)
-    - [ ] Identified singleton patterns and getInstance methods
-    - [ ] Found global registries (Maps, Sets, Arrays modified at module level)
-    - [ ] Located functions with implicit dependencies on module-level state
-    - [ ] Checked for scattered process.env access
-    - [ ] Documented impact of each global state instance on testing
-    - [ ] Proposed ideas for refactoring global state to explicit dependencies
+    - Searched for module-level mutable variables (let/var outside functions)
+    - Identified singleton patterns and getInstance methods
+    - Found global registries (Maps, Sets, Arrays modified at module level)
+    - Located functions with implicit dependencies on module-level state
+    - Checked for scattered process.env access
+    - Documented impact of each global state instance on testing
+    - Proposed ideas for refactoring global state to explicit dependencies
   `
 }
 
@@ -679,12 +679,12 @@ function repositoryContext(): string {
 
     ## Definition of Done
 
-    - [ ] \`.dust/repository.md\` exists and is up to date
-    - [ ] Document describes what the project does without referencing specific files
-    - [ ] Key capabilities and features are listed
-    - [ ] Design philosophy or guiding approach is captured
-    - [ ] Document is concise enough to fit comfortably in an agent context window
-    - [ ] A new agent reading only this document could make sensible high-level suggestions
+    - \`.dust/repository.md\` exists and is up to date
+    - Document describes what the project does without referencing specific files
+    - Key capabilities and features are listed
+    - Design philosophy or guiding approach is captured
+    - Document is concise enough to fit comfortably in an agent context window
+    - A new agent reading only this document could make sensible high-level suggestions
   `
 }
 
@@ -738,13 +738,13 @@ function slowTests(): string {
 
     ## Definition of Done
 
-    - [ ] Ran test suite with timing information
-    - [ ] Listed tests exceeding duration thresholds (100ms unit, 1s integration)
-    - [ ] Identified tests using sleep/setTimeout/delay patterns
-    - [ ] Found tests with unmocked I/O (network, database, file system)
-    - [ ] Reviewed beforeEach/beforeAll for optimization opportunities
-    - [ ] Checked test parallelization configuration
-    - [ ] Proposed ideas for optimizing the slowest tests
+    - Ran test suite with timing information
+    - Listed tests exceeding duration thresholds (100ms unit, 1s integration)
+    - Identified tests using sleep/setTimeout/delay patterns
+    - Found tests with unmocked I/O (network, database, file system)
+    - Reviewed beforeEach/beforeAll for optimization opportunities
+    - Checked test parallelization configuration
+    - Proposed ideas for optimizing the slowest tests
   `
 }
 
@@ -796,13 +796,13 @@ function namingConsistency(): string {
 
     ## Definition of Done
 
-    - [ ] Reviewed high-confidence factory/constructor naming consistency for equivalent creation APIs
-    - [ ] Constrained findings to \`build*\`, \`create*\`, \`make*\`, and \`new*\` naming variants with clearly equivalent intent
-    - [ ] Documented each finding with locations, inconsistent term set, canonical proposal, and migration strategy
-    - [ ] Chose incremental or one-shot migration strategy for each canonical proposal
-    - [ ] Avoided speculative broad renames
-    - [ ] Avoided artifact-list ordering/shape checks and broad terminology drift
-    - [ ] Proposed ideas for naming consistency improvements identified
+    - Reviewed high-confidence factory/constructor naming consistency for equivalent creation APIs
+    - Constrained findings to \`build*\`, \`create*\`, \`make*\`, and \`new*\` naming variants with clearly equivalent intent
+    - Documented each finding with locations, inconsistent term set, canonical proposal, and migration strategy
+    - Chose incremental or one-shot migration strategy for each canonical proposal
+    - Avoided speculative broad renames
+    - Avoided artifact-list ordering/shape checks and broad terminology drift
+    - Proposed ideas for naming consistency improvements identified
   `
 }
 
@@ -872,13 +872,13 @@ function primitiveObsession(): string {
 
     ## Definition of Done
 
-    - [ ] Reviewed high-confidence existing-type drift for domain string literals and numeric magic values
-    - [ ] Constrained findings to cases where canonical domain types or clear constant/wrapper opportunities already exist
-    - [ ] Documented each finding with locations, primitive pattern, constant/type opportunity, and incremental migration path
-    - [ ] Documented numeric findings with locations, numeric pattern, constant/type opportunity, and incremental migration path
-    - [ ] Preserved Functional Core, Imperative Shell boundaries in recommendations
-    - [ ] Avoided speculative introduction of entirely new types
-    - [ ] Proposed ideas for primitive obsession improvements identified
+    - Reviewed high-confidence existing-type drift for domain string literals and numeric magic values
+    - Constrained findings to cases where canonical domain types or clear constant/wrapper opportunities already exist
+    - Documented each finding with locations, primitive pattern, constant/type opportunity, and incremental migration path
+    - Documented numeric findings with locations, numeric pattern, constant/type opportunity, and incremental migration path
+    - Preserved Functional Core, Imperative Shell boundaries in recommendations
+    - Avoided speculative introduction of entirely new types
+    - Proposed ideas for primitive obsession improvements identified
   `
 }
 
@@ -940,12 +940,12 @@ function singleResponsibilityViolations(): string {
 
     ## Definition of Done
 
-    - [ ] Reviewed high-confidence function-level findings where 3+ distinct responsibilities are combined
-    - [ ] Included runtime code and test helpers in scope
-    - [ ] Documented each finding with location, responsibility split, severity, and suggested extraction plan
-    - [ ] Preserved Functional Core, Imperative Shell boundaries in recommendations
-    - [ ] Kept recommendations high-confidence only with clear concern boundaries
-    - [ ] Proposed ideas for substantial responsibility-splitting work identified
+    - Reviewed high-confidence function-level findings where 3+ distinct responsibilities are combined
+    - Included runtime code and test helpers in scope
+    - Documented each finding with location, responsibility split, severity, and suggested extraction plan
+    - Preserved Functional Core, Imperative Shell boundaries in recommendations
+    - Kept recommendations high-confidence only with clear concern boundaries
+    - Proposed ideas for substantial responsibility-splitting work identified
   `
 }
 
@@ -994,12 +994,12 @@ function ubiquitousLanguage(): string {
 
     ## Definition of Done
 
-    - [ ] Identified key domain terms from project documentation
-    - [ ] Reviewed recent commits for terminology consistency
-    - [ ] Compared code naming against documentation vocabulary
-    - [ ] Checked user-facing text for alignment with code terms
-    - [ ] Documented any terminology drift or inconsistencies found
-    - [ ] Proposed ideas for standardizing inconsistent terminology
+    - Identified key domain terms from project documentation
+    - Reviewed recent commits for terminology consistency
+    - Compared code naming against documentation vocabulary
+    - Checked user-facing text for alignment with code terms
+    - Documented any terminology drift or inconsistencies found
+    - Proposed ideas for standardizing inconsistent terminology
   `
 }
 
@@ -1063,13 +1063,13 @@ function uxAudit(): string {
 
     ## Definition of Done
 
-    - [ ] Identified the application type (web, terminal, hybrid, or no UI)
-    - [ ] Listed key user scenarios
-    - [ ] Captured screenshots or output at each stage of key scenarios
-    - [ ] Reviewed evidence for UX issues
-    - [ ] Documented findings with evidence and recommendations
-    - [ ] Included verification criteria for each issue
-    - [ ] Created ideas for any UX improvements needed
+    - Identified the application type (web, terminal, hybrid, or no UI)
+    - Listed key user scenarios
+    - Captured screenshots or output at each stage of key scenarios
+    - Reviewed evidence for UX issues
+    - Documented findings with evidence and recommendations
+    - Included verification criteria for each issue
+    - Created ideas for any UX improvements needed
   `
 }
 

@@ -360,7 +360,7 @@ ${repositoryHintsSection}
 
 ## Definition of Done
 
-${definitionOfDone.map(item => `- [ ] ${item}`).join('\n')}
+${definitionOfDone.map(item => `- ${item}`).join('\n')}
 `
 }
 
@@ -527,9 +527,9 @@ ${repositoryHintsSection}
 
 ## Definition of Done
 
-- [ ] Idea is implemented directly OR one or more new tasks are created in \`.dust/tasks/\`
-- [ ] If tasks were created, they link to relevant principles from \`.dust/principles/\`
-- [ ] Changes are committed with a clear commit message
+- Idea is implemented directly OR one or more new tasks are created in \`.dust/tasks/\`
+- If tasks were created, they link to relevant principles from \`.dust/principles/\`
+- Changes are committed with a clear commit message
 `
     await fileSystem.writeFile(filePath, content)
     return { filePath }
@@ -557,11 +557,11 @@ ${repositoryHintsSection}
 
 ## Definition of Done
 
-- [ ] One or more idea files are created in \`.dust/ideas/\`
-- [ ] Each idea file has an H1 title matching its content
-- [ ] Idea includes relevant context from codebase exploration
-- [ ] Open questions are added for any ambiguous or underspecified aspects
-- [ ] Open questions follow the required heading format and focus on high-value decisions
+- One or more idea files are created in \`.dust/ideas/\`
+- Each idea file has an H1 title matching its content
+- Idea includes relevant context from codebase exploration
+- Open questions are added for any ambiguous or underspecified aspects
+- Open questions follow the required heading format and focus on high-value decisions
 `
   await fileSystem.writeFile(filePath, content)
   return { filePath }

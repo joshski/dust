@@ -451,7 +451,7 @@ describe('multi-word command routing', () => {
         '.dust': {
           tasks: {
             'a.md':
-              '# A\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+              '# A\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
           },
         },
       },

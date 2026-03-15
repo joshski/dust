@@ -30,7 +30,7 @@ function createTaskContent(options: {
     title,
     description,
     blockedBy = '(none)',
-    definitionOfDone = '- [ ] Done',
+    definitionOfDone = '- Done',
   } = options
 
   const sections: string[] = []

@@ -66,7 +66,7 @@ function newTaskInstructions(vars: TemplateVars): string {
     '8. Add a `## Blocked By` section listing any tasks that must complete first, or `(none)` if there are no blockers'
   )
   steps.push(
-    '9. Add a `## Definition of Done` section with a checklist of completion criteria using `- [ ]` for each item'
+    '9. Add a `## Definition of Done` section with completion criteria using `- ` for each item'
   )
   steps.push(
     `10. Run \`${vars.bin} lint\` to catch any issues with the task format`

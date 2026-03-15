@@ -73,15 +73,15 @@ describe('createRefineIdeaTask', () => {
     )
     expect(content).toContain('## Blocked By\n\n(none)')
     expect(content).toContain(
-      '- [ ] Idea is thoroughly researched with relevant codebase context'
+      '- Idea is thoroughly researched with relevant codebase context'
     )
     expect(content).toContain(
-      '- [ ] Open questions are added for any ambiguous or underspecified aspects'
+      '- Open questions are added for any ambiguous or underspecified aspects'
     )
     expect(content).toContain(
-      '- [ ] Open questions follow the required heading format and focus on high-value decisions'
+      '- Open questions follow the required heading format and focus on high-value decisions'
     )
-    expect(content).toContain('- [ ] Idea file is updated with findings')
+    expect(content).toContain('- Idea file is updated with findings')
   })
 
   test('includes optional description as a new paragraph', async () => {
@@ -269,13 +269,13 @@ describe('decomposeIdea', () => {
       'See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
     )
     expect(content).toContain(
-      '- [ ] One or more new tasks are created in .dust/tasks/'
+      '- One or more new tasks are created in .dust/tasks/'
     )
     expect(content).toContain(
-      "- [ ] Task's Principles section links to relevant principles from .dust/principles/"
+      "- Task's Principles section links to relevant principles from .dust/principles/"
     )
     expect(content).toContain(
-      '- [ ] The original idea is deleted or updated to reflect remaining scope'
+      '- The original idea is deleted or updated to reflect remaining scope'
     )
   })
 
@@ -435,10 +435,8 @@ describe('createShelveIdeaTask', () => {
     expect(content).toContain(
       'Archive this idea and remove it from the active backlog. See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
     )
-    expect(content).toContain('- [ ] Idea file is deleted')
-    expect(content).toContain(
-      '- [ ] Rationale is recorded in the commit message'
-    )
+    expect(content).toContain('- Idea file is deleted')
+    expect(content).toContain('- Rationale is recorded in the commit message')
   })
 
   test('includes Shelves Idea section with link to target idea', async () => {
@@ -537,19 +535,19 @@ describe('createIdeaTask', () => {
     expect(content).not.toContain('The idea should have the title')
     expect(content).not.toContain('start from the following description')
     expect(content).toContain(
-      '- [ ] One or more idea files are created in `.dust/ideas/`'
+      '- One or more idea files are created in `.dust/ideas/`'
     )
     expect(content).toContain(
-      '- [ ] Each idea file has an H1 title matching its content'
+      '- Each idea file has an H1 title matching its content'
     )
     expect(content).toContain(
-      '- [ ] Idea includes relevant context from codebase exploration'
+      '- Idea includes relevant context from codebase exploration'
     )
     expect(content).toContain(
-      '- [ ] Open questions are added for any ambiguous or underspecified aspects'
+      '- Open questions are added for any ambiguous or underspecified aspects'
     )
     expect(content).toContain(
-      '- [ ] Open questions follow the required heading format and focus on high-value decisions'
+      '- Open questions follow the required heading format and focus on high-value decisions'
     )
   })
 
@@ -615,13 +613,13 @@ describe('createIdeaTask', () => {
       'Run `dust principles` and `dust facts` for relevant context.'
     )
     expect(content).toContain(
-      '- [ ] Idea is implemented directly OR one or more new tasks are created'
+      '- Idea is implemented directly OR one or more new tasks are created'
     )
     expect(content).toContain(
-      '- [ ] If tasks were created, they link to relevant principles'
+      '- If tasks were created, they link to relevant principles'
     )
     expect(content).toContain(
-      '- [ ] Changes are committed with a clear commit message'
+      '- Changes are committed with a clear commit message'
     )
     // Should NOT contain idea-file-specific instructions
     expect(content).not.toContain('Idea file exists at')
@@ -871,7 +869,7 @@ Create tasks from this idea.
 
 ## Definition of Done
 
-- [ ] Tasks created
+- Tasks created
 `,
           },
         },
@@ -908,7 +906,7 @@ Do something.
 
 ## Definition of Done
 
-- [ ] Done
+- Done
 `,
           },
         },
@@ -949,7 +947,7 @@ Do something.
 
 ## Definition of Done
 
-- [ ] Done
+- Done
 `,
           },
         },
@@ -990,7 +988,7 @@ Archive this idea.
 
 ## Definition of Done
 
-- [ ] Done
+- Done
 `,
           },
         },
@@ -1236,7 +1234,7 @@ describe('parseCaptureIdeaTask', () => {
           ideas: {},
           tasks: {
             'some-regular-task.md':
-              '# Some Regular Task\n\nDo something.\n\n## Principles\n\n(none)\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done\n',
+              '# Some Regular Task\n\nDo something.\n\n## Principles\n\n(none)\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done\n',
           },
         },
       },
@@ -1256,7 +1254,7 @@ describe('parseCaptureIdeaTask', () => {
           ideas: {},
           tasks: {
             'add-idea-old-format.md':
-              '# Add Idea: Old Format\n\nSome description inline.\n\n## Principles\n\n(none)\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done\n',
+              '# Add Idea: Old Format\n\nSome description inline.\n\n## Principles\n\n(none)\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done\n',
           },
         },
       },

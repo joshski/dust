@@ -55,8 +55,8 @@ function extractLinksFromSection(
 }
 
 /**
- * Extracts checklist items from the Definition of Done section.
- * Returns an array of item texts (without the checkbox markers).
+ * Extracts list items from the Definition of Done section.
+ * Returns an array of item texts (without the list markers).
  */
 function extractDefinitionOfDone(content: string): string[] {
   const lines = content.split('\n')
@@ -76,10 +76,10 @@ function extractDefinitionOfDone(content: string): string[] {
     // Stop at next h2 or h1
     if (line.startsWith('# ')) break
 
-    // Match checklist items: - [ ] or - [x]
-    const checklistMatch = line.match(/^-\s+\[[x\s]\]\s+(.+)$/i)
-    if (checklistMatch) {
-      items.push(checklistMatch[1].trim())
+    // Match plain list items: - item text
+    const listMatch = line.match(/^-\s+(.+)$/)
+    if (listMatch) {
+      items.push(listMatch[1].trim())
     }
   }
 

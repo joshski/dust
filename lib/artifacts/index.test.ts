@@ -71,9 +71,9 @@ This h1 after Principles tests the h1 break in extractLinksFromSection.
 
 ## Definition of Done
 
-- [ ] Feature is implemented
-- [ ] Tests are written
-- [x] Documentation is updated
+- Feature is implemented
+- Tests are written
+- Documentation is updated
 
 # Notes
 
@@ -715,7 +715,7 @@ Configure continuous integration.
 
 ## Definition of Done
 
-- [ ] CI is configured
+- CI is configured
 `,
             'add-tests.md': `# Add Tests
 
@@ -731,7 +731,7 @@ Add unit tests.
 
 ## Definition of Done
 
-- [ ] Tests are added
+- Tests are added
 `,
             'deploy.md': `# Deploy
 
@@ -748,7 +748,7 @@ Deploy the application.
 
 ## Definition of Done
 
-- [ ] Application is deployed
+- Application is deployed
 `,
           },
         },
@@ -794,7 +794,7 @@ Refine this idea.
 
 ## Definition of Done
 
-- [ ] Idea is refined
+- Idea is refined
 `,
             'regular-task.md': `# Regular Task
 
@@ -810,7 +810,7 @@ A regular non-workflow task.
 
 ## Definition of Done
 
-- [ ] Task is done
+- Task is done
 `,
           },
         },
@@ -853,7 +853,7 @@ Do something first.
 
 ## Definition of Done
 
-- [ ] Done
+- Done
 `,
             'second-task.md': `# Second Task
 
@@ -869,7 +869,7 @@ Do something second.
 
 ## Definition of Done
 
-- [ ] Done
+- Done
 `,
             'decompose-idea-my-idea.md': `# Decompose Idea: My Idea
 
@@ -885,7 +885,7 @@ Decompose this idea.
 
 ## Definition of Done
 
-- [ ] Tasks created
+- Tasks created
 `,
           },
         },

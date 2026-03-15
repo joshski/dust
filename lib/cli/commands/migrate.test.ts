@@ -105,7 +105,7 @@ describe('migrate command', () => {
           },
           tasks: {
             'task.md':
-              '# Task\n\nDescription.\n\n## Goals\n\n- [Link](../goals/principle.md)\n\n## Blocked By\n\n- (none)\n\n## Definition of Done\n\n- [ ] Done\n',
+              '# Task\n\nDescription.\n\n## Goals\n\n- [Link](../goals/principle.md)\n\n## Blocked By\n\n- (none)\n\n## Definition of Done\n\n- Done\n',
           },
         },
       },
@@ -145,7 +145,7 @@ describe('migrate command', () => {
           },
           tasks: {
             'task.md':
-              '# Task\n\nDescription.\n\n## Goals\n\n- [Link](../goals/principle.md)\n\n## Blocked By\n\n- (none)\n\n## Definition of Done\n\n- [ ] Done\n',
+              '# Task\n\nDescription.\n\n## Goals\n\n- [Link](../goals/principle.md)\n\n## Blocked By\n\n- (none)\n\n## Definition of Done\n\n- Done\n',
           },
         },
       },

@@ -43,11 +43,11 @@ For each suggested audit, create an idea file explaining why that audit is relev
 
 ## Definition of Done
 
-- [ ] Analyzed commits from the last 20 commits
-- [ ] Identified file paths matching audit-relevant patterns
-- [ ] Reviewed commit messages for relevant keywords
-- [ ] Noted files with high churn that might need attention
-- [ ] Created idea files for each suggested audit with context explaining why
+- Analyzed commits from the last 20 commits
+- Identified file paths matching audit-relevant patterns
+- Reviewed commit messages for relevant keywords
+- Noted files with high churn that might need attention
+- Created idea files for each suggested audit with context explaining why
 ```
 
 ## Alignment with Principles

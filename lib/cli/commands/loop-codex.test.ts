@@ -19,7 +19,7 @@ const VALID_TASK_CONTENT = `# Task
 
 ## Definition of Done
 
-- [ ] Done`
+- Done`
 
 function createDependencies(
   tree: Parameters<typeof createFileSystemEmulator>[0] = {}

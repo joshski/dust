@@ -33,7 +33,7 @@ function formatLinks(links: Link[] | '(none)' | undefined): string {
 }
 
 function formatChecklist(items: string[]): string {
-  return items.map(item => `- [ ] ${item}`).join('\n')
+  return items.map(item => `- ${item}`).join('\n')
 }
 
 export function buildTask(options: TaskOptions): string {
