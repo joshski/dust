@@ -7,6 +7,6 @@ Branch coverage is important for ensuring thorough test coverage, so Vitest is u
 ## v8 Coverage Limitations
 
 The v8 coverage provider does not honor `/* v8 ignore */` comments for function-level metrics. Files with native wrapper functions (e.g., functions that directly access `process.stdin`, `process.stdout`, signals) work for line/statement coverage but require file-level exclusions in `vitest.config.ts` to achieve 100% function coverage. Currently affected files:
-- `lib/cli/commands/bucket.ts` (native WebSocket, stdin, signals, resize, stdout wrappers)
+- `lib/bucket/native-io.ts` (native WebSocket, stdin, signals, resize, stdout wrappers)
 
 When v8 fixes this limitation upstream, these file-level exclusions can be removed.
