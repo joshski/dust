@@ -10,6 +10,10 @@ While Dust has [Agent-Agnostic Design](agent-agnostic-design.md) and works with 
 
 This principle complements Agent-Agnostic Design: the core functionality never requires a specific agent, but the experience improves when one is recognized.
 
+## Applicability
+
+This repository only
+
 ## Parent Principle
 
 - [Agent Autonomy](agent-autonomy.md)

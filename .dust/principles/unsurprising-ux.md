@@ -6,6 +6,10 @@ Following the [Principle of Least Astonishment](https://en.wikipedia.org/wiki/Pr
 
 Surprising behavior erodes trust and slows people down. Unsurprising behavior lets users stay in flow.
 
+## Applicability
+
+This repository only
+
 ## Parent Principle
 
 - [Easy Adoption](easy-adoption.md)

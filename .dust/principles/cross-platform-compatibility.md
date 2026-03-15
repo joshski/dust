@@ -10,6 +10,10 @@ This means:
 
 Cross-platform support broadens adoption and ensures teams with mixed environments can collaborate effectively.
 
+## Applicability
+
+This repository only
+
 ## Parent Principle
 
 - [Easy Adoption](easy-adoption.md)

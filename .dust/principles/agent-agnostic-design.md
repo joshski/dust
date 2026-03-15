@@ -8,6 +8,10 @@ Dust may have built-in support for invoking popular agents (Claude, Aider, Codex
 
 Note: Supporting multiple agents directly contributes to [Easy Adoption](easy-adoption.md), since teams can use their preferred agent tools without being locked into a specific platform.
 
+## Applicability
+
+This repository only
+
 ## Parent Principle
 
 - [Agent Autonomy](agent-autonomy.md)

@@ -6,6 +6,10 @@ When a human gives a brief instruction like "the button should be green", the ag
 
 This reduces friction for humans and makes agent interactions feel more natural. The burden of context discovery shifts to the agent, which can use dust's CLI and repository structure to find what it needs.
 
+## Applicability
+
+This repository only
+
 ## Parent Principle
 
 - [Agent Autonomy](agent-autonomy.md)

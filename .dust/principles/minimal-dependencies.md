@@ -4,6 +4,10 @@ Dust should avoid coupling to specific tools so we can switch to better alternat
 
 By keeping dependencies minimal and using standard APIs where possible, we maintain the freedom to adopt new tools without major rewrites. This applies to runtimes, test frameworks, build tools, and other infrastructure choices.
 
+## Applicability
+
+This repository only
+
 ## Parent Principle
 
 - [Maintainable Codebase](maintainable-codebase.md)

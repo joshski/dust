@@ -6,6 +6,10 @@ When an agent encounters a new codebase — or an unfamiliar corner of a familia
 
 Dust should promote and integrate tools that help agents explore: dependency graphs, module overviews, search utilities tuned for code navigation, and summaries of project structure. The goal is to make the "orientation" phase of any task as short and reliable as possible.
 
+## Applicability
+
+This repository only
+
 ## Parent Principle
 
 - [Ideal Agent Developer Experience](ideal-agent-developer-experience.md)

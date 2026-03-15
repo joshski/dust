@@ -6,6 +6,10 @@ Getting started with Dust should require minimal friction. A developer should be
 
 This lowers the barrier to entry and encourages experimentation.
 
+## Applicability
+
+This repository only
+
 ## Parent Principle
 
 - [Human-AI Collaboration](human-ai-collaboration.md)

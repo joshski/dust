@@ -10,6 +10,10 @@ This approach scales through discipline rather than isolation. Feature flags and
 
 See: https://trunkbaseddevelopment.com/
 
+## Applicability
+
+This repository only
+
 ## Parent Principle
 
 - [Repository Hygiene](repository-hygiene.md)
