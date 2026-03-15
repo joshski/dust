@@ -15,9 +15,9 @@ export default defineConfig({
         'lib/version.ts',
         'lib/test/**',
         // v8 does not honor `/* v8 ignore */` comments for function-level metrics
-        // on native wrapper functions. This file uses inline ignores for
-        // line/statement coverage but must be excluded for 100% function coverage.
-        'lib/cli/commands/bucket-worker.ts',
+        // on native wrapper functions. This file contains thin wrappers around
+        // Node.js/Bun native APIs and is excluded for 100% function coverage.
+        'lib/bucket/native-io.ts',
       ],
       reporter: [
         [resolve(import.meta.dirname, 'lib/istanbul/minimal-reporter.cjs')],
