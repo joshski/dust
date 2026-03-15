@@ -250,8 +250,8 @@ export function lintTaskFile(filePath: string, content: string): Violation[] {
  * Useful when testing output that may contain colors or formatting.
  */
 export function stripAnsi(text: string): string {
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI codes require escape sequences
-  return text.replace(/\x1b\[[0-9;]*m/g, '')
+  // oxlint-disable-next-line no-control-regex -- ANSI codes require matching escape character
+  return text.replace(/\u001b\[[0-9;]*m/g, '')
 }
 
 /**

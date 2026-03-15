@@ -78,8 +78,8 @@ export const SYSTEM_COLOR = ANSI.DIM
  */
 export function visibleLength(text: string): number {
   // Remove all ANSI escape sequences
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI codes require escape sequences
-  return text.replace(/\x1b\[[0-9;]*m/g, '').length
+  // oxlint-disable-next-line no-control-regex -- ANSI codes require matching escape character
+  return text.replace(/\u001b\[[0-9;]*m/g, '').length
 }
 
 /**
@@ -91,8 +91,8 @@ export function truncateLine(text: string, maxWidth: number): string {
   const textLength = visibleLength(text)
   if (textLength <= maxWidth) return text
 
-  // biome-ignore lint/suspicious/noControlCharactersInRegex: ANSI codes require escape sequences
-  const ansiRegex = /\x1b\[[0-9;]*m/g
+  // oxlint-disable-next-line no-control-regex -- ANSI codes require matching escape character
+  const ansiRegex = /\u001b\[[0-9;]*m/g
   const truncateAt = maxWidth - CHARS.ellipsis.length
   let visibleCount = 0
   let result = ''
