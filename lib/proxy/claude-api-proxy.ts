@@ -224,6 +224,18 @@ export function buildUpstreamErrorResponse(error: unknown): ErrorResponse {
   }
 }
 
+/* v8 ignore start - HTTP response helper, tested via system tests */
+function sendErrorResponse(
+  nodeResponse: import('node:http').ServerResponse,
+  errorResponse: ErrorResponse
+): void {
+  nodeResponse.writeHead(errorResponse.statusCode, {
+    'Content-Type': errorResponse.contentType,
+  })
+  nodeResponse.end(errorResponse.body)
+}
+/* v8 ignore stop */
+
 /**
  * Creates a Claude API proxy server.
  * The server accepts HTTP requests and forwards them to the Anthropic API
@@ -235,15 +247,6 @@ export async function createClaudeApiProxyServer(
   let resolvedPort = 0
 
   /* v8 ignore start - HTTP server wiring, tested via system tests */
-  function sendErrorResponse(
-    nodeResponse: import('node:http').ServerResponse,
-    errorResponse: ErrorResponse
-  ): void {
-    nodeResponse.writeHead(errorResponse.statusCode, {
-      'Content-Type': errorResponse.contentType,
-    })
-    nodeResponse.end(errorResponse.body)
-  }
   const server = httpCreateServer(async (nodeRequest, nodeResponse) => {
     const method = nodeRequest.method ?? 'GET'
     const url = new URL(

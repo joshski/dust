@@ -10,7 +10,7 @@
     },
     {
       "name": "lint (oxlint)",
-      "command": "bunx oxlint .",
+      "command": "bunx oxlint -D suspicious .",
       "hints": [
         "Run `bunx oxlint .` to reproduce lint diagnostics locally",
         "Linting uses OXC defaults rather than Biome rule-by-rule parity"

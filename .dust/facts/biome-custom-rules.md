@@ -17,5 +17,5 @@ Design:
 
 ## Related Commands
 
-- `bunx oxlint .` - primary linter with OXC defaults.
+- `bunx oxlint -D suspicious .` - primary linter with OXC defaults plus suspicious category.
 - `bun run scripts/lint/policy-checks.ts` - repository-owned lint policy enforcement.
