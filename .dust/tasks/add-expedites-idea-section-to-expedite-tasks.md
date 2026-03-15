@@ -37,8 +37,8 @@ Update facts:
 
 ## Definition of Done
 
-- [ ] `createExpediteIdeaTask` creates a task with an "Expedites Idea" section linking to the source idea
-- [ ] `findAllWorkflowTasks` includes expedite tasks in `workflowTasksByIdeaSlug`
-- [ ] `findWorkflowTaskForIdea` returns expedite tasks
-- [ ] Lint validation enforces the "Expedites Idea" section for "Expedite Idea:" prefixed tasks
-- [ ] Facts are updated to reflect the new transition type
+- `createExpediteIdeaTask` creates a task with an "Expedites Idea" section linking to the source idea
+- `findAllWorkflowTasks` includes expedite tasks in `workflowTasksByIdeaSlug`
+- `findWorkflowTaskForIdea` returns expedite tasks
+- Lint validation enforces the "Expedites Idea" section for "Expedite Idea:" prefixed tasks
+- Facts are updated to reflect the new transition type
