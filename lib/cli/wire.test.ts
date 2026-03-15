@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, test } from 'vitest'
-import { restoreEnv, stubEnv } from '../test/test-utilities'
+import {
+  createTestRuntimeConfig,
+  restoreEnv,
+  stubEnv,
+} from '../test/test-utilities'
 import {
   type ConsolePrimitives,
   createFileSystem,
@@ -247,7 +251,12 @@ describe('wireEntry', () => {
       error: (msg: string) => errorLines.push(msg),
     }
 
-    await wireEntry(fsPrimitives, processPrimitives, consolePrimitives)
+    await wireEntry(
+      fsPrimitives,
+      processPrimitives,
+      consolePrimitives,
+      createTestRuntimeConfig()
+    )
 
     expect(exitCode).toBe(0)
     expect(logLines.join('\n')).toContain(
@@ -273,7 +282,12 @@ describe('wireEntry', () => {
       error: () => {},
     }
 
-    await wireEntry(fsPrimitives, processPrimitives, consolePrimitives)
+    await wireEntry(
+      fsPrimitives,
+      processPrimitives,
+      consolePrimitives,
+      createTestRuntimeConfig()
+    )
 
     expect(exitCode).toBe(1)
   })
@@ -298,7 +312,12 @@ describe('wireEntry', () => {
       error: () => {},
     }
 
-    await wireEntry(fsPrimitives, processPrimitives, consolePrimitives)
+    await wireEntry(
+      fsPrimitives,
+      processPrimitives,
+      consolePrimitives,
+      createTestRuntimeConfig()
+    )
 
     expect(exitCode).toBe(0)
     expect(logLines.join('\n')).toContain(
@@ -327,7 +346,12 @@ describe('wireEntry', () => {
       error: () => {},
     }
 
-    await wireEntry(fsPrimitives, processPrimitives, consolePrimitives)
+    await wireEntry(
+      fsPrimitives,
+      processPrimitives,
+      consolePrimitives,
+      createTestRuntimeConfig()
+    )
 
     expect(exitCode).toBe(0)
     expect(logLines.join('\n')).toContain('Usage: custom <command>')

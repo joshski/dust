@@ -92,7 +92,7 @@ import {
   type ToolExecutionResultMessage,
 } from '../../bucket/tool-execution-protocol'
 import { run as claudeRun } from '../../claude/run'
-import type { SessionConfig } from '../../env-config'
+import type { RuntimeConfig, SessionConfig } from '../../env-config'
 import { createLogger, enableFileLogs } from '../../logging'
 import { isUnattended } from '../../session'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
@@ -132,6 +132,7 @@ export interface BucketDependencies {
   getReposDir: () => string
   auth: AuthDependencies
   session: SessionConfig
+  runtime: RuntimeConfig
   /** Optional override for the agent runner (default: claudeRun). Used for testing. */
   run?: typeof claudeRun
 }
@@ -257,6 +258,7 @@ function toRepositoryDependencies(
     sleep: bucketDeps.sleep,
     getReposDir: bucketDeps.getReposDir,
     session: bucketDeps.session,
+    runtime: bucketDeps.runtime,
     getTools: () => state.tools,
     forwardToolExecution,
   }

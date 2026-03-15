@@ -4,6 +4,7 @@ import {
   asChildProcessStub,
   createContextEmulator,
   createFileSystemEmulator,
+  createTestRuntimeConfig,
   type FileSystemEmulator,
 } from '../../test/test-utilities'
 import { createGitRunner, type GitRunner } from '../process-runner'
@@ -46,6 +47,7 @@ function createDependencies(
     context,
     fileSystem,
     globScanner: fileSystem,
+    runtime: createTestRuntimeConfig(),
     settings,
   }
 }

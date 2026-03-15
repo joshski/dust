@@ -11,7 +11,11 @@ import { dirname } from 'node:path'
 import { run as claudeRun } from '../claude/run'
 import type { CommandDependencies, FileSystem } from '../cli/types'
 import type { DockerDependencies } from '../docker/docker-agent'
-import { readEnvConfig, type SessionConfig } from '../env-config'
+import {
+  readEnvConfig,
+  type RuntimeConfig,
+  type SessionConfig,
+} from '../env-config'
 import { createLogger } from '../logging'
 import type {
   ToolExecutionRequest,
@@ -89,6 +93,7 @@ export interface RepositoryDependencies {
   sleep: (ms: number) => Promise<void>
   getReposDir: () => string
   session: SessionConfig
+  runtime: RuntimeConfig
   /** Optional overrides for Docker dependency functions (for testing) */
   dockerDeps?: Partial<DockerDependencies>
   /** Function to get current tool definitions */
@@ -145,6 +150,7 @@ export function createDefaultRepositoryDependencies(
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
     getReposDir: () => getReposDir(process.env, homedir()),
     session: envConfig.session,
+    runtime: envConfig.runtime,
   }
 }
 /* v8 ignore stop */

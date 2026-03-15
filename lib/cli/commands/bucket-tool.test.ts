@@ -4,6 +4,7 @@ import {
   createContextEmulator,
   createFetchStub,
   createFileSystemEmulator,
+  createTestRuntimeConfig,
 } from '../../test/test-utilities'
 import type { CommandDependencies } from '../types'
 import { type BucketToolDependencies, bucketTool } from './bucket-tool'
@@ -45,6 +46,7 @@ function createCommandDependencies(
     context,
     fileSystem,
     globScanner: fileSystem,
+    runtime: createTestRuntimeConfig(),
     settings: { dustCommand: 'dust' },
   }
 }

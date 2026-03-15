@@ -36,6 +36,7 @@ import {
 import {
   createContextEmulator,
   createFileSystemEmulator,
+  createTestRuntimeConfig,
   type FileSystemEmulator,
 } from '../../test/test-utilities'
 import type { CommandContext, CommandDependencies } from '../types'
@@ -51,6 +52,7 @@ function createDependencies(
     context,
     fileSystem,
     globScanner: fileSystem,
+    runtime: createTestRuntimeConfig(),
     settings: { dustCommand: 'dust', ...settingsOverrides },
   }
 }

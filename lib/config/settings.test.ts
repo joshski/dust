@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from 'vitest'
 import {
   createFileSystemEmulator,
+  createTestRuntimeConfig,
   restoreEnv,
   stubEnv,
 } from '../test/test-utilities'
@@ -12,49 +13,57 @@ import {
   validateSettingsJson,
 } from './settings'
 
-describe('detectDustCommand', () => {
-  afterEach(() => {
-    restoreEnv()
-  })
+/** Default runtime config with no env vars set */
+const defaultRuntime = createTestRuntimeConfig()
 
+describe('detectDustCommand', () => {
   test('returns bunx dust when bun.lock exists', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'bun.lock': '' },
     })
-    expect(detectDustCommand('/project', fileSystem)).toBe('bunx dust')
+    expect(detectDustCommand('/project', fileSystem, defaultRuntime)).toBe(
+      'bunx dust'
+    )
   })
 
   test('returns bunx dust when bun.lockb exists', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'bun.lockb': '' },
     })
-    expect(detectDustCommand('/project', fileSystem)).toBe('bunx dust')
+    expect(detectDustCommand('/project', fileSystem, defaultRuntime)).toBe(
+      'bunx dust'
+    )
   })
 
   test('returns pnpx dust when pnpm-lock.yaml exists', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'pnpm-lock.yaml': '' },
     })
-    expect(detectDustCommand('/project', fileSystem)).toBe('pnpx dust')
+    expect(detectDustCommand('/project', fileSystem, defaultRuntime)).toBe(
+      'pnpx dust'
+    )
   })
 
   test('returns npx dust when package-lock.json exists', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'package-lock.json': '' },
     })
-    expect(detectDustCommand('/project', fileSystem)).toBe('npx dust')
+    expect(detectDustCommand('/project', fileSystem, defaultRuntime)).toBe(
+      'npx dust'
+    )
   })
 
-  test('returns bunx dust when BUN_INSTALL env var is set and no lockfiles', () => {
-    stubEnv('BUN_INSTALL', '/home/user/.bun')
+  test('returns bunx dust when bunInstall is set and no lockfiles', () => {
+    const runtime = createTestRuntimeConfig({ bunInstall: '/home/user/.bun' })
     const fileSystem = createFileSystemEmulator()
-    expect(detectDustCommand('/project', fileSystem)).toBe('bunx dust')
+    expect(detectDustCommand('/project', fileSystem, runtime)).toBe('bunx dust')
   })
 
-  test('returns npx dust as default when no lockfiles and no BUN_INSTALL', () => {
-    stubEnv('BUN_INSTALL', '')
+  test('returns npx dust as default when no lockfiles and no bunInstall', () => {
     const fileSystem = createFileSystemEmulator()
-    expect(detectDustCommand('/project', fileSystem)).toBe('npx dust')
+    expect(detectDustCommand('/project', fileSystem, defaultRuntime)).toBe(
+      'npx dust'
+    )
   })
 
   test('prioritizes bun.lock over bun.lockb', () => {
@@ -64,7 +73,9 @@ describe('detectDustCommand', () => {
         'bun.lockb': '',
       },
     })
-    expect(detectDustCommand('/project', fileSystem)).toBe('bunx dust')
+    expect(detectDustCommand('/project', fileSystem, defaultRuntime)).toBe(
+      'bunx dust'
+    )
   })
 
   test('prioritizes bun lockfiles over pnpm-lock.yaml', () => {
@@ -74,7 +85,9 @@ describe('detectDustCommand', () => {
         'pnpm-lock.yaml': '',
       },
     })
-    expect(detectDustCommand('/project', fileSystem)).toBe('bunx dust')
+    expect(detectDustCommand('/project', fileSystem, defaultRuntime)).toBe(
+      'bunx dust'
+    )
   })
 
   test('prioritizes pnpm-lock.yaml over package-lock.json', () => {
@@ -84,15 +97,17 @@ describe('detectDustCommand', () => {
         'package-lock.json': '',
       },
     })
-    expect(detectDustCommand('/project', fileSystem)).toBe('pnpx dust')
+    expect(detectDustCommand('/project', fileSystem, defaultRuntime)).toBe(
+      'pnpx dust'
+    )
   })
 
-  test('prioritizes lockfiles over BUN_INSTALL env var', () => {
-    stubEnv('BUN_INSTALL', '/home/user/.bun')
+  test('prioritizes lockfiles over bunInstall', () => {
+    const runtime = createTestRuntimeConfig({ bunInstall: '/home/user/.bun' })
     const fileSystem = createFileSystemEmulator({
       project: { 'package-lock.json': '' },
     })
-    expect(detectDustCommand('/project', fileSystem)).toBe('npx dust')
+    expect(detectDustCommand('/project', fileSystem, runtime)).toBe('npx dust')
   })
 })
 
@@ -255,65 +270,71 @@ describe('detectInstallCommand', () => {
 })
 
 describe('detectTestCommand', () => {
-  afterEach(() => {
-    restoreEnv()
-  })
-
   test('returns bun test when bun.lockb exists', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'bun.lockb': '' },
     })
-    expect(detectTestCommand('/project', fileSystem)).toBe('bun test')
+    expect(detectTestCommand('/project', fileSystem, defaultRuntime)).toBe(
+      'bun test'
+    )
   })
 
   test('returns bun test when bun.lock exists', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'bun.lock': '' },
     })
-    expect(detectTestCommand('/project', fileSystem)).toBe('bun test')
+    expect(detectTestCommand('/project', fileSystem, defaultRuntime)).toBe(
+      'bun test'
+    )
   })
 
   test('returns pnpm test when pnpm-lock.yaml exists', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'pnpm-lock.yaml': '' },
     })
-    expect(detectTestCommand('/project', fileSystem)).toBe('pnpm test')
+    expect(detectTestCommand('/project', fileSystem, defaultRuntime)).toBe(
+      'pnpm test'
+    )
   })
 
   test('returns npm test when package-lock.json exists', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'package-lock.json': '' },
     })
-    expect(detectTestCommand('/project', fileSystem)).toBe('npm test')
+    expect(detectTestCommand('/project', fileSystem, defaultRuntime)).toBe(
+      'npm test'
+    )
   })
 
   test('returns yarn test when yarn.lock exists', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'yarn.lock': '' },
     })
-    expect(detectTestCommand('/project', fileSystem)).toBe('yarn test')
+    expect(detectTestCommand('/project', fileSystem, defaultRuntime)).toBe(
+      'yarn test'
+    )
   })
 
-  test('returns bun test when BUN_INSTALL env var is set and no lockfiles', () => {
-    stubEnv('BUN_INSTALL', '/home/user/.bun')
+  test('returns bun test when bunInstall is set and no lockfiles', () => {
+    const runtime = createTestRuntimeConfig({ bunInstall: '/home/user/.bun' })
     const fileSystem = createFileSystemEmulator({
       project: { 'package.json': '' },
     })
-    expect(detectTestCommand('/project', fileSystem)).toBe('bun test')
+    expect(detectTestCommand('/project', fileSystem, runtime)).toBe('bun test')
   })
 
-  test('returns npm test when only package.json exists and no BUN_INSTALL', () => {
-    stubEnv('BUN_INSTALL', '')
+  test('returns npm test when only package.json exists and no bunInstall', () => {
     const fileSystem = createFileSystemEmulator({
       project: { 'package.json': '' },
     })
-    expect(detectTestCommand('/project', fileSystem)).toBe('npm test')
+    expect(detectTestCommand('/project', fileSystem, defaultRuntime)).toBe(
+      'npm test'
+    )
   })
 
   test('returns null when no lockfiles and no package.json', () => {
-    stubEnv('BUN_INSTALL', '')
     const fileSystem = createFileSystemEmulator()
-    expect(detectTestCommand('/project', fileSystem)).toBeNull()
+    expect(detectTestCommand('/project', fileSystem, defaultRuntime)).toBeNull()
   })
 
   test('prioritizes bun.lockb over other lockfiles', () => {
@@ -325,36 +346,32 @@ describe('detectTestCommand', () => {
         'yarn.lock': '',
       },
     })
-    expect(detectTestCommand('/project', fileSystem)).toBe('bun test')
+    expect(detectTestCommand('/project', fileSystem, defaultRuntime)).toBe(
+      'bun test'
+    )
   })
 
-  test('prioritizes lockfiles over BUN_INSTALL env var', () => {
-    stubEnv('BUN_INSTALL', '/home/user/.bun')
+  test('prioritizes lockfiles over bunInstall', () => {
+    const runtime = createTestRuntimeConfig({ bunInstall: '/home/user/.bun' })
     const fileSystem = createFileSystemEmulator({
       project: { 'package-lock.json': '' },
     })
-    expect(detectTestCommand('/project', fileSystem)).toBe('npm test')
+    expect(detectTestCommand('/project', fileSystem, runtime)).toBe('npm test')
   })
 
-  test('prioritizes BUN_INSTALL over package.json fallback', () => {
-    stubEnv('BUN_INSTALL', '/home/user/.bun')
+  test('prioritizes bunInstall over package.json fallback', () => {
+    const runtime = createTestRuntimeConfig({ bunInstall: '/home/user/.bun' })
     const fileSystem = createFileSystemEmulator({
       project: { 'package.json': '' },
     })
-    expect(detectTestCommand('/project', fileSystem)).toBe('bun test')
+    expect(detectTestCommand('/project', fileSystem, runtime)).toBe('bun test')
   })
 })
 
 describe('loadSettings', () => {
-  afterEach(() => {
-    restoreEnv()
-  })
-
   test('returns auto-detected dustCommand when no config file exists', async () => {
-    stubEnv('BUN_INSTALL', '')
-    stubEnv('DUST_EVENTS_URL', '')
     const fileSystem = createFileSystemEmulator()
-    const settings = await loadSettings('/project', fileSystem)
+    const settings = await loadSettings('/project', fileSystem, defaultRuntime)
 
     expect(settings.dustCommand).toBe('npx dust')
     expect(settings.installCommand).toBeUndefined()
@@ -362,12 +379,10 @@ describe('loadSettings', () => {
   })
 
   test('auto-detects installCommand when no config file exists and lockfile found', async () => {
-    stubEnv('BUN_INSTALL', '')
-    stubEnv('DUST_EVENTS_URL', '')
     const fileSystem = createFileSystemEmulator({
       project: { 'Gemfile.lock': '' },
     })
-    const settings = await loadSettings('/project', fileSystem)
+    const settings = await loadSettings('/project', fileSystem, defaultRuntime)
 
     expect(settings.dustCommand).toBe('npx dust')
     expect(settings.installCommand).toBe('bundle install')
@@ -386,14 +401,12 @@ describe('loadSettings', () => {
         },
       },
     })
-    const settings = await loadSettings('/project', fileSystem)
+    const settings = await loadSettings('/project', fileSystem, defaultRuntime)
 
     expect(settings.dustCommand).toBe('bin/dust')
   })
 
   test('throws when config file is invalid JSON', async () => {
-    stubEnv('BUN_INSTALL', '')
-    stubEnv('DUST_EVENTS_URL', '')
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -402,14 +415,12 @@ describe('loadSettings', () => {
       },
     })
 
-    await expect(loadSettings('/project', fileSystem)).rejects.toThrow(
-      SyntaxError
-    )
+    await expect(
+      loadSettings('/project', fileSystem, defaultRuntime)
+    ).rejects.toThrow(SyntaxError)
   })
 
   test('throws when config file is invalid JSON even with lockfile', async () => {
-    stubEnv('BUN_INSTALL', '')
-    stubEnv('DUST_EVENTS_URL', '')
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -419,9 +430,9 @@ describe('loadSettings', () => {
       },
     })
 
-    await expect(loadSettings('/project', fileSystem)).rejects.toThrow(
-      SyntaxError
-    )
+    await expect(
+      loadSettings('/project', fileSystem, defaultRuntime)
+    ).rejects.toThrow(SyntaxError)
   })
 
   test('auto-detects dustCommand when not set in settings', async () => {
@@ -433,7 +444,7 @@ describe('loadSettings', () => {
         'bun.lockb': '',
       },
     })
-    const settings = await loadSettings('/project', fileSystem)
+    const settings = await loadSettings('/project', fileSystem, defaultRuntime)
 
     expect(settings.dustCommand).toBe('bunx dust')
   })
@@ -447,7 +458,7 @@ describe('loadSettings', () => {
         'bun.lockb': '',
       },
     })
-    const settings = await loadSettings('/project', fileSystem)
+    const settings = await loadSettings('/project', fileSystem, defaultRuntime)
 
     expect(settings.dustCommand).toBe('custom/dust')
   })
@@ -461,7 +472,7 @@ describe('loadSettings', () => {
         'bun.lockb': '',
       },
     })
-    const settings = await loadSettings('/project', fileSystem)
+    const settings = await loadSettings('/project', fileSystem, defaultRuntime)
 
     expect(settings.installCommand).toBe('bun install')
   })
@@ -474,7 +485,7 @@ describe('loadSettings', () => {
         },
       },
     })
-    const settings = await loadSettings('/project', fileSystem)
+    const settings = await loadSettings('/project', fileSystem, defaultRuntime)
 
     expect(settings.installCommand).toBeUndefined()
   })
@@ -490,13 +501,12 @@ describe('loadSettings', () => {
         'bun.lockb': '',
       },
     })
-    const settings = await loadSettings('/project', fileSystem)
+    const settings = await loadSettings('/project', fileSystem, defaultRuntime)
 
     expect(settings.installCommand).toBe('custom install')
   })
 
   test('loads eventsUrl from settings.json', async () => {
-    stubEnv('DUST_EVENTS_URL', '') // Clear env var to test config file only
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -506,13 +516,15 @@ describe('loadSettings', () => {
         },
       },
     })
-    const settings = await loadSettings('/project', fileSystem)
+    const settings = await loadSettings('/project', fileSystem, defaultRuntime)
 
     expect(settings.eventsUrl).toBe('https://example.com/events')
   })
 
-  test('DUST_EVENTS_URL env var overrides settings.json value', async () => {
-    stubEnv('DUST_EVENTS_URL', 'https://env.example.com/events')
+  test('runtime eventsUrl overrides settings.json value', async () => {
+    const runtime = createTestRuntimeConfig({
+      eventsUrl: 'https://env.example.com/events',
+    })
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -523,13 +535,15 @@ describe('loadSettings', () => {
         },
       },
     })
-    const settings = await loadSettings('/project', fileSystem)
+    const settings = await loadSettings('/project', fileSystem, runtime)
 
     expect(settings.eventsUrl).toBe('https://env.example.com/events')
   })
 
-  test('DUST_EVENTS_URL env var works when settings.json has no eventsUrl', async () => {
-    stubEnv('DUST_EVENTS_URL', 'https://env.example.com/events')
+  test('runtime eventsUrl works when settings.json has no eventsUrl', async () => {
+    const runtime = createTestRuntimeConfig({
+      eventsUrl: 'https://env.example.com/events',
+    })
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -537,22 +551,22 @@ describe('loadSettings', () => {
         },
       },
     })
-    const settings = await loadSettings('/project', fileSystem)
+    const settings = await loadSettings('/project', fileSystem, runtime)
 
     expect(settings.eventsUrl).toBe('https://env.example.com/events')
   })
 
-  test('DUST_EVENTS_URL env var works when no settings.json exists', async () => {
-    stubEnv('DUST_EVENTS_URL', 'https://env.example.com/events')
-    stubEnv('BUN_INSTALL', '')
+  test('runtime eventsUrl works when no settings.json exists', async () => {
+    const runtime = createTestRuntimeConfig({
+      eventsUrl: 'https://env.example.com/events',
+    })
     const fileSystem = createFileSystemEmulator()
-    const settings = await loadSettings('/project', fileSystem)
+    const settings = await loadSettings('/project', fileSystem, runtime)
 
     expect(settings.eventsUrl).toBe('https://env.example.com/events')
   })
 
-  test('eventsUrl is undefined when neither env var nor config is set', async () => {
-    stubEnv('DUST_EVENTS_URL', '')
+  test('eventsUrl is undefined when neither runtime nor config is set', async () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -560,14 +574,15 @@ describe('loadSettings', () => {
         },
       },
     })
-    const settings = await loadSettings('/project', fileSystem)
+    const settings = await loadSettings('/project', fileSystem, defaultRuntime)
 
     expect(settings.eventsUrl).toBeUndefined()
   })
 
-  test('throws when settings.json is invalid JSON even with DUST_EVENTS_URL env var', async () => {
-    stubEnv('DUST_EVENTS_URL', 'https://env.example.com/events')
-    stubEnv('BUN_INSTALL', '')
+  test('throws when settings.json is invalid JSON even with runtime eventsUrl', async () => {
+    const runtime = createTestRuntimeConfig({
+      eventsUrl: 'https://env.example.com/events',
+    })
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -576,14 +591,12 @@ describe('loadSettings', () => {
       },
     })
 
-    await expect(loadSettings('/project', fileSystem)).rejects.toThrow(
+    await expect(loadSettings('/project', fileSystem, runtime)).rejects.toThrow(
       SyntaxError
     )
   })
 
   test('re-throws unexpected filesystem errors', async () => {
-    stubEnv('BUN_INSTALL', '')
-    stubEnv('DUST_EVENTS_URL', '')
     const permissionError = new Error('EACCES: permission denied')
     ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
     const fileSystem = createFileSystemEmulator({
@@ -597,15 +610,16 @@ describe('loadSettings', () => {
       throw permissionError
     }
 
-    await expect(loadSettings('/project', fileSystem)).rejects.toThrow(
-      'EACCES: permission denied'
-    )
+    await expect(
+      loadSettings('/project', fileSystem, defaultRuntime)
+    ).rejects.toThrow('EACCES: permission denied')
   })
 
   test('returns defaults when readFile throws ENOENT after exists check', async () => {
     // Race condition case: file exists when checked but deleted before read
-    stubEnv('BUN_INSTALL', '')
-    stubEnv('DUST_EVENTS_URL', 'https://env.example.com/events')
+    const runtime = createTestRuntimeConfig({
+      eventsUrl: 'https://env.example.com/events',
+    })
     const enoentError = new Error('ENOENT: no such file')
     ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
     const fileSystem = createFileSystemEmulator({
@@ -620,16 +634,14 @@ describe('loadSettings', () => {
       throw enoentError
     }
 
-    const settings = await loadSettings('/project', fileSystem)
+    const settings = await loadSettings('/project', fileSystem, runtime)
     expect(settings.dustCommand).toBe('bunx dust')
     expect(settings.installCommand).toBe('bun install')
     expect(settings.eventsUrl).toBe('https://env.example.com/events')
   })
 
   test('returns defaults without optional properties when ENOENT and no lockfile', async () => {
-    // Test the false branches: no lockfile detected and no DUST_EVENTS_URL
-    stubEnv('BUN_INSTALL', '')
-    stubEnv('DUST_EVENTS_URL', '')
+    // Test the false branches: no lockfile detected and no eventsUrl
     const enoentError = new Error('ENOENT: no such file')
     ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
     const fileSystem = createFileSystemEmulator({
@@ -643,7 +655,7 @@ describe('loadSettings', () => {
       throw enoentError
     }
 
-    const settings = await loadSettings('/project', fileSystem)
+    const settings = await loadSettings('/project', fileSystem, defaultRuntime)
     expect(settings.dustCommand).toBe('npx dust')
     expect(settings.installCommand).toBeUndefined()
     expect(settings.eventsUrl).toBeUndefined()
@@ -661,7 +673,7 @@ describe('loadSettings', () => {
         },
       },
     })
-    const settings = await loadSettings('/project', fileSystem)
+    const settings = await loadSettings('/project', fileSystem, defaultRuntime)
 
     expect(settings.checks).toEqual([
       { name: 'npm run lint', command: 'npm run lint' },
@@ -687,7 +699,7 @@ describe('loadSettings', () => {
         },
       },
     })
-    const settings = await loadSettings('/project', fileSystem)
+    const settings = await loadSettings('/project', fileSystem, defaultRuntime)
 
     expect(settings.checks?.[0].timeoutMilliseconds).toBe(30000)
   })

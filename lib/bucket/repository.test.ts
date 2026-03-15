@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest'
 import {
   createContextEmulator,
   createFileSystemEmulator,
+  createTestRuntimeConfig,
   createTestSessionConfig,
 } from '../test/test-utilities'
 import { createLogBuffer, getLogLines } from './log-buffer'
@@ -114,6 +115,7 @@ function createRepositoryDependencies(
     sleep: () => new Promise(() => {}),
     getReposDir: () => '/tmp',
     session: createTestSessionConfig(),
+    runtime: createTestRuntimeConfig(),
     ...overrides,
   }
 }

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import {
   createContextEmulator,
   createFileSystemEmulator,
+  createTestRuntimeConfig,
   type FileSystemTree,
   stripAnsi,
 } from '../../test/test-utilities'
@@ -36,6 +37,7 @@ function createDependencies(fileSystemTree: FileSystemTree = {}): {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     },
   }

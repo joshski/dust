@@ -14,6 +14,7 @@ import {
   createContextEmulator,
   createFileSystemEmulator,
   createTestAgentSessionStartedEvent,
+  createTestRuntimeConfig,
   createTestSessionConfig,
   restoreEnv,
   stubEnv,
@@ -63,6 +64,7 @@ function createDependencies(): CommandDependencies {
     fileSystem,
     globScanner: fileSystem,
     settings: { dustCommand: 'dust' },
+    runtime: createTestRuntimeConfig(),
   }
 }
 
@@ -107,6 +109,7 @@ function createBucketDependencies(
     getReposDir: () => '/tmp',
     auth: createMockAuthDeps(),
     session: createTestSessionConfig(),
+    runtime: createTestRuntimeConfig(),
     ...overrides,
   }
 }
@@ -2519,6 +2522,7 @@ describe('handleRepositoryListSuccess', () => {
       sleep: async () => {},
       getReposDir: () => '/tmp',
       session: createTestSessionConfig(),
+      runtime: createTestRuntimeConfig(),
     }
 
     handleRepositoryListSuccess(
@@ -2566,6 +2570,7 @@ describe('handleRepositoryListSuccess', () => {
       sleep: async () => {},
       getReposDir: () => '/tmp',
       session: createTestSessionConfig(),
+      runtime: createTestRuntimeConfig(),
     }
 
     handleRepositoryListSuccess(
@@ -2612,6 +2617,7 @@ describe('handleRepositoryListSuccess', () => {
       sleep: async () => {},
       getReposDir: () => '/tmp',
       session: createTestSessionConfig(),
+      runtime: createTestRuntimeConfig(),
     }
 
     handleRepositoryListSuccess(

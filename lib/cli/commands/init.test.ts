@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from 'vitest'
 import {
   createContextEmulator,
   createFileSystemEmulator,
+  createTestRuntimeConfig,
   restoreEnv,
   stripAnsi,
   stubEnv,
@@ -22,6 +23,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -46,6 +48,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -71,6 +74,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -96,6 +100,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -114,6 +119,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -136,6 +142,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -160,6 +167,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -182,6 +190,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -203,6 +212,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -225,6 +235,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -251,6 +262,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -274,6 +286,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -296,6 +309,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -317,6 +331,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -337,6 +352,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -358,6 +374,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -370,8 +387,6 @@ describe('init command', () => {
   })
 
   test('uses bunx when BUN_INSTALL env var is set and no lockfiles', async () => {
-    stubEnv('BUN_INSTALL', '/home/user/.bun')
-
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator()
     const dependencies: CommandDependencies = {
@@ -379,6 +394,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig({ bunInstall: '/home/user/.bun' }),
       settings: { dustCommand: 'dust' },
     }
 
@@ -399,6 +415,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -418,6 +435,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -438,6 +456,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -458,6 +477,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -478,6 +498,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -498,6 +519,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -521,6 +543,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -548,6 +571,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -575,6 +599,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 
@@ -602,6 +627,7 @@ describe('init command', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 

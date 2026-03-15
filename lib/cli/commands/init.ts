@@ -8,6 +8,7 @@ import {
   detectDustCommand,
   detectTestCommand,
 } from '../../config/settings'
+import type { RuntimeConfig } from '../../env-config'
 import { getColors } from '../colors'
 import { dedent } from '../dedent'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
@@ -18,9 +19,13 @@ const DUST_DIRECTORIES = ['principles', 'ideas', 'tasks', 'facts', 'config']
  * Generates starter settings based on detected project type.
  * Returns settings with appropriate dustCommand and checks.
  */
-function generateSettings(cwd: string, fileSystem: FileSystem): DustSettings {
-  const dustCommand = detectDustCommand(cwd, fileSystem)
-  const testCommand = detectTestCommand(cwd, fileSystem)
+function generateSettings(
+  cwd: string,
+  fileSystem: FileSystem,
+  runtime: RuntimeConfig
+): DustSettings {
+  const dustCommand = detectDustCommand(cwd, fileSystem, runtime)
+  const testCommand = detectTestCommand(cwd, fileSystem, runtime)
   const checks: CheckConfig[] = []
 
   if (testCommand) {
@@ -58,10 +63,10 @@ function agentsMdContent(dustCommand: string): string {
 export async function init(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
-  const { context, fileSystem } = dependencies
+  const { context, fileSystem, runtime } = dependencies
   const colors = getColors()
   const dustPath = `${context.cwd}/.dust`
-  const dustCommand = detectDustCommand(context.cwd, fileSystem)
+  const dustCommand = detectDustCommand(context.cwd, fileSystem, runtime)
   const agentInstruction = `Always immediately run \`${dustCommand} agent\` when you start working in this repository.`
 
   // Try to create .dust directory atomically
@@ -93,7 +98,7 @@ export async function init(
 
   try {
     // Generate and write settings.json
-    const settings = generateSettings(context.cwd, fileSystem)
+    const settings = generateSettings(context.cwd, fileSystem, runtime)
     await fileSystem.writeFile(
       `${dustPath}/config/settings.json`,
       `${JSON.stringify(settings, null, 2)}\n`,

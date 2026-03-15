@@ -304,11 +304,11 @@ export async function runRepositoryLoop(
   sendEvent?: SendEventFn,
   sessionId?: string
 ): Promise<void> {
-  const { spawn, run, fileSystem, sleep } = repoDeps
+  const { spawn, run, fileSystem, sleep, runtime } = repoDeps
   const repoName = repoState.repository.name
 
   // Build CommandDependencies for runOneIteration
-  const settings = await loadSettings(repoState.path, fileSystem)
+  const settings = await loadSettings(repoState.path, fileSystem, runtime)
   const logCallbacks = createLogCallbacks(repoState.logBuffer)
   const commandDeps: CommandDependencies = {
     arguments: [],
@@ -320,6 +320,7 @@ export async function runRepositoryLoop(
     fileSystem,
     globScanner: createNoOpGlobScanner(),
     settings,
+    runtime,
   }
 
   // Wrap run to redirect agent output to the repo's log buffer

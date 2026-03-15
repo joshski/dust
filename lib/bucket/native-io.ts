@@ -164,6 +164,7 @@ export function createDefaultBucketDependencies(): BucketDependencies {
       fileSystem: authFileSystem,
     },
     session: envConfig.session,
+    runtime: envConfig.runtime,
   }
 }
 /* v8 ignore stop */

@@ -5,6 +5,7 @@ import {
   asChildProcessStub,
   createContextEmulator,
   createFileSystemEmulator,
+  createTestRuntimeConfig,
   createTestSessionConfig,
 } from '../test/test-utilities'
 import type { CommandDependencies } from '../cli/types'
@@ -28,6 +29,7 @@ function createDependencies(
     context,
     fileSystem,
     globScanner: fileSystem,
+    runtime: createTestRuntimeConfig(),
     settings: { dustCommand: 'dust' },
   }
 }
@@ -300,6 +302,7 @@ describe('runOneIteration', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
     const loopDeps = createLoopDeps()

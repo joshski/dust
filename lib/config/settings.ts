@@ -10,6 +10,7 @@ import type {
   DustSettings,
   ReadableFileSystem,
 } from '../cli/types'
+import type { RuntimeConfig } from '../env-config'
 
 // Re-export for backwards compatibility
 export type { CheckConfig, DustSettings }
@@ -222,7 +223,8 @@ const DEFAULT_SETTINGS: DustSettings = {
  */
 export function detectDustCommand(
   cwd: string,
-  fileSystem: ReadableFileSystem
+  fileSystem: ReadableFileSystem,
+  runtime: RuntimeConfig
 ): string {
   if (
     fileSystem.exists(join(cwd, 'bun.lock')) ||
@@ -236,7 +238,7 @@ export function detectDustCommand(
   if (fileSystem.exists(join(cwd, 'package-lock.json'))) {
     return 'npx dust'
   }
-  if (process.env.BUN_INSTALL) {
+  if (runtime.bunInstall) {
     return 'bunx dust'
   }
   return 'npx dust'
@@ -319,7 +321,8 @@ export function detectInstallCommand(
  */
 export function detectTestCommand(
   cwd: string,
-  fileSystem: ReadableFileSystem
+  fileSystem: ReadableFileSystem,
+  runtime: RuntimeConfig
 ): string | null {
   if (
     fileSystem.exists(join(cwd, 'bun.lockb')) ||
@@ -336,7 +339,7 @@ export function detectTestCommand(
   if (fileSystem.exists(join(cwd, 'yarn.lock'))) {
     return 'yarn test'
   }
-  if (process.env.BUN_INSTALL) {
+  if (runtime.bunInstall) {
     return 'bun test'
   }
   if (fileSystem.exists(join(cwd, 'package.json'))) {
@@ -354,21 +357,22 @@ function normalizeCheckEntry(entry: string | CheckConfig): CheckConfig {
 
 export async function loadSettings(
   cwd: string,
-  fileSystem: ReadableFileSystem
+  fileSystem: ReadableFileSystem,
+  runtime: RuntimeConfig
 ): Promise<DustSettings> {
   const settingsPath = join(cwd, '.dust', 'config', 'settings.json')
 
   if (!fileSystem.exists(settingsPath)) {
     const result: DustSettings = {
-      dustCommand: detectDustCommand(cwd, fileSystem),
+      dustCommand: detectDustCommand(cwd, fileSystem, runtime),
     }
     const installCommand = detectInstallCommand(cwd, fileSystem)
     if (installCommand !== null) {
       result.installCommand = installCommand
     }
     // Override eventsUrl with env var if set
-    if (process.env.DUST_EVENTS_URL) {
-      result.eventsUrl = process.env.DUST_EVENTS_URL
+    if (runtime.eventsUrl) {
+      result.eventsUrl = runtime.eventsUrl
     }
     return result
   }
@@ -385,7 +389,7 @@ export async function loadSettings(
     }
     // Auto-detect dustCommand if not explicitly set
     if (!parsed.dustCommand) {
-      result.dustCommand = detectDustCommand(cwd, fileSystem)
+      result.dustCommand = detectDustCommand(cwd, fileSystem, runtime)
     }
     // Auto-detect installCommand if not explicitly set
     if (!parsed.installCommand) {
@@ -397,22 +401,22 @@ export async function loadSettings(
       }
     }
     // Override eventsUrl with env var if set
-    if (process.env.DUST_EVENTS_URL) {
-      result.eventsUrl = process.env.DUST_EVENTS_URL
+    if (runtime.eventsUrl) {
+      result.eventsUrl = runtime.eventsUrl
     }
     return result
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
       const result: DustSettings = {
-        dustCommand: detectDustCommand(cwd, fileSystem),
+        dustCommand: detectDustCommand(cwd, fileSystem, runtime),
       }
       const installCommand = detectInstallCommand(cwd, fileSystem)
       if (installCommand !== null) {
         result.installCommand = installCommand
       }
       // Override eventsUrl with env var if set
-      if (process.env.DUST_EVENTS_URL) {
-        result.eventsUrl = process.env.DUST_EVENTS_URL
+      if (runtime.eventsUrl) {
+        result.eventsUrl = runtime.eventsUrl
       }
       return result
     }

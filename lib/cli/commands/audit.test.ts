@@ -4,6 +4,7 @@ import { loadStockAudits } from '../../audits/stock-audits'
 import {
   createContextEmulator,
   createFileSystemEmulator,
+  createTestRuntimeConfig,
   type FileSystemEmulator,
   lintTaskFile,
 } from '../../test/test-utilities'
@@ -19,6 +20,7 @@ function createDependencies(
     context,
     fileSystem,
     globScanner: fileSystem,
+    runtime: createTestRuntimeConfig(),
     settings: { dustCommand: 'dust' },
   }
 }

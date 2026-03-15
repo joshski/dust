@@ -6,6 +6,7 @@ import {
   createContextEmulator,
   createFileSystemEmulator,
   type FileSystemEmulator,
+  createTestRuntimeConfig,
 } from '../../test/test-utilities'
 import { createShellRunner, type ShellRunner } from '../process-runner'
 import type {
@@ -60,6 +61,7 @@ function createDependencies(
     context,
     fileSystem,
     globScanner: fileSystem,
+    runtime: createTestRuntimeConfig(),
     settings,
   }
 }

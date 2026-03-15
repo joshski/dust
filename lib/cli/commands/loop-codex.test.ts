@@ -4,6 +4,7 @@ import {
   asChildProcessStub,
   createContextEmulator,
   createFileSystemEmulator,
+  createTestRuntimeConfig,
   createTestSessionConfig,
 } from '../../test/test-utilities'
 import type { CommandDependencies } from '../types'
@@ -32,6 +33,7 @@ function createDependencies(
     context,
     fileSystem,
     globScanner: fileSystem,
+    runtime: createTestRuntimeConfig(),
     settings: { dustCommand: 'dust' },
   }
 }

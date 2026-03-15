@@ -4,6 +4,7 @@ import type { RunnerDependencies } from '../claude/run'
 import type { RunnerDependencies as CodexRunnerDependencies } from '../codex/run'
 import {
   asTestType,
+  createTestRuntimeConfig,
   createTestSessionConfig,
   restoreEnv,
   stubEnv,
@@ -611,6 +612,7 @@ describe('runRepositoryLoop', () => {
       },
       getReposDir: () => '/tmp/repos',
       session: createTestSessionConfig(),
+      runtime: createTestRuntimeConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -650,6 +652,7 @@ describe('runRepositoryLoop', () => {
       },
       getReposDir: () => '/tmp/repos',
       session: createTestSessionConfig(),
+      runtime: createTestRuntimeConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -700,6 +703,7 @@ describe('runRepositoryLoop', () => {
       },
       getReposDir: () => '/tmp/repos',
       session: createTestSessionConfig(),
+      runtime: createTestRuntimeConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -734,6 +738,7 @@ describe('runRepositoryLoop', () => {
       },
       getReposDir: () => '/tmp/repos',
       session: createTestSessionConfig(),
+      runtime: createTestRuntimeConfig(),
     }
 
     // Should complete without throwing, verifying codex runner initialization works
@@ -771,6 +776,7 @@ describe('runRepositoryLoop', () => {
       },
       getReposDir: () => '/tmp/repos',
       session: createTestSessionConfig(),
+      runtime: createTestRuntimeConfig(),
     }
 
     // Should complete without throwing, verifying claude runner initialization works
@@ -827,6 +833,7 @@ describe('runRepositoryLoop', () => {
       },
       getReposDir: () => '/tmp/repos',
       session: createTestSessionConfig(),
+      runtime: createTestRuntimeConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -902,6 +909,7 @@ describe('runRepositoryLoop', () => {
         homedir: () => '/home/test',
       },
       session: createTestSessionConfig(),
+      runtime: createTestRuntimeConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -968,6 +976,7 @@ describe('runRepositoryLoop', () => {
         homedir: () => '/home/test',
       },
       session: createTestSessionConfig(),
+      runtime: createTestRuntimeConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -1024,6 +1033,7 @@ describe('runRepositoryLoop', () => {
         homedir: () => '/home/test',
       },
       session: createTestSessionConfig(),
+      runtime: createTestRuntimeConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -1091,6 +1101,7 @@ describe('runRepositoryLoop', () => {
         homedir: () => '/home/test',
       },
       session: createTestSessionConfig(),
+      runtime: createTestRuntimeConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)

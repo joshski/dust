@@ -14,7 +14,7 @@ import type {
   DustSettings,
 } from '../cli/types'
 import type { CommandEvent } from '../command-events'
-import type { SessionConfig } from '../env-config'
+import type { RuntimeConfig, SessionConfig } from '../env-config'
 import { createFileSystemEmulator } from '../filesystem/emulator'
 
 export {
@@ -36,6 +36,20 @@ export function createTestSessionConfig(
     skipAgent: undefined,
     repositoryId: undefined,
     reposDir: undefined,
+    ...overrides,
+  }
+}
+
+/**
+ * Creates a test RuntimeConfig with default undefined values.
+ * Use this for tests that need to pass runtime config as a dependency.
+ */
+export function createTestRuntimeConfig(
+  overrides: Partial<RuntimeConfig> = {}
+): RuntimeConfig {
+  return {
+    bunInstall: undefined,
+    eventsUrl: undefined,
     ...overrides,
   }
 }
@@ -294,6 +308,7 @@ export function createCommandDependencies(
       fileSystem,
       globScanner: fileSystem,
       settings,
+      runtime: createTestRuntimeConfig(),
     },
   }
 }

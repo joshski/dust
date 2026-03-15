@@ -3,6 +3,7 @@
  */
 
 import type { CommandEvent } from '../command-events'
+import type { RuntimeConfig } from '../env-config'
 import type { FileSystem, GlobScanner } from '../filesystem/types'
 
 export type {
@@ -53,4 +54,5 @@ export interface CommandDependencies {
   globScanner: GlobScanner
   settings: DustSettings
   directoryFileSorter?: DirectoryFileSorter
+  runtime: RuntimeConfig
 }

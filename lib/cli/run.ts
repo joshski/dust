@@ -40,5 +40,6 @@ await wireEntry(
     },
     error: console.error,
     emitEvent,
-  }
+  },
+  envConfig.runtime
 )

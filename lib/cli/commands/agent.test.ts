@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import {
   createContextEmulator,
   createFileSystemEmulator,
+  createTestRuntimeConfig,
   type FileSystemEmulator,
 } from '../../test/test-utilities'
 import type {
@@ -24,6 +25,7 @@ function createDependencies(
     fileSystem,
     globScanner: fileSystem,
     settings,
+    runtime: createTestRuntimeConfig(),
   }
 }
 

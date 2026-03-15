@@ -3,6 +3,7 @@ import type { FileSystemEmulator } from '../test/test-utilities'
 import {
   createContextEmulator,
   createFileSystemEmulator,
+  createTestRuntimeConfig,
   restoreEnv,
   stubEnv,
 } from '../test/test-utilities'
@@ -29,6 +30,7 @@ function createDependencies(
     fileSystem,
     globScanner: fileSystem,
     settings,
+    runtime: createTestRuntimeConfig(),
   }
 }
 
@@ -125,6 +127,7 @@ describe('main', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     expect(result.exitCode).toBe(0)
@@ -145,6 +148,7 @@ describe('main', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     expect(result.exitCode).toBe(0)
@@ -163,6 +167,7 @@ describe('main', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     expect(result.exitCode).toBe(0)
@@ -181,6 +186,7 @@ describe('main', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     expect(result.exitCode).toBe(0)
@@ -198,6 +204,7 @@ describe('main', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     expect(result.exitCode).toBe(0)
@@ -215,6 +222,7 @@ describe('main', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     expect(result.exitCode).toBe(1)
@@ -241,6 +249,7 @@ describe('main', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     expect(result.exitCode).toBe(0)
@@ -266,6 +275,7 @@ describe('main', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     expect(result.exitCode).toBe(1)
@@ -283,6 +293,7 @@ describe('main', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     expect(result.exitCode).toBe(0)
@@ -300,6 +311,7 @@ describe('main', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     expect(result.exitCode).toBe(0)
@@ -316,6 +328,7 @@ describe('main', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     expect(result.exitCode).toBe(0)
@@ -332,6 +345,7 @@ describe('main', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     expect(result.exitCode).toBe(0)
@@ -348,6 +362,7 @@ describe('main', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     // check command runs lint first, which should pass with empty .dust
@@ -369,6 +384,7 @@ describe('main', () => {
         context,
         fileSystem,
         glob: fileSystem,
+        runtime: createTestRuntimeConfig(),
       })
 
       expect(result.exitCode).toBe(0)
@@ -394,6 +410,7 @@ describe('main', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     expect(result.exitCode).toBe(1)
@@ -438,6 +455,7 @@ describe('multi-word command routing', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     expect(result.exitCode).toBe(0)
@@ -462,6 +480,7 @@ describe('multi-word command routing', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     expect(result.exitCode).toBe(0)
@@ -480,6 +499,7 @@ describe('multi-word command routing', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     // pre push runs check, which should fail without checks configured
@@ -499,6 +519,7 @@ describe('multi-word command routing', () => {
       context,
       fileSystem,
       glob: fileSystem,
+      runtime: createTestRuntimeConfig(),
     })
 
     // Should fall back to error since 'new unknown subcommand' and 'new unknown' don't exist

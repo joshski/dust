@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import {
   createContextEmulator,
   createFileSystemEmulator,
+  createTestRuntimeConfig,
 } from '../../test/test-utilities'
 import type { CommandDependencies } from '../types'
 import { buildImplementationInstructions, focus } from './focus'
@@ -17,6 +18,7 @@ function createDependencies(
     fileSystem,
     globScanner: fileSystem,
     settings: { dustCommand: 'dust' },
+    runtime: createTestRuntimeConfig(),
   }
 }
 
@@ -86,6 +88,7 @@ describe('focus', () => {
       context,
       fileSystem,
       globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
       settings: { dustCommand: 'dust' },
     }
 

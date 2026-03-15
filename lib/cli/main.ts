@@ -9,6 +9,7 @@
  */
 
 import { loadSettings } from '../config/settings'
+import type { RuntimeConfig } from '../env-config'
 import { DUST_VERSION } from '../version'
 import { agent } from './commands/agent'
 import { audit } from './commands/audit'
@@ -91,6 +92,7 @@ interface MainOptions {
   fileSystem: FileSystem
   glob: GlobScanner
   directoryFileSorter?: DirectoryFileSorter
+  runtime: RuntimeConfig
 }
 
 export function isHelpRequest(command: string | undefined): boolean {
@@ -138,10 +140,16 @@ function resolveCommand(commandArguments: string[]): {
 }
 
 export async function main(options: MainOptions): Promise<CommandResult> {
-  const { commandArguments, context, fileSystem, glob, directoryFileSorter } =
-    options
+  const {
+    commandArguments,
+    context,
+    fileSystem,
+    glob,
+    directoryFileSorter,
+    runtime,
+  } = options
 
-  const settings = await loadSettings(context.cwd, fileSystem)
+  const settings = await loadSettings(context.cwd, fileSystem, runtime)
   const helpText = generateHelpText(settings)
 
   if (isVersionRequest(commandArguments[0])) {
@@ -169,6 +177,7 @@ export async function main(options: MainOptions): Promise<CommandResult> {
     globScanner: glob,
     settings,
     directoryFileSorter,
+    runtime,
   }
 
   return runCommand(command, dependencies)

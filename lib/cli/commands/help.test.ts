@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { createTestRuntimeConfig } from '../../test/test-utilities'
 import type {
   CommandContext,
   CommandDependencies,
@@ -53,6 +54,7 @@ function createDependencies(
     context,
     fileSystem: createMockFileSystem(),
     globScanner: createMockGlob(),
+    runtime: createTestRuntimeConfig(),
     settings: { dustCommand },
   }
 }

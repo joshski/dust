@@ -13,6 +13,7 @@ import {
   rename,
   writeFile,
 } from 'node:fs/promises'
+import type { RuntimeConfig } from '../env-config'
 import { createGitDirectoryFileSorter } from '../git/file-sorter'
 import { main } from './main'
 import { defaultGitRunner } from './process-runner'
@@ -131,7 +132,8 @@ export const defaultFileSystemPrimitives: FileSystemPrimitives = {
 export async function wireEntry(
   fsPrimitives: FileSystemPrimitives,
   processPrimitives: ProcessPrimitives,
-  consolePrimitives: ConsolePrimitives
+  consolePrimitives: ConsolePrimitives,
+  runtime: RuntimeConfig
 ): Promise<void> {
   const fileSystem = createFileSystem(fsPrimitives)
   const glob = createGlobScanner(fsPrimitives.readdir)
@@ -149,6 +151,7 @@ export async function wireEntry(
     fileSystem,
     glob,
     directoryFileSorter,
+    runtime,
   })
 
   processPrimitives.exit(result.exitCode)

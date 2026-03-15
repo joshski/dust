@@ -5,6 +5,7 @@ import {
   asChildProcessStub,
   createContextEmulator,
   createFileSystemEmulator,
+  createTestRuntimeConfig,
   createTestSessionConfig,
   restoreEnv,
   stubEnv,
@@ -32,6 +33,7 @@ function createDependencies(
     context,
     fileSystem,
     globScanner: fileSystem,
+    runtime: createTestRuntimeConfig(),
     settings: { dustCommand: 'dust' },
   }
 }
@@ -436,6 +438,7 @@ describe('runLoop', () => {
       },
     })
     dependencies.arguments = ['1']
+    dependencies.runtime = createTestRuntimeConfig()
     dependencies.settings = {
       dustCommand: 'dust',
       eventsUrl: 'http://example.com/events',
@@ -508,6 +511,7 @@ describe('runLoop', () => {
       },
     })
     dependencies.arguments = ['1']
+    dependencies.runtime = createTestRuntimeConfig()
     dependencies.settings = {
       dustCommand: 'dust',
       eventsUrl: 'http://example.com/events',
@@ -542,6 +546,7 @@ describe('runLoop', () => {
       },
     })
     dependencies.arguments = ['1']
+    dependencies.runtime = createTestRuntimeConfig()
     dependencies.settings = {
       dustCommand: 'dust',
       eventsUrl: 'http://example.com/events',
@@ -576,6 +581,7 @@ describe('runLoop', () => {
       },
     })
     dependencies.arguments = ['1']
+    dependencies.runtime = createTestRuntimeConfig()
     dependencies.settings = {
       dustCommand: 'dust',
     }
@@ -603,6 +609,7 @@ describe('runLoop', () => {
       },
     })
     dependencies.arguments = ['1']
+    dependencies.runtime = createTestRuntimeConfig()
     dependencies.settings = {
       dustCommand: 'dust',
       eventsUrl: 'http://example.com/events',
@@ -638,6 +645,7 @@ describe('runLoop', () => {
       },
     })
     dependencies.arguments = ['2']
+    dependencies.runtime = createTestRuntimeConfig()
     dependencies.settings = {
       dustCommand: 'dust',
       eventsUrl: 'http://example.com/events',
@@ -692,6 +700,7 @@ describe('runLoop', () => {
       },
     })
     dependencies.arguments = ['1']
+    dependencies.runtime = createTestRuntimeConfig()
     dependencies.settings = {
       dustCommand: 'dust',
       eventsUrl: 'http://example.com/events',
@@ -933,6 +942,7 @@ describe('integration: HTTP event posting', () => {
         },
       })
       dependencies.arguments = ['1']
+      dependencies.runtime = createTestRuntimeConfig()
       dependencies.settings = {
         dustCommand: 'dust',
         eventsUrl,

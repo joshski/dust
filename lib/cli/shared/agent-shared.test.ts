@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { createTestRuntimeConfig } from '../../test/test-utilities'
 import type { CommandDependencies, DustSettings, FileSystem } from '../types'
 import {
   loadAgentInstructions,
@@ -320,6 +321,7 @@ describe('manageGitHooks', () => {
           yield* []
         },
       },
+      runtime: createTestRuntimeConfig(),
       settings,
     }
   }
