@@ -7,6 +7,21 @@ import {
   templateVariablesWithInstructions,
 } from './agent-shared'
 
+const createFileSystem = (files: Record<string, string>): FileSystem => ({
+  exists: (path: string) => path in files,
+  isDirectory: () => false,
+  getFileCreationTime: () => 0,
+  readFile: async (path: string) => {
+    if (path in files) return files[path]
+    throw new Error('File not found')
+  },
+  writeFile: async () => {},
+  mkdir: async () => {},
+  readdir: async () => [],
+  chmod: async () => {},
+  rename: async () => {},
+})
+
 describe('templateVariables', () => {
   const defaultSettings: DustSettings = { dustCommand: 'dust' }
 
@@ -103,21 +118,6 @@ describe('templateVariables', () => {
 })
 
 describe('loadAgentInstructions', () => {
-  const createFileSystem = (files: Record<string, string>): FileSystem => ({
-    exists: (path: string) => path in files,
-    isDirectory: () => false,
-    getFileCreationTime: () => 0,
-    readFile: async (path: string) => {
-      if (path in files) return files[path]
-      throw new Error('File not found')
-    },
-    writeFile: async () => {},
-    mkdir: async () => {},
-    readdir: async () => [],
-    chmod: async () => {},
-    rename: async () => {},
-  })
-
   test('returns empty string when file does not exist', async () => {
     const fileSystem = createFileSystem({})
     const result = await loadAgentInstructions(
@@ -222,21 +222,6 @@ describe('loadAgentInstructions', () => {
 
 describe('templateVariablesWithInstructions', () => {
   const defaultSettings: DustSettings = { dustCommand: 'dust' }
-
-  const createFileSystem = (files: Record<string, string>): FileSystem => ({
-    exists: (path: string) => path in files,
-    isDirectory: () => false,
-    getFileCreationTime: () => 0,
-    readFile: async (path: string) => {
-      if (path in files) return files[path]
-      throw new Error('File not found')
-    },
-    writeFile: async () => {},
-    mkdir: async () => {},
-    readdir: async () => [],
-    chmod: async () => {},
-    rename: async () => {},
-  })
 
   test('includes agentInstructions when file exists', async () => {
     const fileSystem = createFileSystem({

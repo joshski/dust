@@ -10,15 +10,37 @@ import {
   validateRequiredParameters,
 } from './tool-executor'
 
+const defaultMockFetch = async () =>
+  new Response(JSON.stringify({ url: 'https://example.com/result' }))
+
+const errorResponseMockFetch = async () =>
+  new Response('File too large', {
+    status: 413,
+    statusText: 'Payload Too Large',
+  })
+
+const throwingMockFetch = async (): Promise<Response> => {
+  throw new Error('Network timeout')
+}
+
+const noUrlMockFetch = async () =>
+  new Response(JSON.stringify({ status: 'ok', count: 5 }))
+
+const plainTextMockFetch = async () => new Response('Plain text response')
+
+const emptyBodyErrorMockFetch = async () =>
+  new Response('', { status: 502, statusText: 'Bad Gateway' })
+
+const successMockFetch = async () =>
+  new Response(JSON.stringify({ status: 'ok' }))
+
 function createMockDependencies(
   overrides: Partial<ToolExecutorDependencies> = {}
 ): ToolExecutorDependencies {
-  const mockFetch = async () =>
-    new Response(JSON.stringify({ url: 'https://example.com/result' }))
   return {
     readFileBytes: async () => new Uint8Array([1, 2, 3]),
     fileExists: async () => true,
-    fetch: createFetchStub(mockFetch),
+    fetch: createFetchStub(defaultMockFetch),
     ...overrides,
   }
 }
@@ -216,13 +238,8 @@ describe('executeTool', () => {
   })
 
   test('handles HTTP error responses', async () => {
-    const mockFetch = async () =>
-      new Response('File too large', {
-        status: 413,
-        statusText: 'Payload Too Large',
-      })
     const dependencies = createMockDependencies({
-      fetch: createFetchStub(mockFetch),
+      fetch: createFetchStub(errorResponseMockFetch),
     })
 
     const result = await executeTool(
@@ -239,11 +256,8 @@ describe('executeTool', () => {
   })
 
   test('handles network errors', async () => {
-    const mockFetch = async (): Promise<Response> => {
-      throw new Error('Network timeout')
-    }
     const dependencies = createMockDependencies({
-      fetch: createFetchStub(mockFetch),
+      fetch: createFetchStub(throwingMockFetch),
     })
 
     const result = await executeTool(
@@ -259,10 +273,8 @@ describe('executeTool', () => {
   })
 
   test('returns full JSON when no url field', async () => {
-    const mockFetch = async () =>
-      new Response(JSON.stringify({ status: 'ok', count: 5 }))
     const dependencies = createMockDependencies({
-      fetch: createFetchStub(mockFetch),
+      fetch: createFetchStub(noUrlMockFetch),
     })
 
     const result = await executeTool(
@@ -279,9 +291,8 @@ describe('executeTool', () => {
   })
 
   test('handles non-JSON responses', async () => {
-    const mockFetch = async () => new Response('Plain text response')
     const dependencies = createMockDependencies({
-      fetch: createFetchStub(mockFetch),
+      fetch: createFetchStub(plainTextMockFetch),
     })
 
     const result = await executeTool(
@@ -417,10 +428,8 @@ describe('executeTool', () => {
   })
 
   test('handles HTTP error with empty body', async () => {
-    const mockFetch = async () =>
-      new Response('', { status: 502, statusText: 'Bad Gateway' })
     const dependencies = createMockDependencies({
-      fetch: createFetchStub(mockFetch),
+      fetch: createFetchStub(emptyBodyErrorMockFetch),
     })
 
     const result = await executeTool(
@@ -504,9 +513,8 @@ describe('executeTool', () => {
         },
       ],
     }
-    const mockFetch = async () => new Response(JSON.stringify({ status: 'ok' }))
     const dependencies = createMockDependencies({
-      fetch: createFetchStub(mockFetch),
+      fetch: createFetchStub(successMockFetch),
       fileExists: async () => false, // File doesn't exist, but shouldn't be checked
     })
 

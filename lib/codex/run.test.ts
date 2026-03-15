@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest'
-import type { RawEvent } from '../claude/types'
+import type { RawEvent, RawEventCallback } from '../claude/types'
 import { defaultRunnerDependencies, type RunnerDependencies, run } from './run'
+
+const noOpOnRawEvent: RawEventCallback = () => {}
 
 describe('run', () => {
   test('defaultRunnerDependencies has all required functions', () => {
@@ -52,13 +54,12 @@ describe('run', () => {
       },
     }
 
-    const onRawEvent = () => {}
     await run(
       'test',
-      { spawnOptions: { cwd: '/tmp' }, onRawEvent },
+      { spawnOptions: { cwd: '/tmp' }, onRawEvent: noOpOnRawEvent },
       dependencies
     )
-    expect(capturedOnRawEvent).toBe(onRawEvent)
+    expect(capturedOnRawEvent).toBe(noOpOnRawEvent)
   })
 
   test('defaults spawnOptions to empty when RunOptions has only onRawEvent', async () => {
@@ -77,7 +78,7 @@ describe('run', () => {
       },
     }
 
-    await run('test', { onRawEvent: () => {} }, dependencies)
+    await run('test', { onRawEvent: noOpOnRawEvent }, dependencies)
     expect(streamCalled).toBe(true)
   })
 

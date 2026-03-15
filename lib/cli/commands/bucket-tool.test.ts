@@ -8,6 +8,23 @@ import {
 import type { CommandDependencies } from '../types'
 import { type BucketToolDependencies, bucketTool } from './bucket-tool'
 
+const throwingMockFetch = async () => {
+  throw new Error('connect ECONNREFUSED')
+}
+
+const okMockFetch = async () => new Response('ok', { status: 200 })
+
+const jsonOkMockFetch = async () =>
+  new Response(JSON.stringify({ ok: true }), { status: 200 })
+
+const proxyUnavailableMockFetch = async () =>
+  new Response('proxy unavailable', { status: 503 })
+
+const empty503MockFetch = async () => new Response('', { status: 503 })
+
+const emptyToolsMockFetch = async () =>
+  new Response(JSON.stringify({ tools: [] }), { status: 200 })
+
 const sampleTools: ToolDefinition[] = [
   {
     name: 'asset-upload',
@@ -110,13 +127,10 @@ describe('bucketTool', () => {
     const context = commandDependencies.context as ReturnType<
       typeof createContextEmulator
     >
-    const mockFetch = async () => {
-      throw new Error('connect ECONNREFUSED')
-    }
 
     const result = await bucketTool(
       commandDependencies,
-      createToolDependencies(createFetchStub(mockFetch)),
+      createToolDependencies(createFetchStub(throwingMockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -134,11 +148,10 @@ describe('bucketTool', () => {
     const context = commandDependencies.context as ReturnType<
       typeof createContextEmulator
     >
-    const mockFetch = async () => new Response('ok', { status: 200 })
 
     const result = await bucketTool(
       commandDependencies,
-      createToolDependencies(createFetchStub(mockFetch)),
+      createToolDependencies(createFetchStub(okMockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -156,12 +169,10 @@ describe('bucketTool', () => {
     const context = commandDependencies.context as ReturnType<
       typeof createContextEmulator
     >
-    const mockFetch = async () =>
-      new Response(JSON.stringify({ ok: true }), { status: 200 })
 
     const result = await bucketTool(
       commandDependencies,
-      createToolDependencies(createFetchStub(mockFetch)),
+      createToolDependencies(createFetchStub(jsonOkMockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -179,12 +190,10 @@ describe('bucketTool', () => {
     const context = commandDependencies.context as ReturnType<
       typeof createContextEmulator
     >
-    const mockFetch = async () =>
-      new Response('proxy unavailable', { status: 503 })
 
     const result = await bucketTool(
       commandDependencies,
-      createToolDependencies(createFetchStub(mockFetch)),
+      createToolDependencies(createFetchStub(proxyUnavailableMockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -200,11 +209,10 @@ describe('bucketTool', () => {
     const context = commandDependencies.context as ReturnType<
       typeof createContextEmulator
     >
-    const mockFetch = async () => new Response('', { status: 503 })
 
     const result = await bucketTool(
       commandDependencies,
-      createToolDependencies(createFetchStub(mockFetch)),
+      createToolDependencies(createFetchStub(empty503MockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',
@@ -246,12 +254,9 @@ describe('bucketTool', () => {
       typeof createContextEmulator
     >
 
-    const mockFetch = async () =>
-      new Response(JSON.stringify({ tools: [] }), { status: 200 })
-
     const result = await bucketTool(
       commandDependencies,
-      createToolDependencies(createFetchStub(mockFetch)),
+      createToolDependencies(createFetchStub(emptyToolsMockFetch)),
       {
         DUST_REPOSITORY_ID: 'repo-id',
         DUST_PROXY_PORT: '4444',

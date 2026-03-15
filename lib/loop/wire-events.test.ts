@@ -3,6 +3,17 @@ import type { EventMessage } from '../agent-events'
 import { createTestAgentSessionStartedEvent } from '../test/test-utilities'
 import { createPostEvent, createWireEventSender } from './wire-events'
 
+const throwingMockFetch = async (
+  _url: string | URL | Request,
+  _options?: RequestInit
+): Promise<Response> => {
+  throw new Error('Network failure')
+}
+
+const throwingPostEvent = async () => {
+  throw new Error('Network error')
+}
+
 describe('createPostEvent', () => {
   test('calls fetch with correct URL, method, and headers', async () => {
     const fetchCalls: { url: string; options: RequestInit }[] = []
@@ -56,13 +67,7 @@ describe('createPostEvent', () => {
   })
 
   test('propagates fetch errors', async () => {
-    const mockFetch = async (
-      _url: string | URL | Request,
-      _options?: RequestInit
-    ): Promise<Response> => {
-      throw new Error('Network failure')
-    }
-    const postEvent = createPostEvent(mockFetch as typeof fetch)
+    const postEvent = createPostEvent(throwingMockFetch as typeof fetch)
 
     await expect(
       postEvent('http://example.com/events', {
@@ -177,13 +182,10 @@ describe('createWireEventSender', () => {
 
   test('calls onError when post fails', async () => {
     const errors: unknown[] = []
-    const postEvent = async () => {
-      throw new Error('Network error')
-    }
     const send = createWireEventSender(
       'http://example.com',
       testSessionId,
-      postEvent,
+      throwingPostEvent,
       (error: unknown) => {
         errors.push(error)
       }

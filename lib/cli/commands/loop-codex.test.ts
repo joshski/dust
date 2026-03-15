@@ -11,6 +11,8 @@ import type { CommandDependencies } from '../types'
 import type { LoopDependencies } from '../../loop/iteration'
 import { createCodexDependencies, loopCodex } from './loop-codex'
 
+const customRun = async () => {}
+
 const VALID_TASK_CONTENT = `# Task
 
 ## Blocked By
@@ -74,7 +76,6 @@ describe('createCodexDependencies', () => {
   })
 
   test('allows overriding run while keeping agentType codex', () => {
-    const customRun = async () => {}
     const dependencies = createCodexDependencies({ run: customRun })
     expect(dependencies.run).toBe(customRun)
     expect(dependencies.agentType).toBe('codex')

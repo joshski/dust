@@ -101,6 +101,20 @@ export { createDefaultBucketDependencies }
 
 const log = createLogger('dust:cli:commands:bucket')
 
+/* v8 ignore start */
+function findRepoPathByRepositoryId(
+  repositories: Map<string, import('../../bucket/repository').RepositoryState>,
+  repositoryId: number
+): string | undefined {
+  for (const repoState of repositories.values()) {
+    if (repoState.repository.id === repositoryId) {
+      return repoState.path
+    }
+  }
+  return undefined
+}
+/* v8 ignore stop */
+
 const DEFAULT_DUSTBUCKET_WS_URL = 'wss://dustbucket.com/agent/connect'
 
 export interface BucketDependencies {
@@ -1090,21 +1104,6 @@ export async function bucketWorker(
   }
 
   /* v8 ignore start -- internal functions only called during real tool execution flows */
-  function findRepoPathByRepositoryId(
-    repositories: Map<
-      string,
-      import('../../bucket/repository').RepositoryState
-    >,
-    repositoryId: number
-  ): string | undefined {
-    for (const repoState of repositories.values()) {
-      if (repoState.repository.id === repositoryId) {
-        return repoState.path
-      }
-    }
-    return undefined
-  }
-
   let tuiHandle: TUIHandle | undefined
   let cleanupKeypress: (() => void) | undefined
   let cleanupSignals: (() => void) | undefined

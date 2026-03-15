@@ -22,7 +22,7 @@ The change involves updating the oxlint command in the check configuration to in
 
 ## Blocked By
 
-- [Fix consistent-function-scoping Violations](fix-consistent-function-scoping-violations.md)
+(none)
 
 ## Definition of Done
 

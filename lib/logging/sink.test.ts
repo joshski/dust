@@ -1,6 +1,16 @@
 import { describe, expect, test } from 'vitest'
 import { FileSink } from './sink'
 
+const noOpMkdirSync = () => {}
+
+const throwingMkdirSync = () => {
+  throw new Error('permission denied')
+}
+
+const throwingAppendFileSync = () => {
+  throw new Error('disk full')
+}
+
 function makeFakes() {
   const appended: [string, string][] = []
   const mkdirPaths: string[] = []
@@ -64,27 +74,20 @@ describe('FileSink', () => {
     const appended: [string, string][] = []
     const appendFileSync = (path: string, data: string) =>
       appended.push([path, data])
-    const mkdirSync = () => {
-      throw new Error('permission denied')
-    }
     const sink = new FileSink(
       '/home/user/.dust/logs/debug.log',
       appendFileSync,
-      mkdirSync
+      throwingMkdirSync
     )
     expect(() => sink.write('msg\n')).not.toThrow()
     expect(appended).toHaveLength(0)
   })
 
   test('silently no-ops when appendFileSync throws', () => {
-    const mkdirSync = () => {}
-    const appendFileSync = () => {
-      throw new Error('disk full')
-    }
     const sink = new FileSink(
       '/home/user/.dust/logs/debug.log',
-      appendFileSync,
-      mkdirSync
+      throwingAppendFileSync,
+      noOpMkdirSync
     )
     expect(() => sink.write('msg\n')).not.toThrow()
   })

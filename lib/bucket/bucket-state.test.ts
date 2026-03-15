@@ -34,6 +34,17 @@ const KEYS = {
   CTRL_C: '\x03',
 } as const
 
+function createKeypressState(
+  overrides: Partial<KeypressHandlerState> = {}
+): KeypressHandlerState {
+  return {
+    selectedIndex: -1,
+    repositories: [],
+    repositoryUrls: {},
+    ...overrides,
+  }
+}
+
 describe('bucket-state', () => {
   describe('handleServerMessage', () => {
     describe('repository-list messages', () => {
@@ -414,17 +425,6 @@ describe('bucket-state', () => {
   })
 
   describe('handleKeypress', () => {
-    function createKeypressState(
-      overrides: Partial<KeypressHandlerState> = {}
-    ): KeypressHandlerState {
-      return {
-        selectedIndex: -1,
-        repositories: [],
-        repositoryUrls: {},
-        ...overrides,
-      }
-    }
-
     describe('quit keys', () => {
       it('returns quit effect for q key', () => {
         const state = createKeypressState()

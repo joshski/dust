@@ -24,6 +24,22 @@ import {
   setupFallbackTimeout,
 } from './repository-loop'
 
+const noOpHandler = () => {}
+const immediatelySleep = () => Promise.resolve()
+const noOpReplacementCancel = () => {}
+
+const throwingSpawnUnexpectedFailure = () => {
+  throw new Error('Unexpected spawn failure')
+}
+
+const throwingSpawnStringError = () => {
+  throw 'string error' // eslint-disable-line no-throw-literal
+}
+
+const throwingSpawnFailure = () => {
+  throw new Error('spawn failure')
+}
+
 describe('createLogCallbacks', () => {
   test('stdout appends to log buffer with stdout stream', () => {
     const buffer = createLogBuffer()
@@ -521,11 +537,9 @@ describe('setupFallbackTimeout', () => {
     const resolve = () => {
       resolved = true
     }
-    const handler = () => {}
-    repoState.wakeUp = handler
-    const sleep = () => Promise.resolve()
+    repoState.wakeUp = noOpHandler
 
-    setupFallbackTimeout(repoState, sleep, resolve, handler)
+    setupFallbackTimeout(repoState, immediatelySleep, resolve, noOpHandler)
     await new Promise(r => setTimeout(r, 0))
 
     expect(resolved).toBe(true)
@@ -538,11 +552,9 @@ describe('setupFallbackTimeout', () => {
     const resolve = () => {
       resolved = true
     }
-    const handler = () => {}
     repoState.wakeUp = () => {} // Different handler
-    const sleep = () => Promise.resolve()
 
-    setupFallbackTimeout(repoState, sleep, resolve, handler)
+    setupFallbackTimeout(repoState, immediatelySleep, resolve, noOpHandler)
     await new Promise(r => setTimeout(r, 0))
 
     expect(resolved).toBe(false)
@@ -571,13 +583,8 @@ describe('runRepositoryLoop', () => {
     const repoState = createTestRepoState()
     let sleepCallCount = 0
 
-    // Spawn throws synchronously, causing gitPull (called by runOneIteration) to throw
-    const throwingSpawn = () => {
-      throw new Error('Unexpected spawn failure')
-    }
-
     const repoDeps: RepositoryDependencies = {
-      spawn: throwingSpawn as RepositoryDependencies['spawn'],
+      spawn: throwingSpawnUnexpectedFailure as RepositoryDependencies['spawn'],
       run: async () => {},
       fileSystem: {
         exists: () => false,
@@ -615,12 +622,8 @@ describe('runRepositoryLoop', () => {
     const repoState = createTestRepoState()
     let sleepCallCount = 0
 
-    const throwingSpawn = () => {
-      throw 'string error' // eslint-disable-line no-throw-literal
-    }
-
     const repoDeps: RepositoryDependencies = {
-      spawn: throwingSpawn as RepositoryDependencies['spawn'],
+      spawn: throwingSpawnStringError as RepositoryDependencies['spawn'],
       run: async () => {},
       fileSystem: {
         exists: () => false,
@@ -655,7 +658,6 @@ describe('runRepositoryLoop', () => {
   test('does not clear cancelCurrentIteration if replaced during iteration', async () => {
     const repoState = createTestRepoState()
     let sleepCallCount = 0
-    const replacementCancel = () => {}
 
     const throwingSpawn = (() => {
       let callCount = 0
@@ -663,7 +665,7 @@ describe('runRepositoryLoop', () => {
         callCount++
         // On the first call, replace cancelCurrentIteration before throwing
         if (callCount === 1) {
-          repoState.cancelCurrentIteration = replacementCancel
+          repoState.cancelCurrentIteration = noOpReplacementCancel
         }
         throw new Error('fail')
       }
@@ -695,21 +697,15 @@ describe('runRepositoryLoop', () => {
     await runRepositoryLoop(repoState, repoDeps)
 
     // The replacement cancel should still be in place
-    expect(repoState.cancelCurrentIteration).toBe(replacementCancel)
+    expect(repoState.cancelCurrentIteration).toBe(noOpReplacementCancel)
   })
 
   test('initializes codex runner when agentProvider is codex', async () => {
     const repoState = createTestRepoState('codex')
     let sleepCallCount = 0
 
-    // Spawn throws synchronously, causing the loop to error
-    // but we can verify the loop started successfully with codex configuration
-    const throwingSpawn = () => {
-      throw new Error('spawn failure')
-    }
-
     const repoDeps: RepositoryDependencies = {
-      spawn: throwingSpawn as RepositoryDependencies['spawn'],
+      spawn: throwingSpawnFailure as RepositoryDependencies['spawn'],
       run: async () => {},
       fileSystem: {
         exists: () => false,
@@ -744,12 +740,8 @@ describe('runRepositoryLoop', () => {
     const repoState = createTestRepoState()
     let sleepCallCount = 0
 
-    const throwingSpawn = () => {
-      throw new Error('spawn failure')
-    }
-
     const repoDeps: RepositoryDependencies = {
-      spawn: throwingSpawn as RepositoryDependencies['spawn'],
+      spawn: throwingSpawnFailure as RepositoryDependencies['spawn'],
       run: async () => {},
       fileSystem: {
         exists: () => false,

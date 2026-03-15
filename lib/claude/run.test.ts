@@ -4,6 +4,8 @@ import { spawnClaudeCode } from './spawn-claude-code'
 import { createStdoutSink, streamEvents } from './streamer'
 import type { RawEventCallback } from './types'
 
+const noOpOnRawEvent: RawEventCallback = () => {}
+
 describe('defaultRunnerDependencies', () => {
   test('uses real implementations', () => {
     expect(defaultRunnerDependencies.spawnClaudeCode).toBe(spawnClaudeCode)
@@ -64,7 +66,6 @@ describe('run', () => {
     let capturedCallback: RawEventCallback | undefined
 
     const fakeSink = { write: () => {}, line: () => {} }
-    const onRawEvent: RawEventCallback = () => {}
 
     const dependencies: RunnerDependencies = {
       spawnClaudeCode: () => (async function* () {})(),
@@ -76,11 +77,11 @@ describe('run', () => {
 
     await run(
       'test',
-      { spawnOptions: { maxTurns: 5 }, onRawEvent },
+      { spawnOptions: { maxTurns: 5 }, onRawEvent: noOpOnRawEvent },
       dependencies
     )
 
-    expect(capturedCallback).toBe(onRawEvent)
+    expect(capturedCallback).toBe(noOpOnRawEvent)
   })
 
   test('extracts spawnOptions from RunOptions', async () => {
@@ -116,13 +117,13 @@ describe('run', () => {
       streamEvents: async () => {},
     }
 
-    await run('test', { onRawEvent: () => {} }, dependencies)
+    await run('test', { onRawEvent: noOpOnRawEvent }, dependencies)
 
     expect(capturedOptions).toEqual({})
   })
 
   test('passes undefined callback when using legacy SpawnOptions', async () => {
-    let capturedCallback: RawEventCallback | undefined = () => {}
+    let capturedCallback: RawEventCallback | undefined = noOpOnRawEvent
 
     const dependencies: RunnerDependencies = {
       spawnClaudeCode: () => (async function* () {})(),

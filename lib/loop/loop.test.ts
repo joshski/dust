@@ -13,6 +13,14 @@ import type { LoopDependencies } from './iteration'
 import type { PostEventFn } from './wire-events'
 import { runLoop } from './loop'
 
+const realPostEvent: PostEventFn = async (url, payload) => {
+  await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
 function createDependencies(
   tree: Parameters<typeof createFileSystemEmulator>[0] = {}
 ): CommandDependencies {
@@ -932,15 +940,6 @@ describe('integration: HTTP event posting', () => {
       dependencies.settings = {
         dustCommand: 'dust',
         eventsUrl,
-      }
-
-      // Use real postEvent (via fetch) to test HTTP integration
-      const realPostEvent: PostEventFn = async (url, payload) => {
-        await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        })
       }
 
       const loopDeps = createLoopDeps({

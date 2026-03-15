@@ -5,6 +5,11 @@ import type {
   SpawnForEvents,
 } from '../process/spawn-contract'
 
+function defaultKill(this: ProcessForEvents) {
+  this.killed = true
+  return true
+}
+
 type EventListener = (...values: unknown[]) => void
 
 interface ProcessEventSourceStubOptions {
@@ -92,12 +97,7 @@ export function createSpawnStub(
       on: processStub.on,
       stderr: processStub.stderr,
       killed: processStub.killed ?? false,
-      kill:
-        processStub.kill ??
-        function defaultKill(this: ProcessForEvents) {
-          this.killed = true
-          return true
-        },
+      kill: processStub.kill ?? defaultKill,
     }
     return wrappedProcessStub
   }

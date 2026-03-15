@@ -7,6 +7,9 @@ import {
 import type { CommandContext, CommandDependencies } from '../types'
 import { findUnblockedTasks, next } from './next'
 
+const reverseSorter = async (_dir: string, files: string[]) =>
+  files.toReversed()
+
 function createDependencies(
   context: CommandContext,
   fileSystem: FileSystemEmulator
@@ -298,9 +301,6 @@ describe('next command', () => {
         },
       },
     })
-
-    const reverseSorter = async (_dir: string, files: string[]) =>
-      files.toReversed()
 
     const result = await findUnblockedTasks(
       '/project',

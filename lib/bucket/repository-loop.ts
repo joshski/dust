@@ -130,15 +130,19 @@ export function createWakeUpHandler(
   return handler
 }
 
+/* v8 ignore start */
+async function* noOpScan() {
+  // no-op
+}
+/* v8 ignore stop */
+
 /**
  * Create a no-op glob scanner for CommandDependencies.
  * The `next` command only uses fileSystem, not globScanner.
  */
 function createNoOpGlobScanner() {
   return {
-    scan: async function* noOpScan() {
-      // no-op
-    },
+    scan: noOpScan,
   }
 }
 

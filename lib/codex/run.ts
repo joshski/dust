@@ -8,6 +8,9 @@ interface RunOptions {
   onRawEvent?: RawEventCallback
 }
 
+const isRunOptions = (opt: SpawnOptions | RunOptions): opt is RunOptions =>
+  'spawnOptions' in opt || 'onRawEvent' in opt
+
 export interface RunnerDependencies {
   spawnCodex: typeof defaultSpawnCodex
   createStdoutSink: typeof defaultCreateStdoutSink
@@ -25,9 +28,6 @@ export async function run(
   options: SpawnOptions | RunOptions = {},
   dependencies: RunnerDependencies = defaultRunnerDependencies
 ): Promise<void> {
-  const isRunOptions = (opt: SpawnOptions | RunOptions): opt is RunOptions =>
-    'spawnOptions' in opt || 'onRawEvent' in opt
-
   const spawnOptions = isRunOptions(options)
     ? (options.spawnOptions ?? {})
     : options
