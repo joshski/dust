@@ -117,6 +117,14 @@ describe('next command', () => {
     expect(output).toContain('.dust/tasks/simple-task.md')
     expect(output).toContain('Just do it.')
     expect(output).not.toContain('.dust/tasks/malformed-task.md')
+
+    const stderrOutput = context.stderrLines.join('\n')
+    expect(stderrOutput).toContain('Skipped invalid tasks')
+    expect(stderrOutput).toContain('.dust/tasks/malformed-task.md')
+    expect(stderrOutput).toContain('Missing required heading: "## Blocked By"')
+    expect(stderrOutput).toContain(
+      'Missing required heading: "## Definition of Done"'
+    )
   })
 
   test('filters out tasks with incomplete blockers', async () => {
@@ -307,7 +315,7 @@ describe('next command', () => {
     ])
   })
 
-  test('returns empty when all tasks are invalid', async () => {
+  test('returns empty when all tasks are invalid and shows skipped section', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -325,6 +333,15 @@ describe('next command', () => {
 
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines).toHaveLength(0)
+
+    const stderrOutput = context.stderrLines.join('\n')
+    expect(stderrOutput).toContain('Skipped invalid tasks')
+    expect(stderrOutput).toContain('.dust/tasks/missing-blocked-by.md')
+    expect(stderrOutput).toContain('Missing required heading: "## Blocked By"')
+    expect(stderrOutput).toContain('.dust/tasks/missing-dod.md')
+    expect(stderrOutput).toContain(
+      'Missing required heading: "## Definition of Done"'
+    )
   })
 
   test('lists multiple unblocked tasks sorted by creation time (FIFO)', async () => {

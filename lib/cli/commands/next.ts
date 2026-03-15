@@ -5,6 +5,7 @@
  * A task is blocked if its "## Blocked By" section references task files that still exist.
  */
 
+import { validateTaskHeadings } from '../../lint/validators/content-validator'
 import {
   extractOpeningSentence,
   extractTitle,
@@ -60,6 +61,11 @@ export interface UnblockedTask {
   openingSentence: string | null
 }
 
+export interface InvalidTask {
+  path: string
+  messages: string[]
+}
+
 /**
  * Finds unblocked tasks in .dust/tasks/.
  * Returns null if .dust directory is missing, otherwise an array of unblocked tasks.
@@ -68,17 +74,21 @@ export async function findUnblockedTasks(
   cwd: string,
   fileSystem: FileSystem,
   directoryFileSorter?: DirectoryFileSorter
-): Promise<{ error?: string; tasks: UnblockedTask[] }> {
+): Promise<{
+  error?: string
+  tasks: UnblockedTask[]
+  invalidTasks: InvalidTask[]
+}> {
   const dustPath = `${cwd}/.dust`
 
   if (!fileSystem.exists(dustPath)) {
-    return { error: '.dust directory not found', tasks: [] }
+    return { error: '.dust directory not found', tasks: [], invalidTasks: [] }
   }
 
   const tasksPath = `${dustPath}/tasks`
 
   if (!fileSystem.exists(tasksPath)) {
-    return { tasks: [] }
+    return { tasks: [], invalidTasks: [] }
   }
 
   const files = await fileSystem.readdir(tasksPath)
@@ -95,7 +105,7 @@ export async function findUnblockedTasks(
   }
 
   if (mdFiles.length === 0) {
-    return { tasks: [] }
+    return { tasks: [], invalidTasks: [] }
   }
 
   const taskContents = new Map<string, string>()
@@ -104,12 +114,20 @@ export async function findUnblockedTasks(
     taskContents.set(file, await fileSystem.readFile(filePath))
   }
 
-  const validTaskFiles = mdFiles.filter(file =>
-    hasRequiredHeadings(taskContents.get(file) ?? '')
-  )
+  const validTaskFiles: string[] = []
+  const invalidTasks: InvalidTask[] = []
 
-  if (validTaskFiles.length === 0) {
-    return { tasks: [] }
+  for (const file of mdFiles) {
+    const content = taskContents.get(file) ?? ''
+    if (hasRequiredHeadings(content)) {
+      validTaskFiles.push(file)
+    } else {
+      const violations = validateTaskHeadings(`.dust/tasks/${file}`, content)
+      invalidTasks.push({
+        path: `.dust/tasks/${file}`,
+        messages: violations.map(v => v.message),
+      })
+    }
   }
 
   // Only valid task files participate in blocker evaluation.
@@ -134,7 +152,7 @@ export async function findUnblockedTasks(
     }
   }
 
-  return { tasks }
+  return { tasks, invalidTasks }
 }
 
 /**
@@ -163,6 +181,22 @@ export function printTaskList(
   }
 }
 
+export function printSkippedTasks(
+  context: CommandContext,
+  invalidTasks: InvalidTask[]
+): void {
+  const colors = getColors()
+  context.stderr(`${colors.yellow}⚠ Skipped invalid tasks${colors.reset}`)
+  context.stderr('')
+  for (const task of invalidTasks) {
+    context.stderr(`${colors.cyan}→ ${task.path}${colors.reset}`)
+    for (const message of task.messages) {
+      context.stderr(`  ${message}`)
+    }
+    context.stderr('')
+  }
+}
+
 export async function next(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
@@ -181,6 +215,9 @@ export async function next(
   }
 
   if (result.tasks.length === 0) {
+    if (result.invalidTasks.length > 0) {
+      printSkippedTasks(context, result.invalidTasks)
+    }
     context.emitEvent?.({
       type: 'tasks-listed',
       tasks: [],
@@ -189,6 +226,10 @@ export async function next(
   }
 
   printTaskList(context, result.tasks)
+
+  if (result.invalidTasks.length > 0) {
+    printSkippedTasks(context, result.invalidTasks)
+  }
 
   context.emitEvent?.({
     type: 'tasks-listed',

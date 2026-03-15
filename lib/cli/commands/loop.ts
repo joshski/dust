@@ -39,7 +39,12 @@ import { DUST_VERSION } from '../../version'
 import type { CommandDependencies, CommandResult } from '../types'
 import { manageGitHooks } from './agent-shared'
 import { buildImplementationInstructions } from './focus'
-import { findUnblockedTasks, type UnblockedTask } from './next'
+import {
+  findUnblockedTasks,
+  type InvalidTask,
+  printSkippedTasks,
+  type UnblockedTask,
+} from './next'
 
 function getEnvironmentContext(cwd: string): {
   machineName: string
@@ -294,14 +299,14 @@ export async function gitPull(
 
 export async function findAvailableTasks(
   dependencies: CommandDependencies
-): Promise<UnblockedTask[]> {
+): Promise<{ tasks: UnblockedTask[]; invalidTasks: InvalidTask[] }> {
   const { context, fileSystem, directoryFileSorter } = dependencies
   const result = await findUnblockedTasks(
     context.cwd,
     fileSystem,
     directoryFileSorter
   )
-  return result.tasks
+  return { tasks: result.tasks, invalidTasks: result.invalidTasks }
 }
 
 type IterationResult =
@@ -412,10 +417,13 @@ Make sure the repository is in a clean state and synced with remote before finis
 
   // Step 2: Check for available tasks
   onLoopEvent({ type: 'loop.checking_tasks' })
-  const tasks = await findAvailableTasks(dependencies)
+  const { tasks, invalidTasks } = await findAvailableTasks(dependencies)
 
   if (tasks.length === 0) {
     log('no tasks available')
+    if (invalidTasks.length > 0) {
+      printSkippedTasks(context, invalidTasks)
+    }
     onLoopEvent({ type: 'loop.no_tasks' })
     return 'no_tasks'
   }

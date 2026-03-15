@@ -362,20 +362,24 @@ describe('findAvailableTasks', () => {
   test('returns empty array when no tasks exist', async () => {
     const dependencies = createDependencies()
     const result = await findAvailableTasks(dependencies)
-    expect(result).toEqual([])
+    expect(result.tasks).toEqual([])
+    expect(result.invalidTasks).toEqual([])
   })
 
   test('returns tasks when they exist', async () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
     const result = await findAvailableTasks(dependencies)
-    expect(result).toHaveLength(1)
-    expect(result[0].title).toBe('Task')
+    expect(result.tasks).toHaveLength(1)
+    expect(result.tasks[0].title).toBe('Task')
   })
 })
 
@@ -543,11 +547,49 @@ describe('runOneIteration', () => {
     expect(result).toBe('no_tasks')
   })
 
+  test('logs skipped invalid tasks when no valid work is available', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: {
+            'bad-task.md': '# Bad Task\n\nMissing headings.',
+          },
+        },
+      },
+    })
+    const dependencies: CommandDependencies = {
+      arguments: [],
+      context,
+      fileSystem,
+      globScanner: fileSystem,
+      settings: { dustCommand: 'dust' },
+    }
+    const loopDeps = createLoopDeps()
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    const result = await runOneIteration(
+      dependencies,
+      loopDeps,
+      onLoopEvent,
+      onAgentEvent
+    )
+    expect(result).toBe('no_tasks')
+
+    const stderrOutput = context.stderrLines.join('\n')
+    expect(stderrOutput).toContain('Skipped invalid tasks')
+    expect(stderrOutput).toContain('.dust/tasks/bad-task.md')
+    expect(stderrOutput).toContain('Missing required heading')
+  })
+
   test('invokes Claude when tasks are available', async () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -574,7 +616,8 @@ describe('runOneIteration', () => {
       project: {
         '.dust': {
           tasks: {
-            'task.md': '# Task\n\nDo the thing.\n\n## Blocked By\n\n(none)',
+            'task.md':
+              '# Task\n\nDo the thing.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
           },
         },
       },
@@ -611,7 +654,10 @@ describe('runOneIteration', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -632,7 +678,10 @@ describe('runOneIteration', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -654,7 +703,10 @@ describe('runOneIteration', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -679,7 +731,10 @@ describe('runOneIteration', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -706,7 +761,10 @@ describe('runOneIteration', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -731,7 +789,10 @@ describe('runOneIteration', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -760,7 +821,10 @@ describe('runOneIteration', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# My Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# My Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -789,7 +853,10 @@ describe('runOneIteration', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': 'No heading here\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              'No heading here\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -818,7 +885,10 @@ describe('runOneIteration', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -846,7 +916,10 @@ describe('runOneIteration', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -875,7 +948,10 @@ describe('runOneIteration', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': 'No heading here\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              'No heading here\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -899,7 +975,10 @@ describe('runOneIteration', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -928,7 +1007,10 @@ describe('runOneIteration', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -999,7 +1081,10 @@ describe('runOneIteration', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1035,7 +1120,10 @@ describe('runOneIteration', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1057,7 +1145,10 @@ describe('runOneIteration', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1090,7 +1181,10 @@ Usage: \`dust bucket tool asset-upload <file>\``
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1274,7 +1368,7 @@ describe('loopClaude', () => {
         if (sleepCalls.length === 1) {
           fileSystem.files.set(
             '/project/.dust/tasks/task.md',
-            '# Task\n\n## Blocked By\n\n(none)'
+            '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done'
           )
         }
       },
@@ -1329,7 +1423,7 @@ describe('loopClaude', () => {
         if (sleepCalls.length === 1) {
           fileSystem.files.set(
             '/project/.dust/tasks/task.md',
-            '# Task\n\n## Blocked By\n\n(none)'
+            '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done'
           )
         }
       },
@@ -1347,7 +1441,10 @@ describe('loopClaude', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1373,7 +1470,10 @@ describe('loopClaude', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1422,7 +1522,7 @@ describe('loopClaude', () => {
         if (sleepCount === 1) {
           fileSystem.files.set(
             '/project/.dust/tasks/task.md',
-            '# Task\n\n## Blocked By\n\n(none)'
+            '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done'
           )
         }
       },
@@ -1441,7 +1541,10 @@ describe('loopClaude', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1465,7 +1568,10 @@ describe('loopClaude', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1490,7 +1596,10 @@ describe('loopClaude', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1526,7 +1635,10 @@ describe('loopClaude', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1570,7 +1682,10 @@ describe('loopClaude', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1592,7 +1707,10 @@ describe('loopClaude', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1623,7 +1741,10 @@ describe('loopClaude', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1654,7 +1775,10 @@ describe('loopClaude', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1678,7 +1802,10 @@ describe('loopClaude', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1710,7 +1837,10 @@ describe('loopClaude', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1761,7 +1891,10 @@ describe('loopClaude', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1814,7 +1947,10 @@ describe('loopClaude', () => {
       project: {
         '.dust': {
           Dockerfile: 'FROM node:20',
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1853,7 +1989,10 @@ describe('loopClaude', () => {
       project: {
         '.dust': {
           Dockerfile: 'FROM node:20',
-          tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+          },
         },
       },
     })
@@ -1993,7 +2132,10 @@ describe('integration: HTTP event posting', () => {
       const dependencies = createDependencies({
         project: {
           '.dust': {
-            tasks: { 'task.md': '# Task\n\n## Blocked By\n\n(none)' },
+            tasks: {
+              'task.md':
+                '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- [ ] Done',
+            },
           },
         },
       })
