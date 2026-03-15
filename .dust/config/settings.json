@@ -64,7 +64,7 @@
     },
     {
       "name": "tests (bun)",
-      "command": "bun test",
+      "command": "bun test lib/",
       "timeoutMilliseconds": 20000,
       "hints": [
         "Tests must work with both Vitest and Bun runtimes",

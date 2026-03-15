@@ -5,6 +5,18 @@ import {
   createFileSystemEmulator,
 } from '../test/test-utilities'
 import { createLogBuffer, getLogLines } from './log-buffer'
+
+const VALID_TASK_CONTENT = `# My Task
+
+Do something
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- [ ] Done`
 import {
   addRepository,
   cloneRepository,
@@ -656,7 +668,7 @@ describe('runRepositoryLoop', () => {
         repo: {
           '.dust': {
             tasks: {
-              'my-task.md': '# My Task\n\nDo something',
+              'my-task.md': VALID_TASK_CONTENT,
             },
           },
         },
@@ -786,7 +798,7 @@ describe('runRepositoryLoop', () => {
         repo: {
           '.dust': {
             tasks: {
-              'my-task.md': '# My Task\n\nDo something',
+              'my-task.md': VALID_TASK_CONTENT,
             },
           },
         },
@@ -893,7 +905,7 @@ describe('runRepositoryLoop', () => {
         repo: {
           '.dust': {
             tasks: {
-              'my-task.md': '# My Task\n\nDo something',
+              'my-task.md': VALID_TASK_CONTENT,
             },
           },
         },
@@ -944,7 +956,7 @@ describe('runRepositoryLoop', () => {
         repo: {
           '.dust': {
             tasks: {
-              'my-task.md': '# My Task\n\nDo something',
+              'my-task.md': VALID_TASK_CONTENT,
             },
           },
         },
