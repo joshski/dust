@@ -3,6 +3,7 @@ import os from 'node:os'
 import { run as claudeRun } from '../claude/run'
 import type { DockerSpawnConfig } from '../claude/types'
 import type { DockerDependencies } from '../docker/docker-agent'
+import { readEnvConfig, type SessionConfig } from '../env-config'
 import { createLogger } from '../logging'
 import { buildUnattendedEnv } from '../session'
 import { DUST_VERSION } from '../version'
@@ -42,6 +43,7 @@ export interface LoopDependencies {
   run: typeof claudeRun
   sleep: (ms: number) => Promise<void>
   postEvent: PostEventFn
+  session: SessionConfig
   agentType?: string
   fetch?: typeof fetch
   /** Optional overrides for Docker dependency functions (for testing) */
@@ -49,11 +51,13 @@ export interface LoopDependencies {
 }
 
 export function createDefaultDependencies(): LoopDependencies {
+  const envConfig = readEnvConfig(process.env)
   return {
     spawn: nodeSpawn,
     run: claudeRun,
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
     postEvent: createPostEvent(fetch),
+    session: envConfig.session,
   }
 }
 
@@ -114,6 +118,7 @@ export async function runOneIteration(
   const baseEnv = buildUnattendedEnv({
     repositoryId,
     proxyPort: options.proxyPort,
+    session: loopDependencies.session,
   })
 
   // Step 1: Sync with remote

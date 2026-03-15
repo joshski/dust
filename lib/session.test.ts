@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import type { SessionConfig } from './env-config'
 import {
   buildUnattendedEnv,
   DUST_PROXY_PORT,
@@ -7,53 +8,74 @@ import {
   DUST_UNATTENDED,
   isUnattended,
 } from './session'
-import { stubEnv } from './test/test-utilities'
+
+function createSessionConfig(
+  overrides: Partial<SessionConfig> = {}
+): SessionConfig {
+  return {
+    proxyPort: undefined,
+    unattended: undefined,
+    skipAgent: undefined,
+    repositoryId: undefined,
+    reposDir: undefined,
+    ...overrides,
+  }
+}
 
 describe('isUnattended', () => {
-  test('returns false when DUST_UNATTENDED is not set', () => {
-    expect(isUnattended({})).toBe(false)
+  test('returns false when unattended is not set', () => {
+    expect(isUnattended(createSessionConfig())).toBe(false)
   })
 
-  test('returns true when DUST_UNATTENDED is set', () => {
-    expect(isUnattended({ [DUST_UNATTENDED]: '1' })).toBe(true)
+  test('returns true when unattended is set', () => {
+    expect(isUnattended(createSessionConfig({ unattended: '1' }))).toBe(true)
   })
 
-  test('returns false when DUST_UNATTENDED is undefined', () => {
-    expect(isUnattended({ [DUST_UNATTENDED]: undefined })).toBe(false)
+  test('returns false when unattended is undefined', () => {
+    expect(isUnattended(createSessionConfig({ unattended: undefined }))).toBe(
+      false
+    )
   })
 })
 
 describe('buildUnattendedEnv', () => {
   test('returns DUST_UNATTENDED and DUST_SKIP_AGENT', () => {
-    return stubEnv(DUST_PROXY_PORT, undefined, () => {
-      const env = buildUnattendedEnv()
-      expect(env).toEqual({
-        [DUST_UNATTENDED]: '1',
-        [DUST_SKIP_AGENT]: '1',
-      })
+    const env = buildUnattendedEnv({ session: createSessionConfig() })
+    expect(env).toEqual({
+      [DUST_UNATTENDED]: '1',
+      [DUST_SKIP_AGENT]: '1',
     })
   })
 
   test('includes DUST_REPOSITORY_ID when provided', () => {
-    return stubEnv(DUST_PROXY_PORT, undefined, () => {
-      const env = buildUnattendedEnv({ repositoryId: 'repo-123' })
-      expect(env).toEqual({
-        [DUST_UNATTENDED]: '1',
-        [DUST_SKIP_AGENT]: '1',
-        [DUST_REPOSITORY_ID]: 'repo-123',
-      })
+    const env = buildUnattendedEnv({
+      repositoryId: 'repo-123',
+      session: createSessionConfig(),
+    })
+    expect(env).toEqual({
+      [DUST_UNATTENDED]: '1',
+      [DUST_SKIP_AGENT]: '1',
+      [DUST_REPOSITORY_ID]: 'repo-123',
     })
   })
 
   test('omits DUST_REPOSITORY_ID when not provided', () => {
-    const env = buildUnattendedEnv({})
+    const env = buildUnattendedEnv({ session: createSessionConfig() })
     expect(env[DUST_REPOSITORY_ID]).toBeUndefined()
   })
 
-  test('includes DUST_PROXY_PORT when present in process env', () => {
-    return stubEnv(DUST_PROXY_PORT, '4310', () => {
-      const env = buildUnattendedEnv()
-      expect(env[DUST_PROXY_PORT]).toBe('4310')
+  test('includes DUST_PROXY_PORT when present in session config', () => {
+    const env = buildUnattendedEnv({
+      session: createSessionConfig({ proxyPort: '4310' }),
     })
+    expect(env[DUST_PROXY_PORT]).toBe('4310')
+  })
+
+  test('uses explicit proxyPort over session config', () => {
+    const env = buildUnattendedEnv({
+      proxyPort: 5000,
+      session: createSessionConfig({ proxyPort: '4310' }),
+    })
+    expect(env[DUST_PROXY_PORT]).toBe('5000')
   })
 })

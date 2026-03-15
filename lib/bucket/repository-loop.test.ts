@@ -2,7 +2,12 @@ import { afterEach, describe, expect, test } from 'vitest'
 import type { AgentSessionEvent } from '../agent-events'
 import type { RunnerDependencies } from '../claude/run'
 import type { RunnerDependencies as CodexRunnerDependencies } from '../codex/run'
-import { asTestType, restoreEnv, stubEnv } from '../test/test-utilities'
+import {
+  asTestType,
+  createTestSessionConfig,
+  restoreEnv,
+  stubEnv,
+} from '../test/test-utilities'
 import type { SendEventFn } from './events'
 import { createLogBuffer, getLogLines } from './log-buffer'
 import type { RepositoryDependencies, RepositoryState } from './repository'
@@ -605,6 +610,7 @@ describe('runRepositoryLoop', () => {
         }
       },
       getReposDir: () => '/tmp/repos',
+      session: createTestSessionConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -643,6 +649,7 @@ describe('runRepositoryLoop', () => {
         }
       },
       getReposDir: () => '/tmp/repos',
+      session: createTestSessionConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -692,6 +699,7 @@ describe('runRepositoryLoop', () => {
         }
       },
       getReposDir: () => '/tmp/repos',
+      session: createTestSessionConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -725,6 +733,7 @@ describe('runRepositoryLoop', () => {
         }
       },
       getReposDir: () => '/tmp/repos',
+      session: createTestSessionConfig(),
     }
 
     // Should complete without throwing, verifying codex runner initialization works
@@ -761,6 +770,7 @@ describe('runRepositoryLoop', () => {
         }
       },
       getReposDir: () => '/tmp/repos',
+      session: createTestSessionConfig(),
     }
 
     // Should complete without throwing, verifying claude runner initialization works
@@ -816,6 +826,7 @@ describe('runRepositoryLoop', () => {
         }
       },
       getReposDir: () => '/tmp/repos',
+      session: createTestSessionConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -890,6 +901,7 @@ describe('runRepositoryLoop', () => {
         existsSync: (p: string) => p.includes('.dust/Dockerfile'),
         homedir: () => '/home/test',
       },
+      session: createTestSessionConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -955,6 +967,7 @@ describe('runRepositoryLoop', () => {
         existsSync: (p: string) => p.includes('.dust/Dockerfile'),
         homedir: () => '/home/test',
       },
+      session: createTestSessionConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -1010,6 +1023,7 @@ describe('runRepositoryLoop', () => {
         existsSync: (p: string) => p.includes('.dust/Dockerfile'),
         homedir: () => '/home/test',
       },
+      session: createTestSessionConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -1076,6 +1090,7 @@ describe('runRepositoryLoop', () => {
         existsSync: (p: string) => p.includes('.dust/Dockerfile'),
         homedir: () => '/home/test',
       },
+      session: createTestSessionConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)

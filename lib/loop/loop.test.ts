@@ -5,6 +5,7 @@ import {
   asChildProcessStub,
   createContextEmulator,
   createFileSystemEmulator,
+  createTestSessionConfig,
   restoreEnv,
   stubEnv,
 } from '../test/test-utilities'
@@ -65,26 +66,21 @@ function createLoopDeps(
     run: async () => {},
     sleep: async () => {},
     postEvent: async () => {},
+    session: createTestSessionConfig(),
     ...overrides,
   }
 }
 
 describe('runLoop', () => {
-  beforeEach(() => {
-    stubEnv('DUST_UNATTENDED', undefined)
-  })
-
-  afterEach(() => {
-    restoreEnv()
-  })
-
-  test('refuses to run when DUST_UNATTENDED is set', async () => {
-    stubEnv('DUST_UNATTENDED', '1')
+  test('refuses to run when unattended is set in session config', async () => {
     const dependencies = createDependencies()
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
-    const result = await runLoop(dependencies, createLoopDeps())
+    const loopDeps = createLoopDeps({
+      session: createTestSessionConfig({ unattended: '1' }),
+    })
+    const result = await runLoop(dependencies, loopDeps)
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('\n')).toContain(
       'dust loop cannot run inside an unattended session'

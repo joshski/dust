@@ -92,6 +92,7 @@ import {
   type ToolExecutionResultMessage,
 } from '../../bucket/tool-execution-protocol'
 import { run as claudeRun } from '../../claude/run'
+import type { SessionConfig } from '../../env-config'
 import { createLogger, enableFileLogs } from '../../logging'
 import { isUnattended } from '../../session'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
@@ -130,6 +131,7 @@ export interface BucketDependencies {
   sleep: (ms: number) => Promise<void>
   getReposDir: () => string
   auth: AuthDependencies
+  session: SessionConfig
   /** Optional override for the agent runner (default: claudeRun). Used for testing. */
   run?: typeof claudeRun
 }
@@ -254,6 +256,7 @@ function toRepositoryDependencies(
     fileSystem,
     sleep: bucketDeps.sleep,
     getReposDir: bucketDeps.getReposDir,
+    session: bucketDeps.session,
     getTools: () => state.tools,
     forwardToolExecution,
   }
@@ -1049,7 +1052,7 @@ export async function bucketWorker(
   enableFileLogs('bucket')
   const { context, fileSystem } = dependencies
 
-  if (isUnattended()) {
+  if (isUnattended(bucketDeps.session)) {
     context.stderr(
       'dust bucket cannot run inside an unattended session (DUST_UNATTENDED is set)'
     )

@@ -5,6 +5,7 @@ import {
   asChildProcessStub,
   createContextEmulator,
   createFileSystemEmulator,
+  createTestSessionConfig,
 } from '../test/test-utilities'
 import type { CommandDependencies } from '../cli/types'
 import type { LoopEmitFn } from './events'
@@ -55,6 +56,7 @@ function createLoopDeps(
     run: async () => {},
     sleep: async () => {},
     postEvent: async () => {},
+    session: createTestSessionConfig(),
     ...overrides,
   }
 }

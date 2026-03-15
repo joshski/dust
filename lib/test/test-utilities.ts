@@ -14,6 +14,7 @@ import type {
   DustSettings,
 } from '../cli/types'
 import type { CommandEvent } from '../command-events'
+import type { SessionConfig } from '../env-config'
 import { createFileSystemEmulator } from '../filesystem/emulator'
 
 export {
@@ -21,6 +22,23 @@ export {
   type FileSystemEmulator,
   type FileSystemTree,
 } from '../filesystem/emulator'
+
+/**
+ * Creates a test SessionConfig with default undefined values.
+ * Use this for tests that need to pass session config as a dependency.
+ */
+export function createTestSessionConfig(
+  overrides: Partial<SessionConfig> = {}
+): SessionConfig {
+  return {
+    proxyPort: undefined,
+    unattended: undefined,
+    skipAgent: undefined,
+    repositoryId: undefined,
+    reposDir: undefined,
+    ...overrides,
+  }
+}
 
 import {
   validateImperativeOpeningSentence,

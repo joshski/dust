@@ -1,11 +1,10 @@
 import { EventEmitter } from 'node:events'
-import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import {
   asChildProcessStub,
   createContextEmulator,
   createFileSystemEmulator,
-  restoreEnv,
-  stubEnv,
+  createTestSessionConfig,
 } from '../../test/test-utilities'
 import type { CommandDependencies } from '../types'
 import type { LoopDependencies } from '../../loop/iteration'
@@ -61,6 +60,7 @@ function createLoopDeps(
     run: async () => {},
     sleep: async () => {},
     postEvent: async () => {},
+    session: createTestSessionConfig(),
     ...overrides,
   }
 }
@@ -83,14 +83,6 @@ describe('createCodexDependencies', () => {
 })
 
 describe('loopCodex', () => {
-  beforeEach(() => {
-    stubEnv('DUST_UNATTENDED', undefined)
-  })
-
-  afterEach(() => {
-    restoreEnv()
-  })
-
   test('uses codex agentType in startup message', async () => {
     const dependencies = createDependencies()
     dependencies.arguments = ['1']

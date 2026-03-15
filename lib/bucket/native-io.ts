@@ -11,6 +11,7 @@ import { EventEmitter } from 'node:events'
 import { accessSync, statSync } from 'node:fs'
 import { chmod, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
+import { readEnvConfig } from '../env-config'
 import { createLocalServer, openBrowser } from './auth-server'
 import { discoverAgentCapabilities } from './agent-capabilities'
 import type { WebSocketLike } from './events'
@@ -128,6 +129,7 @@ function defaultWriteStdout(data: string): void {
 }
 
 export function createDefaultBucketDependencies(): BucketDependencies {
+  const envConfig = readEnvConfig(process.env)
   const authFileSystem = createAuthFileSystem({
     accessSync,
     statSync,
@@ -161,6 +163,7 @@ export function createDefaultBucketDependencies(): BucketDependencies {
       getHomeDir: () => homedir(),
       fileSystem: authFileSystem,
     },
+    session: envConfig.session,
   }
 }
 /* v8 ignore stop */

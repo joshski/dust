@@ -14,6 +14,7 @@ import {
   createContextEmulator,
   createFileSystemEmulator,
   createTestAgentSessionStartedEvent,
+  createTestSessionConfig,
   restoreEnv,
   stubEnv,
 } from '../../test/test-utilities'
@@ -105,6 +106,7 @@ function createBucketDependencies(
     sleep: () => new Promise(() => {}),
     getReposDir: () => '/tmp',
     auth: createMockAuthDeps(),
+    session: createTestSessionConfig(),
     ...overrides,
   }
 }
@@ -2516,6 +2518,7 @@ describe('handleRepositoryListSuccess', () => {
       fileSystem: dependencies.fileSystem,
       sleep: async () => {},
       getReposDir: () => '/tmp',
+      session: createTestSessionConfig(),
     }
 
     handleRepositoryListSuccess(
@@ -2562,6 +2565,7 @@ describe('handleRepositoryListSuccess', () => {
       fileSystem: dependencies.fileSystem,
       sleep: async () => {},
       getReposDir: () => '/tmp',
+      session: createTestSessionConfig(),
     }
 
     handleRepositoryListSuccess(
@@ -2607,6 +2611,7 @@ describe('handleRepositoryListSuccess', () => {
       fileSystem: dependencies.fileSystem,
       sleep: async () => {},
       getReposDir: () => '/tmp',
+      session: createTestSessionConfig(),
     }
 
     handleRepositoryListSuccess(

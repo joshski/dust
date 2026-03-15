@@ -16,6 +16,7 @@ import {
 } from '../claude/run'
 import type { DockerSpawnConfig, OutputSink } from '../claude/types'
 import { manageGitHooks } from '../cli/shared/agent-shared'
+import type { SessionConfig } from '../env-config'
 import {
   formatLoopEvent,
   type LoopEmitFn,
@@ -442,6 +443,7 @@ export async function runRepositoryLoop(
       run: bufferRun,
       sleep,
       postEvent: noOpPostEvent,
+      session: repoDeps.session,
       agentType,
     }
     const abortController = new AbortController()

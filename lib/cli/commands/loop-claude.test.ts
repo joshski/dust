@@ -1,11 +1,10 @@
 import { EventEmitter } from 'node:events'
-import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import {
   asChildProcessStub,
   createContextEmulator,
   createFileSystemEmulator,
-  restoreEnv,
-  stubEnv,
+  createTestSessionConfig,
 } from '../../test/test-utilities'
 import type { LoopDependencies } from '../../loop/iteration'
 import type { CommandDependencies } from '../types'
@@ -49,19 +48,12 @@ function createLoopDeps(
     run: async () => {},
     sleep: async () => {},
     postEvent: async () => {},
+    session: createTestSessionConfig(),
     ...overrides,
   }
 }
 
 describe('loopClaude', () => {
-  beforeEach(() => {
-    stubEnv('DUST_UNATTENDED', undefined)
-  })
-
-  afterEach(() => {
-    restoreEnv()
-  })
-
   test('delegates to runLoop and returns result', async () => {
     const dependencies = createDependencies({
       project: {

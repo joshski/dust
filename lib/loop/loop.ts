@@ -44,7 +44,7 @@ export async function runLoop(
   enableFileLogs('loop')
   const { context, settings } = dependencies
 
-  if (isUnattended()) {
+  if (isUnattended(loopDependencies.session)) {
     context.stderr(
       'dust loop cannot run inside an unattended session (DUST_UNATTENDED is set)'
     )
