@@ -6,26 +6,18 @@
  */
 
 import { join } from 'node:path'
-
-/**
- * Environment variables used by getReposDir.
- * Includes an index signature for compatibility with process.env.
- */
-interface ReposDirEnv {
-  DUST_REPOS_DIR?: string
-  [key: string]: string | undefined
-}
+import type { SessionConfig } from '../env-config'
 
 /**
  * Compute the repositories directory path.
  *
- * If DUST_REPOS_DIR is set in the environment, returns that value.
+ * If session.reposDir is set, returns that value.
  * Otherwise, returns the default path: ~/.dust/repos
  *
- * @param env - Environment variables object
+ * @param session - Session configuration from EnvConfig
  * @param homeDir - User's home directory path
  * @returns The resolved repositories directory path
  */
-export function getReposDir(env: ReposDirEnv, homeDir: string): string {
-  return env.DUST_REPOS_DIR || join(homeDir, '.dust', 'repos')
+export function getReposDir(session: SessionConfig, homeDir: string): string {
+  return session.reposDir || join(homeDir, '.dust', 'repos')
 }

@@ -92,7 +92,12 @@ import {
   type ToolExecutionResultMessage,
 } from '../../bucket/tool-execution-protocol'
 import { run as claudeRun } from '../../claude/run'
-import type { RuntimeConfig, SessionConfig } from '../../env-config'
+import type {
+  AuthConfig,
+  BucketConfig,
+  RuntimeConfig,
+  SessionConfig,
+} from '../../env-config'
 import { createLogger, enableFileLogs } from '../../logging'
 import { isUnattended } from '../../session'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
@@ -131,6 +136,8 @@ export interface BucketDependencies {
   sleep: (ms: number) => Promise<void>
   getReposDir: () => string
   auth: AuthDependencies
+  authConfig: AuthConfig
+  bucket: BucketConfig
   session: SessionConfig
   runtime: RuntimeConfig
   /** Optional override for the agent runner (default: claudeRun). Used for testing. */
@@ -235,10 +242,10 @@ export function createInitialState(): BucketState {
 }
 
 /**
- * Get the WebSocket URL, with env var override support.
+ * Get the WebSocket URL from bucket config.
  */
-export function getWebSocketUrl(): string {
-  return process.env.DUST_BUCKET_AGENT_CONNECT_URL || DEFAULT_DUSTBUCKET_WS_URL
+export function getWebSocketUrl(bucketConfig: BucketConfig): string {
+  return bucketConfig.agentConnectUrl || DEFAULT_DUSTBUCKET_WS_URL
 }
 
 /* v8 ignore start -- helper functions called by effect handlers */
@@ -259,6 +266,7 @@ function toRepositoryDependencies(
     getReposDir: bucketDeps.getReposDir,
     session: bucketDeps.session,
     runtime: bucketDeps.runtime,
+    auth: bucketDeps.authConfig,
     getTools: () => state.tools,
     forwardToolExecution,
   }
@@ -470,7 +478,7 @@ export function waitForConnection(
   token: string,
   bucketDeps: BucketDependencies
 ): Promise<WebSocketLike> {
-  const wsUrl = getWebSocketUrl()
+  const wsUrl = getWebSocketUrl(bucketDeps.bucket)
   const ws = bucketDeps.createWebSocket(wsUrl, token)
 
   return new Promise((onConnect, onFail) => {
@@ -497,7 +505,7 @@ export function connectWebSocket(
 ): void {
   if (state.shuttingDown) return
 
-  const wsUrl = getWebSocketUrl()
+  const wsUrl = getWebSocketUrl(bucketDependencies.bucket)
   const pendingServerMessages: Array<{ data: string }> = []
   let waitingForAgentCapabilities = false
   let readyToProcessServerMessages = false
@@ -1015,13 +1023,14 @@ export function createKeypressHandler(
 
 /* v8 ignore start -- authentication flow tested via bucketWorker integration tests */
 async function resolveToken(
-  authDeps: AuthDependencies,
+  bucketDeps: BucketDependencies,
   context: CommandDependencies['context']
 ): Promise<string | null> {
-  // 1. Environment variable
-  const envToken = process.env.DUST_BUCKET_TOKEN
-  if (envToken) {
-    return envToken
+  const { auth: authDeps, bucket: bucketConfig } = bucketDeps
+
+  // 1. Config token (from environment)
+  if (bucketConfig.token) {
+    return bucketConfig.token
   }
 
   // 2. Stored credential
@@ -1061,13 +1070,13 @@ export async function bucketWorker(
     return { exitCode: 1 }
   }
 
-  const token = await resolveToken(bucketDeps.auth, context)
+  const token = await resolveToken(bucketDeps, context)
   if (!token) {
     return { exitCode: 1 }
   }
 
   // Attempt initial connection before entering TUI
-  const wsUrl = getWebSocketUrl()
+  const wsUrl = getWebSocketUrl(bucketDeps.bucket)
   context.stdout(`Connecting to ${wsUrl}...`)
 
   let initialWs: WebSocketLike

@@ -156,13 +156,16 @@ export function createDefaultBucketDependencies(): BucketDependencies {
     writeStdout: defaultWriteStdout,
     isTTY: process.stdout.isTTY ?? false,
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
-    getReposDir: () => getReposDir(process.env, homedir()),
+    getReposDir: () => getReposDir(envConfig.session, homedir()),
     auth: {
       createServer: createLocalServer,
       openBrowser: openBrowser,
       getHomeDir: () => homedir(),
       fileSystem: authFileSystem,
+      bucketConfig: envConfig.bucket,
     },
+    authConfig: envConfig.auth,
+    bucket: envConfig.bucket,
     session: envConfig.session,
     runtime: envConfig.runtime,
   }

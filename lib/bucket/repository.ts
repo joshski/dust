@@ -13,6 +13,7 @@ import type { CommandDependencies, FileSystem } from '../cli/types'
 import type { DockerDependencies } from '../docker/docker-agent'
 import {
   readEnvConfig,
+  type AuthConfig,
   type RuntimeConfig,
   type SessionConfig,
 } from '../env-config'
@@ -94,6 +95,7 @@ export interface RepositoryDependencies {
   getReposDir: () => string
   session: SessionConfig
   runtime: RuntimeConfig
+  auth: AuthConfig
   /** Optional overrides for Docker dependency functions (for testing) */
   dockerDeps?: Partial<DockerDependencies>
   /** Function to get current tool definitions */
@@ -148,9 +150,10 @@ export function createDefaultRepositoryDependencies(
     run: claudeRun,
     fileSystem,
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
-    getReposDir: () => getReposDir(process.env, homedir()),
+    getReposDir: () => getReposDir(envConfig.session, homedir()),
     session: envConfig.session,
     runtime: envConfig.runtime,
+    auth: envConfig.auth,
   }
 }
 /* v8 ignore stop */

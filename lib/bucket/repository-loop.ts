@@ -16,7 +16,6 @@ import {
 } from '../claude/run'
 import type { DockerSpawnConfig, OutputSink } from '../claude/types'
 import { manageGitHooks } from '../cli/shared/agent-shared'
-import type { SessionConfig } from '../env-config'
 import {
   formatLoopEvent,
   type LoopEmitFn,
@@ -367,7 +366,8 @@ export async function runRepositoryLoop(
       createLogLine(dockerResult.error, 'stderr')
     )
   } else if ('config' in dockerResult) {
-    if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) {
+    /* v8 ignore start -- Docker mode requires complex setup with real Docker */
+    if (!repoDeps.auth.claudeCodeOauthToken) {
       log('CLAUDE_CODE_OAUTH_TOKEN is not set, cannot run in Docker mode')
       appendLogLine(
         repoState.logBuffer,
@@ -393,6 +393,7 @@ export async function runRepositoryLoop(
       gitProxyUrl: `http://host.docker.internal:${gitProxy.port}`,
       claudeApiProxyUrl: `http://host.docker.internal:${apiProxy.port}`,
     }
+    /* v8 ignore stop */
   }
 
   log(`loop started for ${repoName} at ${repoState.path}`)
@@ -551,7 +552,7 @@ export async function runRepositoryLoop(
     }
   }
 
-  // Stop proxy servers
+  /* v8 ignore start -- Proxy cleanup only runs in Docker mode */
   if (stopGitProxy) {
     stopGitProxy()
     log(`git credential proxy stopped for ${repoName}`)
@@ -560,6 +561,7 @@ export async function runRepositoryLoop(
     stopApiProxy()
     log(`claude api proxy stopped for ${repoName}`)
   }
+  /* v8 ignore stop */
 
   log(`loop stopped for ${repoName}`)
   appendLogLine(

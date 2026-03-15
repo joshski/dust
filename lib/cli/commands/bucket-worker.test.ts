@@ -14,6 +14,8 @@ import {
   createContextEmulator,
   createFileSystemEmulator,
   createTestAgentSessionStartedEvent,
+  createTestAuthConfig,
+  createTestBucketConfig,
   createTestRuntimeConfig,
   createTestSessionConfig,
   restoreEnv,
@@ -50,6 +52,7 @@ function createMockAuthDeps(
     openBrowser: () => {},
     getHomeDir: () => '/home',
     fileSystem: createFileSystemEmulator(),
+    bucketConfig: createTestBucketConfig(),
     exchangeCode: async () => 'browser-tok',
     ...overrides,
   }
@@ -108,6 +111,8 @@ function createBucketDependencies(
     sleep: () => new Promise(() => {}),
     getReposDir: () => '/tmp',
     auth: createMockAuthDeps(),
+    authConfig: createTestAuthConfig(),
+    bucket: createTestBucketConfig(),
     session: createTestSessionConfig(),
     runtime: createTestRuntimeConfig(),
     ...overrides,
@@ -358,26 +363,18 @@ describe('createInitialState', () => {
 })
 
 describe('getWebSocketUrl', () => {
-  const savedUrl = process.env.DUST_BUCKET_AGENT_CONNECT_URL
-
-  beforeEach(() => {
-    delete process.env.DUST_BUCKET_AGENT_CONNECT_URL
+  test('returns default URL when bucketConfig.agentConnectUrl is not set', () => {
+    const bucketConfig = createTestBucketConfig()
+    expect(getWebSocketUrl(bucketConfig)).toBe(
+      'wss://dustbucket.com/agent/connect'
+    )
   })
 
-  afterEach(() => {
-    if (savedUrl !== undefined) {
-      process.env.DUST_BUCKET_AGENT_CONNECT_URL = savedUrl
-    }
-    restoreEnv()
-  })
-
-  test('returns default URL when env var is not set', () => {
-    expect(getWebSocketUrl()).toBe('wss://dustbucket.com/agent/connect')
-  })
-
-  test('returns env var URL when DUST_BUCKET_AGENT_CONNECT_URL is set', () => {
-    stubEnv('DUST_BUCKET_AGENT_CONNECT_URL', 'ws://localhost:3000/ws')
-    expect(getWebSocketUrl()).toBe('ws://localhost:3000/ws')
+  test('returns custom URL when bucketConfig.agentConnectUrl is set', () => {
+    const bucketConfig = createTestBucketConfig({
+      agentConnectUrl: 'ws://localhost:3000/ws',
+    })
+    expect(getWebSocketUrl(bucketConfig)).toBe('ws://localhost:3000/ws')
   })
 })
 
@@ -540,18 +537,6 @@ describe('waitForConnection', () => {
 })
 
 describe('connectWebSocket', () => {
-  const savedUrl = process.env.DUST_BUCKET_AGENT_CONNECT_URL
-
-  beforeEach(() => {
-    delete process.env.DUST_BUCKET_AGENT_CONNECT_URL
-  })
-
-  afterEach(() => {
-    if (savedUrl !== undefined) {
-      process.env.DUST_BUCKET_AGENT_CONNECT_URL = savedUrl
-    }
-  })
-
   test('creates WebSocket with token', () => {
     const dependencies = createDependencies()
     const state = createInitialState()
@@ -1779,13 +1764,12 @@ describe('bucketWorker', () => {
     expect(context.stderrLines.join('\n')).toContain('Authentication failed')
   })
 
-  test('uses DUST_BUCKET_TOKEN environment variable when set', async () => {
+  test('uses bucket.token when set', async () => {
     const dependencies = createDependencies()
     let capturedToken: string | undefined
 
-    stubEnv('DUST_BUCKET_TOKEN', 'env-var-token')
-
     const bucketDependencies = createBucketDependencies({
+      bucket: createTestBucketConfig({ token: 'env-var-token' }),
       createWebSocket: (_url, token) => {
         capturedToken = token
         return createAutoConnectWebSocket()
@@ -1801,11 +1785,9 @@ describe('bucketWorker', () => {
     expect(capturedToken).toBe('env-var-token')
   })
 
-  test('DUST_BUCKET_TOKEN takes precedence over stored credential', async () => {
+  test('bucket.token takes precedence over stored credential', async () => {
     const dependencies = createDependencies()
     let capturedToken: string | undefined
-
-    stubEnv('DUST_BUCKET_TOKEN', 'env-var-token')
 
     const authFs = createFileSystemEmulator({
       home: { '.dust': { 'credentials.json': '{"token":"stored-tok"}' } },
@@ -1813,6 +1795,7 @@ describe('bucketWorker', () => {
 
     const bucketDependencies = createBucketDependencies({
       auth: createMockAuthDeps({ fileSystem: authFs }),
+      bucket: createTestBucketConfig({ token: 'env-var-token' }),
       createWebSocket: (_url, token) => {
         capturedToken = token
         return createAutoConnectWebSocket()
@@ -1828,11 +1811,9 @@ describe('bucketWorker', () => {
     expect(capturedToken).toBe('env-var-token')
   })
 
-  test('empty DUST_BUCKET_TOKEN falls through to stored credential', async () => {
+  test('empty bucket.token falls through to stored credential', async () => {
     const dependencies = createDependencies()
     let capturedToken: string | undefined
-
-    stubEnv('DUST_BUCKET_TOKEN', '')
 
     const authFs = createFileSystemEmulator({
       home: { '.dust': { 'credentials.json': '{"token":"stored-tok"}' } },
@@ -1840,6 +1821,7 @@ describe('bucketWorker', () => {
 
     const bucketDependencies = createBucketDependencies({
       auth: createMockAuthDeps({ fileSystem: authFs }),
+      bucket: createTestBucketConfig({ token: '' }),
       createWebSocket: (_url, token) => {
         capturedToken = token
         return createAutoConnectWebSocket()
@@ -1860,10 +1842,9 @@ describe('bucketWorker', () => {
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
-    stubEnv('DUST_BUCKET_TOKEN', 'token')
-
     const ws = createMockWebSocket()
     const bucketDependencies = createBucketDependencies({
+      bucket: createTestBucketConfig({ token: 'token' }),
       createWebSocket: () => {
         setTimeout(() => ws.emit('error', new Error('Connection refused')), 0)
         return ws
@@ -1907,9 +1888,8 @@ describe('bucketWorker', () => {
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
-    stubEnv('DUST_BUCKET_TOKEN', 'token')
-
     const bucketDependencies = createBucketDependencies({
+      bucket: createTestBucketConfig({ token: 'token' }),
       setupKeypress: onKey => {
         setTimeout(() => onKey('q'), 10)
         return () => {}
@@ -1925,9 +1905,8 @@ describe('bucketWorker', () => {
 
   test('exits on Ctrl+C keypress', async () => {
     const dependencies = createDependencies()
-    stubEnv('DUST_BUCKET_TOKEN', 'token')
-
     const bucketDependencies = createBucketDependencies({
+      bucket: createTestBucketConfig({ token: 'token' }),
       setupKeypress: onKey => {
         setTimeout(() => onKey('\u0003'), 10)
         return () => {}
@@ -1941,9 +1920,8 @@ describe('bucketWorker', () => {
 
   test('exits on SIGINT/SIGTERM', async () => {
     const dependencies = createDependencies()
-    stubEnv('DUST_BUCKET_TOKEN', 'token')
-
     const bucketDependencies = createBucketDependencies({
+      bucket: createTestBucketConfig({ token: 'token' }),
       setupSignals: onSignal => {
         setTimeout(() => onSignal(), 10)
         return () => {}
@@ -1960,10 +1938,10 @@ describe('bucketWorker', () => {
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
-    stubEnv('DUST_BUCKET_TOKEN', 'token')
     let keyCallCount = 0
 
     const bucketDependencies = createBucketDependencies({
+      bucket: createTestBucketConfig({ token: 'token' }),
       setupKeypress: onKey => {
         setTimeout(() => {
           keyCallCount++
@@ -1988,11 +1966,11 @@ describe('bucketWorker', () => {
 
   test('cleans up keypress and signal handlers on exit', async () => {
     const dependencies = createDependencies()
-    stubEnv('DUST_BUCKET_TOKEN', 'token')
     let keypressCleanedUp = false
     let signalsCleanedUp = false
 
     const bucketDependencies = createBucketDependencies({
+      bucket: createTestBucketConfig({ token: 'token' }),
       setupKeypress: onKey => {
         setTimeout(() => onKey('q'), 10)
         return () => {
@@ -2014,10 +1992,10 @@ describe('bucketWorker', () => {
 
   test('uses setupTUI in TUI mode and cleans up on exit', async () => {
     const dependencies = createDependencies()
-    stubEnv('DUST_BUCKET_TOKEN', 'token')
     const written: string[] = []
 
     const bucketDependencies = createBucketDependencies({
+      bucket: createTestBucketConfig({ token: 'token' }),
       isTTY: true,
       writeStdout: (data: string) => written.push(data),
       getTerminalSize: () => ({ width: 100, height: 30 }),
@@ -2038,11 +2016,11 @@ describe('bucketWorker', () => {
 
   test('does not set DUST_PROXY_PORT globally (per-iteration proxies handle it)', async () => {
     const dependencies = createDependencies()
-    stubEnv('DUST_BUCKET_TOKEN', 'token')
     stubEnv('DUST_PROXY_PORT', '9999')
     let proxyPortDuringRun: string | undefined
 
     const bucketDependencies = createBucketDependencies({
+      bucket: createTestBucketConfig({ token: 'token' }),
       setupKeypress: onKey => {
         setTimeout(() => {
           proxyPortDuringRun = process.env.DUST_PROXY_PORT
@@ -2063,10 +2041,12 @@ describe('bucketWorker', () => {
 
   test('falls back to raw URL when wsUrl is not parseable', async () => {
     const dependencies = createDependencies()
-    stubEnv('DUST_BUCKET_TOKEN', 'token')
-    stubEnv('DUST_BUCKET_AGENT_CONNECT_URL', 'not-a-valid-url')
 
     const bucketDependencies = createBucketDependencies({
+      bucket: createTestBucketConfig({
+        token: 'token',
+        agentConnectUrl: 'not-a-valid-url',
+      }),
       setupKeypress: onKey => {
         setTimeout(() => onKey('q'), 10)
         return () => {}
@@ -2523,6 +2503,7 @@ describe('handleRepositoryListSuccess', () => {
       getReposDir: () => '/tmp',
       session: createTestSessionConfig(),
       runtime: createTestRuntimeConfig(),
+      auth: createTestAuthConfig(),
     }
 
     handleRepositoryListSuccess(
@@ -2571,6 +2552,7 @@ describe('handleRepositoryListSuccess', () => {
       getReposDir: () => '/tmp',
       session: createTestSessionConfig(),
       runtime: createTestRuntimeConfig(),
+      auth: createTestAuthConfig(),
     }
 
     handleRepositoryListSuccess(
@@ -2618,6 +2600,7 @@ describe('handleRepositoryListSuccess', () => {
       getReposDir: () => '/tmp',
       session: createTestSessionConfig(),
       runtime: createTestRuntimeConfig(),
+      auth: createTestAuthConfig(),
     }
 
     handleRepositoryListSuccess(

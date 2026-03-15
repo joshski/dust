@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { createFetchStub, stubEnv } from '../test/test-utilities'
+import { createFetchStub, createTestBucketConfig } from '../test/test-utilities'
 import type { ToolDefinition } from './server-messages'
 import {
   buildToolUrl,
@@ -41,6 +41,7 @@ function createMockDependencies(
     readFileBytes: async () => new Uint8Array([1, 2, 3]),
     fileExists: async () => true,
     fetch: createFetchStub(defaultMockFetch),
+    bucketConfig: createTestBucketConfig(),
     ...overrides,
   }
 }
@@ -103,21 +104,21 @@ describe('getContentType', () => {
 
 describe('buildToolUrl', () => {
   test('builds URL with repository ID', () => {
-    return stubEnv('DUST_BUCKET_HOST', undefined, () => {
-      const url = buildToolUrl('/api/assets', 'repo-123')
-      expect(url).toBe(
-        'https://dustbucket.com/api/assets?repositoryId=repo-123'
-      )
-    })
+    const bucketConfig = createTestBucketConfig()
+    const url = buildToolUrl('/api/assets', 'repo-123', bucketConfig)
+    expect(url).toBe('https://dustbucket.com/api/assets?repositoryId=repo-123')
   })
 
   test('URL-encodes special characters in repository ID', () => {
-    return stubEnv('DUST_BUCKET_HOST', undefined, () => {
-      const url = buildToolUrl('/api/assets', 'repo/with spaces&special')
-      expect(url).toBe(
-        'https://dustbucket.com/api/assets?repositoryId=repo%2Fwith+spaces%26special'
-      )
-    })
+    const bucketConfig = createTestBucketConfig()
+    const url = buildToolUrl(
+      '/api/assets',
+      'repo/with spaces&special',
+      bucketConfig
+    )
+    expect(url).toBe(
+      'https://dustbucket.com/api/assets?repositoryId=repo%2Fwith+spaces%26special'
+    )
   })
 })
 
@@ -219,22 +220,20 @@ describe('executeTool', () => {
       fetch: createFetchStub(mockFetch),
     })
 
-    await stubEnv('DUST_BUCKET_HOST', undefined, async () => {
-      const result = await executeTool(
-        assetUploadTool,
-        ['/path/to/file.png'],
-        'test-token',
-        'repo-123',
-        dependencies
-      )
+    const result = await executeTool(
+      assetUploadTool,
+      ['/path/to/file.png'],
+      'test-token',
+      'repo-123',
+      dependencies
+    )
 
-      expect(result.success).toBe(true)
-      expect(result.output).toBe('https://result.com/asset')
-      expect(capturedUrl).toBe(
-        'https://dustbucket.com/api/assets?repositoryId=repo-123'
-      )
-      expect(capturedHeaders?.Authorization).toBe('Bearer test-token')
-    })
+    expect(result.success).toBe(true)
+    expect(result.output).toBe('https://result.com/asset')
+    expect(capturedUrl).toBe(
+      'https://dustbucket.com/api/assets?repositoryId=repo-123'
+    )
+    expect(capturedHeaders?.Authorization).toBe('Bearer test-token')
   })
 
   test('handles HTTP error responses', async () => {

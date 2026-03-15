@@ -4,6 +4,7 @@ import type { RunnerDependencies } from '../claude/run'
 import type { RunnerDependencies as CodexRunnerDependencies } from '../codex/run'
 import {
   asTestType,
+  createTestAuthConfig,
   createTestRuntimeConfig,
   createTestSessionConfig,
   restoreEnv,
@@ -613,6 +614,7 @@ describe('runRepositoryLoop', () => {
       getReposDir: () => '/tmp/repos',
       session: createTestSessionConfig(),
       runtime: createTestRuntimeConfig(),
+      auth: createTestAuthConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -653,6 +655,7 @@ describe('runRepositoryLoop', () => {
       getReposDir: () => '/tmp/repos',
       session: createTestSessionConfig(),
       runtime: createTestRuntimeConfig(),
+      auth: createTestAuthConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -704,6 +707,7 @@ describe('runRepositoryLoop', () => {
       getReposDir: () => '/tmp/repos',
       session: createTestSessionConfig(),
       runtime: createTestRuntimeConfig(),
+      auth: createTestAuthConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -739,6 +743,7 @@ describe('runRepositoryLoop', () => {
       getReposDir: () => '/tmp/repos',
       session: createTestSessionConfig(),
       runtime: createTestRuntimeConfig(),
+      auth: createTestAuthConfig(),
     }
 
     // Should complete without throwing, verifying codex runner initialization works
@@ -777,6 +782,7 @@ describe('runRepositoryLoop', () => {
       getReposDir: () => '/tmp/repos',
       session: createTestSessionConfig(),
       runtime: createTestRuntimeConfig(),
+      auth: createTestAuthConfig(),
     }
 
     // Should complete without throwing, verifying claude runner initialization works
@@ -834,6 +840,7 @@ describe('runRepositoryLoop', () => {
       getReposDir: () => '/tmp/repos',
       session: createTestSessionConfig(),
       runtime: createTestRuntimeConfig(),
+      auth: createTestAuthConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -910,6 +917,7 @@ describe('runRepositoryLoop', () => {
       },
       session: createTestSessionConfig(),
       runtime: createTestRuntimeConfig(),
+      auth: createTestAuthConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -977,6 +985,7 @@ describe('runRepositoryLoop', () => {
       },
       session: createTestSessionConfig(),
       runtime: createTestRuntimeConfig(),
+      auth: createTestAuthConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -1034,6 +1043,7 @@ describe('runRepositoryLoop', () => {
       },
       session: createTestSessionConfig(),
       runtime: createTestRuntimeConfig(),
+      auth: createTestAuthConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -1102,6 +1112,7 @@ describe('runRepositoryLoop', () => {
       },
       session: createTestSessionConfig(),
       runtime: createTestRuntimeConfig(),
+      auth: createTestAuthConfig(),
     }
 
     await runRepositoryLoop(repoState, repoDeps)

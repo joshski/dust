@@ -7,6 +7,7 @@
  */
 
 import { basename, extname } from 'node:path'
+import type { BucketConfig } from '../env-config'
 import { getDustbucketHost } from './auth'
 import type { ToolDefinition } from './server-messages'
 
@@ -44,6 +45,8 @@ export interface ToolExecutorDependencies {
   fileExists: (path: string) => Promise<boolean>
   /** Execute HTTP request */
   fetch: typeof fetch
+  /** Bucket configuration for URL building */
+  bucketConfig: BucketConfig
 }
 
 /**
@@ -58,8 +61,12 @@ interface ToolExecutorResult {
 /**
  * Build the full URL for a tool endpoint.
  */
-export function buildToolUrl(endpoint: string, repositoryId: string): string {
-  const host = getDustbucketHost()
+export function buildToolUrl(
+  endpoint: string,
+  repositoryId: string,
+  bucketConfig: BucketConfig
+): string {
+  const host = getDustbucketHost(bucketConfig)
   const url = new URL(endpoint, host)
   url.searchParams.set('repositoryId', repositoryId)
   return url.toString()
@@ -210,7 +217,11 @@ export async function executeTool(
   }
 
   // Build URL
-  const url = buildToolUrl(tool.endpoint, repositoryId)
+  const url = buildToolUrl(
+    tool.endpoint,
+    repositoryId,
+    dependencies.bucketConfig
+  )
 
   // Build request body
   const { body, contentType } = await buildRequestBody(

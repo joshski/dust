@@ -14,7 +14,12 @@ import type {
   DustSettings,
 } from '../cli/types'
 import type { CommandEvent } from '../command-events'
-import type { RuntimeConfig, SessionConfig } from '../env-config'
+import type {
+  AuthConfig,
+  BucketConfig,
+  RuntimeConfig,
+  SessionConfig,
+} from '../env-config'
 import { createFileSystemEmulator } from '../filesystem/emulator'
 
 export {
@@ -50,6 +55,35 @@ export function createTestRuntimeConfig(
   return {
     bunInstall: undefined,
     eventsUrl: undefined,
+    ...overrides,
+  }
+}
+
+/**
+ * Creates a test AuthConfig with default undefined values.
+ * Use this for tests that need to pass auth config as a dependency.
+ */
+export function createTestAuthConfig(
+  overrides: Partial<AuthConfig> = {}
+): AuthConfig {
+  return {
+    claudeCodeOauthToken: undefined,
+    openaiApiKey: undefined,
+    ...overrides,
+  }
+}
+
+/**
+ * Creates a test BucketConfig with default undefined values.
+ * Use this for tests that need to pass bucket config as a dependency.
+ */
+export function createTestBucketConfig(
+  overrides: Partial<BucketConfig> = {}
+): BucketConfig {
+  return {
+    host: undefined,
+    token: undefined,
+    agentConnectUrl: undefined,
     ...overrides,
   }
 }

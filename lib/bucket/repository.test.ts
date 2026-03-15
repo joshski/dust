@@ -3,6 +3,7 @@ import { describe, expect, test } from 'vitest'
 import {
   createContextEmulator,
   createFileSystemEmulator,
+  createTestAuthConfig,
   createTestRuntimeConfig,
   createTestSessionConfig,
 } from '../test/test-utilities'
@@ -116,6 +117,7 @@ function createRepositoryDependencies(
     getReposDir: () => '/tmp',
     session: createTestSessionConfig(),
     runtime: createTestRuntimeConfig(),
+    auth: createTestAuthConfig(),
     ...overrides,
   }
 }
@@ -605,8 +607,12 @@ describe('runRepositoryLoop', () => {
 
     const loopPromise = runRepositoryLoop(repoState, repoDeps)
 
-    // Wait for the loop to process two iterations (pending flag cleared, then no_tasks)
-    await new Promise(resolve => setTimeout(resolve, 50))
+    // Wait for sleep to be called, which indicates the loop processed
+    // the pending flag and then found no tasks on second iteration
+    const checkSleepCalled = () => sleepCalled
+    for (let i = 0; i < 100 && !checkSleepCalled(); i++) {
+      await new Promise(resolve => setTimeout(resolve, 10))
+    }
 
     // The flag should have been cleared and the loop should have retried
     expect(repoState.taskAvailablePending).toBeFalsy()

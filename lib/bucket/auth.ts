@@ -1,4 +1,5 @@
 import { join } from 'node:path'
+import type { BucketConfig } from '../env-config'
 import type { FileSystem } from '../filesystem/types'
 
 const CREDENTIALS_DIR = '.dust'
@@ -6,10 +7,8 @@ const CREDENTIALS_FILE = 'credentials.json'
 const AUTH_TIMEOUT_MS = 120_000
 const DEFAULT_DUSTBUCKET_HOST = 'https://dustbucket.com'
 
-export function getDustbucketHost(
-  env: NodeJS.ProcessEnv = process.env
-): string {
-  return env.DUST_BUCKET_HOST || DEFAULT_DUSTBUCKET_HOST
+export function getDustbucketHost(bucketConfig: BucketConfig): string {
+  return bucketConfig.host || DEFAULT_DUSTBUCKET_HOST
 }
 
 export interface AuthDependencies {
@@ -20,6 +19,7 @@ export interface AuthDependencies {
   openBrowser: (url: string) => void
   getHomeDir: () => string
   fileSystem: FileSystem
+  bucketConfig: BucketConfig
   authTimeoutMs?: number
   exchangeCode?: (code: string) => Promise<string>
   fetch?: typeof fetch
@@ -78,9 +78,10 @@ export async function clearToken(
 /** Visible for testing */
 export async function defaultExchangeCode(
   code: string,
+  bucketConfig: BucketConfig,
   fetchFn: typeof fetch = fetch
 ): Promise<string> {
-  const host = getDustbucketHost()
+  const host = getDustbucketHost(bucketConfig)
   const response = await fetchFn(`${host}/auth/cli/exchange`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -101,7 +102,8 @@ export async function authenticate(
 ): Promise<string> {
   const exchange =
     authDeps.exchangeCode ??
-    ((code: string) => defaultExchangeCode(code, authDeps.fetch))
+    ((code: string) =>
+      defaultExchangeCode(code, authDeps.bucketConfig, authDeps.fetch))
 
   return new Promise<string>((resolve, reject) => {
     let timer: ReturnType<typeof setTimeout> | null = null
@@ -161,7 +163,7 @@ export async function authenticate(
       const server = authDeps.createServer(handler)
       serverHandle = server
 
-      const dustbucketUrl = getDustbucketHost()
+      const dustbucketUrl = getDustbucketHost(authDeps.bucketConfig)
       const authUrl = `${dustbucketUrl}/auth/cli?port=${server.port}`
       authDeps.openBrowser(authUrl)
 

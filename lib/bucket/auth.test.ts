@@ -1,9 +1,8 @@
-import { afterEach, describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vitest'
+import type { BucketConfig } from '../env-config'
 import {
   createFetchStub,
   createFileSystemEmulator,
-  restoreEnv,
-  stubEnv,
 } from '../test/test-utilities'
 import {
   type AuthDependencies,
@@ -13,6 +12,12 @@ import {
   loadStoredToken,
   storeToken,
 } from './auth'
+
+const defaultBucketConfig: BucketConfig = {
+  host: undefined,
+  token: undefined,
+  agentConnectUrl: undefined,
+}
 
 describe('loadStoredToken', () => {
   test('returns token from credentials file', async () => {
@@ -123,12 +128,13 @@ describe('clearToken', () => {
 })
 
 describe('defaultExchangeCode', () => {
-  afterEach(() => {
-    restoreEnv()
-  })
+  const testBucketConfig: BucketConfig = {
+    host: 'http://localhost:9999',
+    token: undefined,
+    agentConnectUrl: undefined,
+  }
 
   test('exchanges code for token', async () => {
-    stubEnv('DUST_BUCKET_HOST', 'http://localhost:9999')
     const stubFetch = createFetchStub(
       async () =>
         new Response(JSON.stringify({ token: 'exchanged-token' }), {
@@ -136,23 +142,25 @@ describe('defaultExchangeCode', () => {
         })
     )
 
-    const token = await defaultExchangeCode('my-code', stubFetch)
+    const token = await defaultExchangeCode(
+      'my-code',
+      testBucketConfig,
+      stubFetch
+    )
     expect(token).toBe('exchanged-token')
   })
 
   test('throws when response is not ok', async () => {
-    stubEnv('DUST_BUCKET_HOST', 'http://localhost:9999')
     const stubFetch = createFetchStub(
       async () => new Response('error', { status: 401 })
     )
 
-    await expect(defaultExchangeCode('bad-code', stubFetch)).rejects.toThrow(
-      'Token exchange failed: 401'
-    )
+    await expect(
+      defaultExchangeCode('bad-code', testBucketConfig, stubFetch)
+    ).rejects.toThrow('Token exchange failed: 401')
   })
 
   test('throws when response has no token string', async () => {
-    stubEnv('DUST_BUCKET_HOST', 'http://localhost:9999')
     const stubFetch = createFetchStub(
       async () =>
         new Response(JSON.stringify({ token: 42 }), {
@@ -160,17 +168,13 @@ describe('defaultExchangeCode', () => {
         })
     )
 
-    await expect(defaultExchangeCode('my-code', stubFetch)).rejects.toThrow(
-      'Invalid token exchange response'
-    )
+    await expect(
+      defaultExchangeCode('my-code', testBucketConfig, stubFetch)
+    ).rejects.toThrow('Invalid token exchange response')
   })
 })
 
 describe('authenticate', () => {
-  afterEach(() => {
-    restoreEnv()
-  })
-
   function createMockDependencies(
     overrides: Partial<AuthDependencies> = {}
   ): AuthDependencies {
@@ -184,13 +188,13 @@ describe('authenticate', () => {
       openBrowser: () => {},
       getHomeDir: () => '/home',
       fileSystem: createFileSystemEmulator(),
+      bucketConfig: defaultBucketConfig,
       exchangeCode: async () => 'test-token',
       ...overrides,
     }
   }
 
   test('opens browser with auth URL containing port', async () => {
-    stubEnv('DUST_BUCKET_HOST', undefined)
     let openedUrl: string | undefined
     const authDependencies = createMockDependencies({
       openBrowser: url => {
@@ -209,10 +213,14 @@ describe('authenticate', () => {
     expect(token).toBe('test-token')
   })
 
-  test('uses DUST_BUCKET_HOST env var when set', async () => {
-    stubEnv('DUST_BUCKET_HOST', 'http://localhost:3000')
+  test('uses bucketConfig.host when set', async () => {
     let openedUrl: string | undefined
     const authDependencies = createMockDependencies({
+      bucketConfig: {
+        host: 'http://localhost:3000',
+        token: undefined,
+        agentConnectUrl: undefined,
+      },
       openBrowser: url => {
         openedUrl = url
       },
@@ -313,7 +321,6 @@ describe('authenticate', () => {
   })
 
   test('uses defaultExchangeCode when exchangeCode not provided', async () => {
-    stubEnv('DUST_BUCKET_HOST', 'http://localhost:9999')
     const stubFetch = createFetchStub(
       async () =>
         new Response(JSON.stringify({ token: 'default-exchange-token' }), {
@@ -331,6 +338,11 @@ describe('authenticate', () => {
       openBrowser: () => {},
       getHomeDir: () => '/home',
       fileSystem: createFileSystemEmulator(),
+      bucketConfig: {
+        host: 'http://localhost:9999',
+        token: undefined,
+        agentConnectUrl: undefined,
+      },
       fetch: stubFetch,
       // Note: exchangeCode is intentionally not provided to test the fallback
     }
