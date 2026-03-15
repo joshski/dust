@@ -18,7 +18,7 @@ Task files include:
 2026-03-13
 ```
 
-`renderTask` in `lib/artifacts/workflow-tasks.ts` writes the section at creation time, and `findUnblockedTasks` in `lib/cli/commands/next.ts` uses it as a sort key.
+`renderTask` in [`lib/artifacts/workflow-tasks.ts`](../../lib/artifacts/workflow-tasks.ts) writes the section at creation time, and `findUnblockedTasks` in [`lib/cli/commands/next.ts`](../../lib/cli/commands/next.ts) uses it as a sort key.
 
 ## Open Questions
 
