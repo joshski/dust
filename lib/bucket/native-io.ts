@@ -7,6 +7,7 @@
  */
 
 import { spawn as nodeSpawn } from 'node:child_process'
+import { EventEmitter } from 'node:events'
 import { accessSync, statSync } from 'node:fs'
 import { chmod, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
@@ -21,38 +22,38 @@ import {
 
 /* v8 ignore start */
 function adaptWebSocket(ws: WebSocket): WebSocketLike {
-  const adapter: WebSocketLike = {
-    onopen: null,
-    onclose: null,
-    onerror: null,
-    onmessage: null,
-    close: () => ws.close(),
-    send: (data: string) => ws.send(data),
-    readyState: ws.readyState,
-  }
+  const emitter = new EventEmitter()
+  let currentReadyState = ws.readyState
 
   ws.addEventListener('open', () => {
-    adapter.readyState = ws.readyState
-    adapter.onopen?.()
+    currentReadyState = ws.readyState
+    emitter.emit('open')
   })
 
   ws.addEventListener('close', event => {
-    adapter.readyState = ws.readyState
-    adapter.onclose?.({ code: event.code, reason: event.reason })
+    currentReadyState = ws.readyState
+    emitter.emit('close', { code: event.code, reason: event.reason })
   })
 
   ws.addEventListener('error', event => {
     const maybeError = (event as { error?: unknown }).error
     const error =
       maybeError instanceof Error ? maybeError : new Error('WebSocket error')
-    adapter.onerror?.(error)
+    emitter.emit('error', error)
   })
 
   ws.addEventListener('message', event => {
-    adapter.onmessage?.({ data: String(event.data) })
+    emitter.emit('message', { data: String(event.data) })
   })
 
-  return adapter
+  return {
+    addEventListener: (type, handler) => emitter.on(type, handler),
+    close: () => ws.close(),
+    send: (data: string) => ws.send(data),
+    get readyState() {
+      return currentReadyState
+    },
+  }
 }
 
 function defaultCreateWebSocket(url: string, token: string): WebSocketLike {

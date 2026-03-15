@@ -455,10 +455,13 @@ export function waitForConnection(
   const ws = bucketDeps.createWebSocket(wsUrl, token)
 
   return new Promise((onConnect, onFail) => {
-    ws.onopen = () => onConnect(ws)
-    ws.onerror = error => onFail(new Error(error.message))
-    ws.onclose = event =>
+    ws.addEventListener('open', () => onConnect(ws))
+    ws.addEventListener('error', (error: Error) =>
+      onFail(new Error(error.message))
+    )
+    ws.addEventListener('close', (event: { code: number; reason: string }) =>
       onFail(new Error(`Connection closed (code ${event.code})`))
+    )
   })
 }
 
@@ -583,7 +586,7 @@ export function connectWebSocket(
     ws = bucketDependencies.createWebSocket(wsUrl, token)
     state.ws = ws
 
-    ws.onopen = () => {
+    ws.addEventListener('open', () => {
       state.emit({ type: 'bucket.connected' })
       const lifecycleState: ConnectionLifecycleState = {
         reconnectDelay: state.reconnectDelay,
@@ -604,10 +607,10 @@ export function connectWebSocket(
         token
       )
       void sendAgentCapabilities()
-    }
+    })
   }
 
-  ws.onclose = event => {
+  ws.addEventListener('close', (event: { code: number; reason: string }) => {
     const disconnectEvent = {
       type: 'bucket.disconnected' as const,
       code: event.code,
@@ -627,9 +630,9 @@ export function connectWebSocket(
       { state, context, useTUI, bucketDependencies, fileSystem },
       token
     )
-  }
+  })
 
-  ws.onerror = error => {
+  ws.addEventListener('error', (error: Error) => {
     const lifecycleState: ConnectionLifecycleState = {
       reconnectDelay: state.reconnectDelay,
       shuttingDown: state.shuttingDown,
@@ -640,15 +643,15 @@ export function connectWebSocket(
       { state, context, useTUI, bucketDependencies, fileSystem },
       token
     )
-  }
+  })
 
-  ws.onmessage = event => {
+  ws.addEventListener('message', (event: { data: string }) => {
     if (waitingForAgentCapabilities && !readyToProcessServerMessages) {
       pendingServerMessages.push({ data: event.data })
       return
     }
     processIncomingServerMessage({ data: event.data })
-  }
+  })
 }
 
 /**

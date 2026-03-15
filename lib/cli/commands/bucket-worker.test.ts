@@ -68,10 +68,7 @@ function createDependencies(): CommandDependencies {
 function createMockWebSocket(): WebSocketLike & EventEmitter {
   const ws = new EventEmitter() as WebSocketLike & EventEmitter
   ws.readyState = WS_CLOSED
-  ws.onopen = null
-  ws.onclose = null
-  ws.onerror = null
-  ws.onmessage = null
+  ws.addEventListener = (type, handler) => ws.on(type, handler)
   ws.close = () => {
     ws.readyState = WS_CLOSED
   }
@@ -79,10 +76,10 @@ function createMockWebSocket(): WebSocketLike & EventEmitter {
   return ws
 }
 
-/** Create a mock ws that auto-fires onopen so waitForConnection resolves. */
+/** Create a mock ws that auto-fires open so waitForConnection resolves. */
 function createAutoConnectWebSocket(): WebSocketLike & EventEmitter {
   const ws = createMockWebSocket()
-  setTimeout(() => ws.onopen?.(), 0)
+  setTimeout(() => ws.emit('open'), 0)
   return ws
 }
 
@@ -498,7 +495,7 @@ describe('waitForConnection', () => {
     const ws = createMockWebSocket()
     const bucketDependencies = createBucketDependencies({
       createWebSocket: () => {
-        setTimeout(() => ws.onerror?.(new Error('Connection refused')), 0)
+        setTimeout(() => ws.emit('error', new Error('Connection refused')), 0)
         return ws
       },
     })
@@ -512,7 +509,7 @@ describe('waitForConnection', () => {
     const ws = createMockWebSocket()
     const bucketDependencies = createBucketDependencies({
       createWebSocket: () => {
-        setTimeout(() => ws.onclose?.({ code: 1006, reason: '' }), 0)
+        setTimeout(() => ws.emit('close', { code: 1006, reason: '' }), 0)
         return ws
       },
     })
@@ -601,7 +598,7 @@ describe('connectWebSocket', () => {
     )
 
     ws.readyState = WS_OPEN
-    ws.onopen?.()
+    ws.emit('open')
 
     expect(state.reconnectDelay).toBe(1000)
     expect(context.stdoutLines.join('\n')).toContain('bucket.connected')
@@ -645,8 +642,8 @@ describe('connectWebSocket', () => {
     )
 
     ws.readyState = WS_OPEN
-    ws.onopen?.()
-    ws.onmessage?.({
+    ws.emit('open')
+    ws.emit('message', {
       data: JSON.stringify({
         type: 'repository-list',
         repositories: [],
@@ -734,7 +731,7 @@ describe('connectWebSocket', () => {
     )
 
     ws.readyState = WS_OPEN
-    ws.onopen?.()
+    ws.emit('open')
     await new Promise(resolve => setTimeout(resolve, 0))
 
     expect(JSON.parse(sentMessages[0])).toEqual({
@@ -771,7 +768,7 @@ describe('connectWebSocket', () => {
     )
 
     ws.readyState = WS_OPEN
-    ws.onopen?.()
+    ws.emit('open')
     await new Promise(resolve => setTimeout(resolve, 0))
 
     expect(JSON.parse(sentMessages[0])).toEqual({
@@ -801,7 +798,7 @@ describe('connectWebSocket', () => {
       false
     )
 
-    ws.onclose?.({ code: 1000, reason: '' })
+    ws.emit('close', { code: 1000, reason: '' })
 
     expect(context.stdoutLines.join('\n')).toContain('reason=none')
 
@@ -829,7 +826,7 @@ describe('connectWebSocket', () => {
       false
     )
 
-    ws.onclose?.({ code: 1006, reason: 'Connection lost' })
+    ws.emit('close', { code: 1006, reason: 'Connection lost' })
 
     expect(context.stdoutLines.join('\n')).toContain('bucket.disconnected')
     expect(context.stdoutLines.join('\n')).toContain(
@@ -869,7 +866,7 @@ describe('connectWebSocket', () => {
 
     expect(connectionAttempts).toBe(1)
 
-    ws.onclose?.({ code: 1006, reason: 'Connection lost' })
+    ws.emit('close', { code: 1006, reason: 'Connection lost' })
 
     await new Promise(resolve => setTimeout(resolve, 10))
 
@@ -904,7 +901,7 @@ describe('connectWebSocket', () => {
 
     state.shuttingDown = true
 
-    ws.onclose?.({ code: 1000, reason: 'Normal closure' })
+    ws.emit('close', { code: 1000, reason: 'Normal closure' })
 
     expect(state.reconnectTimer).toBeNull()
     expect(context.stdoutLines.join('\n')).not.toContain('Reconnecting')
@@ -931,7 +928,7 @@ describe('connectWebSocket', () => {
       false
     )
 
-    ws.onclose?.({ code: 4000, reason: 'Replaced by newer connection' })
+    ws.emit('close', { code: 4000, reason: 'Replaced by newer connection' })
 
     // Should NOT schedule reconnection for code 4000
     expect(state.reconnectTimer).toBeNull()
@@ -987,7 +984,7 @@ describe('connectWebSocket', () => {
       false
     )
 
-    ws.onerror?.(new Error('Connection refused'))
+    ws.emit('error', new Error('Connection refused'))
 
     expect(context.stderrLines.join('\n')).toContain('WebSocket error')
     expect(context.stderrLines.join('\n')).toContain('Connection refused')
@@ -1014,7 +1011,7 @@ describe('connectWebSocket', () => {
       false
     )
 
-    ws.onmessage?.({
+    ws.emit('message', {
       data: JSON.stringify({
         type: 'repository-list',
         repositories: [
@@ -1071,7 +1068,7 @@ describe('connectWebSocket', () => {
       false
     )
 
-    ws.onmessage?.({
+    ws.emit('message', {
       data: JSON.stringify({
         type: 'repository-list',
         repositories: [
@@ -1119,7 +1116,7 @@ describe('connectWebSocket', () => {
     )
 
     // First list with repo1 and repo2
-    ws.onmessage?.({
+    ws.emit('message', {
       data: JSON.stringify({
         type: 'repository-list',
         repositories: [
@@ -1145,7 +1142,7 @@ describe('connectWebSocket', () => {
     expect(state.ui.repositories).toContain('repo2')
 
     // Updated list with only repo2
-    ws.onmessage?.({
+    ws.emit('message', {
       data: JSON.stringify({
         type: 'repository-list',
         repositories: [
@@ -1187,7 +1184,7 @@ describe('connectWebSocket', () => {
       false
     )
 
-    ws.onmessage?.({
+    ws.emit('message', {
       data: JSON.stringify({
         type: 'repository-list',
       }),
@@ -1216,7 +1213,7 @@ describe('connectWebSocket', () => {
       true
     )
 
-    ws.onerror?.(new Error('Connection refused'))
+    ws.emit('error', new Error('Connection refused'))
 
     const systemBuffer = state.logBuffers.get('system')
     expect(systemBuffer).toBeDefined()
@@ -1248,7 +1245,7 @@ describe('connectWebSocket', () => {
       false
     )
 
-    ws.onmessage?.({ data: 'not valid json' })
+    ws.emit('message', { data: 'not valid json' })
 
     expect(context.stderrLines.join('\n')).toContain(
       'Failed to parse WebSocket message'
@@ -1279,7 +1276,7 @@ describe('connectWebSocket', () => {
       }
     )
 
-    ws.onmessage?.({
+    ws.emit('message', {
       data: JSON.stringify({
         type: 'tool-execution-result',
         requestId: 'req-1',
@@ -1326,7 +1323,7 @@ describe('connectWebSocket', () => {
       false
     )
 
-    ws.onmessage?.({
+    ws.emit('message', {
       data: JSON.stringify({
         type: 'repository-list',
         repositories: [
@@ -1387,7 +1384,7 @@ describe('connectWebSocket', () => {
     }
     state.repositories.set('owner/repo', repoState)
 
-    ws.onmessage?.({
+    ws.emit('message', {
       data: JSON.stringify({
         type: 'task-available',
         repository: 'owner/repo',
@@ -1444,7 +1441,7 @@ describe('connectWebSocket', () => {
     }
     state.repositories.set('owner/repo', repoState)
 
-    ws.onmessage?.({
+    ws.emit('message', {
       data: JSON.stringify({
         type: 'task-available',
         repository: 'owner/repo',
@@ -1478,7 +1475,7 @@ describe('connectWebSocket', () => {
     )
 
     // Should not throw
-    ws.onmessage?.({
+    ws.emit('message', {
       data: JSON.stringify({
         type: 'task-available',
         repository: 'unknown/repo',
@@ -1524,7 +1521,7 @@ describe('connectWebSocket', () => {
     }
     state.repositories.set('owner/repo', repoState)
 
-    ws.onmessage?.({
+    ws.emit('message', {
       data: JSON.stringify({
         type: 'repository-list',
         repositories: [
@@ -1863,7 +1860,7 @@ describe('bucketWorker', () => {
     const ws = createMockWebSocket()
     const bucketDependencies = createBucketDependencies({
       createWebSocket: () => {
-        setTimeout(() => ws.onerror?.(new Error('Connection refused')), 0)
+        setTimeout(() => ws.emit('error', new Error('Connection refused')), 0)
         return ws
       },
     })
@@ -1888,7 +1885,7 @@ describe('bucketWorker', () => {
     const bucketDependencies = createBucketDependencies({
       auth: createMockAuthDeps({ fileSystem: authFs }),
       createWebSocket: () => {
-        setTimeout(() => ws.onclose?.({ code: 1008, reason: '' }), 0)
+        setTimeout(() => ws.emit('close', { code: 1008, reason: '' }), 0)
         return ws
       },
     })

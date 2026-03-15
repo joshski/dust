@@ -13,10 +13,7 @@ import {
 function createMockWebSocket(): WebSocketLike & EventEmitter {
   const emitter = new EventEmitter() as WebSocketLike & EventEmitter
   emitter.readyState = WS_CLOSED
-  emitter.onopen = null
-  emitter.onclose = null
-  emitter.onerror = null
-  emitter.onmessage = null
+  emitter.addEventListener = (type, handler) => emitter.on(type, handler)
   emitter.close = () => {
     emitter.readyState = WS_CLOSED
   }

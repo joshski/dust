@@ -11,11 +11,17 @@ import type { EventMessage } from '../agent-events'
 export const WS_OPEN = 1
 export const WS_CLOSED = 3
 
+type WebSocketEventHandler =
+  | (() => void)
+  | ((event: { code: number; reason: string }) => void)
+  | ((error: Error) => void)
+  | ((event: { data: string }) => void)
+
 export interface WebSocketLike {
-  onopen: (() => void) | null
-  onclose: ((event: { code: number; reason: string }) => void) | null
-  onerror: ((error: Error) => void) | null
-  onmessage: ((event: { data: string }) => void) | null
+  addEventListener(
+    type: 'open' | 'close' | 'error' | 'message',
+    handler: WebSocketEventHandler
+  ): void
   close: () => void
   send: (data: string) => void
   readyState: number

@@ -5,6 +5,7 @@
  * Captures all messages sent by the client and can inject server messages.
  */
 
+import { EventEmitter } from 'node:events'
 import { type WebSocketLike, WS_OPEN } from '../../lib/bucket/events'
 
 interface CapturedMessage {
@@ -32,25 +33,26 @@ export function createBucketServerEmulator(
   initialMessages: unknown[] = []
 ): BucketServerEmulator {
   const messages: CapturedMessage[] = []
-  let ws: WebSocketLike | undefined
+  let emitter: EventEmitter | undefined
+  let wsReadyState = 0
   let connectedToken: string | undefined
 
   const serverSend = (data: unknown) => {
-    if (ws && ws.readyState === WS_OPEN) {
-      ws.onmessage?.({ data: JSON.stringify(data) })
+    if (emitter && wsReadyState === WS_OPEN) {
+      emitter.emit('message', { data: JSON.stringify(data) })
     }
   }
 
   const createWebSocket = (_url: string, token: string): WebSocketLike => {
     connectedToken = token
+    const localEmitter = new EventEmitter()
+    emitter = localEmitter
 
     const fakeWs: WebSocketLike = {
       readyState: 0,
-      onopen: null,
-      onclose: null,
-      onerror: null,
-      onmessage: null,
+      addEventListener: (type, handler) => localEmitter.on(type, handler),
       close: () => {
+        wsReadyState = 3
         fakeWs.readyState = 3
       },
       send: (data: string) => {
@@ -63,16 +65,16 @@ export function createBucketServerEmulator(
         messages.push({ raw: data, parsed })
       },
     }
-    ws = fakeWs
 
     // Simulate async connection establishment
     setTimeout(() => {
+      wsReadyState = WS_OPEN
       fakeWs.readyState = WS_OPEN
-      fakeWs.onopen?.()
+      localEmitter.emit('open')
 
-      // Send initial server messages after bucket worker sets up onmessage handlers.
-      // connectWebSocket assigns onmessage synchronously after waitForConnection resolves,
-      // so a short delay after onopen is sufficient.
+      // Send initial server messages after bucket worker sets up message handlers.
+      // connectWebSocket registers handlers synchronously after waitForConnection resolves,
+      // so a short delay after open is sufficient.
       setTimeout(() => {
         for (const msg of initialMessages) {
           serverSend(msg)
