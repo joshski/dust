@@ -2,7 +2,7 @@
  * dust lint - Run lint checks on .dust/ markdown files
  */
 
-import { join } from 'node:path'
+import { isAbsolute, join, relative, sep } from 'node:path'
 import { validateSettingsJson } from '../../config/settings'
 import {
   validateImperativeOpeningSentence,
@@ -312,10 +312,25 @@ export async function lintMarkdown(
   context.stderr('')
 
   for (const v of violations) {
+    const displayPath = renderViolationPath(v.file, context.cwd)
     const location = v.line ? `:${v.line}` : ''
-    context.stderr(`  ${v.file}${location}`)
+    context.stderr(`  ${displayPath}${location}`)
     context.stderr(`    ${v.message}`)
   }
 
   return { exitCode: 1 }
+}
+
+export function renderViolationPath(filePath: string, cwd: string): string {
+  if (!isAbsolute(filePath)) return filePath
+  const relativePath = relative(cwd, filePath)
+  if (relativePath.length === 0) return filePath
+  if (
+    relativePath === '..' ||
+    relativePath.startsWith(`..${sep}`) ||
+    isAbsolute(relativePath)
+  ) {
+    return filePath
+  }
+  return relativePath
 }

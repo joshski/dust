@@ -39,7 +39,7 @@ import {
   type FileSystemEmulator,
 } from '../../test/test-utilities'
 import type { CommandContext, CommandDependencies } from '../types'
-import { lintMarkdown } from './lint-markdown'
+import { lintMarkdown, renderViolationPath } from './lint-markdown'
 
 function createDependencies(
   context: CommandContext,
@@ -900,6 +900,34 @@ describe('validateSemanticLinks', () => {
 })
 
 describe('lintMarkdown command', () => {
+  test('renders violation file paths relative to cwd', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: {
+            'BadName.md': `# Task
+## Principles
+## Blocked By
+## Definition of Done`,
+          },
+        },
+      },
+    })
+
+    await lintMarkdown(createDependencies(context, fileSystem))
+
+    const output = context.stderrLines.join('\n')
+    expect(output).toContain('.dust/tasks/BadName.md')
+    expect(output).not.toContain('/project/.dust/tasks/BadName.md')
+  })
+
+  test('falls back to absolute path when relative conversion is not cleanly possible', () => {
+    expect(renderViolationPath('/outside/project/file.md', '/project')).toBe(
+      '/outside/project/file.md'
+    )
+  })
+
   test('fails if .dust not found', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator()
