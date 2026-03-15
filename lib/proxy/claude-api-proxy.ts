@@ -136,7 +136,94 @@ export interface ClaudeApiProxyServer {
   stop: () => void
 }
 
-/* v8 ignore start - HTTP server integration, tested via system tests */
+const HEADERS_TO_FORWARD = [
+  'content-type',
+  'anthropic-version',
+  'anthropic-beta',
+  'accept',
+  'accept-encoding',
+] as const
+
+export interface ProxyRequestConfig {
+  url: string
+  headers: Record<string, string>
+}
+
+/**
+ * Build the proxy request configuration for forwarding to the Anthropic API.
+ * Returns the upstream URL and headers with the token injected.
+ */
+export function buildProxyRequest(
+  pathname: string,
+  search: string,
+  token: string,
+  incomingHeaders: Record<string, string | string[] | undefined>
+): ProxyRequestConfig {
+  const upstreamUrl = new URL(`${ANTHROPIC_API_HOST}${pathname}`)
+  upstreamUrl.search = search
+
+  const headers: Record<string, string> = {
+    'x-api-key': token,
+  }
+
+  for (const headerName of HEADERS_TO_FORWARD) {
+    const value = incomingHeaders[headerName]
+    if (value && typeof value === 'string') {
+      headers[headerName] = value
+    }
+  }
+
+  return {
+    url: upstreamUrl.toString(),
+    headers,
+  }
+}
+
+/**
+ * Filter response headers from upstream response for forwarding to the client.
+ * Removes transfer-encoding as we're not chunking.
+ */
+export function filterResponseHeaders(
+  upstreamHeaders: Headers
+): Record<string, string> {
+  const responseHeaders: Record<string, string> = {}
+  upstreamHeaders.forEach((value, key) => {
+    if (key.toLowerCase() !== 'transfer-encoding') {
+      responseHeaders[key] = value
+    }
+  })
+  return responseHeaders
+}
+
+export interface ErrorResponse {
+  statusCode: number
+  contentType: string
+  body: string
+}
+
+/**
+ * Build a 401 response for when no OAuth token is available.
+ */
+export function buildNoTokenResponse(): ErrorResponse {
+  return {
+    statusCode: 401,
+    contentType: 'text/plain',
+    body: 'Could not obtain OAuth token',
+  }
+}
+
+/**
+ * Build a 502 response for when the upstream request fails.
+ */
+export function buildUpstreamErrorResponse(error: unknown): ErrorResponse {
+  const message = error instanceof Error ? error.message : 'Unknown error'
+  return {
+    statusCode: 502,
+    contentType: 'text/plain',
+    body: `Upstream request failed: ${message}`,
+  }
+}
+
 /**
  * Creates a Claude API proxy server.
  * The server accepts HTTP requests and forwards them to the Anthropic API
@@ -147,6 +234,16 @@ export async function createClaudeApiProxyServer(
 ): Promise<ClaudeApiProxyServer> {
   let resolvedPort = 0
 
+  /* v8 ignore start - HTTP server wiring, tested via system tests */
+  function sendErrorResponse(
+    nodeResponse: import('node:http').ServerResponse,
+    errorResponse: ErrorResponse
+  ): void {
+    nodeResponse.writeHead(errorResponse.statusCode, {
+      'Content-Type': errorResponse.contentType,
+    })
+    nodeResponse.end(errorResponse.body)
+  }
   const server = httpCreateServer(async (nodeRequest, nodeResponse) => {
     const method = nodeRequest.method ?? 'GET'
     const url = new URL(
@@ -159,14 +256,17 @@ export async function createClaudeApiProxyServer(
     // Read the OAuth token
     const token = readOAuthToken(dependencies)
     if (!token) {
-      nodeResponse.writeHead(401, { 'Content-Type': 'text/plain' })
-      nodeResponse.end('Could not obtain OAuth token')
+      sendErrorResponse(nodeResponse, buildNoTokenResponse())
       return
     }
 
-    // Build upstream URL
-    const upstreamUrl = new URL(`${ANTHROPIC_API_HOST}${url.pathname}`)
-    upstreamUrl.search = url.search
+    // Build proxy request configuration
+    const proxyRequest = buildProxyRequest(
+      url.pathname,
+      url.search,
+      token,
+      nodeRequest.headers
+    )
 
     // Read request body if present
     const chunks: Buffer[] = []
@@ -175,48 +275,16 @@ export async function createClaudeApiProxyServer(
     }
     const body = chunks.length > 0 ? Buffer.concat(chunks) : undefined
 
-    // Forward request to upstream with OAuth token via x-api-key
-    const headers: Record<string, string> = {
-      'x-api-key': token,
-    }
-
-    // Copy relevant headers from the original request
-    // Don't forward authorization or x-api-key from the container
-    const headersToForward = [
-      'content-type',
-      'anthropic-version',
-      'anthropic-beta',
-      'accept',
-      'accept-encoding',
-    ]
-
-    for (const headerName of headersToForward) {
-      const value = nodeRequest.headers[headerName]
-      if (value && typeof value === 'string') {
-        headers[headerName] = value
-      }
-    }
-
-    log(`forwarding ${method} to ${upstreamUrl.toString()}`)
+    log(`forwarding ${method} to ${proxyRequest.url}`)
 
     try {
-      const upstreamResponse = await dependencies.fetch(
-        upstreamUrl.toString(),
-        {
-          method,
-          headers,
-          body,
-        }
-      )
-
-      // Copy upstream response status and headers
-      const responseHeaders: Record<string, string> = {}
-      upstreamResponse.headers.forEach((value, key) => {
-        // Skip transfer-encoding as we're not chunking
-        if (key.toLowerCase() !== 'transfer-encoding') {
-          responseHeaders[key] = value
-        }
+      const upstreamResponse = await dependencies.fetch(proxyRequest.url, {
+        method,
+        headers: proxyRequest.headers,
+        body,
       })
+
+      const responseHeaders = filterResponseHeaders(upstreamResponse.headers)
 
       log(`upstream responded: ${upstreamResponse.status}`)
       nodeResponse.writeHead(upstreamResponse.status, responseHeaders)
@@ -237,10 +305,10 @@ export async function createClaudeApiProxyServer(
 
       nodeResponse.end()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error'
-      log(`upstream request failed: ${message}`)
-      nodeResponse.writeHead(502, { 'Content-Type': 'text/plain' })
-      nodeResponse.end(`Upstream request failed: ${message}`)
+      log(
+        `upstream request failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      )
+      sendErrorResponse(nodeResponse, buildUpstreamErrorResponse(error))
     }
   })
 
@@ -262,5 +330,5 @@ export async function createClaudeApiProxyServer(
       log('claude api proxy stopped')
     },
   }
+  /* v8 ignore stop */
 }
-/* v8 ignore stop */
