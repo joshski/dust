@@ -15,7 +15,7 @@ import {
   type RunnerDependencies,
 } from '../claude/run'
 import type { DockerSpawnConfig, OutputSink } from '../claude/types'
-import { manageGitHooks } from '../cli/commands/agent-shared'
+import { manageGitHooks } from '../cli/shared/agent-shared'
 import {
   formatLoopEvent,
   type LoopEmitFn,

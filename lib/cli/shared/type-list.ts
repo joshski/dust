@@ -9,7 +9,7 @@
  */
 
 import type { CommandDependencies, CommandResult } from '../types'
-import { list } from './list'
+import { list } from '../commands/list'
 
 export async function tasks(
   dependencies: CommandDependencies

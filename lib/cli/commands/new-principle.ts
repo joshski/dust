@@ -10,7 +10,7 @@ import {
   manageGitHooks,
   type TemplateVars,
   templateVariables,
-} from './agent-shared'
+} from '../shared/agent-shared'
 
 function newPrincipleInstructions(vars: TemplateVars): string {
   const intro = vars.isClaudeCodeWeb

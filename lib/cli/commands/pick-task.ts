@@ -6,7 +6,7 @@
  */
 
 import type { CommandDependencies, CommandResult } from '../types'
-import { manageGitHooks, templateVariables } from './agent-shared'
+import { manageGitHooks, templateVariables } from '../shared/agent-shared'
 import { findUnblockedTasks, printTaskList } from './next'
 
 export async function pickTask(

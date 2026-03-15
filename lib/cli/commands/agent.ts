@@ -11,7 +11,7 @@ import {
   manageGitHooks,
   type TemplateVarsWithInstructions,
   templateVariablesWithInstructions,
-} from './agent-shared'
+} from '../shared/agent-shared'
 
 function agentGreeting(vars: TemplateVarsWithInstructions): string {
   const instructions = vars.agentInstructions

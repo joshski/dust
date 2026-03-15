@@ -36,7 +36,7 @@ import {
   type BucketDependencies,
   bucketWorker,
   createAuthFileSystem,
-} from '../lib/cli/commands/bucket'
+} from '../lib/cli/commands/bucket-worker'
 import type { CommandDependencies } from '../lib/cli/types'
 import { createFileSystem, defaultFileSystemPrimitives } from '../lib/cli/wire'
 import { stubEnv } from '../lib/test/test-utilities'

@@ -22,7 +22,7 @@ import { createClaudeApiProxyServer } from '../proxy/claude-api-proxy'
 import { createGitCredentialProxyServer } from '../proxy/git-credential-proxy'
 import { isUnattended } from '../session'
 import type { CommandDependencies, CommandResult } from '../cli/types'
-import { manageGitHooks } from '../cli/commands/agent-shared'
+import { manageGitHooks } from '../cli/shared/agent-shared'
 import { formatLoopEvent } from './events'
 import type { LoopEmitFn } from './events'
 import {

@@ -12,7 +12,7 @@ import { loadSettings } from '../config/settings'
 import { DUST_VERSION } from '../version'
 import { agent } from './commands/agent'
 import { audit } from './commands/audit'
-import { bucketWorker } from './commands/bucket'
+import { bucketWorker } from './commands/bucket-worker'
 import { bucketTool } from './commands/bucket-tool'
 import { check } from './commands/check'
 import { focus } from './commands/focus'
@@ -30,7 +30,7 @@ import { newTask } from './commands/new-task'
 import { next } from './commands/next'
 import { pickTask } from './commands/pick-task'
 import { prePush } from './commands/pre-push'
-import { facts, ideas, principles, tasks } from './commands/type-list'
+import { facts, ideas, principles, tasks } from './shared/type-list'
 import type {
   CommandContext,
   CommandDependencies,

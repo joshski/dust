@@ -9,7 +9,7 @@ import {
   manageGitHooks,
   type TemplateVars,
   templateVariables,
-} from './agent-shared'
+} from '../shared/agent-shared'
 
 function newTaskInstructions(vars: TemplateVars): string {
   const steps: string[] = []

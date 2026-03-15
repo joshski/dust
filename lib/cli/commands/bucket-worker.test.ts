@@ -38,7 +38,7 @@ import {
   syncTUI,
   syncUIWithRepoList,
   waitForConnection,
-} from './bucket'
+} from './bucket-worker'
 
 function createMockAuthDeps(
   overrides: Partial<AuthDependencies> = {}

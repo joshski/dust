@@ -5,7 +5,7 @@
  */
 
 import type { CommandDependencies, CommandResult } from '../types'
-import { manageGitHooks, templateVariables } from './agent-shared'
+import { manageGitHooks, templateVariables } from '../shared/agent-shared'
 
 export async function implementTask(
   dependencies: CommandDependencies

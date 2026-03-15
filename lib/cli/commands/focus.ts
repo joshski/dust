@@ -9,7 +9,7 @@
 
 import { EXPEDITE_IDEA_PREFIX } from '../../artifacts/workflow-tasks'
 import type { CommandDependencies, CommandResult } from '../types'
-import { manageGitHooks, templateVariables } from './agent-shared'
+import { manageGitHooks, templateVariables } from '../shared/agent-shared'
 
 export function buildImplementationInstructions(
   bin: string,

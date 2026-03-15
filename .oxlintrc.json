@@ -1,0 +1,6 @@
+{
+  "jsPlugins": ["./lib/oxlint/plugins/dust.js"],
+  "rules": {
+    "dust/command-exports-matching-filename": "error"
+  }
+}
