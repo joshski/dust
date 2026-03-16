@@ -1217,64 +1217,6 @@ function slowTests(): string {
   `
 }
 
-function namingConsistency(): string {
-  return dedent`
-    # Naming Consistency
-
-    Review high-confidence naming consistency issues for equivalent factory/constructor creation APIs.
-
-    ${ideasHint}
-
-    ## Scope
-
-    Focus only on high-confidence factory/constructor naming inconsistencies where intent is clearly the same:
-    - Equivalent creation abstractions using \`build*\`, \`create*\`, \`make*\`, or \`new*\`
-    - Cases where names differ but behavior and role clearly indicate the same creation concept
-
-    Out of scope:
-    - Canonical artifact-list ordering or shape checks
-    - Broad terminology drift and ambiguous language choices (covered by the \`ubiquitous-language\` audit)
-
-    ## Analysis Steps
-
-    1. Identify factory/constructor APIs with equivalent behavior that use \`build*\`, \`create*\`, \`make*\`, or \`new*\` naming variants
-    2. Group findings by shared creation concept to avoid duplicate reporting
-    3. Keep only high-confidence inconsistencies where the compared usages clearly represent the same concept
-    4. Recommend only high-confidence renames with clear semantic equivalence; do not propose speculative broad renames
-    5. Preserve Functional Core, Imperative Shell boundaries in recommendations (pure matching/analysis logic separated from IO shell)
-
-    ## Output
-
-    For each inconsistency, provide:
-    - **Locations** - File paths and line numbers where inconsistent factory/constructor names appear
-    - **Inconsistent term set** - The observed naming variants (for example \`createWidget\`, \`buildWidget\`, \`makeWidget\`)
-    - **Canonical proposal** - The recommended canonical name and rationale
-    - **Migration strategy** - Choose either **incremental** (aliases/adapters then cleanup) or **one-shot** (single coordinated rename), with rationale
-
-    ## Principles
-
-    - [Consistent Naming](../principles/consistent-naming.md)
-    - [Naming Matters](../principles/naming-matters.md)
-    - [Clarity Over Brevity](../principles/clarity-over-brevity.md)
-    - [Functional Core, Imperative Shell](../principles/functional-core-imperative-shell.md)
-    - [Small Units](../principles/small-units.md)
-
-    ## Blocked By
-
-    (none)
-
-    ## Definition of Done
-
-    - Reviewed high-confidence factory/constructor naming consistency for equivalent creation APIs
-    - Constrained findings to \`build*\`, \`create*\`, \`make*\`, and \`new*\` naming variants with clearly equivalent intent
-    - Documented each finding with locations, inconsistent term set, canonical proposal, and migration strategy
-    - Chose incremental or one-shot migration strategy for each canonical proposal
-    - Avoided speculative broad renames
-    - Avoided artifact-list ordering/shape checks and broad terminology drift
-    - Proposed ideas for naming consistency improvements identified
-  `
-}
-
 function primitiveObsession(): string {
   return dedent`
     # Primitive Obsession
@@ -1436,6 +1378,20 @@ function ubiquitousLanguage(): string {
     4. **Glossary adherence** - If a glossary exists, is it being followed?
     5. **Acronym and abbreviation usage** - Are shortened forms used consistently?
 
+    ## Factory/Constructor Naming
+
+    A specific case of terminology consistency: factory and constructor naming patterns.
+
+    Focus on high-confidence inconsistencies where equivalent creation APIs use different naming variants:
+    - \`build*\`, \`create*\`, \`make*\`, or \`new*\` prefixes for the same creation concept
+    - Cases where names differ but behavior and role clearly indicate the same concept
+
+    For each factory naming inconsistency, document:
+    - **Locations** - File paths and line numbers where inconsistent names appear
+    - **Inconsistent term set** - The observed naming variants (e.g., \`createWidget\`, \`buildWidget\`)
+    - **Canonical proposal** - The recommended canonical name and rationale
+    - **Migration strategy** - Incremental (aliases then cleanup) or one-shot (coordinated rename)
+
     ## Analysis Steps
 
     1. Identify key domain terms from documentation, README, or existing glossary
@@ -1443,6 +1399,8 @@ function ubiquitousLanguage(): string {
     3. Compare code identifiers against documented terminology
     4. Check user-facing strings for consistency with technical naming
     5. Flag deviations where the same concept uses different names
+    6. Identify factory/constructor APIs using \`build*\`, \`create*\`, \`make*\`, or \`new*\` with equivalent behavior
+    7. Group factory naming findings by shared creation concept
 
     ## Output
 
@@ -1467,6 +1425,7 @@ function ubiquitousLanguage(): string {
     - Reviewed recent commits for terminology consistency
     - Compared code naming against documentation vocabulary
     - Checked user-facing text for alignment with code terms
+    - Reviewed factory/constructor naming for \`build*\`, \`create*\`, \`make*\`, \`new*\` consistency
     - Documented any terminology drift or inconsistencies found
     - Proposed ideas for standardizing inconsistent terminology
   `
@@ -2548,7 +2507,6 @@ const stockAuditFunctions: Record<string, () => string> = {
   'ideas-from-principles': ideasFromPrinciples,
   'idiomatic-style': idiomaticStyle,
   'logging-and-traceability': loggingAndTraceability,
-  'naming-consistency': namingConsistency,
   'performance-review': performanceReview,
   'primitive-obsession': primitiveObsession,
   'refactoring-opportunities': refactoringOpportunities,

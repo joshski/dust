@@ -221,7 +221,7 @@ describe('audit command', () => {
   test('loadStockAudits loads audits from markdown files', () => {
     const audits = loadStockAudits()
     expect(audits).toBeInstanceOf(Array)
-    expect(audits.length).toBe(35)
+    expect(audits.length).toBe(34)
 
     const names = audits.map(a => a.name)
     expect(names).toContain('agent-developer-experience')
@@ -240,7 +240,6 @@ describe('audit command', () => {
     expect(names).toContain('ideas-from-principles')
     expect(names).toContain('idiomatic-style')
     expect(names).toContain('logging-and-traceability')
-    expect(names).toContain('naming-consistency')
     expect(names).toContain('performance-review')
     expect(names).toContain('primitive-obsession')
     expect(names).toContain('refactoring-opportunities')
@@ -287,7 +286,6 @@ describe('audit command', () => {
       'global-state',
       'idiomatic-style',
       'logging-and-traceability',
-      'naming-consistency',
       'primitive-obsession',
       'refactoring-opportunities',
       'security-review',
@@ -313,35 +311,6 @@ describe('audit command', () => {
         expect(goalsMatch?.[1].trim()).toBe('(none)')
       }
     }
-  })
-
-  test('naming-consistency audit enforces factory-constructor high-confidence contract', () => {
-    const namingConsistencyAudit = loadStockAudits().find(
-      a => a.name === 'naming-consistency'
-    )
-
-    expect(namingConsistencyAudit).toBeDefined()
-    expect(namingConsistencyAudit?.template).toContain(
-      'Focus only on high-confidence factory/constructor naming inconsistencies'
-    )
-    expect(namingConsistencyAudit?.template).toContain(
-      '`build*`, `create*`, `make*`, or `new*`'
-    )
-    expect(namingConsistencyAudit?.template).toContain(
-      '**Inconsistent term set** - The observed naming variants'
-    )
-    expect(namingConsistencyAudit?.template).toContain(
-      '**Canonical proposal** - The recommended canonical name and rationale'
-    )
-    expect(namingConsistencyAudit?.template).toContain(
-      '**Migration strategy** - Choose either **incremental**'
-    )
-    expect(namingConsistencyAudit?.template).toContain(
-      'do not propose speculative broad renames'
-    )
-    expect(namingConsistencyAudit?.template).toContain(
-      'Canonical artifact-list ordering or shape checks'
-    )
   })
 
   test('primitive-obsession audit enforces existing-type and numeric high-confidence contract', () => {
