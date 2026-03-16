@@ -56,21 +56,28 @@ export function extractPrincipleRelationships(
     while (match) {
       const linkTarget = match[2]
 
-      if (
+      const isLocalLink =
         !linkTarget.startsWith('#') &&
         !linkTarget.startsWith('http://') &&
         !linkTarget.startsWith('https://')
-      ) {
-        const targetPath = linkTarget.split('#')[0]
-        const resolvedPath = resolve(fileDir, targetPath)
 
-        if (resolvedPath.includes('/.dust/principles/')) {
-          if (currentSection === '## Parent Principle') {
-            parentPrinciples.push(resolvedPath)
-          } else {
-            subPrinciples.push(resolvedPath)
-          }
-        }
+      if (!isLocalLink) {
+        match = linkPattern.exec(line)
+        continue
+      }
+
+      const targetPath = linkTarget.split('#')[0]
+      const resolvedPath = resolve(fileDir, targetPath)
+
+      if (!resolvedPath.includes('/.dust/principles/')) {
+        match = linkPattern.exec(line)
+        continue
+      }
+
+      if (currentSection === '## Parent Principle') {
+        parentPrinciples.push(resolvedPath)
+      } else {
+        subPrinciples.push(resolvedPath)
       }
       match = linkPattern.exec(line)
     }

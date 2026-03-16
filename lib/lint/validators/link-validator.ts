@@ -43,29 +43,35 @@ export function validateLinks(
     while (match) {
       const linkTarget = match[2]
 
-      if (
-        !linkTarget.startsWith('http://') &&
-        !linkTarget.startsWith('https://') &&
-        !linkTarget.startsWith('#')
-      ) {
-        if (linkTarget.startsWith('/')) {
-          violations.push({
-            file: filePath,
-            message: `Absolute link not allowed: "${linkTarget}" (use a relative path instead)`,
-            line: i + 1,
-          })
-        } else {
-          const targetPath = linkTarget.split('#')[0]
-          const resolvedPath = resolve(fileDir, targetPath)
+      const isExternalOrAnchorLink =
+        linkTarget.startsWith('http://') ||
+        linkTarget.startsWith('https://') ||
+        linkTarget.startsWith('#')
 
-          if (!fileSystem.exists(resolvedPath)) {
-            violations.push({
-              file: filePath,
-              message: `Broken link: "${linkTarget}"`,
-              line: i + 1,
-            })
-          }
-        }
+      if (isExternalOrAnchorLink) {
+        match = linkPattern.exec(line)
+        continue
+      }
+
+      if (linkTarget.startsWith('/')) {
+        violations.push({
+          file: filePath,
+          message: `Absolute link not allowed: "${linkTarget}" (use a relative path instead)`,
+          line: i + 1,
+        })
+        match = linkPattern.exec(line)
+        continue
+      }
+
+      const targetPath = linkTarget.split('#')[0]
+      const resolvedPath = resolve(fileDir, targetPath)
+
+      if (!fileSystem.exists(resolvedPath)) {
+        violations.push({
+          file: filePath,
+          message: `Broken link: "${linkTarget}"`,
+          line: i + 1,
+        })
       }
       match = linkPattern.exec(line)
     }

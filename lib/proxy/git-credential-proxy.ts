@@ -173,6 +173,21 @@ export interface GitCredentialProxyServer {
 }
 
 /* v8 ignore start - HTTP server integration, tested via system tests */
+async function streamResponseBody(
+  body: ReadableStream<Uint8Array>,
+  nodeResponse: import('node:http').ServerResponse
+): Promise<void> {
+  const reader = body.getReader()
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      nodeResponse.write(value)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}
 /**
  * Creates a git credential proxy server.
  * The server accepts git smart HTTP protocol requests and forwards them
@@ -262,16 +277,7 @@ export async function createGitCredentialProxyServer(
 
       // Stream the response body
       if (upstreamResponse.body) {
-        const reader = upstreamResponse.body.getReader()
-        try {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-            nodeResponse.write(value)
-          }
-        } finally {
-          reader.releaseLock()
-        }
+        await streamResponseBody(upstreamResponse.body, nodeResponse)
       }
 
       nodeResponse.end()

@@ -234,6 +234,22 @@ function sendErrorResponse(
   })
   nodeResponse.end(errorResponse.body)
 }
+
+async function streamResponseBody(
+  body: ReadableStream<Uint8Array>,
+  nodeResponse: import('node:http').ServerResponse
+): Promise<void> {
+  const reader = body.getReader()
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      nodeResponse.write(value)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}
 /* v8 ignore stop */
 
 /**
@@ -294,16 +310,7 @@ export async function createClaudeApiProxyServer(
 
       // Stream the response body
       if (upstreamResponse.body) {
-        const reader = upstreamResponse.body.getReader()
-        try {
-          while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-            nodeResponse.write(value)
-          }
-        } finally {
-          reader.releaseLock()
-        }
+        await streamResponseBody(upstreamResponse.body, nodeResponse)
       }
 
       nodeResponse.end()
