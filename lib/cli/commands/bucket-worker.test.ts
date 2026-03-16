@@ -1364,8 +1364,7 @@ describe('connectWebSocket', () => {
         id: 1,
       },
       path: '/tmp/owner/repo',
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       logBuffer: createLogBuffer(),
       agentStatus: 'idle',
       wakeUp: () => {
@@ -1424,8 +1423,7 @@ describe('connectWebSocket', () => {
         id: 1,
       },
       path: '/tmp/owner/repo',
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       logBuffer: createLogBuffer(),
       agentStatus: 'idle',
     }
@@ -1440,7 +1438,7 @@ describe('connectWebSocket', () => {
 
     await new Promise(resolve => setTimeout(resolve, 30))
 
-    expect(repoState.loopPromise).not.toBeNull()
+    expect(repoState.lifecycle.type).toBe('running')
     expect(context.stdoutLines.join('\n')).toContain(
       'Repository loop not running for owner/repo; restarting'
     )
@@ -1501,8 +1499,7 @@ describe('connectWebSocket', () => {
         id: 1,
       },
       path: '/tmp/owner/repo',
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       logBuffer: createLogBuffer(),
       agentStatus: 'idle',
       wakeUp: () => {
@@ -1571,6 +1568,7 @@ describe('shutdown', () => {
     const dependencies = createDependencies()
     const state = createInitialState()
 
+    let cancelCalled = false
     const repoState: RepositoryState = {
       repository: {
         name: 'repo',
@@ -1579,8 +1577,13 @@ describe('shutdown', () => {
         id: 1,
       },
       path: '/tmp/dust-bucket-repo',
-      loopPromise: Promise.resolve(),
-      stopRequested: false,
+      lifecycle: {
+        type: 'running',
+        loopPromise: Promise.resolve(),
+        cancel: () => {
+          cancelCalled = true
+        },
+      },
       logBuffer: createLogBuffer(),
       agentStatus: 'idle',
     }
@@ -1606,7 +1609,7 @@ describe('shutdown', () => {
 
     await shutdown(state, bucketDependencies, dependencies.context)
 
-    expect(repoState.stopRequested).toBe(true)
+    expect(cancelCalled).toBe(true)
     expect(state.repositories.size).toBe(0)
   })
 
@@ -2345,8 +2348,7 @@ describe('syncAgentStatuses', () => {
         id: 1,
       },
       path: '/tmp/repo1',
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       logBuffer: createLogBuffer(),
       agentStatus: 'busy',
     })
@@ -2358,8 +2360,7 @@ describe('syncAgentStatuses', () => {
         id: 2,
       },
       path: '/tmp/repo2',
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       logBuffer: createLogBuffer(),
       agentStatus: 'idle',
     })
@@ -2380,8 +2381,7 @@ describe('syncAgentStatuses', () => {
         id: 1,
       },
       path: '/tmp/repo1',
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       logBuffer: createLogBuffer(),
       agentStatus: 'idle',
     }
@@ -2408,8 +2408,7 @@ describe('syncTUI', () => {
         id: 1,
       },
       path: '/tmp/repo1',
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       logBuffer: repoBuffer,
       agentStatus: 'idle',
     })
@@ -2430,8 +2429,7 @@ describe('syncTUI', () => {
         id: 1,
       },
       path: '/tmp/repo1',
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       logBuffer: createLogBuffer(),
       agentStatus: 'busy',
     })
@@ -2488,8 +2486,7 @@ describe('handleRepositoryListSuccess', () => {
     const repoState: RepositoryState = {
       repository: repos[0],
       path: '/tmp/repo1',
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       logBuffer: createLogBuffer(),
       agentStatus: 'idle',
     }
@@ -2534,8 +2531,7 @@ describe('handleRepositoryListSuccess', () => {
     const repoState: RepositoryState = {
       repository: repos[0],
       path: '/tmp/repo1',
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       logBuffer: createLogBuffer(),
       agentStatus: 'idle',
       wakeUp: () => {
@@ -2582,8 +2578,7 @@ describe('handleRepositoryListSuccess', () => {
     const repoState: RepositoryState = {
       repository: repos[0],
       path: '/tmp/repo1',
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       logBuffer: createLogBuffer(),
       agentStatus: 'idle',
       wakeUp: () => {

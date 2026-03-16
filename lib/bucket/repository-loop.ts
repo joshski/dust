@@ -398,7 +398,7 @@ export async function runRepositoryLoop(
 
   log(`loop started for ${repoName} at ${repoState.path}`)
 
-  while (!repoState.stopRequested) {
+  while (repoState.lifecycle.type === 'running') {
     loopState.agentSessionId = crypto.randomUUID()
 
     // Select agent based on agentProvider (re-read each iteration so changes take effect)
@@ -450,7 +450,22 @@ export async function runRepositoryLoop(
     }
     const abortController = new AbortController()
     const cancelCurrentIteration = createCancelHandler(abortController)
-    repoState.cancelCurrentIteration = cancelCurrentIteration
+
+    /* v8 ignore start - defensive guard and cancel callback */
+    // Update the lifecycle's cancel function to also abort the current iteration
+    if (repoState.lifecycle.type === 'running') {
+      const { loopPromise } = repoState.lifecycle
+      repoState.lifecycle = {
+        type: 'running',
+        loopPromise,
+        cancel: () => {
+          cancelCurrentIteration()
+          repoState.lifecycle = { type: 'stopping' }
+        },
+      }
+    }
+    /* v8 ignore stop */
+
     let result: Awaited<ReturnType<typeof runOneIteration>>
     // Get current tools and format for prompt injection
     const tools = repoDeps.getTools?.() ?? []
@@ -520,9 +535,6 @@ export async function runRepositoryLoop(
       continue
     } finally {
       await proxy.stop()
-      if (repoState.cancelCurrentIteration === cancelCurrentIteration) {
-        repoState.cancelCurrentIteration = undefined
-      }
     }
 
     if (result === 'no_tasks') {

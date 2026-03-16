@@ -498,11 +498,11 @@ describe('removeRepository', () => {
 })
 
 describe('runRepositoryLoop', () => {
-  test('stops when stopRequested is set', async () => {
+  test('stops when lifecycle is stopping', async () => {
     const { spawn } = createAutoResolvingSpawn()
     const fileSystem = createFileSystemEmulator()
 
-    const repoState = {
+    const repoState: RepositoryState = {
       repository: {
         name: 'repo',
         gitUrl: 'repo',
@@ -510,9 +510,8 @@ describe('runRepositoryLoop', () => {
         id: 1,
       },
       path: '/tmp/repo',
-      loopPromise: null,
-      stopRequested: true,
       logBuffer: createLogBuffer(),
+      lifecycle: { type: 'stopping' },
       agentStatus: 'idle' as const,
     }
 
@@ -541,9 +540,12 @@ describe('runRepositoryLoop', () => {
         id: 1,
       },
       path: '/tmp/repo',
-      loopPromise: null,
-      stopRequested: false,
       logBuffer: createLogBuffer(),
+      lifecycle: {
+        type: 'running',
+        loopPromise: Promise.resolve(),
+        cancel: () => {},
+      },
       agentStatus: 'idle' as const,
     }
 
@@ -567,7 +569,7 @@ describe('runRepositoryLoop', () => {
     expect(sleepCalled).toBe(true)
 
     // Stop on next iteration, then wake up
-    repoState.stopRequested = true
+    repoState.lifecycle = { type: 'stopping' }
     repoState.wakeUp?.()
 
     await loopPromise
@@ -588,9 +590,12 @@ describe('runRepositoryLoop', () => {
         id: 1,
       },
       path: '/tmp/repo',
-      loopPromise: null,
-      stopRequested: false,
       logBuffer: createLogBuffer(),
+      lifecycle: {
+        type: 'running',
+        loopPromise: Promise.resolve(),
+        cancel: () => {},
+      },
       agentStatus: 'idle' as const,
       taskAvailablePending: true,
     }
@@ -621,7 +626,7 @@ describe('runRepositoryLoop', () => {
     expect(sleepCalled).toBe(true)
 
     // Clean up
-    repoState.stopRequested = true
+    repoState.lifecycle = { type: 'stopping' }
     repoState.wakeUp?.()
     await loopPromise
   })
@@ -638,9 +643,12 @@ describe('runRepositoryLoop', () => {
         id: 1,
       },
       path: '/tmp/repo',
-      loopPromise: null,
-      stopRequested: false,
       logBuffer: createLogBuffer(),
+      lifecycle: {
+        type: 'running',
+        loopPromise: Promise.resolve(),
+        cancel: () => {},
+      },
       agentStatus: 'idle' as const,
     }
 
@@ -659,7 +667,7 @@ describe('runRepositoryLoop', () => {
     expect(repoState.wakeUp).toBeDefined()
 
     // Wake up the loop, then stop it on the next iteration
-    repoState.stopRequested = true
+    repoState.lifecycle = { type: 'stopping' }
     repoState.wakeUp?.()
 
     await loopPromise
@@ -670,7 +678,7 @@ describe('runRepositoryLoop', () => {
     )
   })
 
-  test('cancelCurrentIteration aborts an in-flight agent run', async () => {
+  test('lifecycle cancel aborts an in-flight agent run', async () => {
     const { spawn } = createAutoResolvingSpawn()
     const fileSystem = createFileSystemEmulator({
       // biome-ignore lint: tmp is the /tmp directory name, not an abbreviation
@@ -693,9 +701,12 @@ describe('runRepositoryLoop', () => {
         id: 1,
       },
       path: '/tmp/repo',
-      loopPromise: null,
-      stopRequested: false,
       logBuffer: createLogBuffer(),
+      lifecycle: {
+        type: 'running',
+        loopPromise: Promise.resolve(),
+        cancel: () => {},
+      },
       agentStatus: 'idle' as const,
     }
 
@@ -735,12 +746,13 @@ describe('runRepositoryLoop', () => {
     const loopPromise = runRepositoryLoop(repoState, repoDeps)
     await runStarted
 
-    repoState.stopRequested = true
-    repoState.cancelCurrentIteration?.()
+    // The loop should have updated lifecycle with a cancel that aborts current iteration
+    if (repoState.lifecycle.type === 'running') {
+      repoState.lifecycle.cancel()
+    }
     await loopPromise
 
     expect(signalWasAborted).toBe(true)
-    expect(repoState.cancelCurrentIteration).toBeUndefined()
   })
 
   test('stale fallback timeout does not clear a newer wait wakeUp handler', async () => {
@@ -755,9 +767,12 @@ describe('runRepositoryLoop', () => {
         id: 1,
       },
       path: '/tmp/repo',
-      loopPromise: null,
-      stopRequested: false,
       logBuffer: createLogBuffer(),
+      lifecycle: {
+        type: 'running',
+        loopPromise: Promise.resolve(),
+        cancel: () => {},
+      },
       agentStatus: 'idle' as const,
     }
 
@@ -793,7 +808,7 @@ describe('runRepositoryLoop', () => {
 
     expect(repoState.wakeUp).toBe(secondWakeUp)
 
-    repoState.stopRequested = true
+    repoState.lifecycle = { type: 'stopping' }
     repoState.wakeUp?.()
     await loopPromise
   })
@@ -815,7 +830,7 @@ describe('runRepositoryLoop', () => {
       },
     })
 
-    const repoState = {
+    const repoState: RepositoryState = {
       repository: {
         name: 'repo',
         gitUrl: 'repo',
@@ -823,9 +838,12 @@ describe('runRepositoryLoop', () => {
         id: 1,
       },
       path: '/tmp/repo',
-      loopPromise: null,
-      stopRequested: false,
       logBuffer: createLogBuffer(),
+      lifecycle: {
+        type: 'running',
+        loopPromise: Promise.resolve(),
+        cancel: () => {},
+      },
       agentStatus: 'idle' as const,
     }
 
@@ -862,7 +880,7 @@ describe('runRepositoryLoop', () => {
       sleep: async () => {
         iterationCount++
         if (iterationCount >= 1) {
-          repoState.stopRequested = true
+          repoState.lifecycle = { type: 'stopping' }
         }
       },
     })
@@ -922,7 +940,7 @@ describe('runRepositoryLoop', () => {
       },
     })
 
-    const repoState = {
+    const repoState: RepositoryState = {
       repository: {
         name: 'repo',
         gitUrl: 'repo',
@@ -930,9 +948,12 @@ describe('runRepositoryLoop', () => {
         id: 1,
       },
       path: '/tmp/repo',
-      loopPromise: null,
-      stopRequested: false,
       logBuffer: createLogBuffer(),
+      lifecycle: {
+        type: 'running',
+        loopPromise: Promise.resolve(),
+        cancel: () => {},
+      },
       agentStatus: 'idle' as const,
     }
 
@@ -944,7 +965,7 @@ describe('runRepositoryLoop', () => {
         throw new Error('Claude crashed')
       },
       sleep: async () => {
-        repoState.stopRequested = true
+        repoState.lifecycle = { type: 'stopping' }
       },
     })
 
@@ -973,7 +994,7 @@ describe('runRepositoryLoop', () => {
       },
     })
 
-    const repoState = {
+    const repoState: RepositoryState = {
       repository: {
         name: 'repo',
         gitUrl: 'repo',
@@ -981,9 +1002,12 @@ describe('runRepositoryLoop', () => {
         id: 1,
       },
       path: '/tmp/repo',
-      loopPromise: null,
-      stopRequested: false,
       logBuffer: createLogBuffer(),
+      lifecycle: {
+        type: 'running',
+        loopPromise: Promise.resolve(),
+        cancel: () => {},
+      },
       agentStatus: 'idle' as const,
     }
 
@@ -999,7 +1023,7 @@ describe('runRepositoryLoop', () => {
         fileSystem.files.delete('/tmp/repo/.dust/tasks/my-task.md')
       },
       sleep: async () => {
-        repoState.stopRequested = true
+        repoState.lifecycle = { type: 'stopping' }
       },
     })
 
@@ -1011,7 +1035,7 @@ describe('runRepositoryLoop', () => {
 })
 
 describe('startRepositoryLoop', () => {
-  test('clears loopPromise after loop exits', async () => {
+  test('sets lifecycle to running then idle after loop exits', async () => {
     const { spawn } = createAutoResolvingSpawn()
     const fileSystem = createFileSystemEmulator()
 
@@ -1023,9 +1047,8 @@ describe('startRepositoryLoop', () => {
         id: 1,
       },
       path: '/tmp/repo',
-      loopPromise: null,
-      stopRequested: false,
       logBuffer: createLogBuffer(),
+      lifecycle: { type: 'idle' },
       agentStatus: 'idle',
     }
 
@@ -1033,17 +1056,20 @@ describe('startRepositoryLoop', () => {
       spawn,
       fileSystem,
       sleep: async () => {
-        repoState.stopRequested = true
+        repoState.lifecycle = { type: 'stopping' }
       },
     })
 
     startRepositoryLoop(repoState, repoDeps)
-    expect(repoState.loopPromise).not.toBeNull()
+    expect(repoState.lifecycle.type).toBe('running')
 
-    const firstPromise = repoState.loopPromise as Promise<void>
-    await firstPromise
+    const runningLifecycle = repoState.lifecycle as {
+      type: 'running'
+      loopPromise: Promise<void>
+    }
+    await runningLifecycle.loopPromise
 
-    expect(repoState.loopPromise).toBeNull()
+    expect(repoState.lifecycle.type).toBe('idle')
   })
 
   test('crash handler logs error when runRepositoryLoop rejects', async () => {
@@ -1065,9 +1091,8 @@ describe('startRepositoryLoop', () => {
         id: 1,
       },
       path: '/tmp/crash-repo',
-      loopPromise: null,
-      stopRequested: false,
       logBuffer: createLogBuffer(),
+      lifecycle: { type: 'idle' },
       agentStatus: 'idle',
     }
 
@@ -1078,7 +1103,11 @@ describe('startRepositoryLoop', () => {
     startRepositoryLoop(repoState, repoDeps)
 
     // Wait for the promise chain to settle
-    await repoState.loopPromise
+    const runningLifecycle = repoState.lifecycle as {
+      type: 'running'
+      loopPromise: Promise<void>
+    }
+    await runningLifecycle.loopPromise
 
     // The crash handler should have logged the error to the log buffer
     const logLines = getLogLines(repoState.logBuffer)
@@ -1108,9 +1137,8 @@ describe('startRepositoryLoop', () => {
         id: 1,
       },
       path: '/tmp/string-crash-repo',
-      loopPromise: null,
-      stopRequested: false,
       logBuffer: createLogBuffer(),
+      lifecycle: { type: 'idle' },
       agentStatus: 'idle',
     }
 
@@ -1121,7 +1149,11 @@ describe('startRepositoryLoop', () => {
     startRepositoryLoop(repoState, repoDeps)
 
     // Wait for the promise chain to settle
-    await repoState.loopPromise
+    const runningLifecycle = repoState.lifecycle as {
+      type: 'running'
+      loopPromise: Promise<void>
+    }
+    await runningLifecycle.loopPromise
 
     // The crash handler should have logged the string error to the log buffer
     const logLines = getLogLines(repoState.logBuffer)
@@ -1168,8 +1200,7 @@ describe('handleRepositoryList', () => {
       },
       path: '/tmp/user/repo',
       logBuffer: { lines: [], maxLines: 100, trimToLines: 60 },
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       agentStatus: 'idle',
     } as RepositoryState)
 
@@ -1230,8 +1261,7 @@ describe('handleRepositoryList', () => {
       },
       path: '/tmp/user/repo',
       logBuffer: { lines: [], maxLines: 100, trimToLines: 60 },
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       agentStatus: 'idle',
     } as RepositoryState)
 
@@ -1271,8 +1301,7 @@ describe('handleRepositoryList', () => {
       },
       path: '/tmp/user/repo',
       logBuffer: { lines: [], maxLines: 100, trimToLines: 60 },
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       agentStatus: 'idle',
     } as RepositoryState)
 
@@ -1323,7 +1352,7 @@ describe('handleRepositoryList', () => {
         // Block until clone is resolved, then stop the loop
         if (!cloneResolved) return new Promise(() => {})
         for (const repoState of manager.repositories.values()) {
-          repoState.stopRequested = true
+          repoState.lifecycle = { type: 'stopping' }
         }
       },
     })
@@ -1375,8 +1404,11 @@ describe('handleRepositoryList', () => {
         id: 99,
       },
       path: '/tmp/old-repo',
-      loopPromise: Promise.resolve(),
-      stopRequested: false,
+      lifecycle: {
+        type: 'running',
+        loopPromise: Promise.resolve(),
+        cancel: () => {},
+      },
       logBuffer: createLogBuffer(),
       agentStatus: 'idle' as const,
     })
@@ -1397,6 +1429,46 @@ describe('handleRepositoryList', () => {
 
     expect(manager.repositories.size).toBe(0)
   })
+
+  test('removes idle repositories and calls wakeUp', async () => {
+    const context = createContextEmulator()
+    const manager = createMockManager()
+    const { spawn, processes } = createMockSpawn()
+
+    let wakeUpCalled = false
+    manager.repositories.set('idle-repo', {
+      repository: {
+        name: 'idle-repo',
+        gitUrl: 'idle-repo',
+        url: 'https://example.com/idle-repo',
+        id: 99,
+      },
+      path: '/tmp/idle-repo',
+      lifecycle: { type: 'idle' },
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle' as const,
+      wakeUp: () => {
+        wakeUpCalled = true
+      },
+    })
+
+    const repoDeps = createRepositoryDependencies({
+      spawn,
+      sleep: () => Promise.resolve(),
+    })
+
+    const handlePromise = handleRepositoryList([], manager, repoDeps, context)
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    const rmProc = processes.get('rm -rf /tmp/idle-repo')
+    rmProc?.emit('close', 0)
+
+    await handlePromise
+
+    expect(manager.repositories.size).toBe(0)
+    expect(wakeUpCalled).toBe(true)
+  })
 })
 
 describe('addRepository', () => {
@@ -1412,8 +1484,7 @@ describe('addRepository', () => {
         id: 1,
       },
       path: '/tmp/repo',
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       logBuffer: createLogBuffer(),
       agentStatus: 'idle' as const,
     })
@@ -1473,7 +1544,7 @@ describe('addRepository', () => {
       fileSystem,
       sleep: async () => {
         for (const repoState of manager.repositories.values()) {
-          repoState.stopRequested = true
+          repoState.lifecycle = { type: 'stopping' }
         }
       },
     })

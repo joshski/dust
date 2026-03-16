@@ -33,7 +33,6 @@ import {
 
 const noOpHandler = () => {}
 const immediatelySleep = () => Promise.resolve()
-const noOpReplacementCancel = () => {}
 
 const throwingSpawnUnexpectedFailure = () => {
   throw new Error('Unexpected spawn failure')
@@ -216,8 +215,7 @@ describe('createWakeUpHandler', () => {
         id: 1,
       },
       path: '/test',
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       logBuffer: createLogBuffer(),
       agentStatus: 'idle',
     }
@@ -406,8 +404,7 @@ describe('createAgentEventHandler', () => {
         id: 1,
       },
       path: '/test',
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       logBuffer: createLogBuffer(),
       agentStatus: 'idle',
     }
@@ -531,8 +528,7 @@ describe('setupFallbackTimeout', () => {
         id: 1,
       },
       path: '/test',
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: { type: 'idle' },
       logBuffer: createLogBuffer(),
       agentStatus: 'idle',
     }
@@ -579,8 +575,11 @@ describe('runRepositoryLoop', () => {
         agentProvider,
       },
       path: '/tmp/test-repo',
-      loopPromise: null,
-      stopRequested: false,
+      lifecycle: {
+        type: 'running',
+        loopPromise: Promise.resolve(),
+        cancel: () => {},
+      },
       logBuffer: createLogBuffer(),
       agentStatus: 'idle',
     }
@@ -608,7 +607,7 @@ describe('runRepositoryLoop', () => {
         sleepCallCount++
         // Stop the loop after the error handler's sleep
         if (sleepCallCount >= 1) {
-          repoState.stopRequested = true
+          repoState.lifecycle = { type: 'stopping' }
         }
       },
       getReposDir: () => '/tmp/repos',
@@ -649,7 +648,7 @@ describe('runRepositoryLoop', () => {
       sleep: async () => {
         sleepCallCount++
         if (sleepCallCount >= 1) {
-          repoState.stopRequested = true
+          repoState.lifecycle = { type: 'stopping' }
         }
       },
       getReposDir: () => '/tmp/repos',
@@ -668,24 +667,13 @@ describe('runRepositoryLoop', () => {
     expect(errorLine?.text).toContain('string error')
   })
 
-  test('does not clear cancelCurrentIteration if replaced during iteration', async () => {
+  test('lifecycle cancel function aborts the current iteration', async () => {
     const repoState = createTestRepoState()
     let sleepCallCount = 0
-
-    const throwingSpawn = (() => {
-      let callCount = 0
-      return () => {
-        callCount++
-        // On the first call, replace cancelCurrentIteration before throwing
-        if (callCount === 1) {
-          repoState.cancelCurrentIteration = noOpReplacementCancel
-        }
-        throw new Error('fail')
-      }
-    })()
+    let cancelCalled = false
 
     const repoDeps: RepositoryDependencies = {
-      spawn: throwingSpawn as RepositoryDependencies['spawn'],
+      spawn: throwingSpawnFailure as RepositoryDependencies['spawn'],
       run: async () => {},
       fileSystem: {
         exists: () => false,
@@ -700,8 +688,10 @@ describe('runRepositoryLoop', () => {
       },
       sleep: async () => {
         sleepCallCount++
-        if (sleepCallCount >= 1) {
-          repoState.stopRequested = true
+        // On first sleep, call the lifecycle's cancel function
+        if (sleepCallCount === 1 && repoState.lifecycle.type === 'running') {
+          cancelCalled = true
+          repoState.lifecycle.cancel()
         }
       },
       getReposDir: () => '/tmp/repos',
@@ -712,8 +702,10 @@ describe('runRepositoryLoop', () => {
 
     await runRepositoryLoop(repoState, repoDeps)
 
-    // The replacement cancel should still be in place
-    expect(repoState.cancelCurrentIteration).toBe(noOpReplacementCancel)
+    // Verify cancel was called and transitioned to stopping
+    expect(cancelCalled).toBe(true)
+    // Loop should have ended
+    expect(repoState.lifecycle.type).not.toBe('running')
   })
 
   test('initializes codex runner when agentProvider is codex', async () => {
@@ -737,7 +729,7 @@ describe('runRepositoryLoop', () => {
       sleep: async () => {
         sleepCallCount++
         if (sleepCallCount >= 1) {
-          repoState.stopRequested = true
+          repoState.lifecycle = { type: 'stopping' }
         }
       },
       getReposDir: () => '/tmp/repos',
@@ -776,7 +768,7 @@ describe('runRepositoryLoop', () => {
       sleep: async () => {
         sleepCallCount++
         if (sleepCallCount >= 1) {
-          repoState.stopRequested = true
+          repoState.lifecycle = { type: 'stopping' }
         }
       },
       getReposDir: () => '/tmp/repos',
@@ -834,7 +826,7 @@ describe('runRepositoryLoop', () => {
           // Switch to codex before the second iteration
           repoState.repository.agentProvider = 'codex'
         } else {
-          repoState.stopRequested = true
+          repoState.lifecycle = { type: 'stopping' }
         }
       },
       getReposDir: () => '/tmp/repos',
@@ -907,7 +899,7 @@ describe('runRepositoryLoop', () => {
       sleep: async () => {
         sleepCallCount++
         if (sleepCallCount >= 1) {
-          repoState.stopRequested = true
+          repoState.lifecycle = { type: 'stopping' }
         }
       },
       getReposDir: () => '/tmp/repos',
@@ -1033,7 +1025,7 @@ describe('runRepositoryLoop', () => {
       sleep: async () => {
         sleepCallCount++
         if (sleepCallCount >= 1) {
-          repoState.stopRequested = true
+          repoState.lifecycle = { type: 'stopping' }
         }
       },
       getReposDir: () => '/tmp/repos',
@@ -1102,7 +1094,7 @@ describe('runRepositoryLoop', () => {
       sleep: async () => {
         sleepCallCount++
         if (sleepCallCount >= 1) {
-          repoState.stopRequested = true
+          repoState.lifecycle = { type: 'stopping' }
         }
       },
       getReposDir: () => '/tmp/repos',

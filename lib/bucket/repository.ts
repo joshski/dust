@@ -36,6 +36,7 @@ import {
   createLogLine,
   type LogBuffer,
 } from './log-buffer'
+import type { RepositoryLifecycleState } from './repository-lifecycle'
 import { getReposDir } from './paths'
 import {
   cloneRepository,
@@ -51,6 +52,7 @@ export {
   removeRepository,
 } from './repository-git'
 export { runRepositoryLoop } from './repository-loop'
+export type { RepositoryLifecycleState } from './repository-lifecycle'
 
 const log = createLogger('dust:bucket:repository')
 
@@ -66,13 +68,11 @@ export interface Repository {
 export interface RepositoryState {
   repository: Repository
   path: string
-  loopPromise: Promise<void> | null
-  stopRequested: boolean
   logBuffer: LogBuffer
+  lifecycle: RepositoryLifecycleState
   agentStatus: 'idle' | 'busy'
   wakeUp?: () => void
   taskAvailablePending?: boolean
-  cancelCurrentIteration?: () => void
 }
 
 /**
@@ -111,7 +111,7 @@ export interface RepositoryDependencies {
 }
 
 /**
- * Start (or restart) the per-repository loop and keep loopPromise state accurate.
+ * Start (or restart) the per-repository loop and keep lifecycle state accurate.
  */
 export function startRepositoryLoop(
   repoState: RepositoryState,
@@ -120,8 +120,7 @@ export function startRepositoryLoop(
   sessionId?: string
 ): void {
   log(`starting loop for ${repoState.repository.name}`)
-  repoState.stopRequested = false
-  repoState.loopPromise = runRepositoryLoop(
+  const loopPromise = runRepositoryLoop(
     repoState,
     repoDeps,
     sendEvent,
@@ -137,11 +136,19 @@ export function startRepositoryLoop(
     })
     .finally(() => {
       log(`loop finished for ${repoState.repository.name}`)
-      repoState.loopPromise = null
+      repoState.lifecycle = { type: 'idle' }
       repoState.agentStatus = 'idle'
       repoState.wakeUp = undefined
-      repoState.cancelCurrentIteration = undefined
     })
+
+  repoState.lifecycle = {
+    type: 'running',
+    loopPromise,
+    /* v8 ignore next 3 - simple state transition callback */
+    cancel: () => {
+      repoState.lifecycle = { type: 'stopping' }
+    },
+  }
 }
 
 /* v8 ignore start - simple wrappers around native functions */
@@ -245,9 +252,8 @@ export async function addRepository(
   const repoState: RepositoryState = {
     repository,
     path: repoPath,
-    loopPromise: null,
-    stopRequested: false,
     logBuffer: manager.logBuffers.get(repository.name) ?? createLogBuffer(),
+    lifecycle: { type: 'idle' },
     agentStatus: 'idle',
   }
 
@@ -278,12 +284,13 @@ export async function removeRepositoryFromManager(
   }
 
   log(`removing repository ${repoName}`)
-  repoState.stopRequested = true
-  repoState.cancelCurrentIteration?.()
-  repoState.wakeUp?.()
-
-  if (repoState.loopPromise) {
-    await Promise.race([repoState.loopPromise, repoDeps.sleep(5000)])
+  if (repoState.lifecycle.type === 'running') {
+    const { loopPromise, cancel } = repoState.lifecycle
+    cancel()
+    repoState.wakeUp?.()
+    await Promise.race([loopPromise, repoDeps.sleep(5000)])
+  } else {
+    repoState.wakeUp?.()
   }
 
   await removeRepository(repoState.path, repoDeps.spawn, context)

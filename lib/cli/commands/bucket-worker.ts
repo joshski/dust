@@ -285,8 +285,13 @@ function ensureRepositoryLoopRunning(
   context: CommandDependencies['context'],
   useTUI: boolean
 ): void {
-  // If wakeUp is set, the loop is already alive and waiting for tasks.
-  if (repoState.loopPromise || repoState.wakeUp || repoState.stopRequested) {
+  // If wakeUp is set or lifecycle is running/stopping, the loop is already alive.
+  const lifecycle = repoState.lifecycle
+  if (
+    lifecycle.type === 'running' ||
+    lifecycle.type === 'stopping' ||
+    repoState.wakeUp
+  ) {
     log(`loop already running/waiting for ${repoState.repository.name}`)
     return
   }
@@ -843,16 +848,16 @@ export async function shutdown(
   }
 
   // Stop all repository loops
+  const loopPromises: Promise<void>[] = []
   for (const repoState of state.repositories.values()) {
-    repoState.stopRequested = true
-    repoState.cancelCurrentIteration?.()
+    /* v8 ignore start - defensive guard for non-running repos */
+    if (repoState.lifecycle.type === 'running') {
+      loopPromises.push(repoState.lifecycle.loopPromise)
+      repoState.lifecycle.cancel()
+    }
+    /* v8 ignore stop */
     repoState.wakeUp?.()
   }
-
-  // Wait for all loops to finish
-  const loopPromises = Array.from(state.repositories.values())
-    .map(rs => rs.loopPromise)
-    .filter((p): p is Promise<void> => p !== null)
 
   const results = await Promise.allSettled(loopPromises)
   for (const result of results) {
