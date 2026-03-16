@@ -14,18 +14,9 @@ Reviewing these against dust's principles and goals reveals several gaps where n
 
 Now available as a stock audit: `bin/dust audit error-handling`
 
-### Dependency Health Audit
+### ~~Dependency Health Audit~~ (Implemented)
 
-Review project dependencies for maintenance and security concerns beyond CVE scanning.
-
-**Why this matters:** The security-review audit checks for CVE vulnerabilities, but healthy dependencies require more than security patches. Unmaintained packages, version drift, and unnecessary dependencies all impact project health.
-
-**Scope:**
-- Packages with no recent releases (potential abandonment)
-- Major version drift from latest (missing features, eventual migration pain)
-- Unused dependencies (already covered by dead-code, but dependency-specific checks)
-- Deprecated packages still in use
-- Packages with better-maintained alternatives
+Now available as a stock audit: `bin/dust audit dependency-health`
 
 ### Documentation Drift Audit
 

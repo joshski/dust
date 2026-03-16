@@ -1588,6 +1588,155 @@ function uxAudit(): string {
   `
 }
 
+function dependencyHealth(): string {
+  return dedent`
+    # Dependency Health
+
+    Review project dependencies for maintenance and security concerns beyond CVE scanning.
+
+    ${ideasHint}
+
+    ## Context
+
+    Healthy dependencies require more than security patches. Unmaintained packages, version drift, and deprecated packages all impact project health and can introduce agent confusion when outdated documentation or APIs don't match reality.
+
+    ## Scope
+
+    Focus on these areas:
+
+    1. **Packages with no recent releases** - Identify dependencies that haven't been updated in 2+ years (potential abandonment)
+    2. **Major version drift** - Find dependencies more than 2 major versions behind latest (missing features, eventual migration pain)
+    3. **Deprecated packages** - Detect packages marked as deprecated on npm
+    4. **Better-maintained alternatives** - Flag packages with known successors (e.g., \`request\` → \`node-fetch\` or \`got\`)
+
+    ## Analysis Steps
+
+    ### 1. Check Package Release Dates
+
+    For each dependency in \`package.json\`:
+
+    1. Run \`npm view <package-name> time --json\` to get release history
+    2. Check the date of the latest release
+    3. Flag packages where the latest release is more than 2 years old
+
+    Example:
+    \`\`\`bash
+    npm view lodash time --json | jq -r 'to_entries | sort_by(.value) | last | .value'
+    \`\`\`
+
+    ### 2. Identify Major Version Drift
+
+    Compare installed versions against latest:
+
+    1. Run \`npm outdated --json\` to see current vs latest versions
+    2. Parse version numbers to identify major version differences
+    3. Flag dependencies more than 2 major versions behind
+
+    Example output to parse:
+    \`\`\`json
+    {
+      "example-package": {
+        "current": "2.1.0",
+        "wanted": "2.5.0",
+        "latest": "5.0.0"
+      }
+    }
+    \`\`\`
+
+    In this case, the package is 3 major versions behind (2.x → 5.x).
+
+    ### 3. Detect Deprecated Packages
+
+    Check deprecation status:
+
+    1. Run \`npm view <package-name> deprecated\` for each dependency
+    2. If the field exists and is non-empty, the package is deprecated
+    3. The deprecation message often suggests an alternative
+
+    Example:
+    \`\`\`bash
+    npm view request deprecated
+    # Output: "request has been deprecated..."
+    \`\`\`
+
+    ### 4. Identify Better-Maintained Alternatives
+
+    Known package migrations to check for:
+
+    | Deprecated/Unmaintained | Recommended Alternative |
+    |------------------------|------------------------|
+    | \`request\` | \`node-fetch\`, \`got\`, \`axios\` |
+    | \`moment\` | \`date-fns\`, \`dayjs\`, \`luxon\` |
+    | \`uuid\` v3 or earlier | \`uuid\` v8+ or \`crypto.randomUUID()\` |
+    | \`rimraf\` | \`fs.rm\` (Node 14.14+) |
+    | \`mkdirp\` | \`fs.mkdir\` with \`recursive: true\` |
+    | \`node-fetch\` | native \`fetch\` (Node 18+) |
+    | \`colors\` | \`chalk\`, \`picocolors\` |
+    | \`faker\` | \`@faker-js/faker\` |
+    | \`left-pad\` | \`String.prototype.padStart()\` |
+    | \`underscore\` | \`lodash\` or native methods |
+
+    Search for these packages in \`package.json\` and flag any matches.
+
+    ## Output
+
+    For each concern found, document:
+
+    - **Package name** - The npm package name
+    - **Current version** - Version installed in the project
+    - **Type of concern** - One of: \`unmaintained\`, \`outdated\`, \`deprecated\`, \`superseded\`
+    - **Details** - Last release date, version gap, deprecation message, or successor package
+    - **Suggested action** - One of:
+      - \`update\` - Upgrade to latest version
+      - \`replace\` - Migrate to a successor package
+      - \`remove\` - Remove if no longer needed
+      - \`accept\` - Accept the risk with documented rationale
+
+    Example findings:
+
+    \`\`\`markdown
+    ### moment (v2.29.4)
+
+    - **Concern**: superseded
+    - **Details**: moment is in maintenance mode; the team recommends date-fns, Luxon, or Day.js for new projects
+    - **Action**: replace with \`date-fns\` for tree-shaking benefits, or \`dayjs\` for API compatibility
+
+    ### request (v2.88.2)
+
+    - **Concern**: deprecated
+    - **Details**: Package deprecated in February 2020. Message: "request has been deprecated"
+    - **Action**: replace with \`node-fetch\` (for simple cases) or \`got\` (for advanced features)
+
+    ### some-legacy-lib (v1.0.0)
+
+    - **Concern**: unmaintained
+    - **Details**: Last release was 3 years ago (2021-01-15)
+    - **Action**: evaluate if still needed; if so, consider forking or finding alternative
+    \`\`\`
+
+    ## Principles
+
+    - [Minimal Dependencies](../principles/minimal-dependencies.md) - Avoid coupling to specific tools; healthy dependencies are easier to swap
+    - [Maintainable Codebase](../principles/maintainable-codebase.md) - Maintained dependencies reduce maintenance burden
+    - [Agent Autonomy](../principles/agent-autonomy.md) - Agents benefit from up-to-date dependencies with accurate documentation
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - [ ] Checked package release dates for all dependencies
+    - [ ] Identified packages with no releases in 2+ years
+    - [ ] Ran \`npm outdated\` to find major version drift
+    - [ ] Flagged packages more than 2 major versions behind
+    - [ ] Checked deprecation status of all dependencies
+    - [ ] Searched for packages with known better-maintained alternatives
+    - [ ] Documented each concern with package name, version, type, and suggested action
+    - [ ] Created ideas for any dependency health improvements needed
+  `
+}
+
 function ciDevelopmentParity(): string {
   return dedent`
     # CI / Development Parity
@@ -1758,6 +1907,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   algorithms: algorithms,
   'checks-audit': checksAuditTemplate,
   'ci-development-parity': ciDevelopmentParity,
+  'dependency-health': dependencyHealth,
   'component-reuse': componentReuse,
   'coverage-exclusions': coverageExclusions,
   'data-access-review': dataAccessReview,
