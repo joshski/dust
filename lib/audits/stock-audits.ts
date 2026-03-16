@@ -2404,6 +2404,110 @@ function commitMessageQuality(): string {
   `
 }
 
+function suggestAudits(): string {
+  // Build the list of available audits with descriptions
+  // Exclude 'suggest-audits' itself to avoid circular reference
+  const auditList = Object.entries(stockAuditFunctions)
+    .filter(([name]) => name !== 'suggest-audits')
+    .toSorted(([a], [b]) => a.localeCompare(b))
+    .map(([name, render]) => {
+      const template = render()
+      const description = extractOpeningSentence(template)
+      return `- **${name}**: ${description}`
+    })
+    .join('\n')
+
+  // Build template in parts to avoid dedent issues with interpolated multi-line strings
+  let content = dedent`
+    # Suggest Audits
+
+    Analyze recent commits and create tasks for relevant audits to run.
+
+    ## Context
+
+    This audit examines recent commit history and suggests which stock audits would be valuable based on what changed. Rather than manually selecting audits, this provides an automated way to maintain codebase health by matching recent work to appropriate audits.
+
+    ## Commit Range
+
+    Determine which commits to analyze:
+
+    1. Check VCS history for a prior \`suggest-audits\` run: \`git log --grep="suggest-audits" -1 --format=%H\`
+    2. If found, analyze commits since that commit
+    3. If not found, analyze the last 20 commits as a fallback
+
+    ## Available Audits
+
+  `
+
+  content += '\n\n' + auditList + '\n'
+
+  content += dedent`
+
+    ## Analysis Steps
+
+    1. **Gather commits** - Get the list of commits in the determined range with their messages and changed files
+    2. **Categorize changes** - Group commits by the type of work (features, fixes, refactoring, tests, docs, config)
+    3. **Match to audits** - For each relevant audit, explain why recent changes make it valuable:
+       - What specific commits or file changes triggered the suggestion?
+       - What might the audit uncover given this context?
+    4. **Create tasks** - For each suggested audit, create a task file in \`.dust/tasks/\`
+
+    ## Output
+
+    Create task files (not idea files) for each suggested audit. Task files should:
+
+    - Be placed in \`.dust/tasks/\` with filename like \`run-<audit-name>-audit.md\`
+    - Include a clear title matching the audit name
+    - Explain why the audit is relevant given recent commits
+    - Reference specific commits or changes that triggered the suggestion
+
+    Example task file content:
+
+    \`\`\`markdown
+    # Run Security Review Audit
+
+    Run the \`security-review\` audit to verify security practices in recent changes.
+
+    ## Why Now
+
+    Recent commits added authentication handling in \`src/auth/\`:
+    - abc1234: Add login endpoint
+    - def5678: Store user tokens
+
+    These changes involve sensitive security patterns that should be reviewed.
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - [ ] Run \`bin/dust audit security-review\`
+    - [ ] Address any findings
+    \`\`\`
+
+    ## Principles
+
+    - [Task-First Workflow](../principles/task-first-workflow.md) - Creates tasks as actionable work items
+    - [Lightweight Planning](../principles/lightweight-planning.md) - Suggestions are captured as tasks that can be evaluated and prioritized
+    - [Development Traceability](../principles/development-traceability.md) - Creates visible connection between commit activity and audit suggestions
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - [ ] Determined commit range (since last suggest-audits run or last 20 commits)
+    - [ ] Analyzed commits for changed files and commit messages
+    - [ ] Identified relevant audits based on change patterns
+    - [ ] Created task files for each suggested audit with rationale
+    - [ ] Each task explains why the audit is valuable given recent changes
+  `
+
+  return content
+}
+
 const stockAuditFunctions: Record<string, () => string> = {
   'agent-developer-experience': agentDeveloperExperience,
   'agent-instruction-quality': agentInstructionQuality,
@@ -2432,6 +2536,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'single-responsibility-violations': singleResponsibilityViolations,
   'slow-tests': slowTests,
   'stale-ideas': staleIdeas,
+  'suggest-audits': suggestAudits,
   'test-assertions': testAssertions,
   'test-pyramid': testPyramid,
   'ubiquitous-language': ubiquitousLanguage,
