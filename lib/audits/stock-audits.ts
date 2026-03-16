@@ -703,41 +703,6 @@ function feedbackLoopSpeed(): string {
   `
 }
 
-function ideasFromCommits(): string {
-  return dedent`
-    # Ideas from Commits
-
-    Review recent commit history to identify follow-up improvement ideas.
-
-    ${ideasHint}
-
-    ## Scope
-
-    Focus on these areas:
-
-    1. **Technical debt** - Did recent work introduce shortcuts?
-    2. **Incomplete work** - Are there TODO comments or partial implementations?
-    3. **Pattern opportunities** - Can recent changes be generalized?
-    4. **Test gaps** - Do recent changes have adequate test coverage?
-
-    ## Principles
-
-    (none)
-
-    ## Blocked By
-
-    (none)
-
-    ## Definition of Done
-
-    - Reviewed commits from the last 20 commits
-    - Identified patterns or shortcuts worth addressing
-    - Listed TODO comments added in recent commits
-    - Noted areas where changes could be generalized
-    - Proposed follow-up ideas for any issues identified
-  `
-}
-
 function ideasFromPrinciples(): string {
   return dedent`
     # Ideas from Principles
@@ -776,21 +741,25 @@ function ideasFromPrinciples(): string {
   `
 }
 
-function refactoringOpportunities(): string {
+function commitReview(): string {
   return dedent`
-    # Refactoring Opportunities
+    # Commit Review
 
-    Analyze recent commits to identify code needing structural improvements.
+    Analyze recent commits to identify refactoring opportunities and improvement ideas.
 
     ${ideasHint}
 
     ## Scope
 
-    Analyze commits since the last refactoring-opportunities audit (check \`.dust/done/\` for previous runs). Focus on these signals:
+    Analyze commits since the last commit-review audit (check \`.dust/done/\` for previous runs). Focus on these signals:
 
     1. **File churn** - Files modified frequently across multiple commits may have unclear responsibilities or be accumulating technical debt
     2. **Size growth** - Files that have grown significantly may benefit from decomposition
     3. **Commit message patterns** - Look for messages containing "fix", "workaround", "temporary", "hack", or "TODO" that indicate shortcuts taken
+    4. **Technical debt** - Did recent work introduce shortcuts?
+    5. **Incomplete work** - Are there TODO comments or partial implementations?
+    6. **Pattern opportunities** - Can recent changes be generalized?
+    7. **Test gaps** - Do recent changes have adequate test coverage?
 
     ## Analysis Steps
 
@@ -798,13 +767,15 @@ function refactoringOpportunities(): string {
     2. Count file modification frequency to identify high-churn files
     3. Check current sizes of frequently-modified files with \`wc -l\`
     4. Review commit messages for patterns suggesting technical debt
+    5. Review TODO comments added in recent commits
+    6. Note areas where changes could be generalized
 
     ## Output
 
-    For each refactoring opportunity identified, provide:
+    For each opportunity identified, provide:
     - **File path** - The specific file needing attention
-    - **Signal** - What triggered this recommendation (churn, size, commit pattern)
-    - **Specific suggestion** - A concrete refactoring action (e.g., "Extract the validation logic into a separate module", not just "consider refactoring")
+    - **Signal** - What triggered this recommendation (churn, size, commit pattern, incomplete work, test gap)
+    - **Specific suggestion** - A concrete action (e.g., "Extract the validation logic into a separate module", not just "consider refactoring")
 
     ## Principles
 
@@ -819,11 +790,14 @@ function refactoringOpportunities(): string {
 
     ## Definition of Done
 
+    - Reviewed commits since last audit (or last 20 commits if no prior audit)
     - Identified high-churn files (modified in 3+ commits since last audit)
     - Flagged files exceeding 300 lines that grew significantly
     - Noted commits with concerning message patterns
-    - Provided specific refactoring suggestions for each opportunity
-    - Created ideas for any substantial refactoring work identified
+    - Listed TODO comments added in recent commits
+    - Noted areas where changes could be generalized
+    - Provided specific suggestions for each opportunity
+    - Created ideas for any substantial work identified
   `
 }
 
@@ -2519,13 +2493,12 @@ const stockAuditFunctions: Record<string, () => string> = {
   'facts-verification': factsVerification,
   'feedback-loop-speed': feedbackLoopSpeed,
   'global-state': globalState,
-  'ideas-from-commits': ideasFromCommits,
+  'commit-review': commitReview,
   'ideas-from-principles': ideasFromPrinciples,
   'idiomatic-style': idiomaticStyle,
   'logging-and-traceability': loggingAndTraceability,
   'performance-review': performanceReview,
   'primitive-obsession': primitiveObsession,
-  'refactoring-opportunities': refactoringOpportunities,
   'repository-context': repositoryContext,
   'security-review': securityReview,
   'single-responsibility-violations': singleResponsibilityViolations,

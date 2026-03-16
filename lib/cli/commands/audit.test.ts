@@ -221,7 +221,7 @@ describe('audit command', () => {
   test('loadStockAudits loads audits from markdown files', () => {
     const audits = loadStockAudits()
     expect(audits).toBeInstanceOf(Array)
-    expect(audits.length).toBe(34)
+    expect(audits.length).toBe(33)
 
     const names = audits.map(a => a.name)
     expect(names).toContain('agent-developer-experience')
@@ -236,13 +236,12 @@ describe('audit command', () => {
     expect(names).toContain('error-handling')
     expect(names).toContain('facts-verification')
     expect(names).toContain('global-state')
-    expect(names).toContain('ideas-from-commits')
+    expect(names).toContain('commit-review')
     expect(names).toContain('ideas-from-principles')
     expect(names).toContain('idiomatic-style')
     expect(names).toContain('logging-and-traceability')
     expect(names).toContain('performance-review')
     expect(names).toContain('primitive-obsession')
-    expect(names).toContain('refactoring-opportunities')
     expect(names).toContain('security-review')
     expect(names).toContain('single-responsibility-violations')
     expect(names).toContain('stale-ideas')
@@ -266,7 +265,7 @@ describe('audit command', () => {
     // checks-audit references batteries-included, easy-adoption, stop-the-line, lint-everything, comprehensive-test-coverage
     // error-handling references actionable-errors, debugging-tooling, stop-the-line principles
     // global-state references dependency-injection, decoupled-code, test-isolation principles
-    // refactoring-opportunities references boy scout rule, make the change easy, etc.
+    // commit-review references boy scout rule, make the change easy, etc.
     // ubiquitous-language references naming principles that are universally applicable
     // ux-audit references actionable-errors and unsurprising-ux principles
     const auditsWithPrinciples = [
@@ -287,7 +286,7 @@ describe('audit command', () => {
       'idiomatic-style',
       'logging-and-traceability',
       'primitive-obsession',
-      'refactoring-opportunities',
+      'commit-review',
       'security-review',
       'single-responsibility-violations',
       'slow-tests',
