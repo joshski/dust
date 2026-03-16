@@ -136,7 +136,43 @@ Each idea only tracks its direct requirements. Users must explicitly add all req
 Pros: Simpler mental model, explicit dependencies
 Cons: Users must manually ensure correct ordering
 
+### Are dependencies between ideas the right model for multi-part planning?
+
+#### Yes, use external dependencies between idea files
+
+Ideas remain small and focused. Relationships are expressed through explicit links. This aligns with [Small Units](../principles/small-units.md) and allows ideas to be reordered, replaced, or shelved independently. See [Complex ideas](complex-ideas.md) for the competing approach.
+
+Pros: Files stay small, flexible ordering, ideas can be worked on by different agents
+Cons: Relationships can become orphaned, harder to see full scope at a glance
+
+#### No, use phases within a single idea file
+
+Multi-part work is expressed as phases within a single idea. The idea file grows larger but contains the complete narrative. No new relationship mechanism is needed. See [Complex ideas](complex-ideas.md) for details on this approach.
+
+Pros: No orphan risk, cohesive narrative, simpler workflow
+Cons: Larger files, harder to parallelize, violates Small Units more directly
+
+#### Support both approaches for different use cases
+
+Dependencies for truly independent ideas, phases for tightly coupled exploration areas. This is flexible but adds conceptual overhead.
+
+Pros: Right tool for each situation
+Cons: Two mechanisms to learn and maintain
+
+## Implementation Considerations
+
+Based on codebase analysis:
+
+1. **Idea parsing** — `lib/artifacts/ideas.ts` defines the `Idea` interface and `parseIdea()` function. Adding a `requires` or `after` field would require extending `Idea` and parsing a new `## Requires` section similar to how `parseOpenQuestions()` extracts open questions.
+
+2. **Idea listing** — Unlike tasks, ideas have no filtering logic. The `dust ideas` command simply lists all `.md` files. Adding dependency-aware filtering would mirror `lib/cli/commands/next.ts` which implements `findUnblockedTasks()`.
+
+3. **Completion signals** — Task blocking uses file deletion as the signal (if the blocker file doesn't exist, the blocker is resolved). Ideas persist across transitions, so a different completion signal is needed. The workflow task system already tracks transitions via `## Refines Idea`, `## Decomposes Idea`, and `## Shelves Idea` sections.
+
+4. **Principle alignment** — The [Small Units](../principles/small-units.md) principle encourages keeping artifacts discrete. Dependencies allow multi-part scope while keeping each idea file small. The alternative approach—[Complex ideas](complex-ideas.md)—achieves similar goals through internal structure rather than external relationships.
+
 ## Related Ideas
 
 - [Task priority](task-priority.md) — Adds ordering metadata to tasks
 - [Idea priority](idea-priority.md) — Adds ordering metadata to ideas
+- [Complex ideas](complex-ideas.md) — Alternative approach using phases within a single idea
