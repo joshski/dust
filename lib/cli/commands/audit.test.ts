@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { injectAdHocScope, transformAuditContent } from '../../audits/index'
+import { injectComment, transformAuditContent } from '../../audits/index'
 import { loadStockAudits } from '../../audits/stock-audits'
 import {
   createContextEmulator,
@@ -530,7 +530,7 @@ describe('audit add command', () => {
     expect(writtenContent).toContain('Verify security tooling is configured')
   })
 
-  test('creates task with ad-hoc details when provided', async () => {
+  test('creates task with comment when --comment flag is provided', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -545,6 +545,7 @@ describe('audit add command', () => {
       ...createDependencies(context, fileSystem),
       arguments: [
         'security-review',
+        '--comment',
         'Focus on authentication changes from last week',
       ],
     })
@@ -553,17 +554,17 @@ describe('audit add command', () => {
     const writtenContent = fileSystem.writtenFiles.get(
       '/project/.dust/tasks/audit-security-review.md'
     )
-    expect(writtenContent).toContain('## Ad-hoc Scope')
+    expect(writtenContent).toContain('## Comments')
     expect(writtenContent).toContain(
       'Focus on authentication changes from last week'
     )
-    // Verify Ad-hoc Scope appears before ## Scope
-    const adHocIndex = writtenContent?.indexOf('## Ad-hoc Scope')
+    // Verify Comments appears before ## Scope
+    const commentsIndex = writtenContent?.indexOf('## Comments')
     const scopeIndex = writtenContent?.indexOf('## Scope')
-    expect(adHocIndex).toBeLessThan(scopeIndex as number)
+    expect(commentsIndex).toBeLessThan(scopeIndex as number)
   })
 
-  test('creates task without ad-hoc section when no details provided', async () => {
+  test('creates task without Comments section when no comment provided', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -583,10 +584,10 @@ describe('audit add command', () => {
     const writtenContent = fileSystem.writtenFiles.get(
       '/project/.dust/tasks/audit-security-review.md'
     )
-    expect(writtenContent).not.toContain('## Ad-hoc Scope')
+    expect(writtenContent).not.toContain('## Comments')
   })
 
-  test('creates task with ad-hoc details from user audit', async () => {
+  test('creates task with comment from user audit', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -604,19 +605,46 @@ describe('audit add command', () => {
 
     const result = await audit({
       ...createDependencies(context, fileSystem),
-      arguments: ['my-audit', 'Check src/api/ directory specifically'],
+      arguments: [
+        'my-audit',
+        '--comment',
+        'Check src/api/ directory specifically',
+      ],
     })
 
     expect(result.exitCode).toBe(0)
     const writtenContent = fileSystem.writtenFiles.get(
       '/project/.dust/tasks/audit-my-audit.md'
     )
-    expect(writtenContent).toContain('## Ad-hoc Scope')
+    expect(writtenContent).toContain('## Comments')
     expect(writtenContent).toContain('Check src/api/ directory specifically')
-    // Verify Ad-hoc Scope appears before ## Scope
-    const adHocIndex = writtenContent?.indexOf('## Ad-hoc Scope')
+    // Verify Comments appears before ## Scope
+    const commentsIndex = writtenContent?.indexOf('## Comments')
     const scopeIndex = writtenContent?.indexOf('## Scope')
-    expect(adHocIndex).toBeLessThan(scopeIndex as number)
+    expect(commentsIndex).toBeLessThan(scopeIndex as number)
+  })
+
+  test('lists audits when --comment flag comes before audit name', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          config: {},
+          tasks: {},
+        },
+      },
+    })
+
+    const result = await audit({
+      ...createDependencies(context, fileSystem),
+      arguments: ['--comment', 'Focus on this area'],
+    })
+
+    // Without an audit name, should list audits instead
+    expect(result.exitCode).toBe(0)
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('🔍 Audits')
+    expect(output).toContain('security-review')
   })
 })
 
@@ -666,27 +694,27 @@ describe('transformAuditContent', () => {
   })
 })
 
-describe('injectAdHocScope', () => {
-  test('injects ad-hoc scope section before ## Scope', () => {
+describe('injectComment', () => {
+  test('injects comment section before ## Scope', () => {
     const content =
       '# Audit: Security Review\n\nDescription.\n\n## Scope\n\nFocus areas.'
-    const result = injectAdHocScope(content, 'Check authentication code')
+    const result = injectComment(content, 'Check authentication code')
     expect(result).toBe(
-      '# Audit: Security Review\n\nDescription.\n\n## Ad-hoc Scope\n\nCheck authentication code\n\n## Scope\n\nFocus areas.'
+      '# Audit: Security Review\n\nDescription.\n\n## Comments\n\nCheck authentication code\n\n## Scope\n\nFocus areas.'
     )
   })
 
-  test('appends ad-hoc scope at end when no ## Scope heading exists', () => {
+  test('appends comment at end when no ## Scope heading exists', () => {
     const content = '# Audit: Simple\n\nDescription.'
-    const result = injectAdHocScope(content, 'Focus on this area')
+    const result = injectComment(content, 'Focus on this area')
     expect(result).toBe(
-      '# Audit: Simple\n\nDescription.\n\n## Ad-hoc Scope\n\nFocus on this area\n'
+      '# Audit: Simple\n\nDescription.\n\n## Comments\n\nFocus on this area\n'
     )
   })
 
-  test('preserves multiline ad-hoc details', () => {
+  test('preserves multiline comments', () => {
     const content = '# Audit: Test\n\nDesc.\n\n## Scope\n\nAreas.'
-    const result = injectAdHocScope(content, 'Line 1\nLine 2\nLine 3')
+    const result = injectComment(content, 'Line 1\nLine 2\nLine 3')
     expect(result).toContain('Line 1\nLine 2\nLine 3')
   })
 })

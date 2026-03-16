@@ -33,7 +33,10 @@ export interface CreateAuditTaskResult {
 export interface AuditsRepository {
   listAudits(): Promise<Audit[]>
   parseAudit(options: { name: string }): Promise<Audit>
-  createAuditTask(options: { name: string }): Promise<CreateAuditTaskResult>
+  createAuditTask(options: {
+    name: string
+    comment?: string
+  }): Promise<CreateAuditTaskResult>
 }
 
 /**
@@ -50,24 +53,23 @@ export function transformAuditContent(content: string): string {
 }
 
 /**
- * Injects an Ad-hoc Scope section after the opening description, before ## Scope.
- * The ad-hoc details are passed through without validation.
+ * Injects a Comments section after the opening description, before ## Scope.
+ * The comment is passed through without validation.
  */
-export function injectAdHocScope(
-  content: string,
-  adHocDetails: string
-): string {
+export function injectComment(content: string, comment: string): string {
   // Find the ## Scope heading and insert before it
   const scopeMatch = content.match(/\n## Scope\n/)
   if (scopeMatch?.index !== undefined) {
     const insertIndex = scopeMatch.index
-    const adHocSection = `\n## Ad-hoc Scope\n\n${adHocDetails}\n`
+    const commentSection = `\n## Comments\n\n${comment}\n`
     return (
-      content.slice(0, insertIndex) + adHocSection + content.slice(insertIndex)
+      content.slice(0, insertIndex) +
+      commentSection +
+      content.slice(insertIndex)
     )
   }
   // If no ## Scope heading, append at end
-  return `${content}\n\n## Ad-hoc Scope\n\n${adHocDetails}\n`
+  return `${content}\n\n## Comments\n\n${comment}\n`
 }
 
 export function buildAuditsRepository(
@@ -138,6 +140,7 @@ export function buildAuditsRepository(
 
     async createAuditTask(options: {
       name: string
+      comment?: string
     }): Promise<CreateAuditTaskResult> {
       const audit = await this.parseAudit(options)
 
@@ -149,7 +152,10 @@ export function buildAuditsRepository(
         throw new Error(`Audit task already exists at ${relativeTaskPath}`)
       }
 
-      const transformedContent = transformAuditContent(audit.template)
+      let transformedContent = transformAuditContent(audit.template)
+      if (options.comment) {
+        transformedContent = injectComment(transformedContent, options.comment)
+      }
 
       await fileSystem.mkdir(tasksPath, { recursive: true })
       await fileSystem.writeFile(taskFilePath, transformedContent)

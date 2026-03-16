@@ -7,13 +7,13 @@
  * 2. Stock audits from lib/audits/stock-audits.ts
  *
  * Usage:
- *   dust audit                      - List available audits
- *   dust audit <name>               - Create a task from the audit template
- *   dust audit <name> "<details>"   - Create a task with ad-hoc scope details
+ *   dust audit                                   - List available audits
+ *   dust audit <name>                            - Create a task from the audit template
+ *   dust audit <name> --comment "<comment>"      - Create a task with a comment
  */
 
 import { basename } from 'node:path'
-import { injectAdHocScope, transformAuditContent } from '../../audits/index'
+import { injectComment, transformAuditContent } from '../../audits/index'
 import { loadStockAudits } from '../../audits/stock-audits'
 import {
   extractOpeningSentence,
@@ -33,7 +33,7 @@ interface AuditInfo {
  */
 async function addAudit(
   auditName: string,
-  adHocDetails: string | undefined,
+  comment: string | undefined,
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
   const { context, fileSystem, settings } = dependencies
@@ -55,8 +55,8 @@ async function addAudit(
   if (fileSystem.exists(userAuditPath)) {
     const content = await fileSystem.readFile(userAuditPath)
     let transformedContent = transformAuditContent(content)
-    if (adHocDetails) {
-      transformedContent = injectAdHocScope(transformedContent, adHocDetails)
+    if (comment) {
+      transformedContent = injectComment(transformedContent, comment)
     }
 
     await fileSystem.mkdir(tasksPath, { recursive: true })
@@ -70,8 +70,8 @@ async function addAudit(
   const stockAudit = loadStockAudits().find(a => a.name === auditName)
   if (stockAudit) {
     let transformedContent = transformAuditContent(stockAudit.template)
-    if (adHocDetails) {
-      transformedContent = injectAdHocScope(transformedContent, adHocDetails)
+    if (comment) {
+      transformedContent = injectComment(transformedContent, comment)
     }
 
     await fileSystem.mkdir(tasksPath, { recursive: true })
@@ -149,14 +149,41 @@ async function listAudits(
   return { exitCode: 0 }
 }
 
+/**
+ * Parses --comment flag from arguments.
+ * Returns the comment value if --comment flag is present, undefined otherwise.
+ */
+function parseCommentFlag(arguments_: string[]): string | undefined {
+  const commentIndex = arguments_.indexOf('--comment')
+  if (commentIndex !== -1 && commentIndex + 1 < arguments_.length) {
+    return arguments_[commentIndex + 1]
+  }
+  return undefined
+}
+
+/**
+ * Gets the audit name from arguments, excluding the --comment flag and its value.
+ */
+function parseAuditName(arguments_: string[]): string | undefined {
+  const commentIndex = arguments_.indexOf('--comment')
+  if (commentIndex === -1) {
+    return arguments_[0]
+  }
+  // If --comment is first, there's no audit name before it
+  if (commentIndex === 0) {
+    return undefined
+  }
+  return arguments_[0]
+}
+
 export async function audit(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
-  const auditName = dependencies.arguments[0]
-  const adHocDetails = dependencies.arguments[1]
+  const auditName = parseAuditName(dependencies.arguments)
+  const comment = parseCommentFlag(dependencies.arguments)
 
   if (auditName) {
-    return addAudit(auditName, adHocDetails, dependencies)
+    return addAudit(auditName, comment, dependencies)
   }
 
   return listAudits(dependencies)

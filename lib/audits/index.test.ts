@@ -252,5 +252,33 @@ describe('buildAuditsRepository', () => {
       expect(content).toContain('# Audit: Custom Dead Code Audit')
       expect(content).not.toMatch(/^# Custom Dead Code Audit$/m)
     })
+
+    test('creates a task with a comment when comment option is provided', async () => {
+      const fileSystem = createFileSystem()
+      const repository = buildAuditsRepository(fileSystem, '/project/.dust')
+
+      const result = await repository.createAuditTask({
+        name: 'custom-audit',
+        comment: 'Focus on the API module',
+      })
+
+      const content = fileSystem.writtenFiles.get(result.filePath) as string
+      expect(content).toContain('## Comments')
+      expect(content).toContain('Focus on the API module')
+      // Verify Comments section appears before Scope
+      const commentsIndex = content.indexOf('## Comments')
+      const scopeIndex = content.indexOf('## Scope')
+      expect(commentsIndex).toBeLessThan(scopeIndex)
+    })
+
+    test('creates a task without Comments section when no comment provided', async () => {
+      const fileSystem = createFileSystem()
+      const repository = buildAuditsRepository(fileSystem, '/project/.dust')
+
+      const result = await repository.createAuditTask({ name: 'custom-audit' })
+
+      const content = fileSystem.writtenFiles.get(result.filePath) as string
+      expect(content).not.toContain('## Comments')
+    })
   })
 })
