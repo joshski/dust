@@ -527,6 +527,10 @@ function factsVerification(): string {
 
     ${ideasHint}
 
+    ## Applicability
+
+    If \`.dust/facts/\` does not exist or is empty, document that finding and skip the detailed analysis.
+
     ## Scope
 
     Focus on these areas:
@@ -742,6 +746,10 @@ function ideasFromPrinciples(): string {
 
     ${ideasHint}
 
+    ## Applicability
+
+    If \`.dust/principles/\` does not exist or is empty, document that finding and skip the detailed analysis.
+
     ## Scope
 
     Focus on these areas:
@@ -933,6 +941,10 @@ function staleIdeas(): string {
 
     ${ideasHint}
 
+    ## Applicability
+
+    If \`.dust/ideas/\` does not exist or is empty, document that finding and skip the detailed analysis.
+
     ## Scope
 
     Focus on these areas:
@@ -1116,6 +1128,10 @@ function repositoryContext(): string {
     ## Purpose
 
     The repository context document helps downstream agents quickly understand the project without reading individual files. It describes features, scenarios, and design philosophy rather than implementation details. This enables high-level planning where agents reason about capabilities rather than code structure.
+
+    ## Applicability
+
+    If \`.dust/repository.md\` does not exist and this is a new project adoption, document that finding and proceed with creating an initial repository context document. If the project has no clear purpose or documentation to draw from, document that finding and skip the detailed analysis.
 
     ## Scope
 
