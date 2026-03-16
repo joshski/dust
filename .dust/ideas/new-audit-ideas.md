@@ -26,18 +26,9 @@ Now available as a stock audit: `bin/dust audit documentation-drift`
 
 Now available as a stock audit: `bin/dust audit feedback-loop-speed`
 
-### Agent Instruction Quality Audit
+### ~~Agent Instruction Quality Audit~~ (Implemented)
 
-Review agent instruction files (AGENTS.md, CLAUDE.md) for clarity and completeness.
-
-**Why this matters:** Agent instruction files directly impact agent effectiveness. Poor instructions lead to wasted context, confusion, and suboptimal decisions. This complements the agent-developer-experience audit with a focus on the instruction artifacts themselves.
-
-**Scope:**
-- Contradictory instructions across files
-- Instructions that reference removed code/features
-- Missing context that agents frequently need
-- Overly verbose instructions wasting context window
-- Instructions that could be replaced by linter rules
+Now available as a stock audit: `bin/dust audit agent-instruction-quality`
 
 ### Commit Message Quality Audit
 

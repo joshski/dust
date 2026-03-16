@@ -189,6 +189,178 @@ function agentDeveloperExperience(): string {
   `
 }
 
+function agentInstructionQuality(): string {
+  return dedent`
+    # Agent Instruction Quality
+
+    Review agent instruction files (AGENTS.md, CLAUDE.md) for clarity and completeness.
+
+    ${ideasHint}
+
+    ## Context
+
+    Agent instruction files directly impact agent effectiveness. Poor instructions lead to wasted context, confusion, and suboptimal decisions. This audit focuses on the instruction artifacts themselves.
+
+    ## Scope
+
+    Focus on these areas:
+
+    1. **Contradictory instructions** - Find conflicting guidance across instruction files
+    2. **Stale references** - Identify instructions that reference removed code or features
+    3. **Missing context** - Detect areas where agents frequently need information not provided
+    4. **Verbose instructions** - Flag overly long sections that waste context window space
+    5. **Linter-replaceable rules** - Identify instructions that could be enforced by linter rules instead
+
+    ## Analysis Steps
+
+    ### 1. Locate Instruction Files
+
+    Search for agent instruction files:
+    - \`CLAUDE.md\` (Claude Code instructions)
+    - \`AGENTS.md\` (general agent instructions)
+    - \`.cursorrules\` (Cursor rules)
+    - \`copilot-instructions.md\` (GitHub Copilot instructions)
+    - Any other agent-specific configuration files
+
+    ### 2. Check for Contradictory Instructions
+
+    For each instruction file:
+    1. Extract all directives, rules, and guidance statements
+    2. Compare against directives in other instruction files
+    3. Flag cases where:
+       - One file says "always do X" and another says "never do X"
+       - Instructions give conflicting guidance for the same scenario
+       - Priority or ordering conflicts exist
+
+    Example finding:
+    \`\`\`markdown
+    ### Contradiction: Commit message format
+    - **CLAUDE.md:45** says "Use conventional commits (feat:, fix:, etc.)"
+    - **AGENTS.md:23** says "Use imperative mood without prefixes"
+    - **Impact**: Agents may produce inconsistent commit messages
+    - **Suggestion**: Align both files on a single commit message convention
+    \`\`\`
+
+    ### 3. Detect Stale References
+
+    For each instruction file:
+    1. Extract references to files, functions, directories, or features
+    2. Verify each reference exists in the codebase
+    3. Flag references to:
+       - Deleted or renamed files/directories
+       - Removed functions, classes, or APIs
+       - Deprecated features or workflows
+       - Outdated tool names or commands
+
+    Example finding:
+    \`\`\`markdown
+    ### Stale reference: src/legacy/parser.ts
+    - **Location**: CLAUDE.md:78
+    - **Instruction**: "Use the parser from src/legacy/parser.ts for..."
+    - **Reality**: src/legacy/ directory was removed in commit abc123
+    - **Impact**: Agents will fail to follow this instruction
+    - **Suggestion**: Update to reference the new parser location
+    \`\`\`
+
+    ### 4. Identify Missing Context
+
+    Review instruction files for gaps:
+    1. Check if common agent tasks are covered (setup, testing, deployment)
+    2. Look for areas where instructions assume knowledge not documented
+    3. Identify patterns where agents might need guidance but none exists
+    4. Consider what questions a new agent would have that aren't answered
+
+    Signals of missing context:
+    - Instructions reference concepts without explanation
+    - Workflows have steps that require undocumented knowledge
+    - Common failure modes have no troubleshooting guidance
+
+    Example finding:
+    \`\`\`markdown
+    ### Missing context: Environment setup
+    - **Gap**: No instructions for required environment variables
+    - **Impact**: Agents may fail setup or produce incorrect configuration
+    - **Suggestion**: Add section documenting required env vars and their purpose
+    \`\`\`
+
+    ### 5. Flag Verbose Sections
+
+    Analyze instruction file sections for efficiency:
+    1. Measure section lengths (line count, word count)
+    2. Flag sections over 50 lines that could be condensed
+    3. Identify redundant explanations or excessive examples
+    4. Look for sections that repeat information found elsewhere
+
+    Verbosity signals:
+    - Multiple examples where one would suffice
+    - Lengthy explanations of concepts that could be linked
+    - Repeated disclaimers or caveats
+    - Inline documentation that duplicates code comments
+
+    Example finding:
+    \`\`\`markdown
+    ### Verbose: Testing guidelines
+    - **Location**: CLAUDE.md:120-220 (100 lines)
+    - **Issue**: Includes 15 code examples; 3 would suffice
+    - **Context cost**: ~2000 tokens that could be reclaimed
+    - **Suggestion**: Condense to key patterns, link to test files for examples
+    \`\`\`
+
+    ### 6. Find Linter-Replaceable Rules
+
+    Identify instructions that describe rules enforceable by static analysis:
+    1. Search for instructions about code formatting (spacing, quotes, semicolons)
+    2. Look for naming convention rules (camelCase, PascalCase, etc.)
+    3. Find import ordering or organization requirements
+    4. Identify type annotation requirements
+
+    For each candidate:
+    - Verify whether an ESLint, Biome, or similar rule exists
+    - Check if the rule is already configured in the project
+    - If not configured, recommend adding the linter rule
+
+    Example finding:
+    \`\`\`markdown
+    ### Linter-replaceable: Import ordering
+    - **Location**: CLAUDE.md:34
+    - **Instruction**: "Always order imports: external, then internal, then relative"
+    - **Linter rule**: \`import/order\` or \`@ianvs/prettier-plugin-sort-imports\`
+    - **Current state**: Not configured in .eslintrc
+    - **Suggestion**: Add linter rule to enforce automatically
+    \`\`\`
+
+    ## Output
+
+    For each issue found, document:
+    - **Location** - File path and section/line number
+    - **Type** - One of: contradictory, stale, missing, verbose, linter-replaceable
+    - **Impact** - How this affects agent effectiveness
+    - **Suggested improvement** - Specific fix or action
+
+    ## Principles
+
+    - [Agent Autonomy](../principles/agent-autonomy.md) - Clear instructions enable autonomous work
+    - [Context Window Efficiency](../principles/context-window-efficiency.md) - Concise instructions leave room for reasoning
+    - [Actionable Errors](../principles/actionable-errors.md) - Instructions should guide agents toward correct actions
+    - [Lint Everything](../principles/lint-everything.md) - Prefer static analysis over runtime guidance where possible
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - [ ] Located all agent instruction files in the repository
+    - [ ] Reviewed for contradictory instructions across files
+    - [ ] Checked all file/code references for staleness
+    - [ ] Identified gaps where context is missing
+    - [ ] Flagged verbose sections that waste context window space
+    - [ ] Found instructions that could be replaced by linter rules
+    - [ ] Documented each issue with location, type, impact, and suggestion
+    - [ ] Created ideas for substantial instruction improvements
+  `
+}
+
 function deadCode(): string {
   return dedent`
     # Dead Code
@@ -2168,6 +2340,7 @@ function ciDevelopmentParity(): string {
 
 const stockAuditFunctions: Record<string, () => string> = {
   'agent-developer-experience': agentDeveloperExperience,
+  'agent-instruction-quality': agentInstructionQuality,
   algorithms: algorithms,
   'checks-audit': checksAuditTemplate,
   'ci-development-parity': ciDevelopmentParity,
