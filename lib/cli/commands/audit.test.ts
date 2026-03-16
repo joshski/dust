@@ -47,10 +47,6 @@ describe('audit command', () => {
       'Verify security tooling is configured and suggest missing tools.'
     )
     expect(output).toContain('→ stock')
-    expect(output).toContain('test-coverage')
-    expect(output).toContain(
-      'Identify untested code paths and areas that need additional test coverage.'
-    )
     expect(output).toContain('dead-code')
     expect(output).toContain(
       'Find and remove unused code to improve maintainability and reduce bundle size.'
@@ -135,7 +131,7 @@ describe('audit command', () => {
     const output = context.stdoutLines.join('\n')
     // Stock audits should appear
     expect(output).toContain('security-review')
-    expect(output).toContain('test-coverage')
+    expect(output).toContain('dead-code')
     // User audit should appear
     expect(output).toContain('Custom Audit')
   })
@@ -156,7 +152,7 @@ describe('audit command', () => {
     const output = context.stdoutLines.join('\n')
     // Should still list stock audits
     expect(output).toContain('security-review')
-    expect(output).toContain('test-coverage')
+    expect(output).toContain('dead-code')
   })
 
   test('handles missing .dust directory gracefully', async () => {
@@ -171,7 +167,7 @@ describe('audit command', () => {
     const output = context.stdoutLines.join('\n')
     // Should still list stock audits
     expect(output).toContain('security-review')
-    expect(output).toContain('test-coverage')
+    expect(output).toContain('dead-code')
   })
 
   test('uses filename as name if no title in markdown', async () => {
@@ -221,7 +217,7 @@ describe('audit command', () => {
   test('loadStockAudits loads audits from markdown files', () => {
     const audits = loadStockAudits()
     expect(audits).toBeInstanceOf(Array)
-    expect(audits.length).toBe(33)
+    expect(audits.length).toBe(31)
 
     const names = audits.map(a => a.name)
     expect(names).toContain('agent-developer-experience')
@@ -240,13 +236,11 @@ describe('audit command', () => {
     expect(names).toContain('ideas-from-principles')
     expect(names).toContain('idiomatic-style')
     expect(names).toContain('logging-and-traceability')
-    expect(names).toContain('performance-review')
     expect(names).toContain('primitive-obsession')
     expect(names).toContain('security-review')
     expect(names).toContain('single-responsibility-violations')
     expect(names).toContain('stale-ideas')
     expect(names).toContain('test-assertions')
-    expect(names).toContain('test-coverage')
     expect(names).toContain('test-pyramid')
     expect(names).toContain('ubiquitous-language')
     expect(names).toContain('ux-audit')

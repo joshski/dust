@@ -801,42 +801,6 @@ function commitReview(): string {
   `
 }
 
-function performanceReview(): string {
-  return dedent`
-    # Performance Review
-
-    Review the application for performance issues and optimization opportunities.
-
-    ${ideasHint}
-
-    ## Scope
-
-    Focus on these areas:
-
-    1. **Startup time** - How fast does the application start?
-    2. **Command latency** - How responsive are CLI commands?
-    3. **Memory usage** - Is memory being used efficiently?
-    4. **Build performance** - How fast is the build process?
-    5. **Test speed** - Are tests running efficiently?
-
-    ## Principles
-
-    (none)
-
-    ## Blocked By
-
-    (none)
-
-    ## Definition of Done
-
-    - Measured startup time for common commands
-    - Profiled memory usage during typical operations
-    - Identified slow commands or operations
-    - Listed optimization opportunities by impact
-    - Proposed ideas for any performance improvements identified
-  `
-}
-
 function securityReview(): string {
   return dedent`
     # Security Review
@@ -943,41 +907,6 @@ function staleIdeas(): string {
     - Reviewed each stale idea for current relevance
     - Promoted actionable ideas to tasks
     - Deleted ideas that are no longer relevant
-  `
-}
-
-function testCoverage(): string {
-  return dedent`
-    # Test Coverage
-
-    Identify untested code paths and areas that need additional test coverage.
-
-    ${ideasHint}
-
-    ## Scope
-
-    Focus on these areas:
-
-    1. **Core business logic** - Functions that handle critical operations
-    2. **Edge cases** - Boundary conditions, error handling paths
-    3. **Integration points** - API endpoints, database operations
-    4. **User-facing features** - UI components, form validation
-    5. **Recent changes** - Code modified in the last few commits
-
-    ## Principles
-
-    (none)
-
-    ## Blocked By
-
-    (none)
-
-    ## Definition of Done
-
-    - Identified modules with low or no test coverage
-    - Listed critical paths that lack tests
-    - Prioritized areas by risk and importance
-    - Proposed ideas for any test coverage gaps identified
   `
 }
 
@@ -2497,7 +2426,6 @@ const stockAuditFunctions: Record<string, () => string> = {
   'ideas-from-principles': ideasFromPrinciples,
   'idiomatic-style': idiomaticStyle,
   'logging-and-traceability': loggingAndTraceability,
-  'performance-review': performanceReview,
   'primitive-obsession': primitiveObsession,
   'repository-context': repositoryContext,
   'security-review': securityReview,
@@ -2505,7 +2433,6 @@ const stockAuditFunctions: Record<string, () => string> = {
   'slow-tests': slowTests,
   'stale-ideas': staleIdeas,
   'test-assertions': testAssertions,
-  'test-coverage': testCoverage,
   'test-pyramid': testPyramid,
   'ubiquitous-language': ubiquitousLanguage,
   'ux-audit': uxAudit,

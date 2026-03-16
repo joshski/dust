@@ -26,14 +26,14 @@ Analyze the last 20 commits to identify patterns that suggest specific audits:
 1. **Path-based triggers**
    - `.dust/facts/*` changes → suggest `facts-verification` audit
    - `.dust/principles/*` changes → suggest `ideas-from-principles` audit
-   - `*.test.*` or `__tests__/*` changes → suggest `test-coverage` audit
+   - `*.test.*` or `__tests__/*` changes → suggest `test-pyramid` or `slow-tests` audit
    - `package.json` or lockfile changes → suggest `security-review` audit
    - Error handling code changes → suggest `error-handling` audit
 
 2. **Commit message patterns**
    - "refactor" in message → suggest `component-reuse` or `dead-code` audit
-   - "fix" or "bug" in message → suggest `error-handling` or `test-coverage` audit
-   - "perf" or "performance" in message → suggest `performance-review` or `data-access-review` audit
+   - "fix" or "bug" in message → suggest `error-handling` or `test-assertions` audit
+   - "perf" or "performance" in message → suggest `feedback-loop-speed` or `data-access-review` audit
 
 3. **Change size heuristics**
    - Large commits (many files) → suggest `agent-developer-experience` audit
