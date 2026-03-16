@@ -44,7 +44,7 @@ Add integration tests that verify:
 
 ## Blocked By
 
-- [Implement Repository Lifecycle Transitions](implement-repository-lifecycle-transitions.md)
+(none)
 
 ## Definition of Done
 
