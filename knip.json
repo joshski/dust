@@ -12,6 +12,7 @@
     "lib/validation/index.ts",
     "lib/proxy/git-credential-proxy.ts",
     "lib/proxy/claude-api-proxy.ts",
+    "scripts/end-to-end/claude-oauth-apikey-helper-poc.ts",
     "scripts/lint/policy-checks.ts",
     "scripts/lint/check-package-json-format.ts",
     "lib/oxlint/plugins/dust.js"

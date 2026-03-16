@@ -53,12 +53,17 @@ function maskToken(token: string): string {
 
 function randomSidecarToken(): string {
   // Looks like a Claude API key format so Claude accepts helper output.
-  return `sk-ant-api03-${Buffer.from(crypto.randomUUID().replaceAll('-', '') + crypto.randomUUID().replaceAll('-', '')).toString('hex').slice(0, 96)}`
+  return `sk-ant-api03-${Buffer.from(
+    crypto.randomUUID().replaceAll('-', '') +
+      crypto.randomUUID().replaceAll('-', '')
+  )
+    .toString('hex')
+    .slice(0, 96)}`
 }
 
 function runCommand(
   command: string,
-  args: string[],
+  commandArguments: string[],
   options: {
     env?: Record<string, string | undefined>
     cwd?: string
@@ -66,7 +71,7 @@ function runCommand(
   } = {}
 ): Promise<CommandResult> {
   return new Promise((resolve, reject) => {
-    const proc = spawn(command, args, {
+    const proc = spawn(command, commandArguments, {
       cwd: options.cwd,
       env: options.env ? { ...process.env, ...options.env } : process.env,
       stdio: ['pipe', 'pipe', 'pipe'],
