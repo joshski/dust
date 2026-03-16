@@ -16,7 +16,6 @@ The existing `dust new idea` command (`lib/cli/commands/new-idea.ts:15-64`) prov
 ### Related ideas
 
 - [Workflow instruction tasks](workflow-instruction-tasks.md) - proposes adding `dust decompose idea` and similar commands that emit step-by-step instructions
-- [Meta Audit](meta-audit.md) - analyzes commit activity to select which audits to run
 
 ## How it could work
 
