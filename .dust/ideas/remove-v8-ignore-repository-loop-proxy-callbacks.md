@@ -1,6 +1,6 @@
 # Remove v8 Ignore: Repository Loop Proxy Callbacks
 
-Remove the v8 coverage exclusion for proxy callback setup in `lib/bucket/repository-loop.ts`.
+Remove the v8 coverage exclusion for proxy callback setup in [`lib/bucket/repository-loop.ts`](../../lib/bucket/repository-loop.ts).
 
 ## Current State
 

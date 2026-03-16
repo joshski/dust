@@ -15,13 +15,13 @@ export function validateNoCycles(...): boolean        // Boolean
 ```
 
 Files affected:
-- `lib/lint/validators/content-validator.ts`
-- `lib/lint/validators/link-validator.ts`
-- `lib/lint/validators/filename-validator.ts`
-- `lib/lint/validators/idea-validator.ts`
-- `lib/lint/validators/directory-validator.ts`
-- `lib/lint/validators/principle-hierarchy.ts`
-- `lib/validation/index.ts`
+- [`lib/lint/validators/content-validator.ts`](../../lib/lint/validators/content-validator.ts)
+- [`lib/lint/validators/link-validator.ts`](../../lib/lint/validators/link-validator.ts)
+- [`lib/lint/validators/filename-validator.ts`](../../lib/lint/validators/filename-validator.ts)
+- [`lib/lint/validators/idea-validator.ts`](../../lib/lint/validators/idea-validator.ts)
+- [`lib/lint/validators/directory-validator.ts`](../../lib/lint/validators/directory-validator.ts)
+- [`lib/lint/validators/principle-hierarchy.ts`](../../lib/lint/validators/principle-hierarchy.ts)
+- [`lib/validation/index.ts`](../../lib/validation/index.ts)
 
 ## Proposed Pattern
 
@@ -51,7 +51,7 @@ This enables:
 - Eliminates cognitive overhead of remembering each validator's signature
 - Enables building validator pipelines declaratively
 - Aligns with [Decoupled Code](../principles/decoupled-code.md) principle
-- Makes validation orchestration in `lib/validation/index.ts` cleaner
+- Makes validation orchestration in [`lib/validation/index.ts`](../../lib/validation/index.ts) cleaner
 
 ### Costs
 

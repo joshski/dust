@@ -1,6 +1,6 @@
 # Remove v8 Ignore: Git Credential Proxy Server
 
-Remove the v8 coverage exclusion for `createGitCredentialProxyServer()` in `lib/proxy/git-credential-proxy.ts` by restructuring for testability.
+Remove the v8 coverage exclusion for `createGitCredentialProxyServer()` in [`lib/proxy/git-credential-proxy.ts`](../../lib/proxy/git-credential-proxy.ts) by restructuring for testability.
 
 ## Current State
 

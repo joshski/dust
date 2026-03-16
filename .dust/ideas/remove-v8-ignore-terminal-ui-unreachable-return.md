@@ -1,6 +1,6 @@
 # Remove v8 Ignore: Terminal UI Unreachable Return
 
-Remove the v8 coverage exclusion for the unreachable return in `lib/bucket/terminal-ui.ts`.
+Remove the v8 coverage exclusion for the unreachable return in [`lib/bucket/terminal-ui.ts`](../../lib/bucket/terminal-ui.ts).
 
 ## Current State
 

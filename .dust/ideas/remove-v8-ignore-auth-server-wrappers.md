@@ -1,6 +1,6 @@
 # Remove v8 Ignore: Auth Server Wrappers
 
-Remove the v8 coverage exclusion for native wrappers in `lib/bucket/auth-server.ts`.
+Remove the v8 coverage exclusion for native wrappers in [`lib/bucket/auth-server.ts`](../../lib/bucket/auth-server.ts).
 
 ## Current State
 

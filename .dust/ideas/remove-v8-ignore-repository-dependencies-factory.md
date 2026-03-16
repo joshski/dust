@@ -1,6 +1,6 @@
 # Remove v8 Ignore: Repository Dependencies Factory
 
-Remove the v8 coverage exclusion for `createDefaultRepositoryDependencies()` in `lib/bucket/repository.ts` by extracting to a dedicated module.
+Remove the v8 coverage exclusion for `createDefaultRepositoryDependencies()` in [`lib/bucket/repository.ts`](../../lib/bucket/repository.ts) by extracting to a dedicated module.
 
 ## Current State
 

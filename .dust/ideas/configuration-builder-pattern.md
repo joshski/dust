@@ -17,7 +17,7 @@ export function detectTestCommand(...): string | null { ... }
 export function loadSettings(...): Promise<DustSettings> { ... }
 ```
 
-`loadSettings` in `lib/config/settings.ts` has three code paths with duplication:
+`loadSettings` in [`lib/config/settings.ts`](../../lib/config/settings.ts) has three code paths with duplication:
 1. No settings file — builds defaults, applies env override
 2. Settings file parsed — merges config, applies env override
 3. ENOENT during read — builds defaults (identical to path 1), applies env override

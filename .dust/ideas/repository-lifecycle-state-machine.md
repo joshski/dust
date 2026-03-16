@@ -4,7 +4,7 @@ Replace imperative state mutation in repository loop management with an explicit
 
 ## Current State
 
-Repository lifecycle in `lib/bucket/repository.ts` uses imperative state management with callbacks and manual cleanup:
+Repository lifecycle in [`lib/bucket/repository.ts`](../../lib/bucket/repository.ts) uses imperative state management with callbacks and manual cleanup:
 
 ```typescript
 export function startRepositoryLoop(

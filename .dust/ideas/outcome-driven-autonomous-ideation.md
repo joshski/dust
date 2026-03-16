@@ -29,9 +29,9 @@ This mirrors how the `ideas-from-principles` audit works today, but at a higher 
 
 2. **`dust outcomes` command** — Lists outcomes similar to `dust principles` and `dust facts`.
 
-3. **Strategize audit** — A new stock audit (`ideas-from-outcomes` or `strategize`) that reads outcomes + principles + facts and proposes ideas that would advance the project toward its outcomes. Added to `lib/audits/stock-audits.ts`.
+3. **Strategize audit** — A new stock audit (`ideas-from-outcomes` or `strategize`) that reads outcomes + principles + facts and proposes ideas that would advance the project toward its outcomes. Added to [`lib/audits/stock-audits.ts`](../../lib/audits/stock-audits.ts).
 
-4. **Periodic scheduling** — Configuration in `.dust/config/settings.json` to run strategize automatically during `dust loop` at a specified interval (e.g., `{ "strategizeIntervalIterations": 10 }`). The loop would create a strategize audit task after N completed task iterations.
+4. **Periodic scheduling** — Configuration in [`.dust/config/settings.json`](../config/settings.json) to run strategize automatically during `dust loop` at a specified interval (e.g., `{ "strategizeIntervalIterations": 10 }`). The loop would create a strategize audit task after N completed task iterations.
 
 5. **Idea-to-outcome tracing** — Ideas generated from strategize link back to the outcome(s) they serve, allowing humans to evaluate proposals in context. This could use a new `## Outcomes` section in idea files, following the existing `## Principles` pattern.
 

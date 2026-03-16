@@ -39,7 +39,7 @@ This aligns with the [Unsurprising UX](../principles/unsurprising-ux.md) princip
 
 ## Implementation
 
-The command resolution logic in `lib/cli/main.ts` already has a registry of command patterns. When `resolveCommand()` fails to find an exact match:
+The command resolution logic in [`lib/cli/main.ts`](../../lib/cli/main.ts) already has a registry of command patterns. When `resolveCommand()` fails to find an exact match:
 
 1. Check if the input is a prefix of any known multi-word commands
 2. If matches exist, return a special "partial match" result with the available completions

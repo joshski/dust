@@ -20,9 +20,9 @@ Both generic audits add breadth but no depth. Downstream projects running them a
 
 ## Changes
 
-1. Delete the `performanceReview` function from `lib/audits/stock-audits.ts`
+1. Delete the `performanceReview` function from [`lib/audits/stock-audits.ts`](../../lib/audits/stock-audits.ts)
 2. Remove `'performance-review'` from `stockAuditFunctions`
-3. Delete the `testCoverage` function from `lib/audits/stock-audits.ts`
+3. Delete the `testCoverage` function from [`lib/audits/stock-audits.ts`](../../lib/audits/stock-audits.ts)
 4. Remove `'test-coverage'` from `stockAuditFunctions`
 
 ## Principles

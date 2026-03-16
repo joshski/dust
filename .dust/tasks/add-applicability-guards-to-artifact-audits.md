@@ -9,7 +9,7 @@ These audits reference dust-specific directories that may not exist in newly ado
 - `facts-verification` — `.dust/facts/`
 - `stale-ideas` — `.dust/ideas/`
 - `ideas-from-principles` — `.dust/principles/`
-- `repository-context` — `.dust/repository.md`
+- `repository-context` — [`.dust/repository.md`](../repository.md)
 
 Each should include an applicability section: "If `.dust/facts/` does not exist or is empty, document that finding and skip the detailed analysis."
 
@@ -22,7 +22,7 @@ Add `## Applicability` sections to these audit functions:
 1. `factsVerification` — Guard for missing `.dust/facts/`
 2. `staleIdeas` — Guard for missing `.dust/ideas/`
 3. `ideasFromPrinciples` — Guard for missing `.dust/principles/`
-4. `repositoryContext` — Guard for missing `.dust/repository.md`
+4. `repositoryContext` — Guard for missing [`.dust/repository.md`](../repository.md)
 
 Each guard should instruct the agent to document that the directory/file doesn't exist and skip the detailed analysis.
 

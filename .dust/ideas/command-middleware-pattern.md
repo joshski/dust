@@ -4,7 +4,7 @@ Add middleware/interceptor support to the CLI command system for cross-cutting c
 
 ## Current State
 
-Commands in `lib/cli/commands/` are registered in `lib/cli/main.ts` via a flat registry:
+Commands in `lib/cli/commands/` are registered in [`lib/cli/main.ts`](../../lib/cli/main.ts) via a flat registry:
 
 ```typescript
 const commandRegistry = {
