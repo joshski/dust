@@ -859,23 +859,55 @@ function securityReview(): string {
   return dedent`
     # Security Review
 
-    Review the codebase for common security vulnerabilities and misconfigurations.
+    Verify security tooling is configured and suggest missing tools.
 
     ${ideasHint}
 
     ## Scope
 
-    Focus on these areas:
+    Manual vulnerability scanning is unreliable — an agent reporting "no issues found" doesn't mean the code is secure. Instead, verify that dedicated security tools are configured and create ideas to add any that are missing.
 
-    1. **Hardcoded secrets** - API keys, passwords, tokens in source code
-    2. **Injection vulnerabilities** - SQL injection, command injection, XSS
-    3. **Authentication issues** - Weak password handling, missing auth checks
-    4. **Sensitive data exposure** - Logging sensitive data, insecure storage
-    5. **Dependency vulnerabilities** - Known CVEs in dependencies
+    ### 1. Dependency Vulnerability Scanning
+
+    Check for one of:
+    - \`npm audit\` / \`yarn audit\` / \`bun audit\` in CI
+    - Dependabot or Renovate configured for security updates
+    - Snyk integration
+
+    ### 2. Secret Detection
+
+    Check for one of:
+    - \`gitleaks\` configured in CI or pre-commit hooks
+    - \`trufflehog\` scanning git history
+    - GitHub secret scanning enabled (for GitHub repos)
+
+    ### 3. Static Analysis for Security
+
+    Check for one of:
+    - \`semgrep\` with security rules configured
+    - \`eslint-plugin-security\` for JavaScript/TypeScript
+    - Language-specific security linters
+
+    ### 4. Supply Chain Security
+
+    Check for one of:
+    - \`socket.dev\` configured for npm packages
+    - Package lockfile integrity checks in CI
+    - Dependency review workflows
+
+    ### 5. Lightweight Pattern Scan (Supplementary)
+
+    As a supplement to proper tooling (not a replacement), grep for obvious issues:
+    - Common secret patterns: \`sk-\`, \`AKIA\`, \`ghp_\`, \`Bearer \`
+    - Hardcoded credentials: \`password = "\`, \`apiKey = "\`, \`secret = "\`
+    - Unsafe patterns: \`eval(\`, \`dangerouslySetInnerHTML\`, \`exec(\`
+
+    Note: This scan is non-exhaustive. Proper tooling catches far more issues.
 
     ## Principles
 
-    (none)
+    - [Lint Everything](../principles/lint-everything.md) - Security checks should use dedicated static analysis tools
+    - [Batteries Included](../principles/batteries-included.md) - The audit should suggest appropriate security tooling
 
     ## Blocked By
 
@@ -883,13 +915,13 @@ function securityReview(): string {
 
     ## Definition of Done
 
-    - Searched for hardcoded secrets (API keys, passwords, tokens)
-    - Reviewed input validation and sanitization
-    - Checked authentication and authorization logic
-    - Verified sensitive data is not logged or exposed
-    - Ran dependency audit for known vulnerabilities
-    - Documented any findings with severity ratings
-    - Proposed ideas for any security issues found
+    - [ ] Checked CI configuration for dependency vulnerability scanning
+    - [ ] Checked for secret detection tooling (CI, pre-commit, or platform-native)
+    - [ ] Checked for security-focused static analysis
+    - [ ] Checked for supply chain security measures
+    - [ ] Ran lightweight pattern scan for obvious issues (documented as supplementary)
+    - [ ] Created ideas for any missing security tooling categories
+    - [ ] Each idea specifies which tool to add and where to configure it
   `
 }
 

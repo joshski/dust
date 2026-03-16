@@ -44,7 +44,7 @@ describe('audit command', () => {
     )
     expect(output).toContain('security-review')
     expect(output).toContain(
-      'Review the codebase for common security vulnerabilities and misconfigurations.'
+      'Verify security tooling is configured and suggest missing tools.'
     )
     expect(output).toContain('→ stock')
     expect(output).toContain('test-coverage')
@@ -290,6 +290,7 @@ describe('audit command', () => {
       'naming-consistency',
       'primitive-obsession',
       'refactoring-opportunities',
+      'security-review',
       'single-responsibility-violations',
       'slow-tests',
       'test-assertions',
@@ -563,7 +564,7 @@ describe('audit add command', () => {
       '/project/.dust/tasks/audit-security-review.md'
     )
     expect(writtenContent).toContain('# Audit: Security Review')
-    expect(writtenContent).toContain('Review the codebase for common security')
+    expect(writtenContent).toContain('Verify security tooling is configured')
   })
 
   test('creates task with ad-hoc details when provided', async () => {
