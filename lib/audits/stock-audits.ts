@@ -1300,6 +1300,96 @@ function algorithms(): string {
   `
 }
 
+function testPyramid(): string {
+  return dedent`
+    # Test Pyramid
+
+    Evaluate whether tests follow the test pyramid pattern.
+
+    ${ideasHint}
+
+    ## Background
+
+    The test pyramid model suggests:
+    - **Many fast unit tests** (base) — pure, isolated, testing single units
+    - **Fewer integration tests** (middle) — testing interactions between components
+    - **Minimal end-to-end tests** (top) — slow, broad tests exercising full systems
+
+    Projects with an inverted pyramid suffer from slow feedback loops and difficulty isolating failures.
+
+    ## Scope
+
+    ### Test Classification
+
+    Determine test types by examining project structure. Common patterns include:
+
+    - **Directory conventions**: \`unit/\`, \`integration/\`, \`e2e/\`, or co-located tests vs \`system-tests/\`
+    - **Test runners**: Different runners for different types (e.g., vitest for unit, bun test for system)
+    - **Configuration**: Look at test config files for exclusions or separate setups
+
+    First identify how this specific project organizes tests, then classify accordingly.
+
+    ### Time Analysis
+
+    Include execution time per tier, not just test count. A pyramid with 100 unit tests taking 10 seconds each and 10 e2e tests taking 1 second each has problems the count alone wouldn't reveal.
+
+    Guidance on obtaining timing:
+    - For vitest: \`npx vitest run --reporter=json\` provides per-test duration
+    - For jest: \`jest --json\` provides timing data
+    - For bun test: parse verbose output
+
+    ## Analysis Steps
+
+    1. Examine project structure to understand how tests are organized
+    2. Identify the test classification strategy used (directories, config files, runners)
+    3. Count tests in each category (unit, integration, e2e)
+    4. Run tests with timing output to measure execution time per tier
+    5. Look for "unit" tests that perform I/O (process spawning, network calls, file system access)
+    6. Evaluate pyramid shape based on counts and timing
+
+    ## Output
+
+    Report the following:
+
+    1. **Test distribution** — counts and percentages per category
+    2. **Time distribution** — total execution time per tier
+    3. **Pyramid health** — flag obvious inversions:
+       - More e2e tests than unit tests
+       - More time spent in integration/e2e than unit tests
+    4. **Miscategorized tests** — tests that appear to be in the wrong tier based on their behavior (e.g., "unit" tests with I/O)
+    5. **Recommendations** — specific actions to improve the pyramid shape
+
+    ## Relative Guidance
+
+    Flag obvious problems without prescribing exact ratios. Examples of problems:
+    - More end-to-end tests than unit tests
+    - More time spent in integration/e2e than unit tests
+    - Unit tests that perform I/O (process spawning, network calls, file system access)
+
+    ## Principles
+
+    - [Fast Feedback Loops](../principles/fast-feedback-loops.md) — Unit-heavy pyramids enable fast feedback
+    - [Keep Unit Tests Pure](../principles/keep-unit-tests-pure.md) — Defines what makes a test a "unit test"
+    - [Unit Test Coverage](../principles/unit-test-coverage.md) — Values unit tests for specific, fast feedback
+    - [Design for Testability](../principles/design-for-testability.md) — Testable code enables unit tests; untestable code forces integration tests
+    - [Functional Core, Imperative Shell](../principles/functional-core-imperative-shell.md) — Keep audit definition pure
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - Identified how this project organizes and classifies tests
+    - Counted tests per category (unit, integration, e2e)
+    - Measured execution time per tier
+    - Flagged obvious pyramid inversions (more e2e than unit, more time in e2e)
+    - Identified miscategorized tests (e.g., unit tests with I/O)
+    - Provided specific recommendations to improve pyramid shape
+    - Proposed ideas for any substantial test restructuring needed
+  `
+}
+
 function uxAudit(): string {
   return dedent`
     # UX Audit
@@ -1395,6 +1485,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'stale-ideas': staleIdeas,
   'test-assertions': testAssertions,
   'test-coverage': testCoverage,
+  'test-pyramid': testPyramid,
   'ubiquitous-language': ubiquitousLanguage,
   'ux-audit': uxAudit,
 }
