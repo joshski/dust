@@ -2338,12 +2338,169 @@ function ciDevelopmentParity(): string {
   `
 }
 
+function commitMessageQuality(): string {
+  return dedent`
+    # Commit Message Quality
+
+    Review recent commits for message quality and traceability issues.
+
+    ${ideasHint}
+
+    ## Context
+
+    The [Traceable Decisions](../principles/traceable-decisions.md) principle emphasizes that commit history should explain why changes were made. Good commit messages help agents understand project history and make better decisions. This audit evaluates commit message quality itself, not the code changes.
+
+    ## Scope
+
+    Analyze the last 50 commits for these quality issues:
+
+    1. **Generic messages** - Non-descriptive messages like "fix", "update", "WIP", "changes", "stuff", "misc"
+    2. **Missing why** - Messages that describe what changed but not why
+    3. **Breaking changes** - Breaking commits without explanation of impact
+    4. **Multi-concern commits** - Commits that bundle unrelated changes
+    5. **Missing links** - Commits without links to related issues, tasks, or context
+
+    ## Analysis Steps
+
+    ### 1. Gather Recent Commits
+
+    Run \`git log -50 --pretty=format:"%H|%s|%b---END---"\` to get recent commits with their full messages.
+
+    ### 2. Detect Generic Messages
+
+    Flag commits where the subject line:
+    - Is a single word like "fix", "update", "changes", "WIP", "stuff", "misc", "cleanup"
+    - Starts with generic verbs without context: "Fix bug", "Update file", "Change code"
+    - Is very short (under 10 characters) without meaningful content
+
+    Example findings:
+    \`\`\`markdown
+    ### Generic: abc1234
+    - **Message**: "fix"
+    - **Issue**: Single-word message provides no context
+    - **Suggestion**: Describe what was fixed and why, e.g., "Fix null pointer when user has no email"
+    \`\`\`
+
+    ### 3. Detect Missing "Why"
+
+    Flag commits where:
+    - The subject describes what changed but the body is empty or doesn't explain motivation
+    - Technical changes lack business or user context
+    - Refactoring commits don't explain why the refactoring was needed
+
+    Look for these patterns that suggest missing "why":
+    - "Add X" without explaining why X was needed
+    - "Remove X" without explaining why X was unnecessary
+    - "Refactor X" without explaining what problem the refactoring solves
+
+    Example finding:
+    \`\`\`markdown
+    ### Missing Why: def5678
+    - **Message**: "Add caching to API calls"
+    - **Issue**: Doesn't explain why caching was added (performance problem? rate limits? user experience?)
+    - **Suggestion**: Include the motivation, e.g., "Add caching to API calls to reduce rate limit errors during high traffic"
+    \`\`\`
+
+    ### 4. Flag Breaking Changes Without Impact
+
+    Identify breaking changes by looking for:
+    - Subject contains "BREAKING", "breaking", or "!"
+    - Changes to public APIs, configuration schemas, database migrations
+    - Removal of features or options
+
+    Flag if the body doesn't explain:
+    - What exactly breaks
+    - Who is affected
+    - How to migrate
+
+    Example finding:
+    \`\`\`markdown
+    ### Breaking Without Impact: ghi9012
+    - **Message**: "BREAKING: Remove legacy auth"
+    - **Issue**: Doesn't explain impact or migration path
+    - **Suggestion**: Add body explaining: "Removes support for v1 auth tokens. Users must regenerate tokens via /settings. This affects deployments using tokens created before 2024."
+    \`\`\`
+
+    ### 5. Detect Multi-Concern Commits
+
+    Use \`git show --stat <hash>\` to get changed files per commit.
+
+    Flag commits that appear to bundle unrelated changes:
+    - Files across multiple unrelated modules or directories
+    - Mix of feature code and unrelated refactoring
+    - Multiple distinct logical changes in one commit
+
+    Look for signals like:
+    - Changes to both frontend and backend for unrelated features
+    - Test files for different features modified together
+    - Configuration changes bundled with unrelated code changes
+
+    Example finding:
+    \`\`\`markdown
+    ### Multi-Concern: jkl3456
+    - **Message**: "Add user dashboard and fix email validation"
+    - **Files Changed**: src/dashboard/*, src/email/*, tests/email/*
+    - **Issue**: Bundles unrelated features - dashboard addition and email validation fix
+    - **Suggestion**: Split into atomic commits: one for the dashboard feature, one for the email fix
+    \`\`\`
+
+    ### 6. Check for Missing Links
+
+    Flag commits that reference issues or tasks without links:
+    - Mentions "the bug", "the issue", "the task" without a link or ID
+    - Describes a problem without linking to where it was reported
+    - References external context without providing a way to access it
+
+    Also note commits for significant features or bug fixes that lack any external reference.
+
+    Example finding:
+    \`\`\`markdown
+    ### Missing Link: mno7890
+    - **Message**: "Fix the authentication bug reported last week"
+    - **Issue**: References a bug report but doesn't link to it
+    - **Suggestion**: Include issue reference, e.g., "Fix authentication timeout (fixes #123)" or link to discussion
+    \`\`\`
+
+    ## Output
+
+    For each quality issue found, create an idea file documenting:
+
+    1. **Commit hash and message** - The specific commit with the issue
+    2. **Type of issue** - One of: generic, missing-why, breaking-without-impact, multi-concern, missing-link
+    3. **Suggested improvement** - Concrete guidance for future commits
+
+    Group related issues into a single idea file if they suggest a systemic pattern (e.g., "Multiple commits lack issue links" rather than one idea per commit).
+
+    ## Principles
+
+    - [Traceable Decisions](../principles/traceable-decisions.md) - Commit history should explain why changes were made
+    - [Atomic Commits](../principles/atomic-commits.md) - Each commit should tell a complete story
+    - [Agent Autonomy](../principles/agent-autonomy.md) - Agents learn from commit history to understand project patterns
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - [ ] Reviewed last 50 commits for quality issues
+    - [ ] Identified commits with generic/non-descriptive messages
+    - [ ] Identified commits missing "why" context
+    - [ ] Identified breaking changes without impact documentation
+    - [ ] Identified commits bundling unrelated changes
+    - [ ] Identified commits missing links to issues/tasks
+    - [ ] Created idea files for patterns found
+    - [ ] Each idea includes concrete suggestions for improvement
+  `
+}
+
 const stockAuditFunctions: Record<string, () => string> = {
   'agent-developer-experience': agentDeveloperExperience,
   'agent-instruction-quality': agentInstructionQuality,
   algorithms: algorithms,
   'checks-audit': checksAuditTemplate,
   'ci-development-parity': ciDevelopmentParity,
+  'commit-message-quality': commitMessageQuality,
   'dependency-health': dependencyHealth,
   'documentation-drift': documentationDrift,
   'component-reuse': componentReuse,
