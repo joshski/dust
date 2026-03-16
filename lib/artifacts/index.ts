@@ -71,7 +71,7 @@ export type { IdeaInProgress }
 
 export type ArtifactType = 'ideas' | 'tasks' | 'principles' | 'facts'
 
-export interface ArtifactsRepository {
+export interface ReadOnlyArtifactsRepository {
   artifactPath(type: ArtifactType, slug: string): string
   parseIdea(options: { slug: string }): Promise<Idea>
   listIdeas(): Promise<string[]>
@@ -81,6 +81,16 @@ export interface ArtifactsRepository {
   listFacts(): Promise<string[]>
   parseTask(options: { slug: string }): Promise<Task>
   listTasks(): Promise<string[]>
+  findWorkflowTaskForIdea(options: {
+    ideaSlug: string
+  }): Promise<WorkflowTaskMatch | null>
+  parseCaptureIdeaTask(options: {
+    taskSlug: string
+  }): Promise<ParsedCaptureIdeaTask | null>
+  buildTaskGraph(): Promise<TaskGraph>
+}
+
+export interface ArtifactsRepository extends ReadOnlyArtifactsRepository {
   createRefineIdeaTask(options: {
     ideaSlug: string
     description?: string
@@ -106,19 +116,12 @@ export interface ArtifactsRepository {
     expedite?: boolean
     dustCommand?: string
   }): Promise<CreateIdeaTransitionTaskResult>
-  findWorkflowTaskForIdea(options: {
-    ideaSlug: string
-  }): Promise<WorkflowTaskMatch | null>
-  parseCaptureIdeaTask(options: {
-    taskSlug: string
-  }): Promise<ParsedCaptureIdeaTask | null>
-  buildTaskGraph(): Promise<TaskGraph>
 }
 
-export function buildArtifactsRepository(
-  fileSystem: FileSystem,
+function buildReadOperations(
+  fileSystem: ReadableFileSystem,
   dustPath: string
-): ArtifactsRepository {
+): ReadOnlyArtifactsRepository {
   return {
     artifactPath(type: ArtifactType, slug: string): string {
       return `${dustPath}/${type}/${slug}.md`
@@ -187,6 +190,54 @@ export function buildArtifactsRepository(
         .map(f => f.replace(/\.md$/, ''))
         .toSorted()
     },
+
+    async findWorkflowTaskForIdea(options: {
+      ideaSlug: string
+    }): Promise<WorkflowTaskMatch | null> {
+      return findWorkflowTaskForIdeaImpl(fileSystem, dustPath, options.ideaSlug)
+    },
+
+    async parseCaptureIdeaTask(options: {
+      taskSlug: string
+    }): Promise<ParsedCaptureIdeaTask | null> {
+      return parseCaptureIdeaTaskImpl(fileSystem, dustPath, options.taskSlug)
+    },
+
+    async buildTaskGraph(): Promise<TaskGraph> {
+      const taskSlugs = await this.listTasks()
+      const allWorkflowTasks = await findAllWorkflowTasks(fileSystem, dustPath)
+
+      const workflowTypeByTaskSlug = new Map<string, WorkflowTaskType>()
+      for (const match of allWorkflowTasks.workflowTasksByIdeaSlug.values()) {
+        workflowTypeByTaskSlug.set(match.taskSlug, match.type)
+      }
+
+      const nodes: TaskGraphNode[] = []
+      const edges: Array<{ from: string; to: string }> = []
+
+      for (const slug of taskSlugs) {
+        const task = await this.parseTask({ slug })
+        nodes.push({
+          task,
+          workflowType: workflowTypeByTaskSlug.get(slug) ?? null,
+        })
+
+        for (const blockerSlug of task.blockedBy) {
+          edges.push({ from: blockerSlug, to: slug })
+        }
+      }
+
+      return { nodes, edges }
+    },
+  }
+}
+
+export function buildArtifactsRepository(
+  fileSystem: FileSystem,
+  dustPath: string
+): ArtifactsRepository {
+  return {
+    ...buildReadOperations(fileSystem, dustPath),
 
     async createRefineIdeaTask(options: {
       ideaSlug: string
@@ -251,173 +302,12 @@ export function buildArtifactsRepository(
     }): Promise<CreateIdeaTransitionTaskResult> {
       return createIdeaTaskImpl(fileSystem, dustPath, options)
     },
-
-    async findWorkflowTaskForIdea(options: {
-      ideaSlug: string
-    }): Promise<WorkflowTaskMatch | null> {
-      return findWorkflowTaskForIdeaImpl(fileSystem, dustPath, options.ideaSlug)
-    },
-
-    async parseCaptureIdeaTask(options: {
-      taskSlug: string
-    }): Promise<ParsedCaptureIdeaTask | null> {
-      return parseCaptureIdeaTaskImpl(fileSystem, dustPath, options.taskSlug)
-    },
-
-    async buildTaskGraph(): Promise<TaskGraph> {
-      const taskSlugs = await this.listTasks()
-      const allWorkflowTasks = await findAllWorkflowTasks(fileSystem, dustPath)
-
-      const workflowTypeByTaskSlug = new Map<string, WorkflowTaskType>()
-      for (const match of allWorkflowTasks.workflowTasksByIdeaSlug.values()) {
-        workflowTypeByTaskSlug.set(match.taskSlug, match.type)
-      }
-
-      const nodes: TaskGraphNode[] = []
-      const edges: Array<{ from: string; to: string }> = []
-
-      for (const slug of taskSlugs) {
-        const task = await this.parseTask({ slug })
-        nodes.push({
-          task,
-          workflowType: workflowTypeByTaskSlug.get(slug) ?? null,
-        })
-
-        for (const blockerSlug of task.blockedBy) {
-          edges.push({ from: blockerSlug, to: slug })
-        }
-      }
-
-      return { nodes, edges }
-    },
   }
 }
 
-// Overload for read-only repository
 export function buildReadOnlyArtifactsRepository(
   fileSystem: ReadableFileSystem,
   dustPath: string
-): Pick<
-  ArtifactsRepository,
-  | 'artifactPath'
-  | 'parseIdea'
-  | 'listIdeas'
-  | 'parsePrinciple'
-  | 'listPrinciples'
-  | 'parseFact'
-  | 'listFacts'
-  | 'parseTask'
-  | 'listTasks'
-  | 'findWorkflowTaskForIdea'
-  | 'parseCaptureIdeaTask'
-  | 'buildTaskGraph'
-> {
-  return {
-    artifactPath(type: ArtifactType, slug: string): string {
-      return `${dustPath}/${type}/${slug}.md`
-    },
-
-    async parseIdea(options: { slug: string }): Promise<Idea> {
-      return parseIdeaImpl(fileSystem, dustPath, options.slug)
-    },
-
-    async listIdeas(): Promise<string[]> {
-      const ideasPath = `${dustPath}/ideas`
-      if (!fileSystem.exists(ideasPath)) {
-        return []
-      }
-      const files = await fileSystem.readdir(ideasPath)
-      return files
-        .filter(f => f.endsWith('.md'))
-        .map(f => f.replace(/\.md$/, ''))
-        .toSorted()
-    },
-
-    async parsePrinciple(options: { slug: string }): Promise<Principle> {
-      return parsePrincipleImpl(fileSystem, dustPath, options.slug)
-    },
-
-    async listPrinciples(): Promise<string[]> {
-      const principlesPath = `${dustPath}/principles`
-      if (!fileSystem.exists(principlesPath)) {
-        return []
-      }
-      const files = await fileSystem.readdir(principlesPath)
-      return files
-        .filter(f => f.endsWith('.md'))
-        .map(f => f.replace(/\.md$/, ''))
-        .toSorted()
-    },
-
-    async parseFact(options: { slug: string }): Promise<Fact> {
-      return parseFactImpl(fileSystem, dustPath, options.slug)
-    },
-
-    async listFacts(): Promise<string[]> {
-      const factsPath = `${dustPath}/facts`
-      if (!fileSystem.exists(factsPath)) {
-        return []
-      }
-      const files = await fileSystem.readdir(factsPath)
-      return files
-        .filter(f => f.endsWith('.md'))
-        .map(f => f.replace(/\.md$/, ''))
-        .toSorted()
-    },
-
-    async parseTask(options: { slug: string }): Promise<Task> {
-      return parseTaskImpl(fileSystem, dustPath, options.slug)
-    },
-
-    async listTasks(): Promise<string[]> {
-      const tasksPath = `${dustPath}/tasks`
-      if (!fileSystem.exists(tasksPath)) {
-        return []
-      }
-      const files = await fileSystem.readdir(tasksPath)
-      return files
-        .filter(f => f.endsWith('.md'))
-        .map(f => f.replace(/\.md$/, ''))
-        .toSorted()
-    },
-
-    async findWorkflowTaskForIdea(options: {
-      ideaSlug: string
-    }): Promise<WorkflowTaskMatch | null> {
-      return findWorkflowTaskForIdeaImpl(fileSystem, dustPath, options.ideaSlug)
-    },
-
-    async parseCaptureIdeaTask(options: {
-      taskSlug: string
-    }): Promise<ParsedCaptureIdeaTask | null> {
-      return parseCaptureIdeaTaskImpl(fileSystem, dustPath, options.taskSlug)
-    },
-
-    async buildTaskGraph(): Promise<TaskGraph> {
-      const taskSlugs = await this.listTasks()
-      const allWorkflowTasks = await findAllWorkflowTasks(fileSystem, dustPath)
-
-      const workflowTypeByTaskSlug = new Map<string, WorkflowTaskType>()
-      for (const match of allWorkflowTasks.workflowTasksByIdeaSlug.values()) {
-        workflowTypeByTaskSlug.set(match.taskSlug, match.type)
-      }
-
-      const nodes: TaskGraphNode[] = []
-      const edges: Array<{ from: string; to: string }> = []
-
-      for (const slug of taskSlugs) {
-        const task = await this.parseTask({ slug })
-        nodes.push({
-          task,
-          workflowType: workflowTypeByTaskSlug.get(slug) ?? null,
-        })
-
-        for (const blockerSlug of task.blockedBy) {
-          edges.push({ from: blockerSlug, to: slug })
-        }
-      }
-
-      return { nodes, edges }
-    },
-  }
+): ReadOnlyArtifactsRepository {
+  return buildReadOperations(fileSystem, dustPath)
 }
