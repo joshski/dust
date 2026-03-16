@@ -1300,6 +1300,65 @@ function algorithms(): string {
   `
 }
 
+function loggingAndTraceability(): string {
+  return dedent`
+    # Logging and Traceability
+
+    Review logging practices for runtime observability and diagnostic usefulness.
+
+    ${ideasHint}
+
+    ## Scope
+
+    Focus on these areas:
+
+    1. **Runtime observability** - Is it easy to understand what's happening when the application runs?
+    2. **Diagnostic usefulness** - Is it easy for agents and humans to use logs to diagnose issues at development time?
+    3. **Log levels** - Are appropriate log levels used (debug, info, warn, error)?
+    4. **Contextual information** - Do logs include enough context to trace execution flow?
+    5. **Structured logging** - Are logs structured (e.g., JSON) for easy parsing?
+    6. **Log consistency** - Do similar operations produce similar log output?
+
+    ## Analysis Steps
+
+    1. Identify logging calls throughout the codebase (\`console.log\`, \`logger.info\`, etc.)
+    2. Review error handling paths for appropriate error logging
+    3. Check if logs include enough context (operation name, relevant IDs, timestamps)
+    4. Look for silent failures - catch blocks without logging
+    5. Evaluate whether running the application produces understandable output
+    6. Test whether logs help diagnose common failure scenarios
+
+    ## Output
+
+    For each finding, provide:
+    - **Location** - File path and line number
+    - **Category** - Which area of concern (observability, diagnostic usefulness, log levels, context, structure, consistency)
+    - **Issue** - What's missing or problematic
+    - **Impact** - How this affects debugging or understanding system behavior
+    - **Suggestion** - Specific improvement (add logging, change level, add context, etc.)
+
+    ## Principles
+
+    - [Development Traceability](../principles/development-traceability.md) - Structured logging helps agents understand system behavior
+    - [Debugging Tooling](../principles/debugging-tooling.md) - Agents need effective tools for diagnosing issues
+    - [Actionable Errors](../principles/actionable-errors.md) - Error logs should guide next steps
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - Reviewed logging coverage across the codebase
+    - Identified silent failures (catch blocks without logging)
+    - Evaluated log levels for appropriateness
+    - Checked logs for sufficient context (operation names, IDs, relevant state)
+    - Assessed whether running the application produces understandable output
+    - Tested whether logs help diagnose common failure scenarios
+    - Proposed ideas for any logging improvements identified
+  `
+}
+
 function testPyramid(): string {
   return dedent`
     # Test Pyramid
@@ -1474,6 +1533,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'global-state': globalState,
   'ideas-from-commits': ideasFromCommits,
   'ideas-from-principles': ideasFromPrinciples,
+  'logging-and-traceability': loggingAndTraceability,
   'naming-consistency': namingConsistency,
   'performance-review': performanceReview,
   'primitive-obsession': primitiveObsession,
