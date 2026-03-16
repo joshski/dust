@@ -19,6 +19,11 @@ import type {
   FileSystem,
 } from '../types'
 
+interface TaskFile {
+  file: string
+  content: string
+}
+
 function hasRequiredHeadings(content: string): boolean {
   return (
     /^## Blocked By\s*$/m.test(content) &&
@@ -31,13 +36,9 @@ function extractBlockedBy(content: string): string[] {
   const blockedByMatch = content.match(
     /^## Blocked By\s*\n([\s\S]*?)(?=\n## |\n*$)/m
   )
-  /* v8 ignore start -- only called on valid tasks that always have ## Blocked By */
-  if (!blockedByMatch) {
-    return []
-  }
-  /* v8 ignore stop */
 
-  const section = blockedByMatch[1].trim()
+  // hasRequiredHeadings guarantees this section exists
+  const section = blockedByMatch![1].trim()
 
   // Check for "(none)" which means no blockers
   if (section === '(none)') {
@@ -110,20 +111,18 @@ export async function findUnblockedTasks(
     return { tasks: [], invalidTasks: [] }
   }
 
-  const taskContents = new Map<string, string>()
+  const taskFiles: TaskFile[] = []
   for (const file of mdFiles) {
     const filePath = `${tasksPath}/${file}`
-    taskContents.set(file, await fileSystem.readFile(filePath))
+    taskFiles.push({ file, content: await fileSystem.readFile(filePath) })
   }
 
-  const validTaskFiles: string[] = []
+  const validTaskFiles: TaskFile[] = []
   const invalidTasks: InvalidTask[] = []
 
-  for (const file of mdFiles) {
-    const content =
-      /* v8 ignore start */ taskContents.get(file) ?? '' /* v8 ignore stop */
+  for (const { file, content } of taskFiles) {
     if (hasRequiredHeadings(content)) {
-      validTaskFiles.push(file)
+      validTaskFiles.push({ file, content })
     } else {
       const violations = validateTaskHeadings(`.dust/tasks/${file}`, content)
       invalidTasks.push({
@@ -134,13 +133,11 @@ export async function findUnblockedTasks(
   }
 
   // Only valid task files participate in blocker evaluation.
-  const existingTasks = new Set(validTaskFiles)
+  const existingTasks = new Set(validTaskFiles.map(t => t.file))
 
   const tasks: UnblockedTask[] = []
 
-  for (const file of validTaskFiles) {
-    const content =
-      /* v8 ignore start */ taskContents.get(file) ?? '' /* v8 ignore stop */
+  for (const { file, content } of validTaskFiles) {
     const blockers = extractBlockedBy(content)
 
     // Check if any blockers still exist (are incomplete)
