@@ -930,6 +930,14 @@ describe('lintMarkdown command', () => {
     )
   })
 
+  test('returns non-absolute paths unchanged', () => {
+    expect(renderViolationPath('relative/path', '/cwd')).toBe('relative/path')
+  })
+
+  test('returns filePath when it equals cwd', () => {
+    expect(renderViolationPath('/cwd', '/cwd')).toBe('/cwd')
+  })
+
   test('fails if .dust not found', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator()
