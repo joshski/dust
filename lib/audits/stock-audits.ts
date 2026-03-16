@@ -1004,6 +1004,81 @@ function ubiquitousLanguage(): string {
   `
 }
 
+function designPatterns(): string {
+  return dedent`
+    # Design Patterns
+
+    Identify refactoring opportunities to recognized design patterns using code smell triggers.
+
+    ${ideasHint}
+
+    ## Scope
+
+    This audit surfaces opportunities to apply design patterns systematically using code smell triggers rather than structural heuristics. Use a low threshold for flagging patterns and let users filter relevance.
+
+    ## Code Smell Triggers
+
+    Flag patterns based on code smells that suggest pattern opportunities:
+
+    1. **Switch statements on type** - Multiple switch/if-else chains branching on a type field suggest **Strategy** pattern (or discriminated unions in functional codebases)
+    2. **Repeated object construction** - Similar multi-step object creation scattered across files suggests **Factory** pattern
+    3. **Inconsistent interfaces** - Multiple implementations of similar behavior with different method signatures suggest interface **formalization**
+    4. **Complex conditional creation logic** - Functions with many parameters or conditional object assembly suggest **Builder** pattern
+    5. **State with multiple transitions** - Objects with mode/status fields and complex state transition logic suggest **State** pattern
+    6. **Notification chains** - Manual event propagation or callback chains suggest **Observer** pattern
+
+    ## Analysis Steps
+
+    1. Search for switch statements and if-else chains that branch on type/kind/mode fields
+    2. Look for similar object construction patterns repeated across multiple files
+    3. Identify classes/interfaces with inconsistent method signatures for similar operations
+    4. Find functions with 4+ parameters for object creation or complex conditional assembly
+    5. Search for status/state/mode fields with multiple transition conditions
+    6. Look for manual notification or callback propagation patterns
+
+    ## Output Per Finding
+
+    For each finding, provide:
+    - **Location** - File and line range
+    - **Code smell** - What triggered this recommendation (switch on type, repeated construction, etc.)
+    - **Recommended pattern** - The suggested design pattern (Gang of Four name where applicable, or modern alternative)
+    - **Trade-off analysis** - Pros (e.g., "Easier to add new types without modifying existing code") and cons (e.g., "Adds indirection, may be overkill for 2-3 cases")
+    - **Migration complexity** - Low/Medium/High estimate with brief rationale
+
+    ## Tech-Stack Considerations
+
+    - Mention Gang of Four patterns by name where applicable
+    - Note when patterns may not apply:
+      - **Strategy** is less relevant in functional codebases where functions are first-class
+      - **Visitor** can often be replaced with discriminated unions and exhaustive pattern matching
+      - **Observer** may be superseded by reactive frameworks or event emitters
+    - Suggest modern alternatives where appropriate (e.g., discriminated unions, higher-order functions, dependency injection)
+
+    ## Principles
+
+    - [Functional Core, Imperative Shell](../principles/functional-core-imperative-shell.md) - Preserve pure core and thin shell boundaries in recommendations
+    - [Make the Change Easy](../principles/make-the-change-easy.md) - Pattern adoption should simplify future changes
+    - [Decoupled Code](../principles/decoupled-code.md) - Patterns should reduce coupling, not add complexity
+    - [Design for Testability](../principles/design-for-testability.md) - Pattern recommendations should improve testability
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - Searched for switch statements on type/kind/mode fields
+    - Identified repeated object construction patterns
+    - Found inconsistent interfaces for similar behavior
+    - Located complex conditional creation logic
+    - Searched for state fields with multiple transitions
+    - Identified notification chain patterns
+    - Documented each finding with location, code smell, recommended pattern, trade-offs, and migration complexity
+    - Noted tech-stack considerations where Gang of Four patterns may or may not apply
+    - Proposed ideas for any design pattern improvements identified
+  `
+}
+
 function uxAudit(): string {
   return dedent`
     # UX Audit
@@ -1081,6 +1156,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'coverage-exclusions': coverageExclusions,
   'data-access-review': dataAccessReview,
   'dead-code': deadCode,
+  'design-patterns': designPatterns,
   'error-handling': errorHandling,
   'facts-verification': factsVerification,
   'global-state': globalState,
