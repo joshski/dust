@@ -647,6 +647,221 @@ describe('parseServerMessage', () => {
       }
       expect(parseServerMessage(data)).toBeNull()
     })
+
+    it('parses tool with children (tool family)', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'sessions',
+            description: 'Access historic agent sessions',
+            endpoint: '/api/sessions',
+            method: 'GET',
+            parameters: [],
+            children: [
+              {
+                name: 'list',
+                description: 'List all sessions',
+                endpoint: '/api/sessions/list',
+                method: 'GET',
+                parameters: [],
+              },
+              {
+                name: 'view',
+                description: 'View a specific session',
+                endpoint: '/api/sessions/view',
+                method: 'GET',
+                parameters: [
+                  {
+                    name: 'id',
+                    type: 'string',
+                    required: true,
+                    description: 'Session ID',
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }
+      const result = parseServerMessage(data)
+      expect(result).toEqual({
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'sessions',
+            description: 'Access historic agent sessions',
+            endpoint: '/api/sessions',
+            method: 'GET',
+            parameters: [],
+            children: [
+              {
+                name: 'list',
+                description: 'List all sessions',
+                endpoint: '/api/sessions/list',
+                method: 'GET',
+                parameters: [],
+              },
+              {
+                name: 'view',
+                description: 'View a specific session',
+                endpoint: '/api/sessions/view',
+                method: 'GET',
+                parameters: [
+                  {
+                    name: 'id',
+                    type: 'string',
+                    required: true,
+                    description: 'Session ID',
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+    })
+
+    it('parses tool with empty children array', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'empty-family',
+            description: 'A family with no children',
+            endpoint: '/api/empty',
+            method: 'GET',
+            parameters: [],
+            children: [],
+          },
+        ],
+      }
+      const result = parseServerMessage(data)
+      expect(result).toEqual({
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'empty-family',
+            description: 'A family with no children',
+            endpoint: '/api/empty',
+            method: 'GET',
+            parameters: [],
+            children: [],
+          },
+        ],
+      })
+    })
+
+    it('omits children when not present', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'simple',
+            description: 'A simple tool',
+            endpoint: '/api/simple',
+            method: 'GET',
+            parameters: [],
+          },
+        ],
+      }
+      const result = parseServerMessage(data)
+      const tool = (result as { tools: { children?: unknown }[] }).tools[0]
+      expect('children' in tool).toBe(false)
+    })
+
+    it('returns null for children with non-array value', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'invalid',
+            description: 'Invalid children',
+            endpoint: '/api/invalid',
+            method: 'GET',
+            parameters: [],
+            children: 'not-an-array',
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for invalid child tool', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'parent',
+            description: 'Parent tool',
+            endpoint: '/api/parent',
+            method: 'GET',
+            parameters: [],
+            children: [
+              {
+                name: 'invalid-child',
+                // missing description
+                endpoint: '/api/child',
+                method: 'GET',
+                parameters: [],
+              },
+            ],
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for nested children (max one level deep)', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'grandparent',
+            description: 'Grandparent tool',
+            endpoint: '/api/grandparent',
+            method: 'GET',
+            parameters: [],
+            children: [
+              {
+                name: 'parent',
+                description: 'Parent tool',
+                endpoint: '/api/parent',
+                method: 'GET',
+                parameters: [],
+                children: [
+                  {
+                    name: 'child',
+                    description: 'Child tool',
+                    endpoint: '/api/child',
+                    method: 'GET',
+                    parameters: [],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for null child in children array', () => {
+      const data = {
+        type: 'tool-definitions',
+        tools: [
+          {
+            name: 'parent',
+            description: 'Parent tool',
+            endpoint: '/api/parent',
+            method: 'GET',
+            parameters: [],
+            children: [null],
+          },
+        ],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
   })
 
   describe('invalid messages', () => {

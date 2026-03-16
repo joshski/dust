@@ -101,6 +101,7 @@ interface ToolDefinition {
   endpoint: string    // API endpoint path
   method: 'GET' | 'POST'
   parameters: ToolParameter[]
+  children?: ToolDefinition[]  // Sub-tools, max one level deep
 }
 
 interface ToolParameter {
@@ -111,7 +112,9 @@ interface ToolParameter {
 }
 ```
 
-All fields are required. The `tools` array may be empty if no server-defined tools are available.
+All fields except `children` are required. The `tools` array may be empty if no server-defined tools are available.
+
+**Tool Families**: Tools may have an optional `children` array containing sub-tools. Children follow the same structure as parent tools, but cannot themselves have children (max one level deep). In agent prompts, tools with children are rendered as summaries without sub-tool details, implementing progressive disclosure to save context window space.
 
 On receiving this message, clients store the tool definitions for use in agent prompts. The server maintains backwards compatibility; older clients that don't recognize this message type will ignore it.
 

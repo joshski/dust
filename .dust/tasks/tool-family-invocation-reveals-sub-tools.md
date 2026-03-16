@@ -58,7 +58,7 @@ Retrieve a specific session by ID
 
 ## Blocked By
 
-- [Tool Families: Protocol and Rendering](tool-families-protocol-and-rendering.md)
+(none)
 
 ## Definition of Done
 

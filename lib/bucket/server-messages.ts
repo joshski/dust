@@ -31,6 +31,7 @@ export interface ToolDefinition {
   endpoint: string
   method: 'GET' | 'POST'
   parameters: ToolParameter[]
+  children?: ToolDefinition[] // Sub-tools, max one level deep
 }
 
 export interface ToolDefinitionsMessage {
@@ -42,6 +43,91 @@ export type ServerMessage =
   | RepositoryListMessage
   | TaskAvailableMessage
   | ToolDefinitionsMessage
+
+function parseParameter(p: unknown): ToolParameter | null {
+  if (typeof p !== 'object' || p === null) {
+    return null
+  }
+  const param = p as Record<string, unknown>
+  if (
+    typeof param.name !== 'string' ||
+    typeof param.description !== 'string' ||
+    typeof param.required !== 'boolean'
+  ) {
+    return null
+  }
+  if (
+    param.type !== 'string' &&
+    param.type !== 'file' &&
+    param.type !== 'number' &&
+    param.type !== 'boolean'
+  ) {
+    return null
+  }
+  return {
+    name: param.name,
+    description: param.description,
+    required: param.required,
+    type: param.type,
+  }
+}
+
+function parseTool(t: unknown, allowChildren: boolean): ToolDefinition | null {
+  if (typeof t !== 'object' || t === null) {
+    return null
+  }
+  const tool = t as Record<string, unknown>
+  if (
+    typeof tool.name !== 'string' ||
+    typeof tool.description !== 'string' ||
+    typeof tool.endpoint !== 'string'
+  ) {
+    return null
+  }
+  if (tool.method !== 'GET' && tool.method !== 'POST') {
+    return null
+  }
+  if (!Array.isArray(tool.parameters)) {
+    return null
+  }
+  const parameters: ToolParameter[] = []
+  for (const p of tool.parameters) {
+    const param = parseParameter(p)
+    if (param === null) {
+      return null
+    }
+    parameters.push(param)
+  }
+
+  const result: ToolDefinition = {
+    name: tool.name,
+    description: tool.description,
+    endpoint: tool.endpoint,
+    method: tool.method,
+    parameters,
+  }
+
+  if (tool.children !== undefined) {
+    if (!allowChildren) {
+      // Children cannot have children (max one level deep)
+      return null
+    }
+    if (!Array.isArray(tool.children)) {
+      return null
+    }
+    const children: ToolDefinition[] = []
+    for (const c of tool.children) {
+      const child = parseTool(c, false)
+      if (child === null) {
+        return null
+      }
+      children.push(child)
+    }
+    result.children = children
+  }
+
+  return result
+}
 
 /**
  * Parse and validate a server message from raw JSON data.
@@ -105,58 +191,11 @@ export function parseServerMessage(data: unknown): ServerMessage | null {
     }
     const tools: ToolDefinition[] = []
     for (const t of message.tools) {
-      if (typeof t !== 'object' || t === null) {
+      const tool = parseTool(t, true)
+      if (tool === null) {
         return null
       }
-      const tool = t as Record<string, unknown>
-      if (
-        typeof tool.name !== 'string' ||
-        typeof tool.description !== 'string' ||
-        typeof tool.endpoint !== 'string'
-      ) {
-        return null
-      }
-      if (tool.method !== 'GET' && tool.method !== 'POST') {
-        return null
-      }
-      if (!Array.isArray(tool.parameters)) {
-        return null
-      }
-      const parameters: ToolParameter[] = []
-      for (const p of tool.parameters) {
-        if (typeof p !== 'object' || p === null) {
-          return null
-        }
-        const param = p as Record<string, unknown>
-        if (
-          typeof param.name !== 'string' ||
-          typeof param.description !== 'string' ||
-          typeof param.required !== 'boolean'
-        ) {
-          return null
-        }
-        if (
-          param.type !== 'string' &&
-          param.type !== 'file' &&
-          param.type !== 'number' &&
-          param.type !== 'boolean'
-        ) {
-          return null
-        }
-        parameters.push({
-          name: param.name,
-          description: param.description,
-          required: param.required,
-          type: param.type,
-        })
-      }
-      tools.push({
-        name: tool.name,
-        description: tool.description,
-        endpoint: tool.endpoint,
-        method: tool.method,
-        parameters,
-      })
+      tools.push(tool)
     }
     return { type: 'tool-definitions', tools }
   }

@@ -13,9 +13,31 @@ function formatParameter(param: ToolParameter): string {
 }
 
 /**
+ * Format a tool family (tool with children) as a summary.
+ * Sub-tool details are hidden to save context window space.
+ */
+function formatToolFamily(tool: ToolDefinition): string {
+  const lines: string[] = []
+
+  lines.push(`### ${tool.name}`)
+  lines.push(tool.description)
+  lines.push('')
+  lines.push(
+    `Usage: \`dust bucket tool ${tool.name}\` (run to see available operations)`
+  )
+
+  return lines.join('\n')
+}
+
+/**
  * Format a single tool definition for the tools section.
  */
 function formatTool(tool: ToolDefinition): string {
+  // Tools with children render as summaries (progressive disclosure)
+  if (tool.children && tool.children.length > 0) {
+    return formatToolFamily(tool)
+  }
+
   const lines: string[] = []
 
   lines.push(`### ${tool.name}`)
