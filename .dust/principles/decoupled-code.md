@@ -13,3 +13,4 @@ Decoupled code is easier to test, understand, and modify. Dependencies are passe
 - [Dependency Injection](dependency-injection.md)
 - [Stubs Over Mocks](stubs-over-mocks.md)
 - [Functional Core, Imperative Shell](functional-core-imperative-shell.md)
+- [Design for Testability](design-for-testability.md)
