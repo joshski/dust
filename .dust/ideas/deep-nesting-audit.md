@@ -6,51 +6,70 @@ Add a stock audit that identifies deeply nested control flow that obscures the h
 
 There is no stock audit specifically targeting nesting depth and control-flow readability.
 
-Current examples:
-- `lib/markdown/markdown-utilities.ts` `extractOpeningSentence(...)` (`29-98`) uses multiple loops and compound condition blocks to parse structure and extract content.
-- `lib/cli/commands/bucket.ts` has effect interpreters and connection handling with nested switch/if structures (`718-830`, `952-1002`, `1092-1106`) that are correct but expensive to scan.
+The examples originally cited in this idea no longer exist:
+- `extractOpeningSentence(...)` in `lib/markdown/markdown-utilities.ts` has been refactored to use early returns and has max depth 3 (acceptable)
+- `lib/cli/commands/bucket.ts` no longer exists (code has been split into `lib/bucket/` modules)
 
-This mainly impacts comprehension speed and correctness when making targeted edits.
+Running `oxlint -D max-depth` finds 4 violations in the codebase at depth 5, all in proxy code and lint validators.
 
-## Proposed Audit
+## Lint Rules vs Audit
 
-Add a stock audit named `deep-nesting` in `lib/audits/stock-audits.ts`.
+oxlint already provides [`max-depth`](https://oxc.rs/docs/guide/usage/linter/rules/eslint/max-depth) and [`max-nested-callbacks`](https://oxc.rs/docs/guide/usage/linter/rules/eslint/max-nested-callbacks) rules that catch mechanical nesting depth violations:
 
-Template focus:
-1. 3+ nested conditional/loop levels
-2. Nested switch/if trees where guard clauses or extraction could flatten control flow
-3. Blocks where "happy path" is hidden behind exceptional cases
-4. Recommendations using extraction or early-return patterns
+**Advantages of lint rules:**
+- Instant feedback during `dust check`
+- Configurable threshold (default 4, can be set via `.oxlintrc.json`)
+- Zero agent context required - runs automatically
+- Already available - no implementation needed
 
-Required output per finding:
-- Location
-- Nesting pattern summary
-- Comprehension impact
-- Concrete flattening recommendation
+**What a lint rule cannot catch:**
+- Semantic "happy path obscured" patterns where depth is acceptable but flow is hard to follow
+- Cases where early-return refactoring would help even at depth 3
+- Qualitative recommendations for flattening specific patterns
 
-## Relationship to Existing Audits
+## Recommendation
 
-- Complements `refactoring-opportunities` by targeting a specific structural smell independent of commit history.
-- Complements `error-handling` by improving readability of error branches without redefining error policy.
+Enable `max-depth` as a lint rule rather than creating a stock audit. The [Lint Everything](../principles/lint-everything.md) principle favours static analysis over periodic audits: "Every error caught by a linter is an error that never reaches tests."
+
+A deep-nesting audit would only add value if it performed semantic analysis beyond pure depth counting. Since the original motivation was mechanical depth detection, the lint rule addresses the need more directly.
+
+If semantic analysis of control flow readability is desired, it should be scoped separately as an audit focused on "happy path clarity" or "early-return opportunities" rather than nesting depth.
+
+## Implementation Path
+
+1. Add `max-depth` to `.oxlintrc.json`:
+   ```json
+   {
+     "rules": {
+       "max-depth": ["error", { "max": 4 }]
+     }
+   }
+   ```
+2. Fix the 4 existing violations in `lib/proxy/` and `lib/lint/validators/`
+3. Optionally add `max-nested-callbacks` for callback-heavy code
 
 ## Open Questions
 
-### How should nesting severity be scored?
+### Should max-depth be enabled by default?
 
-#### Option: Pure depth threshold
+#### Option: Enable with threshold 4
 
-Severity rises at depth 3/4/5+ regardless of function size.
+Use oxlint's default threshold of 4. This catches egregious nesting (depth 5+) while allowing reasonable patterns.
 
-#### Option: Depth plus span
+#### Option: Enable with threshold 3
 
-Require depth and a minimum block span (for example 20+ lines) to avoid over-flagging short guarded logic.
+Stricter threshold that encourages earlier refactoring. May require fixing more existing code.
 
-### Should switch nesting be treated differently from if nesting?
+#### Option: Enable with threshold 5
 
-#### Option: Equal treatment
+Lenient threshold that only catches severe cases. Lower false-positive rate but allows more complex nesting.
 
-Any nested control tree that hides flow is scored the same.
+### Should violations block the build or warn?
 
-#### Option: Switch-aware treatment
+#### Option: Error (blocking)
 
-Allow deeper switch nesting before flagging, since effect dispatch naturally uses switch patterns.
+Violations fail `dust check`, enforcing the constraint immediately. Aligns with "stop the line" principle.
+
+#### Option: Warning (non-blocking)
+
+Violations produce warnings but don't fail the build. Allows gradual adoption without blocking work.
