@@ -221,7 +221,7 @@ describe('audit command', () => {
   test('loadStockAudits loads audits from markdown files', () => {
     const audits = loadStockAudits()
     expect(audits).toBeInstanceOf(Array)
-    expect(audits.length).toBe(28)
+    expect(audits.length).toBe(29)
 
     const names = audits.map(a => a.name)
     expect(names).toContain('agent-developer-experience')
@@ -235,6 +235,7 @@ describe('audit command', () => {
     expect(names).toContain('global-state')
     expect(names).toContain('ideas-from-commits')
     expect(names).toContain('ideas-from-principles')
+    expect(names).toContain('idiomatic-style')
     expect(names).toContain('logging-and-traceability')
     expect(names).toContain('naming-consistency')
     expect(names).toContain('performance-review')
@@ -275,6 +276,7 @@ describe('audit command', () => {
       'design-patterns',
       'error-handling',
       'global-state',
+      'idiomatic-style',
       'logging-and-traceability',
       'naming-consistency',
       'primitive-obsession',

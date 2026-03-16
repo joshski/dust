@@ -1449,6 +1449,75 @@ function testPyramid(): string {
   `
 }
 
+function idiomaticStyle(): string {
+  return dedent`
+    # Idiomatic Style
+
+    Review recent changes to ensure implementation follows idiomatic practices for the technology stack.
+
+    ${ideasHint}
+
+    ## Scope
+
+    Focus on these areas:
+
+    1. **Language idioms** - Does code follow language-specific patterns and conventions? (e.g., Python comprehensions, JavaScript destructuring, TypeScript type narrowing)
+    2. **Framework patterns** - Are framework/library APIs used as intended? (e.g., React hooks rules, Express middleware patterns, test framework best practices)
+    3. **Style consistency** - Do recent changes match the established code style in this codebase?
+    4. **Anti-patterns** - Are common pitfalls for this stack being avoided?
+    5. **Modern alternatives** - Are deprecated or outdated approaches being used where better alternatives exist?
+
+    ## Analysis Steps
+
+    1. Identify the technology stack by examining package.json, config files, or file extensions
+    2. Review recent commits (last 10-20 commits) to understand what changed
+    3. For each change, evaluate against idiomatic practices for that language/framework
+    4. Check for deviations from established patterns in the existing codebase
+    5. **IMPORTANT**: If uncertain about current best practices (e.g., due to stale training data), consult official documentation or authoritative sources for the latest guidance before flagging issues
+
+    ## Output
+
+    For each finding, provide:
+    - **Location** - File path and line numbers
+    - **Pattern** - What the code is currently doing
+    - **Idiom issue** - How this deviates from idiomatic practice
+    - **Best practice** - What the idiomatic approach would be (with reference to documentation if applicable)
+    - **Impact** - Why this matters (readability, performance, maintainability, community expectations)
+
+    ## Tech-Stack Considerations
+
+    Be specific to the detected stack. Examples:
+
+    - **TypeScript**: Prefer type narrowing over type assertions, use \`const\` assertions, leverage discriminated unions
+    - **React**: Follow hooks rules, prefer controlled components, avoid inline function definitions in JSX for performance
+    - **Node.js**: Use async/await over callbacks, prefer native ES modules, handle streams properly
+    - **Testing**: Use framework-specific matchers, follow Arrange-Act-Assert pattern, avoid test interdependence
+
+    When the technology or its ecosystem is evolving rapidly, explicitly note when findings should be verified against current documentation.
+
+    ## Principles
+
+    - [Context-Optimised Code](../principles/context-optimised-code.md) - Idiomatic code is easier for agents and humans to understand
+    - [Maintainable Codebase](../principles/maintainable-codebase.md) - Following conventions reduces cognitive load
+    - [Consistent Naming](../principles/consistent-naming.md) - Naming should follow language conventions
+    - [Boy Scout Rule](../principles/boy-scout-rule.md) - Leave code better than you found it
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - Identified the technology stack in use
+    - Reviewed recent commits for idiom issues
+    - Checked code against language and framework best practices
+    - Verified current documentation for any uncertain cases
+    - Evaluated code style consistency with rest of codebase
+    - Identified anti-patterns or deprecated approaches
+    - Proposed ideas for any idiomaticity improvements identified
+  `
+}
+
 function uxAudit(): string {
   return dedent`
     # UX Audit
@@ -1533,6 +1602,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'global-state': globalState,
   'ideas-from-commits': ideasFromCommits,
   'ideas-from-principles': ideasFromPrinciples,
+  'idiomatic-style': idiomaticStyle,
   'logging-and-traceability': loggingAndTraceability,
   'naming-consistency': namingConsistency,
   'performance-review': performanceReview,
