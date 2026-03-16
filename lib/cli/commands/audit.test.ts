@@ -221,7 +221,7 @@ describe('audit command', () => {
   test('loadStockAudits loads audits from markdown files', () => {
     const audits = loadStockAudits()
     expect(audits).toBeInstanceOf(Array)
-    expect(audits.length).toBe(25)
+    expect(audits.length).toBe(26)
 
     const names = audits.map(a => a.name)
     expect(names).toContain('agent-developer-experience')
@@ -265,6 +265,7 @@ describe('audit command', () => {
     // ubiquitous-language references naming principles that are universally applicable
     // ux-audit references actionable-errors and unsurprising-ux principles
     const auditsWithPrinciples = [
+      'algorithms',
       'checks-audit',
       'component-reuse',
       'coverage-exclusions',
