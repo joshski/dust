@@ -2,9 +2,11 @@
  * dust bucket tool - Execute a server-defined tool via the local bucket proxy
  *
  * Usage: dust bucket tool <name> [args...]
+ *        dust bucket tool <family> <sub-tool> [args...]
  */
 
 import type { ToolDefinition } from '../../bucket/server-messages'
+import { formatToolFamilyHelp } from '../../bucket/tool-prompt'
 import { DUST_PROXY_PORT, parseProxyPort } from '../../command-events-transport'
 import type { CommandDependencies, CommandResult } from '../types'
 
@@ -92,6 +94,22 @@ async function loadToolsViaProxy(
       success: false,
       error: `Tool proxy request failed: ${(error as Error).message}`,
     }
+  }
+}
+
+async function revealFamilyViaProxy(
+  familyName: string,
+  proxyPort: number,
+  fetchFn: typeof fetch
+): Promise<void> {
+  const url = `http://127.0.0.1:${proxyPort}/reveal/${encodeURIComponent(familyName)}`
+  try {
+    await fetchFn(url, {
+      method: 'POST',
+      headers: { connection: 'close' },
+    })
+  } catch {
+    // Ignore errors - revelation is best-effort
   }
 }
 
@@ -193,6 +211,51 @@ export async function bucketTool(
     return { exitCode: 1 }
   }
 
+  // Check if this is a tool family (has children)
+  const isFamily = tool.children && tool.children.length > 0
+
+  if (isFamily) {
+    // Check if a sub-tool was specified
+    const subToolName = toolArgs[0]
+    const subToolArgs = toolArgs.slice(1)
+
+    if (!subToolName) {
+      // No sub-tool specified: show help text for the family
+      // Mark the family as revealed for future prompt iterations
+      await revealFamilyViaProxy(toolName, proxyPort, toolDeps.fetch)
+      context.stdout(formatToolFamilyHelp(tool))
+      return { exitCode: 0 }
+    }
+
+    // Look up the sub-tool within the family
+    const subTool = tool.children!.find(child => child.name === subToolName)
+    if (!subTool) {
+      context.stderr(
+        `Unknown sub-tool: ${subToolName}\nRun \`dust bucket tool ${toolName}\` to see available operations.`
+      )
+      return { exitCode: 1 }
+    }
+
+    // Execute the sub-tool via proxy (using family/sub-tool path)
+    const result = await executeToolViaProxy(
+      `${toolName}/${subToolName}`,
+      subToolArgs,
+      repositoryId,
+      proxyPort,
+      toolDeps.fetch
+    )
+    if (result.success) {
+      if (result.output) {
+        context.stdout(result.output)
+      }
+      return { exitCode: 0 }
+    }
+
+    context.stderr(result.error || 'Tool execution failed')
+    return { exitCode: 1 }
+  }
+
+  // Regular tool execution (no children)
   const result = await executeToolViaProxy(
     toolName,
     toolArgs,

@@ -528,4 +528,387 @@ describe('bucketTool', () => {
       'Tool proxy request failed: connect ECONNREFUSED'
     )
   })
+
+  test('shows help text when invoking a tool family without a sub-tool', async () => {
+    const toolFamily: ToolDefinition[] = [
+      {
+        name: 'sessions',
+        description: 'Access historic agent sessions',
+        endpoint: '/api/sessions',
+        method: 'GET',
+        parameters: [],
+        children: [
+          {
+            name: 'search',
+            description: 'Search through past sessions',
+            endpoint: '/api/sessions/search',
+            method: 'GET',
+            parameters: [
+              {
+                name: 'query',
+                type: 'string',
+                required: true,
+                description: 'Search term',
+              },
+            ],
+          },
+        ],
+      },
+    ]
+    const commandDependencies = createCommandDependencies(['sessions'])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+
+    const requests: Array<{ url: string; method: string }> = []
+    const mockFetch = async (input: URL | RequestInfo, init?: RequestInit) => {
+      requests.push({
+        url: String(input),
+        method: String(init?.method ?? 'GET'),
+      })
+
+      if (String(input).endsWith('/tools')) {
+        return new Response(JSON.stringify({ tools: toolFamily }), {
+          status: 200,
+        })
+      }
+
+      // Reveal endpoint
+      return new Response('OK', { status: 200 })
+    }
+
+    const result = await bucketTool(
+      commandDependencies,
+      createToolDependencies(createFetchStub(mockFetch)),
+      {
+        DUST_REPOSITORY_ID: 'repo-id',
+        DUST_PROXY_PORT: '4444',
+      }
+    )
+
+    expect(result.exitCode).toBe(0)
+    const stdout = context.stdoutLines.join('\n')
+    expect(stdout).toContain('## sessions')
+    expect(stdout).toContain('Access historic agent sessions')
+    expect(stdout).toContain('### search')
+    expect(stdout).toContain('Search through past sessions')
+    expect(stdout).toContain(
+      'Usage: `dust bucket tool sessions search <query>`'
+    )
+
+    // Should have called reveal endpoint
+    const revealRequest = requests.find(r => r.url.includes('/reveal/'))
+    expect(revealRequest).toBeDefined()
+    expect(revealRequest?.url).toContain('/reveal/sessions')
+    expect(revealRequest?.method).toBe('POST')
+  })
+
+  test('executes sub-tool when invoking a tool family with a sub-tool', async () => {
+    const toolFamily: ToolDefinition[] = [
+      {
+        name: 'sessions',
+        description: 'Access historic agent sessions',
+        endpoint: '/api/sessions',
+        method: 'GET',
+        parameters: [],
+        children: [
+          {
+            name: 'search',
+            description: 'Search through past sessions',
+            endpoint: '/api/sessions/search',
+            method: 'GET',
+            parameters: [
+              {
+                name: 'query',
+                type: 'string',
+                required: true,
+                description: 'Search term',
+              },
+            ],
+          },
+        ],
+      },
+    ]
+    const commandDependencies = createCommandDependencies([
+      'sessions',
+      'search',
+      'my-query',
+    ])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+
+    const requests: Array<{ url: string; method: string; body: string }> = []
+    const mockFetch = async (input: URL | RequestInfo, init?: RequestInit) => {
+      requests.push({
+        url: String(input),
+        method: String(init?.method ?? 'GET'),
+        body: String(init?.body ?? ''),
+      })
+
+      if (String(input).endsWith('/tools')) {
+        return new Response(JSON.stringify({ tools: toolFamily }), {
+          status: 200,
+        })
+      }
+
+      // Tool execution endpoint
+      return new Response(
+        JSON.stringify({
+          success: true,
+          output: 'Search results here',
+          status: 'success',
+        }),
+        { status: 200 }
+      )
+    }
+
+    const result = await bucketTool(
+      commandDependencies,
+      createToolDependencies(createFetchStub(mockFetch)),
+      {
+        DUST_REPOSITORY_ID: 'repo-id',
+        DUST_PROXY_PORT: '4444',
+      }
+    )
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain('Search results here')
+
+    // Should have called tool execution endpoint with family/sub-tool path
+    const execRequest = requests.find(r =>
+      r.url.includes('/tools/sessions%2Fsearch')
+    )
+    expect(execRequest).toBeDefined()
+    expect(execRequest?.method).toBe('POST')
+    expect(execRequest?.body).toContain('"arguments":["my-query"]')
+  })
+
+  test('returns error when invoking unknown sub-tool', async () => {
+    const toolFamily: ToolDefinition[] = [
+      {
+        name: 'sessions',
+        description: 'Access historic agent sessions',
+        endpoint: '/api/sessions',
+        method: 'GET',
+        parameters: [],
+        children: [
+          {
+            name: 'search',
+            description: 'Search through past sessions',
+            endpoint: '/api/sessions/search',
+            method: 'GET',
+            parameters: [],
+          },
+        ],
+      },
+    ]
+    const commandDependencies = createCommandDependencies([
+      'sessions',
+      'unknown',
+    ])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+
+    const mockFetch = async () => {
+      return new Response(JSON.stringify({ tools: toolFamily }), {
+        status: 200,
+      })
+    }
+
+    const result = await bucketTool(
+      commandDependencies,
+      createToolDependencies(createFetchStub(mockFetch)),
+      {
+        DUST_REPOSITORY_ID: 'repo-id',
+        DUST_PROXY_PORT: '4444',
+      }
+    )
+
+    expect(result.exitCode).toBe(1)
+    const stderr = context.stderrLines.join('\n')
+    expect(stderr).toContain('Unknown sub-tool: unknown')
+    expect(stderr).toContain(
+      'Run `dust bucket tool sessions` to see available operations'
+    )
+  })
+
+  test('returns error when sub-tool execution fails', async () => {
+    const toolFamily: ToolDefinition[] = [
+      {
+        name: 'sessions',
+        description: 'Access historic agent sessions',
+        endpoint: '/api/sessions',
+        method: 'GET',
+        parameters: [],
+        children: [
+          {
+            name: 'search',
+            description: 'Search through past sessions',
+            endpoint: '/api/sessions/search',
+            method: 'GET',
+            parameters: [],
+          },
+        ],
+      },
+    ]
+    const commandDependencies = createCommandDependencies([
+      'sessions',
+      'search',
+      'my-query',
+    ])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+
+    let requestCount = 0
+    const mockFetch = async () => {
+      requestCount++
+      if (requestCount === 1) {
+        return new Response(JSON.stringify({ tools: toolFamily }), {
+          status: 200,
+        })
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'sub-tool upstream failed',
+          status: 'error',
+        }),
+        { status: 502 }
+      )
+    }
+
+    const result = await bucketTool(
+      commandDependencies,
+      createToolDependencies(createFetchStub(mockFetch)),
+      {
+        DUST_REPOSITORY_ID: 'repo-id',
+        DUST_PROXY_PORT: '4444',
+      }
+    )
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('sub-tool upstream failed')
+  })
+
+  test('returns generic error when sub-tool execution fails without error message', async () => {
+    const toolFamily: ToolDefinition[] = [
+      {
+        name: 'sessions',
+        description: 'Access historic agent sessions',
+        endpoint: '/api/sessions',
+        method: 'GET',
+        parameters: [],
+        children: [
+          {
+            name: 'delete',
+            description: 'Delete a session',
+            endpoint: '/api/sessions/delete',
+            method: 'POST',
+            parameters: [],
+          },
+        ],
+      },
+    ]
+    const commandDependencies = createCommandDependencies([
+      'sessions',
+      'delete',
+      'session-123',
+    ])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+
+    let requestCount = 0
+    const mockFetch = async () => {
+      requestCount++
+      if (requestCount === 1) {
+        return new Response(JSON.stringify({ tools: toolFamily }), {
+          status: 200,
+        })
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          status: 'error',
+        }),
+        { status: 502 }
+      )
+    }
+
+    const result = await bucketTool(
+      commandDependencies,
+      createToolDependencies(createFetchStub(mockFetch)),
+      {
+        DUST_REPOSITORY_ID: 'repo-id',
+        DUST_PROXY_PORT: '4444',
+      }
+    )
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain('Tool execution failed')
+  })
+
+  test('handles sub-tool success without output', async () => {
+    const toolFamily: ToolDefinition[] = [
+      {
+        name: 'sessions',
+        description: 'Access historic agent sessions',
+        endpoint: '/api/sessions',
+        method: 'GET',
+        parameters: [],
+        children: [
+          {
+            name: 'delete',
+            description: 'Delete a session',
+            endpoint: '/api/sessions/delete',
+            method: 'POST',
+            parameters: [],
+          },
+        ],
+      },
+    ]
+    const commandDependencies = createCommandDependencies([
+      'sessions',
+      'delete',
+      'session-123',
+    ])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+
+    let requestCount = 0
+    const mockFetch = async () => {
+      requestCount++
+      if (requestCount === 1) {
+        return new Response(JSON.stringify({ tools: toolFamily }), {
+          status: 200,
+        })
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          status: 'success',
+        }),
+        { status: 200 }
+      )
+    }
+
+    const result = await bucketTool(
+      commandDependencies,
+      createToolDependencies(createFetchStub(mockFetch)),
+      {
+        DUST_REPOSITORY_ID: 'repo-id',
+        DUST_PROXY_PORT: '4444',
+      }
+    )
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines).toEqual([])
+  })
 })

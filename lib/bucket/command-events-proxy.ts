@@ -34,6 +34,7 @@ interface CommandEventsProxyHandlers {
   forwardToolExecution: (
     request: ToolExecutionRequest
   ) => Promise<ToolExecutionResult>
+  revealFamily?: (familyName: string) => void
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -64,7 +65,14 @@ function isToolExecutionRequestBody(
 }
 
 function parseToolName(pathname: string): string | null {
-  const match = pathname.match(/^\/tools\/([^/]+)$/)
+  // Matches /tools/<name> or /tools/<family>/<subtool>
+  const match = pathname.match(/^\/tools\/(.+)$/)
+  if (!match) return null
+  return decodeURIComponent(match[1])
+}
+
+function parseRevealFamily(pathname: string): string | null {
+  const match = pathname.match(/^\/reveal\/([^/]+)$/)
   if (!match) return null
   return decodeURIComponent(match[1])
 }
@@ -154,6 +162,21 @@ export async function startCommandEventsProxy(
         return
       }
 
+      // Handle family reveal requests: POST /reveal/<family>
+      const revealFamily = parseRevealFamily(pathname)
+      if (revealFamily) {
+        if (method !== 'POST') {
+          response.writeHead(405).end('Method Not Allowed')
+          return
+        }
+        if (handlers.revealFamily) {
+          handlers.revealFamily(revealFamily)
+          log(`revealed family: ${revealFamily}`)
+        }
+        response.writeHead(200).end('OK')
+        return
+      }
+
       const toolName = parseToolName(pathname)
       if (toolName) {
         if (method !== 'POST') {
@@ -171,6 +194,15 @@ export async function startCommandEventsProxy(
         if (!isToolExecutionRequestBody(parsedBody)) {
           response.writeHead(400).end('Invalid tool execution payload')
           return
+        }
+
+        // Extract family name from tool path (e.g., "sessions/search" -> "sessions")
+        const familyName = toolName.includes('/')
+          ? toolName.split('/')[0]
+          : undefined
+        if (familyName && handlers.revealFamily) {
+          handlers.revealFamily(familyName)
+          log(`revealed family via sub-tool: ${familyName}`)
         }
 
         log(

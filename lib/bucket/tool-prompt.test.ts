@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ToolDefinition } from './server-messages'
-import { formatToolsSection } from './tool-prompt'
+import { formatToolFamilyHelp, formatToolsSection } from './tool-prompt'
 
 describe('formatToolsSection', () => {
   it('returns empty string when no tools', () => {
@@ -301,5 +301,141 @@ describe('formatToolsSection', () => {
     // Regular tool with parameters
     expect(result).toContain('### upload')
     expect(result).toContain('Usage: `dust bucket tool upload <file>`')
+  })
+})
+
+describe('formatToolFamilyHelp', () => {
+  it('formats a tool family with sub-tools', () => {
+    const family: ToolDefinition = {
+      name: 'sessions',
+      description: 'Access historic agent sessions',
+      endpoint: '/api/sessions',
+      method: 'GET',
+      parameters: [],
+      children: [
+        {
+          name: 'search',
+          description: 'Search through past sessions',
+          endpoint: '/api/sessions/search',
+          method: 'GET',
+          parameters: [
+            {
+              name: 'query',
+              type: 'string',
+              required: true,
+              description: 'Search term',
+            },
+            {
+              name: 'since',
+              type: 'string',
+              required: false,
+              description: 'Start date (ISO format)',
+            },
+          ],
+        },
+        {
+          name: 'get',
+          description: 'Retrieve a specific session by ID',
+          endpoint: '/api/sessions/get',
+          method: 'GET',
+          parameters: [
+            {
+              name: 'id',
+              type: 'string',
+              required: true,
+              description: 'Session ID',
+            },
+          ],
+        },
+      ],
+    }
+
+    const result = formatToolFamilyHelp(family)
+
+    // Header
+    expect(result).toContain('## sessions')
+    expect(result).toContain('Access historic agent sessions')
+    expect(result).toContain('Available operations:')
+
+    // First sub-tool
+    expect(result).toContain('### search')
+    expect(result).toContain('Search through past sessions')
+    expect(result).toContain('- `query` (string, required): Search term')
+    expect(result).toContain(
+      '- `since` (string, optional): Start date (ISO format)'
+    )
+    expect(result).toContain(
+      'Usage: `dust bucket tool sessions search <query> [--since <since>]`'
+    )
+
+    // Second sub-tool
+    expect(result).toContain('### get')
+    expect(result).toContain('Retrieve a specific session by ID')
+    expect(result).toContain('- `id` (string, required): Session ID')
+    expect(result).toContain('Usage: `dust bucket tool sessions get <id>`')
+  })
+
+  it('formats a tool family with no parameters on sub-tools', () => {
+    const family: ToolDefinition = {
+      name: 'cache',
+      description: 'Cache management operations',
+      endpoint: '/api/cache',
+      method: 'GET',
+      parameters: [],
+      children: [
+        {
+          name: 'clear',
+          description: 'Clear all cached data',
+          endpoint: '/api/cache/clear',
+          method: 'POST',
+          parameters: [],
+        },
+      ],
+    }
+
+    const result = formatToolFamilyHelp(family)
+
+    expect(result).toContain('## cache')
+    expect(result).toContain('### clear')
+    expect(result).toContain('Clear all cached data')
+    expect(result).toContain('Usage: `dust bucket tool cache clear`')
+    expect(result).not.toContain('Parameters:')
+  })
+
+  it('handles empty children array', () => {
+    const family: ToolDefinition = {
+      name: 'empty',
+      description: 'Empty family',
+      endpoint: '/api/empty',
+      method: 'GET',
+      parameters: [],
+      children: [],
+    }
+
+    const result = formatToolFamilyHelp(family)
+
+    expect(result).toContain('## empty')
+    expect(result).toContain('Empty family')
+    expect(result).toContain('Available operations:')
+    // No sub-tool sections
+    expect(result).not.toContain('###')
+  })
+
+  it('handles undefined children', () => {
+    const family: ToolDefinition = {
+      name: 'no-children',
+      description: 'Family with no children defined',
+      endpoint: '/api/no-children',
+      method: 'GET',
+      parameters: [],
+    }
+
+    const result = formatToolFamilyHelp(family)
+
+    expect(result).toContain('## no-children')
+    expect(result).toContain('Family with no children defined')
+    expect(result).toContain('Available operations:')
+    // No sub-tool sections
+    expect(result).not.toContain('###')
   })
 })

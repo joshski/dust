@@ -104,6 +104,8 @@ export interface RepositoryDependencies {
   forwardToolExecution?: (
     request: ToolExecutionRequest
   ) => Promise<ToolExecutionResult>
+  /** Mark a tool family as revealed (for progressive disclosure) */
+  revealFamily?: (familyName: string) => void
 }
 
 /**

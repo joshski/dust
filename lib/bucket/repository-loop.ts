@@ -487,6 +487,7 @@ export async function runRepositoryLoop(
             status: 'error' as const,
             error: 'Tool execution not available',
           })),
+      revealFamily: repoDeps.revealFamily,
     })
     /* v8 ignore stop */
 

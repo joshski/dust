@@ -109,6 +109,7 @@ describe('startCommandEventsProxy', () => {
       forwardToolExecution: (
         request: ToolExecutionRequest
       ) => Promise<ToolExecutionResult>
+      revealFamily: (familyName: string) => void
     }> = {}
   ) => {
     proxy = await startCommandEventsProxy({
@@ -120,6 +121,7 @@ describe('startCommandEventsProxy', () => {
           status: 'success',
           output: 'ok',
         })),
+      revealFamily: overrides.revealFamily,
     })
   }
 
@@ -399,5 +401,68 @@ describe('startCommandEventsProxy', () => {
     )
     expect(response.statusCode).toBe(502)
     expect(response.body).toContain('forward failed')
+  })
+
+  test('reveals family via POST /reveal/:family', async () => {
+    const revealed: string[] = []
+    await createProxy({
+      revealFamily: familyName => revealed.push(familyName),
+    })
+
+    const response = await postJson(
+      getProxyPort(),
+      '/reveal/sessions',
+      'POST',
+      ''
+    )
+
+    expect(response.statusCode).toBe(200)
+    expect(revealed).toEqual(['sessions'])
+  })
+
+  test('reveals family when executing sub-tool via family/sub-tool path', async () => {
+    const revealed: string[] = []
+    await createProxy({
+      revealFamily: familyName => revealed.push(familyName),
+      forwardToolExecution: async () => ({
+        status: 'success',
+        output: 'result',
+      }),
+    })
+
+    const response = await postJson(
+      getProxyPort(),
+      '/tools/sessions%2Fsearch',
+      'POST',
+      JSON.stringify({
+        arguments: ['query'],
+        repositoryId: 'repo-123',
+      })
+    )
+
+    expect(response.statusCode).toBe(200)
+    expect(revealed).toEqual(['sessions'])
+  })
+
+  test('returns 405 for non-POST methods on /reveal/:family', async () => {
+    await createProxy()
+    const response = await postJson(
+      getProxyPort(),
+      '/reveal/sessions',
+      'GET',
+      ''
+    )
+    expect(response.statusCode).toBe(405)
+  })
+
+  test('handles missing revealFamily handler gracefully', async () => {
+    await createProxy()
+    const response = await postJson(
+      getProxyPort(),
+      '/reveal/sessions',
+      'POST',
+      ''
+    )
+    expect(response.statusCode).toBe(200)
   })
 })

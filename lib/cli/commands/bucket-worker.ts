@@ -214,6 +214,7 @@ interface BucketState {
   ui: TerminalUIState
   logBuffers: Map<string, LogBuffer>
   tools: ToolDefinition[]
+  revealedFamilies: Set<string>
 }
 
 export function createInitialState(): BucketState {
@@ -232,6 +233,7 @@ export function createInitialState(): BucketState {
     ui: createTerminalUIState(),
     logBuffers: new Map(),
     tools: [],
+    revealedFamilies: new Set(),
   }
   /* v8 ignore stop */
   state.sendEvent = createEventMessageSender(() => state.ws)
@@ -269,6 +271,9 @@ function toRepositoryDependencies(
     auth: bucketDeps.authConfig,
     getTools: () => state.tools,
     forwardToolExecution,
+    revealFamily: (familyName: string) => {
+      state.revealedFamilies.add(familyName)
+    },
   }
 }
 

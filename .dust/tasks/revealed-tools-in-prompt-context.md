@@ -60,7 +60,7 @@ Retrieve a specific session by ID
 
 ## Blocked By
 
-- [Tool Family Invocation Reveals Sub-Tools](tool-family-invocation-reveals-sub-tools.md)
+(none)
 
 ## Definition of Done
 

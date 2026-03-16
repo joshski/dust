@@ -13,6 +13,48 @@ function formatParameter(param: ToolParameter): string {
 }
 
 /**
+ * Format a tool family help text when invoked without a sub-tool.
+ * Returns detailed help listing all available sub-tools with their parameters.
+ */
+export function formatToolFamilyHelp(family: ToolDefinition): string {
+  const lines: string[] = []
+
+  lines.push(`## ${family.name}`)
+  lines.push('')
+  lines.push(family.description)
+  lines.push('')
+  lines.push('Available operations:')
+  lines.push('')
+
+  const children = family.children ?? []
+  for (const child of children) {
+    lines.push(`### ${child.name}`)
+    lines.push(child.description)
+    lines.push('')
+
+    if (child.parameters.length > 0) {
+      lines.push('Parameters:')
+      for (const param of child.parameters) {
+        lines.push(formatParameter(param))
+      }
+      lines.push('')
+    }
+
+    // Build usage example with parameter placeholders
+    const paramPlaceholders = child.parameters
+      .map(p => (p.required ? `<${p.name}>` : `[--${p.name} <${p.name}>]`))
+      .join(' ')
+    const usageArgs = paramPlaceholders ? ` ${paramPlaceholders}` : ''
+    lines.push(
+      `Usage: \`dust bucket tool ${family.name} ${child.name}${usageArgs}\``
+    )
+    lines.push('')
+  }
+
+  return lines.join('\n')
+}
+
+/**
  * Format a tool family (tool with children) as a summary.
  * Sub-tool details are hidden to save context window space.
  */

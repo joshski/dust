@@ -36,7 +36,16 @@ The agent sees the usage instructions in its prompt and executes the shell comma
 The `dust bucket tool` subprocess:
 
 1. **GET `/tools`** on the local proxy — fetches the current tool list and validates the tool name exists
-2. **POST `/tools/:name`** with `{ "arguments": [...], "repositoryId": "..." }` — requests execution
+2. For **tool families** (tools with children):
+   - If no sub-tool specified (`dust bucket tool sessions`): returns help text listing available sub-tools and marks the family as revealed via **POST `/reveal/:family`**
+   - If sub-tool specified (`dust bucket tool sessions search <query>`): executes via **POST `/tools/family%2Fsubtool`** which also marks the family as revealed
+3. For **regular tools**: **POST `/tools/:name`** with `{ "arguments": [...], "repositoryId": "..." }` — requests execution
+
+### Tool Family Revelation
+
+The bucket worker maintains `state.revealedFamilies: Set<string>` to track which tool families the agent has explored. When a family is revealed:
+- The `revealFamily` callback is invoked via the command events proxy
+- This tracking enables progressive disclosure: future prompt iterations can include full sub-tool definitions for revealed families
 
 ### 5. Proxy forwards over WebSocket
 
