@@ -47,7 +47,7 @@ Write comprehensive unit tests covering:
 
 ## Blocked By
 
-- [Implement Repository Lifecycle State Type](implement-repository-lifecycle-state-type.md)
+(none)
 
 ## Definition of Done
 
