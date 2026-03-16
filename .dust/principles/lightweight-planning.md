@@ -13,3 +13,4 @@ The system avoids the staleness problem by deferring detail until the last respo
 ## Sub-Principles
 
 - [Task-First Workflow](task-first-workflow.md)
+- [Some Big Design Up Front](some-big-design-up-front.md)
