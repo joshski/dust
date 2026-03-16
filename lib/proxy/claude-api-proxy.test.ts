@@ -7,6 +7,7 @@ import {
   type ClaudeApiProxyDependencies,
   filterResponseHeaders,
   isTokenExpired,
+  mergeAnthropicBetaHeader,
   readOAuthToken,
 } from './claude-api-proxy'
 
@@ -184,9 +185,9 @@ describe('buildProxyRequest', () => {
     expect(result.url).toBe('https://api.anthropic.com/v1/messages?stream=true')
   })
 
-  test('includes x-api-key header with token', () => {
+  test('includes authorization header with bearer token', () => {
     const result = buildProxyRequest('/v1/messages', '', 'my-token', {})
-    expect(result.headers['x-api-key']).toBe('my-token')
+    expect(result.headers['authorization']).toBe('Bearer my-token')
   })
 
   test('forwards allowed headers from incoming request', () => {
@@ -199,7 +200,9 @@ describe('buildProxyRequest', () => {
     })
     expect(result.headers['content-type']).toBe('application/json')
     expect(result.headers['anthropic-version']).toBe('2023-06-01')
-    expect(result.headers['anthropic-beta']).toBe('messages-2023-12-15')
+    expect(result.headers['anthropic-beta']).toBe(
+      'messages-2023-12-15,oauth-2025-04-20'
+    )
     expect(result.headers['accept']).toBe('application/json')
     expect(result.headers['accept-encoding']).toBe('gzip')
   })
@@ -210,10 +213,10 @@ describe('buildProxyRequest', () => {
       'x-api-key': 'other-key',
       'x-custom-header': 'custom-value',
     })
-    expect(result.headers['authorization']).toBeUndefined()
+    expect(result.headers['x-api-key']).toBeUndefined()
     expect(result.headers['x-custom-header']).toBeUndefined()
-    // x-api-key should be the injected token, not the incoming one
-    expect(result.headers['x-api-key']).toBe('token')
+    // Authorization should use injected token, not incoming header
+    expect(result.headers['authorization']).toBe('Bearer token')
   })
 
   test('ignores array header values', () => {
@@ -228,6 +231,24 @@ describe('buildProxyRequest', () => {
       'content-type': undefined,
     })
     expect(result.headers['content-type']).toBeUndefined()
+  })
+})
+
+describe('mergeAnthropicBetaHeader', () => {
+  test('returns oauth beta when incoming header is missing', () => {
+    expect(mergeAnthropicBetaHeader(undefined)).toBe('oauth-2025-04-20')
+  })
+
+  test('appends oauth beta when incoming header is present', () => {
+    expect(mergeAnthropicBetaHeader('messages-2023-12-15')).toBe(
+      'messages-2023-12-15,oauth-2025-04-20'
+    )
+  })
+
+  test('does not duplicate oauth beta when already present', () => {
+    expect(
+      mergeAnthropicBetaHeader('messages-2023-12-15,oauth-2025-04-20')
+    ).toBe('messages-2023-12-15,oauth-2025-04-20')
   })
 })
 
@@ -258,6 +279,18 @@ describe('filterResponseHeaders', () => {
     headers.set('Transfer-Encoding', 'chunked')
     const result = filterResponseHeaders(headers)
     expect(result['transfer-encoding']).toBeUndefined()
+  })
+
+  test('filters out content-encoding and content-length headers', () => {
+    const headers = new Headers({
+      'content-type': 'application/json',
+      'content-encoding': 'gzip',
+      'content-length': '123',
+    })
+    const result = filterResponseHeaders(headers)
+    expect(result['content-type']).toBe('application/json')
+    expect(result['content-encoding']).toBeUndefined()
+    expect(result['content-length']).toBeUndefined()
   })
 })
 

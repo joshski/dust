@@ -31,6 +31,7 @@ import { createLogger } from '../logging'
 const log = createLogger('dust:proxy:claude-api')
 
 const ANTHROPIC_API_HOST = 'https://api.anthropic.com'
+const OAUTH_BETA_FLAG = 'oauth-2025-04-20'
 
 export interface ClaudeApiProxyDependencies {
   homedir: () => string
@@ -149,6 +150,28 @@ export interface ProxyRequestConfig {
   headers: Record<string, string>
 }
 
+export function mergeAnthropicBetaHeader(
+  incomingHeader: string | string[] | undefined
+): string {
+  if (
+    typeof incomingHeader !== 'string' ||
+    incomingHeader.trim().length === 0
+  ) {
+    return OAUTH_BETA_FLAG
+  }
+
+  const parts = incomingHeader
+    .split(',')
+    .map(part => part.trim())
+    .filter(Boolean)
+
+  if (parts.includes(OAUTH_BETA_FLAG)) {
+    return parts.join(',')
+  }
+
+  return `${parts.join(',')},${OAUTH_BETA_FLAG}`
+}
+
 /**
  * Build the proxy request configuration for forwarding to the Anthropic API.
  * Returns the upstream URL and headers with the token injected.
@@ -163,10 +186,16 @@ export function buildProxyRequest(
   upstreamUrl.search = search
 
   const headers: Record<string, string> = {
-    'x-api-key': token,
+    authorization: `Bearer ${token}`,
+    'anthropic-beta': mergeAnthropicBetaHeader(
+      incomingHeaders['anthropic-beta']
+    ),
   }
 
   for (const headerName of HEADERS_TO_FORWARD) {
+    if (headerName === 'anthropic-beta') {
+      continue
+    }
     const value = incomingHeaders[headerName]
     if (value && typeof value === 'string') {
       headers[headerName] = value
@@ -188,7 +217,12 @@ export function filterResponseHeaders(
 ): Record<string, string> {
   const responseHeaders: Record<string, string> = {}
   upstreamHeaders.forEach((value, key) => {
-    if (key.toLowerCase() !== 'transfer-encoding') {
+    const lowercaseKey = key.toLowerCase()
+    if (
+      lowercaseKey !== 'transfer-encoding' &&
+      lowercaseKey !== 'content-encoding' &&
+      lowercaseKey !== 'content-length'
+    ) {
       responseHeaders[key] = value
     }
   })
