@@ -36,7 +36,10 @@ import {
   createLogLine,
   type LogBuffer,
 } from './log-buffer'
-import type { RepositoryLifecycleState } from './repository-lifecycle'
+import {
+  transition,
+  type RepositoryLifecycleState,
+} from './repository-lifecycle'
 import { getReposDir } from './paths'
 import {
   cloneRepository,
@@ -119,6 +122,15 @@ export function startRepositoryLoop(
   sendEvent?: SendEventFn,
   sessionId?: string
 ): void {
+  const startResult = transition(repoState.lifecycle, { type: 'start' })
+  if (!startResult.ok) {
+    log(
+      `Cannot start loop for ${repoState.repository.name}: ${startResult.error}`
+    )
+    return
+  }
+  repoState.lifecycle = startResult.state
+
   log(`starting loop for ${repoState.repository.name}`)
   const loopPromise = runRepositoryLoop(
     repoState,
@@ -136,19 +148,50 @@ export function startRepositoryLoop(
     })
     .finally(() => {
       log(`loop finished for ${repoState.repository.name}`)
-      repoState.lifecycle = { type: 'idle' }
+      // Transition to stopped if we were stopping, otherwise back to idle
+      if (repoState.lifecycle.type === 'stopping') {
+        const stoppedResult = transition(repoState.lifecycle, {
+          type: 'stopped',
+        })
+        /* v8 ignore start - defensive check, transition always succeeds from stopping */
+        if (stoppedResult.ok) {
+          repoState.lifecycle = stoppedResult.state
+        }
+        /* v8 ignore stop */
+      } else {
+        repoState.lifecycle = { type: 'idle' }
+      }
       repoState.agentStatus = 'idle'
       repoState.wakeUp = undefined
     })
 
-  repoState.lifecycle = {
-    type: 'running',
-    loopPromise,
-    /* v8 ignore next 3 - simple state transition callback */
-    cancel: () => {
-      repoState.lifecycle = { type: 'stopping' }
-    },
+  /* v8 ignore start - cancel callback invoked from within loop */
+  const cancel = (): void => {
+    const stopResult = transition(repoState.lifecycle, { type: 'stop' })
+    if (stopResult.ok) {
+      repoState.lifecycle = stopResult.state
+    } else {
+      log(
+        `Cannot stop loop for ${repoState.repository.name}: ${stopResult.error}`
+      )
+    }
   }
+  /* v8 ignore stop */
+
+  const startedResult = transition(repoState.lifecycle, {
+    type: 'started',
+    loopPromise,
+    cancel,
+  })
+  /* v8 ignore start - defensive check, should always succeed from starting state */
+  if (startedResult.ok) {
+    repoState.lifecycle = startedResult.state
+  } else {
+    log(
+      `Cannot mark loop started for ${repoState.repository.name}: ${startedResult.error}`
+    )
+  }
+  /* v8 ignore stop */
 }
 
 /* v8 ignore start - simple wrappers around native functions */
@@ -292,6 +335,23 @@ export async function removeRepositoryFromManager(
   } else {
     repoState.wakeUp?.()
   }
+
+  /* v8 ignore start - defensive state machine transitions after async operations */
+  // Ensure we reach stopped state via state machine transitions
+  const lifecycle = repoState.lifecycle
+  if (lifecycle.type === 'stopping') {
+    const stoppedResult = transition(lifecycle, { type: 'stopped' })
+    if (stoppedResult.ok) {
+      repoState.lifecycle = stoppedResult.state
+    }
+  } else if (lifecycle.type !== 'stopped' && lifecycle.type !== 'idle') {
+    // Handle stop from other states (starting)
+    const stopResult = transition(lifecycle, { type: 'stop' })
+    if (stopResult.ok) {
+      repoState.lifecycle = stopResult.state
+    }
+  }
+  /* v8 ignore stop */
 
   await removeRepository(repoState.path, repoDeps.spawn, context)
 

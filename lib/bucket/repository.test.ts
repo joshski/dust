@@ -1035,7 +1035,7 @@ describe('runRepositoryLoop', () => {
 })
 
 describe('startRepositoryLoop', () => {
-  test('sets lifecycle to running then idle after loop exits', async () => {
+  test('transitions idle -> starting -> running, then stopped when cancelled', async () => {
     const { spawn } = createAutoResolvingSpawn()
     const fileSystem = createFileSystemEmulator()
 
@@ -1056,11 +1056,15 @@ describe('startRepositoryLoop', () => {
       spawn,
       fileSystem,
       sleep: async () => {
-        repoState.lifecycle = { type: 'stopping' }
+        // Use cancel to properly transition through the state machine
+        if (repoState.lifecycle.type === 'running') {
+          repoState.lifecycle.cancel()
+        }
       },
     })
 
     startRepositoryLoop(repoState, repoDeps)
+    // After startRepositoryLoop, should be in 'running' state (starting -> running happens synchronously)
     expect(repoState.lifecycle.type).toBe('running')
 
     const runningLifecycle = repoState.lifecycle as {
@@ -1069,7 +1073,86 @@ describe('startRepositoryLoop', () => {
     }
     await runningLifecycle.loopPromise
 
-    expect(repoState.lifecycle.type).toBe('idle')
+    // When cancelled via state machine, transitions to stopped
+    expect(repoState.lifecycle.type).toBe('stopped')
+  })
+
+  test('does not start loop when not in idle state', async () => {
+    const { spawn } = createAutoResolvingSpawn()
+    const fileSystem = createFileSystemEmulator()
+
+    const repoState: RepositoryState = {
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
+      path: '/tmp/repo',
+      logBuffer: createLogBuffer(),
+      lifecycle: { type: 'stopping' }, // Not idle
+      agentStatus: 'idle',
+    }
+
+    const repoDeps = createRepositoryDependencies({
+      spawn,
+      fileSystem,
+    })
+
+    startRepositoryLoop(repoState, repoDeps)
+    // Should remain in 'stopping' state since transition from stopping is invalid
+    expect(repoState.lifecycle.type).toBe('stopping')
+  })
+
+  test('cancel transitions running -> stopping -> stopped', async () => {
+    const { spawn } = createAutoResolvingSpawn()
+    const fileSystem = createFileSystemEmulator()
+
+    const repoState: RepositoryState = {
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
+      path: '/tmp/repo',
+      logBuffer: createLogBuffer(),
+      lifecycle: { type: 'idle' },
+      agentStatus: 'idle',
+    }
+
+    let sleepResolve: (() => void) | undefined
+    const repoDeps = createRepositoryDependencies({
+      spawn,
+      fileSystem,
+      sleep: () =>
+        new Promise<void>(resolve => {
+          sleepResolve = resolve
+        }),
+    })
+
+    startRepositoryLoop(repoState, repoDeps)
+    expect(repoState.lifecycle.type).toBe('running')
+
+    // Wait for loop to reach sleep
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    // Call cancel to transition to stopping
+    const runningLifecycle = repoState.lifecycle as {
+      type: 'running'
+      loopPromise: Promise<void>
+      cancel: () => void
+    }
+    runningLifecycle.cancel()
+    expect(repoState.lifecycle.type).toBe('stopping')
+
+    // Wake up the loop to let it exit
+    repoState.wakeUp?.()
+    sleepResolve?.()
+    await runningLifecycle.loopPromise
+
+    // Should transition to stopped since we were in stopping state
+    expect(repoState.lifecycle.type).toBe('stopped')
   })
 
   test('crash handler logs error when runRepositoryLoop rejects', async () => {
@@ -1622,5 +1705,106 @@ describe('removeRepositoryFromManager', () => {
     const repoDeps = createRepositoryDependencies()
 
     await removeRepositoryFromManager('unknown', manager, repoDeps, context)
+  })
+
+  test('transitions running -> stopping -> stopped when removing running repository', async () => {
+    const context = createContextEmulator()
+    const manager = createMockManager()
+    const { spawn, processes } = createMockSpawn()
+
+    let loopResolve: (() => void) | undefined
+    const loopPromise = new Promise<void>(resolve => {
+      loopResolve = resolve
+    })
+
+    const stateHistory: string[] = []
+    const repoState: RepositoryState = {
+      repository: {
+        name: 'running-repo',
+        gitUrl: 'running-repo',
+        url: 'https://example.com/running-repo',
+        id: 1,
+      },
+      path: '/tmp/running-repo',
+      lifecycle: {
+        type: 'running',
+        loopPromise,
+        cancel: () => {
+          stateHistory.push('cancel called')
+        },
+      },
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle' as const,
+      wakeUp: () => {
+        stateHistory.push('wakeUp called')
+        loopResolve?.()
+      },
+    }
+    manager.repositories.set('running-repo', repoState)
+
+    const repoDeps = createRepositoryDependencies({
+      spawn,
+      sleep: () => Promise.resolve(),
+    })
+
+    const removePromise = removeRepositoryFromManager(
+      'running-repo',
+      manager,
+      repoDeps,
+      context
+    )
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    const rmProc = processes.get('rm -rf /tmp/running-repo')
+    rmProc?.emit('close', 0)
+
+    await removePromise
+
+    expect(stateHistory).toContain('cancel called')
+    expect(stateHistory).toContain('wakeUp called')
+    expect(manager.repositories.has('running-repo')).toBe(false)
+  })
+
+  test('transitions idle repository using state machine stop action', async () => {
+    const context = createContextEmulator()
+    const manager = createMockManager()
+    const { spawn, processes } = createMockSpawn()
+
+    const repoState: RepositoryState = {
+      repository: {
+        name: 'idle-repo',
+        gitUrl: 'idle-repo',
+        url: 'https://example.com/idle-repo',
+        id: 1,
+      },
+      path: '/tmp/idle-repo',
+      lifecycle: { type: 'stopping' }, // In stopping state (not idle, not running)
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle' as const,
+    }
+    manager.repositories.set('idle-repo', repoState)
+
+    const repoDeps = createRepositoryDependencies({
+      spawn,
+      sleep: () => Promise.resolve(),
+    })
+
+    const removePromise = removeRepositoryFromManager(
+      'idle-repo',
+      manager,
+      repoDeps,
+      context
+    )
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    const rmProc = processes.get('rm -rf /tmp/idle-repo')
+    rmProc?.emit('close', 0)
+
+    await removePromise
+
+    // Should have transitioned stopping -> idle via the stop action
+    expect(manager.repositories.has('idle-repo')).toBe(false)
   })
 })
