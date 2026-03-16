@@ -1,14 +1,21 @@
 # Outcome-Driven Autonomous Ideation
 
-Introduce a new artifact type that sits above principles in the planning hierarchy, representing desired outcomes rather than working standards. Agents would periodically reflect on these outcomes, principles, and facts to propose large-scope ideas that bridge the gap between current state and desired outcomes — without requiring low-level human prompting.
+Introduce "outcomes" as a new artifact type representing what the project aims to achieve. Agents would periodically reflect on outcomes, principles, and facts to propose strategic ideas that bridge the gap between current state and desired outcomes — without requiring low-level human prompting.
 
 Currently, principles define *how* to work but not *what to achieve*. Audits like "ideas from principles" are tactical (find violations) rather than strategic (propose direction). An outcome like "onboarding takes < 5 minutes" gives agents something to reason toward, generating ideas that are larger in scope and more architecturally significant than principle-violation fixes.
 
 The idea refinement phase becomes the place for "big design up front" — ideas can span multiple sessions, accumulating depth through repeated refinement before being decomposed into single-commit tasks. This preserves lightweight planning at the task level while allowing ambitious planning at the idea level.
 
+## Resolved Decisions
+
+- **Artifact type name:** Outcomes (directory: `.dust/outcomes/`)
+- **Hierarchy:** Flat list (no parent-child relationships)
+- **Triggering strategize:** Periodically on a schedule during `dust loop`
+- **Scope:** Dust CLI-level feature (not dustbucket-only)
+
 ## Relationship to Existing Artifacts
 
-The current artifact progression is: principles (stable/abstract) → facts (current state) → ideas (proposals) → tasks (concrete work). This new artifact type would sit above principles, adding a fifth level that represents *what we want to achieve* rather than *how we work*:
+The current artifact progression is: principles (stable/abstract) → facts (current state) → ideas (proposals) → tasks (concrete work). Outcomes add a fifth level that represents *what we want to achieve* rather than *how we work*:
 
 ```
 outcomes → principles → facts → ideas → tasks
@@ -16,77 +23,64 @@ outcomes → principles → facts → ideas → tasks
 
 This mirrors how the `ideas-from-principles` audit works today, but at a higher level. Where that audit finds principle violations and proposes tactical fixes, a "strategize" activity would read outcomes and propose strategic initiatives.
 
-## Key Elements
+## Implementation Elements
 
-- A new artifact directory (name TBD) with human-authored desired outcomes and success criteria
-- A "strategize" audit or periodic activity where the agent reads outcomes + principles + facts and proposes ideas
-- Idea-to-outcome tracing so humans can evaluate proposals in the context of what they serve
-- Multi-session refinement as an explicit pattern for large ideas
+1. **Outcome artifact type** — A new `.dust/outcomes/` directory with human-authored desired outcomes. Each outcome is a markdown file with a title, opening sentence (success criteria or measurable target), and optional elaboration. Follows the same pattern as facts (simplest artifact type: slug, title, content).
+
+2. **`dust outcomes` command** — Lists outcomes similar to `dust principles` and `dust facts`.
+
+3. **Strategize audit** — A new stock audit (`ideas-from-outcomes` or `strategize`) that reads outcomes + principles + facts and proposes ideas that would advance the project toward its outcomes. Added to `lib/audits/stock-audits.ts`.
+
+4. **Periodic scheduling** — Configuration in `.dust/config/settings.json` to run strategize automatically during `dust loop` at a specified interval (e.g., `{ "strategizeIntervalIterations": 10 }`). The loop would create a strategize audit task after N completed task iterations.
+
+5. **Idea-to-outcome tracing** — Ideas generated from strategize link back to the outcome(s) they serve, allowing humans to evaluate proposals in context. This could use a new `## Outcomes` section in idea files, following the existing `## Principles` pattern.
+
+## Example Outcomes for Dust
+
+These illustrate how outcomes differ from principles — they are measurable targets rather than working standards:
+
+- **Onboarding under 5 minutes** — A developer can adopt dust in an existing repository and have an agent complete a task within 5 minutes of first contact.
+- **Zero-configuration check pipeline** — Running `dust check` in any repository produces useful feedback without manual configuration.
+- **Agent completes 80% of tasks autonomously** — Given a well-formed task, an agent succeeds without human intervention four out of five times.
+- **Sub-second command latency** — All `dust` CLI commands complete in under one second for typical repositories.
+- **Cross-agent compatibility** — Any LLM-based coding agent can use dust effectively with only the generic AGENTS.md instruction.
 
 ## Open Questions
 
-### What should this artifact type be called?
+### How should outcomes be authored and maintained?
 
-#### Outcomes
+#### Human-authored only
 
-Emphasizes measurable results. "The project outcome is fast onboarding" reads naturally. The term "goal" conflicts with agents' existing concept of a "goal" (the task they're working on), so "outcomes" avoids that collision. However, "outcomes" might be confused with task completion outcomes.
+Outcomes are written and maintained exclusively by humans. This ensures outcomes reflect genuine project direction rather than agent speculation. The agent's role is to propose ideas that serve existing outcomes, not to propose outcomes themselves.
 
-#### Objectives
+#### Agent can propose outcomes for human approval
 
-Familiar from OKR frameworks. "Project objectives" is well-understood business terminology. The directory would be `.dust/objectives/`. Avoids collision with agent "goals".
+Agents could propose new outcomes during strategize, which humans review and approve. This enables discovery of implicit goals the human hadn't articulated. However, it blurs the line between strategic direction (human domain) and tactical execution (agent domain).
 
-#### Targets
+### Should strategize run automatically or require explicit activation?
 
-Clear and measurable connotation. "The project targets sub-5-minute onboarding" is precise. May feel too metrics-focused for qualitative goals. The directory would be `.dust/targets/`.
+#### Auto-schedule during loop with config
 
-#### Aspirations
+Add a `strategizeIntervalIterations` setting. The loop creates a strategize task automatically every N completed task iterations. This follows the "periodically on a schedule" decision but requires implementation in the loop.
 
-Emphasizes the forward-looking nature. Less commonly used in software, which could reduce terminology conflicts. The directory would be `.dust/aspirations/`.
+#### Manual audit command only
 
-### Should this artifact type be hierarchical like principles?
+Keep strategize as a regular audit (`dust audit strategize`) that humans invoke when they want strategic ideation. Simpler to implement and avoids noise, but requires human prompting — which contradicts the "autonomous ideation" goal.
 
-#### Yes, single-parent tree like principles
+#### Both, with auto-scheduling off by default
 
-Allows nesting naturally (e.g., "reliable infrastructure" → "zero-downtime deploys" → "support 50 concurrent sessions"). Consistent with existing principle structure. Principles use a single-parent tree to force prioritization.
+Implement the config option but default it to disabled (or a very high interval like 100). Users who want autonomous strategizing can enable it. This preserves the audit pattern while allowing opt-in automation.
 
-#### No, flat list
+### What scope constraints should strategize have?
 
-Simpler to manage. These artifacts are likely fewer in number than principles and may not need hierarchy. Relationships can be captured as prose notes, following the same workaround used for secondary principle relationships.
+#### Single-commit scope
 
-### How does the agent decide when to strategize?
+Proposed ideas should be achievable in a single commit, matching the existing task model. This keeps ideas tractable but may exclude larger initiatives.
 
-#### Periodically on a schedule
+#### Multi-commit scope allowed
 
-Run strategic ideation as part of `dust loop` at a configured interval (e.g., every N sessions or once per day). Predictable but may generate noise. Could be configured in `.dust/config/settings.json`.
+Ideas can span multiple commits and require decomposition before execution. This enables ambitious proposals but means strategize output requires more processing before becoming work.
 
-#### When the task queue is empty
+#### Tiered scope
 
-Natural trigger point — the agent has nothing to do, so it reflects. The loop already has idle behaviour (sleeping between iterations), so this fits naturally. However, requires the queue to actually drain, which may not happen in active projects.
-
-#### On explicit human request
-
-A `dust strategize` command that humans invoke when they want the agent to think big. Lowest autonomy but highest signal. Fits the existing audit pattern where `dust audit <name>` creates a task.
-
-### How do you prevent runaway scope?
-
-#### Human approval gate before refinement
-
-Ideas proposed by strategic ideation start in a "proposed" state. Humans approve before the agent invests in multi-session refinement. This mirrors how the existing idea workflow requires explicit "Refine Idea" or "Decompose Idea" tasks to progress ideas. Clear but adds friction.
-
-#### Agent proposes freely, humans prune
-
-Let the agent generate ideas liberally. Humans shelve what they don't want using the existing "Shelve Idea" workflow task. Lower friction but risks wasted agent effort and idea clutter. The `stale-ideas` audit already handles periodic review of accumulated ideas.
-
-### Should this be a dust feature or a dustbucket feature?
-
-#### Dust (CLI-level)
-
-Available to all dust users regardless of whether they use dustbucket. Strategic ideation runs locally against the current repo. This follows the existing pattern where audits are CLI commands (`dust audit <name>`).
-
-#### Dustbucket (platform-level)
-
-Dustbucket has multi-session infrastructure and fleet visibility. Could reason across repositories and coordinate strategic ideation centrally. However, this would make the feature unavailable to most dust users.
-
-#### Both, with different scopes
-
-Dust handles single-repo strategic ideation (the core feature). Dustbucket adds cross-repo awareness and scheduling (enhanced orchestration). This mirrors how `dust loop` works locally while `dust bucket` adds remote coordination.
+Strategize proposes a mix: some single-commit improvements and some multi-commit initiatives. Ideas are tagged with scope (quick/medium/large) so humans can filter based on appetite.
