@@ -58,7 +58,7 @@ export function formatToolFamilyHelp(family: ToolDefinition): string {
  * Format a tool family (tool with children) as a summary.
  * Sub-tool details are hidden to save context window space.
  */
-function formatToolFamily(tool: ToolDefinition): string {
+function formatToolFamilySummary(tool: ToolDefinition): string {
   const lines: string[] = []
 
   lines.push(`### ${tool.name}`)
@@ -72,12 +72,61 @@ function formatToolFamily(tool: ToolDefinition): string {
 }
 
 /**
+ * Format a revealed tool family with full sub-tool details.
+ * Used after the agent has invoked the family and seen the help text.
+ * Precondition: tool.children must be defined and non-empty.
+ */
+function formatRevealedToolFamily(tool: ToolDefinition): string {
+  const lines: string[] = []
+
+  lines.push(`### ${tool.name}`)
+  lines.push(tool.description)
+  lines.push('')
+  lines.push('**Sub-tools:**')
+  lines.push('')
+
+  // Children is guaranteed to exist by the caller (formatTool checks
+  // tool.children && tool.children.length > 0 before calling this function)
+  for (const child of tool.children!) {
+    lines.push(`#### ${child.name}`)
+    lines.push(child.description)
+    lines.push('')
+
+    if (child.parameters.length > 0) {
+      lines.push('Parameters:')
+      for (const param of child.parameters) {
+        lines.push(formatParameter(param))
+      }
+      lines.push('')
+    }
+
+    // Build usage example with parameter placeholders
+    const paramPlaceholders = child.parameters
+      .map(p => (p.required ? `<${p.name}>` : `[--${p.name} <${p.name}>]`))
+      .join(' ')
+    const usageArgs = paramPlaceholders ? ` ${paramPlaceholders}` : ''
+    lines.push(
+      `Usage: \`dust bucket tool ${tool.name} ${child.name}${usageArgs}\``
+    )
+    lines.push('')
+  }
+
+  return lines.join('\n').trimEnd()
+}
+
+/**
  * Format a single tool definition for the tools section.
  */
-function formatTool(tool: ToolDefinition): string {
-  // Tools with children render as summaries (progressive disclosure)
+function formatTool(
+  tool: ToolDefinition,
+  revealedFamilies?: Set<string>
+): string {
+  // Tools with children render based on revelation state
   if (tool.children && tool.children.length > 0) {
-    return formatToolFamily(tool)
+    if (revealedFamilies?.has(tool.name)) {
+      return formatRevealedToolFamily(tool)
+    }
+    return formatToolFamilySummary(tool)
   }
 
   const lines: string[] = []
@@ -105,9 +154,16 @@ function formatTool(tool: ToolDefinition): string {
 /**
  * Format tool definitions into a markdown section for agent prompts.
  * Returns an empty string if no tools are defined.
+ *
+ * @param tools - Array of tool definitions to format
+ * @param revealedFamilies - Optional set of family names that have been revealed.
+ *   Revealed families render with full sub-tool details instead of summaries.
  */
 
-export function formatToolsSection(tools: ToolDefinition[]): string {
+export function formatToolsSection(
+  tools: ToolDefinition[],
+  revealedFamilies?: Set<string>
+): string {
   if (tools.length === 0) {
     return ''
   }
@@ -122,7 +178,7 @@ export function formatToolsSection(tools: ToolDefinition[]): string {
   lines.push('')
 
   for (const tool of tools) {
-    lines.push(formatTool(tool))
+    lines.push(formatTool(tool, revealedFamilies))
     lines.push('')
   }
 

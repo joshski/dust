@@ -270,6 +270,7 @@ function toRepositoryDependencies(
     runtime: bucketDeps.runtime,
     auth: bucketDeps.authConfig,
     getTools: () => state.tools,
+    getRevealedFamilies: () => state.revealedFamilies,
     forwardToolExecution,
     revealFamily: (familyName: string) => {
       state.revealedFamilies.add(familyName)

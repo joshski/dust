@@ -43,9 +43,33 @@ The `dust bucket tool` subprocess:
 
 ### Tool Family Revelation
 
-The bucket worker maintains `state.revealedFamilies: Set<string>` to track which tool families the agent has explored. When a family is revealed:
-- The `revealFamily` callback is invoked via the command events proxy
-- This tracking enables progressive disclosure: future prompt iterations can include full sub-tool definitions for revealed families
+The bucket worker maintains `state.revealedFamilies: Set<string>` to track which tool families the agent has explored. The revelation flow completes the progressive disclosure cycle:
+
+1. **Initial prompt** — Tool families render as summaries with `Usage: \`dust bucket tool <family>\` (run to see available operations)`
+2. **Agent invokes family** — Running the tool without a sub-tool returns help text and marks the family as revealed via **POST `/reveal/:family`**
+3. **Subsequent prompts** — `formatToolsSection()` receives `revealedFamilies` and renders revealed families with full sub-tool details:
+
+```
+### sessions
+Access historic agent sessions (search, filter, view details)
+
+**Sub-tools:**
+
+#### search
+Search through past sessions
+
+Parameters:
+- `query` (string, required): Search term
+- `since` (string, optional): Start date (ISO format)
+
+Usage: `dust bucket tool sessions search <query> [--since <since>]`
+
+#### get
+Retrieve a specific session by ID
+...
+```
+
+The `getRevealedFamilies` callback in `RepositoryDependencies` provides access to the current set at each loop iteration
 
 ### 5. Proxy forwards over WebSocket
 

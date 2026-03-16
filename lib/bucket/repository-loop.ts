@@ -454,7 +454,8 @@ export async function runRepositoryLoop(
     let result: Awaited<ReturnType<typeof runOneIteration>>
     // Get current tools and format for prompt injection
     const tools = repoDeps.getTools?.() ?? []
-    const toolsSection = formatToolsSection(tools)
+    const revealedFamilies = repoDeps.getRevealedFamilies?.()
+    const toolsSection = formatToolsSection(tools, revealedFamilies)
 
     // Start a per-iteration command events proxy so subprocesses can send
     // command events (e.g. principles-listed, check-passed) enriched with

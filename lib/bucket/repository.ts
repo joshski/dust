@@ -100,6 +100,8 @@ export interface RepositoryDependencies {
   dockerDeps?: Partial<DockerDependencies>
   /** Function to get current tool definitions */
   getTools?: () => ToolDefinition[]
+  /** Function to get revealed tool families (for progressive disclosure) */
+  getRevealedFamilies?: () => Set<string>
   /** Forward tool execution requests to the bucket server */
   forwardToolExecution?: (
     request: ToolExecutionRequest
