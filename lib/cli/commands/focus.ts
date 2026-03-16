@@ -73,6 +73,11 @@ export function buildImplementationInstructions(
   )
   step++
 
+  steps.push(
+    `${step}. Run \`git pull --rebase\` to incorporate any remote changes`
+  )
+  step++
+
   steps.push(`${step}. Push your commit to the remote repository`)
 
   steps.push('')
