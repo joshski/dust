@@ -18,33 +18,13 @@ Now available as a stock audit: `bin/dust audit error-handling`
 
 Now available as a stock audit: `bin/dust audit dependency-health`
 
-### Documentation Drift Audit
+### ~~Documentation Drift Audit~~ (Implemented)
 
-Review code documentation for accuracy against current implementation.
+Now available as a stock audit: `bin/dust audit documentation-drift`
 
-**Why this matters:** The facts-verification audit checks `.dust/facts/`, but code-level documentation (JSDoc, README sections, inline comments) can also drift from reality. Outdated docs mislead agents.
+### ~~Feedback Loop Speed Audit~~ (Implemented)
 
-**Scope:**
-- JSDoc descriptions that no longer match function behavior
-- README code examples that don't compile
-- Parameter documentation for removed/renamed parameters
-- Return type documentation that contradicts actual types
-- Inline comments describing code that has changed
-
-### Feedback Loop Speed Audit
-
-Measure and report on check/test execution times to identify bottlenecks.
-
-**Why this matters:** The [Fast Feedback Loops](../principles/fast-feedback-loops.md) principle emphasizes that agents benefit from quick feedback. The performance-review audit covers general performance, but a focused audit on the development feedback loop would directly address agent productivity.
-
-**Scope:**
-- Time to run `dust check` (aggregate and per-check)
-- Test suite execution time (total and slowest tests)
-- Type checking duration
-- Linting duration
-- Build time
-- Identify checks that dominate total time
-- Track trends over time to catch regression
+Now available as a stock audit: `bin/dust audit feedback-loop-speed`
 
 ### Agent Instruction Quality Audit
 

@@ -221,7 +221,7 @@ describe('audit command', () => {
   test('loadStockAudits loads audits from markdown files', () => {
     const audits = loadStockAudits()
     expect(audits).toBeInstanceOf(Array)
-    expect(audits.length).toBe(32)
+    expect(audits.length).toBe(33)
 
     const names = audits.map(a => a.name)
     expect(names).toContain('agent-developer-experience')
@@ -281,6 +281,7 @@ describe('audit command', () => {
       'design-patterns',
       'documentation-drift',
       'error-handling',
+      'feedback-loop-speed',
       'global-state',
       'idiomatic-style',
       'logging-and-traceability',

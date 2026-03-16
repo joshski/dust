@@ -383,6 +383,150 @@ function factsVerification(): string {
   `
 }
 
+function feedbackLoopSpeed(): string {
+  return dedent`
+    # Feedback Loop Speed
+
+    Measure and report on check/test execution times to identify bottlenecks.
+
+    ${ideasHint}
+
+    ## Context
+
+    The [Fast Feedback Loops](../principles/fast-feedback-loops.md) principle emphasizes that the primary feedback loop—write code, run checks, see results—should be as fast as possible. Agents especially benefit because they operate in tight loops of change-and-verify; slow feedback wastes tokens and context window space on waiting rather than working.
+
+    This audit focuses specifically on measuring the development feedback loop speed to help identify which checks consume the most time.
+
+    ## Scope
+
+    Measure timing data for each component of the feedback loop:
+
+    1. **\`dust check\` total time** - Aggregate time for all checks
+    2. **Per-check breakdown** - Time spent on each individual check configured in \`dust check\`
+    3. **Test suite execution time** - Total time and identification of slowest individual tests
+    4. **Type checking duration** - Time spent on TypeScript/type checking
+    5. **Linting duration** - Time spent on lint checks
+    6. **Build time** - Time to compile/bundle if applicable
+
+    ## Analysis Steps
+
+    ### 1. Measure \`dust check\` Timing
+
+    Run \`dust check\` and capture timing for each check:
+
+    \`\`\`bash
+    time bin/dust check
+    \`\`\`
+
+    Alternatively, if the output shows timing per check, extract those values.
+
+    ### 2. Measure Test Suite Timing
+
+    Depending on the test framework:
+
+    - **Vitest**: Run \`npx vitest run --reporter=verbose\` to see per-test timing
+    - **Jest**: Run \`jest --verbose\` or \`jest --json\` for timing data
+    - **Bun test**: Run \`bun test --verbose\` and parse output
+    - **Other frameworks**: Use the framework's timing/verbose output option
+
+    Identify the slowest individual tests by duration.
+
+    ### 3. Measure Type Checking Duration
+
+    \`\`\`bash
+    time npx tsc --noEmit
+    \`\`\`
+
+    ### 4. Measure Linting Duration
+
+    \`\`\`bash
+    time npx eslint .
+    # or
+    time npx oxlint .
+    \`\`\`
+
+    ### 5. Measure Build Time (if applicable)
+
+    \`\`\`bash
+    time npm run build
+    # or
+    time bun run build
+    \`\`\`
+
+    ### 6. Calculate Time Distribution
+
+    For each check, calculate:
+    - Absolute duration (seconds)
+    - Percentage of total \`dust check\` time
+    - Flag checks consuming >30% of total time as dominant
+
+    ## Output
+
+    Report timing data in a structured format:
+
+    ### Summary
+
+    | Check | Duration | % of Total |
+    |-------|----------|------------|
+    | lint | 2.1s | 12% |
+    | typecheck | 4.5s | 26% |
+    | tests | 8.3s | 48% |
+    | build | 2.4s | 14% |
+    | **Total** | **17.3s** | **100%** |
+
+    ### Dominant Checks
+
+    Flag any check that consumes a disproportionate amount of time (>30% of total):
+
+    - **tests** (48% of total) - Consider investigating slow tests
+    - See the \`slow-tests\` audit for detailed test timing analysis
+
+    ### Slowest Individual Tests
+
+    List the top 5 slowest tests:
+
+    | Test | Duration |
+    |------|----------|
+    | "integration: full workflow" | 3.2s |
+    | "parses large file" | 1.8s |
+    | ... | ... |
+
+    ## Interpretation Guidelines
+
+    This audit reports raw timing data without prescribing specific thresholds. Different projects have different acceptable speeds depending on:
+
+    - Codebase size
+    - Team workflow (local vs CI-heavy)
+    - Test strategy (unit-heavy vs integration-heavy)
+
+    Use the data to:
+    - Identify which checks to optimize first
+    - Track feedback loop speed over time
+    - Make informed decisions about parallelization or caching
+
+    ## Principles
+
+    - [Fast Feedback Loops](../principles/fast-feedback-loops.md) - Directly measures feedback loop speed
+    - [Fast Feedback](../principles/fast-feedback.md) - Identifies bottlenecks in feedback delivery
+    - [Agent Autonomy](../principles/agent-autonomy.md) - Faster feedback means agents can iterate more within context limits
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - [ ] Measured total \`dust check\` execution time
+    - [ ] Measured time for each individual check (lint, typecheck, tests, build, etc.)
+    - [ ] Identified test suite total execution time
+    - [ ] Identified slowest individual tests (top 5)
+    - [ ] Calculated percentage of total time for each check
+    - [ ] Flagged dominant checks (>30% of total time)
+    - [ ] Documented findings in summary table format
+    - [ ] Created ideas for any feedback loop speed improvements identified
+  `
+}
+
 function ideasFromCommits(): string {
   return dedent`
     # Ideas from Commits
@@ -2036,6 +2180,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'design-patterns': designPatterns,
   'error-handling': errorHandling,
   'facts-verification': factsVerification,
+  'feedback-loop-speed': feedbackLoopSpeed,
   'global-state': globalState,
   'ideas-from-commits': ideasFromCommits,
   'ideas-from-principles': ideasFromPrinciples,
