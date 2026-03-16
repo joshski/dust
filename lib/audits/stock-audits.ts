@@ -1588,10 +1588,176 @@ function uxAudit(): string {
   `
 }
 
+function ciDevelopmentParity(): string {
+  return dedent`
+    # CI / Development Parity
+
+    Identify discrepancies between checks run locally via \`dust check\` and those run in CI.
+
+    ${ideasHint}
+
+    ## Context
+
+    When developers run different checks locally than CI runs remotely, several problems emerge:
+
+    1. **False confidence** - CI might pass while local checks fail, or vice versa
+    2. **Wasted cycles** - Developers push code that passes locally only to have CI fail
+    3. **Agent confusion** - AI agents rely on consistent feedback; discrepancies trigger incorrect debugging paths
+
+    The [Reproducible Checks](../principles/reproducible-checks.md) principle ensures the same checks run everywhere.
+
+    ## Scope
+
+    This audit performs a bidirectional comparison:
+
+    1. **Checks in dust but not in CI** (local-only checks)
+    2. **Checks in CI but not in dust** (CI-only checks)
+
+    ## Analysis Steps
+
+    ### 1. Detect Local Checks
+
+    Read \`.dust/config/settings.json\` to identify checks configured for \`dust check\`:
+
+    \`\`\`json
+    {
+      "checks": [
+        { "name": "lint", "command": "eslint ." },
+        { "name": "typecheck", "command": "tsc --noEmit" },
+        { "name": "test", "command": "vitest run" }
+      ]
+    }
+    \`\`\`
+
+    Extract check names and commands for comparison.
+
+    ### 2. Parse CI Configuration
+
+    Search for CI workflow files and parse them for check commands:
+
+    - \`.github/workflows/*.yml\` (GitHub Actions)
+    - \`.gitlab-ci.yml\` (GitLab CI)
+    - \`.circleci/config.yml\` (CircleCI)
+
+    Look for these check categories in CI:
+
+    - **linting** - eslint, oxlint, biome lint, ruff, golangci-lint
+    - **formatting** - prettier, oxfmt, biome format, black, gofmt
+    - **type-checking** - tsc, mypy, pyright
+    - **build** - npm/bun/yarn build, go build, cargo build
+    - **unit-tests** - vitest, jest, pytest, go test, cargo test
+    - **unused-code** - knip
+
+    ### 3. Follow Indirect References
+
+    When CI runs commands like \`npm run check\` or \`./scripts/check.sh\`, follow one level of indirection:
+
+    1. If CI runs \`npm run check\`, check \`package.json\` scripts for what \`check\` executes
+    2. If CI runs a script file, read that script to identify the actual checks
+    3. Map these resolved commands back to check categories
+
+    Example indirect reference resolution:
+    \`\`\`yaml
+    # CI workflow runs:
+    - run: npm run check
+    \`\`\`
+
+    \`\`\`json
+    // package.json scripts section:
+    "check": "eslint . && tsc --noEmit"
+    \`\`\`
+
+    This resolves to: linting and type-checking in CI.
+
+    ### 4. Bidirectional Comparison
+
+    Compare check categories between local (dust) and CI:
+
+    | Category | In Dust | In CI | Gap |
+    |----------|---------|-------|-----|
+    | linting | ✓ | ✓ | None |
+    | type-checking | ✓ | ✗ | CI missing |
+    | tests | ✗ | ✓ | Dust missing |
+
+    ## Output
+
+    For each gap found, create an idea file with:
+
+    ### For Local-Only Checks (in dust, not in CI)
+
+    \`\`\`markdown
+    # Add [Check Name] to CI
+
+    The \`[check-name]\` check runs locally via \`dust check\` but is not run in CI.
+
+    ## Impact
+
+    - Developers may push code that passes locally but fails CI on other checks
+    - CI provides no coverage for [check category]
+    - The [Stop the Line](../principles/stop-the-line.md) principle is violated - problems aren't caught before merge
+
+    ## Suggested Fix
+
+    Add to \`.github/workflows/ci.yml\`:
+
+    \`\`\`yaml
+    - name: [Check Name]
+      run: [command]
+    \`\`\`
+
+    Or ensure CI runs \`dust check\` which includes this check.
+    \`\`\`
+
+    ### For CI-Only Checks (in CI, not in dust)
+
+    \`\`\`markdown
+    # Add [Check Name] to dust check
+
+    The \`[check-name]\` check runs in CI but is not configured in \`dust check\`.
+
+    ## Impact
+
+    - Developers don't get [check category] feedback until CI runs
+    - [Fast Feedback Loops](../principles/fast-feedback-loops.md) are broken - local checks give incomplete picture
+    - Agents may make changes that pass local checks but fail CI
+
+    ## Suggested Fix
+
+    Add to \`.dust/config/settings.json\`:
+
+    \`\`\`json
+    { "name": "[check-name]", "command": "[command]" }
+    \`\`\`
+    \`\`\`
+
+    ## Principles
+
+    - [Reproducible Checks](../principles/reproducible-checks.md) - Ensures same checks run everywhere
+    - [Stop the Line](../principles/stop-the-line.md) - Problems are caught at source, not downstream
+    - [Fast Feedback Loops](../principles/fast-feedback-loops.md) - Developers get consistent feedback locally before pushing
+    - [Agent Autonomy](../principles/agent-autonomy.md) - Agents can trust that passing local checks means CI will pass
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - [ ] Read \`.dust/config/settings.json\` and extracted check categories
+    - [ ] Parsed CI configuration files for check commands
+    - [ ] Followed indirect references (npm run scripts, shell scripts) one level deep
+    - [ ] Identified local-only checks (in dust but not CI)
+    - [ ] Identified CI-only checks (in CI but not dust)
+    - [ ] Created idea files for each gap with suggested fix
+    - [ ] Each idea links to relevant principles
+  `
+}
+
 const stockAuditFunctions: Record<string, () => string> = {
   'agent-developer-experience': agentDeveloperExperience,
   algorithms: algorithms,
   'checks-audit': checksAuditTemplate,
+  'ci-development-parity': ciDevelopmentParity,
   'component-reuse': componentReuse,
   'coverage-exclusions': coverageExclusions,
   'data-access-review': dataAccessReview,
