@@ -182,7 +182,11 @@ async function runPreflightChecks(
       })
       return { failed: true, output: installResult.output }
     }
-    onAgentEvent?.({ type: 'preflight-completed', step: 'install' })
+    onAgentEvent?.({
+      type: 'preflight-completed',
+      step: 'install',
+      output: installResult.output,
+    })
   }
 
   onLoopEvent({ type: 'loop.running_checks' })
