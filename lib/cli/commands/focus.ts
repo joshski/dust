@@ -27,6 +27,13 @@ export function buildImplementationInstructions(
 
   steps.push(`Note: Do NOT run \`${bin} agent\`.`, '')
 
+  if (skipPreflightSteps) {
+    steps.push(
+      `Note: \`${bin} check\` passed before this session started. Any check failures you encounter were introduced by your changes.`,
+      ''
+    )
+  }
+
   if (!skipPreflightSteps && installCommand) {
     steps.push(`${step}. Run \`${installCommand}\` to install dependencies`)
     step++

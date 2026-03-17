@@ -165,6 +165,7 @@ describe('buildImplementationInstructions', () => {
     expect(result).not.toContain('install dependencies')
     expect(result).not.toContain('Run `dust check` to verify')
     expect(result).toContain('1. Implement the task')
+    expect(result).toContain('check` passed before this session started')
   })
 
   test('preserves pre-commit check when skipPreflightSteps is true and hooks not installed', () => {
@@ -191,7 +192,9 @@ describe('buildImplementationInstructions', () => {
     )
 
     expect(result).not.toContain('install dependencies')
-    expect(result).not.toContain('dust check')
+    expect(result).not.toContain('Run `dust check` to verify')
+    expect(result).not.toContain('`dust check` before committing')
+    expect(result).toContain('check` passed before this session started')
     expect(result).toContain('1. Implement the task')
   })
 })
