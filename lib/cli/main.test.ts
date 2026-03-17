@@ -502,9 +502,9 @@ describe('multi-word command routing', () => {
       runtime: createTestRuntimeConfig(),
     })
 
-    // pre push runs check, which should fail without checks configured
-    expect(result.exitCode).toBe(1)
-    expect(context.stderrLines.join('\n')).toContain('No checks configured')
+    // pre push runs check, which passes with a hint when no checks are configured
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain('No checks configured')
   })
 
   test('routes unknown multi-word command to error', async () => {

@@ -346,7 +346,7 @@ describe('check command with checks configuration', () => {
 })
 
 describe('check command when no checks configured', () => {
-  test('returns error when no checks configured', async () => {
+  test('exits 0 when no checks configured', async () => {
     const context = createContextEmulator()
     const settings: DustSettings = { dustCommand: 'npx dust' }
     const fileSystem = createFileSystemEmulator()
@@ -357,12 +357,12 @@ describe('check command when no checks configured', () => {
       bufferedRunner
     )
 
-    expect(result.exitCode).toBe(1)
-    expect(context.stderrLines.join('\n')).toContain('No checks configured')
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain('No checks configured')
     expect(bufferedRunner.calls).toHaveLength(0)
   })
 
-  test('returns error when checks array is empty', async () => {
+  test('exits 0 when checks array is empty', async () => {
     const context = createContextEmulator()
     const settings: DustSettings = { dustCommand: 'dust', checks: [] }
     const fileSystem = createFileSystemEmulator()
@@ -373,8 +373,8 @@ describe('check command when no checks configured', () => {
       bufferedRunner
     )
 
-    expect(result.exitCode).toBe(1)
-    expect(context.stderrLines.join('\n')).toContain('No checks configured')
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain('No checks configured')
   })
 
   test('shows helpful instructions when no checks configured', async () => {
@@ -388,7 +388,7 @@ describe('check command when no checks configured', () => {
       bufferedRunner
     )
 
-    const output = context.stderrLines.join('\n')
+    const output = context.stdoutLines.join('\n')
     expect(output).toContain('settings.json')
     expect(output).toContain('"checks"')
   })

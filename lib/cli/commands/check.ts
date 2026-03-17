@@ -250,16 +250,16 @@ export async function check(
   enableFileLogs('check')
 
   if (!settings.checks || settings.checks.length === 0) {
-    context.stderr('Error: No checks configured in .dust/config/settings.json')
-    context.stderr('')
-    context.stderr('Add checks to your settings.json:')
-    context.stderr('  {')
-    context.stderr('    "checks": [')
-    context.stderr('      { "name": "lint", "command": "npm run lint" },')
-    context.stderr('      { "name": "test", "command": "npm test" }')
-    context.stderr('    ]')
-    context.stderr('  }')
-    return { exitCode: 1 }
+    context.stdout('No checks configured in .dust/config/settings.json')
+    context.stdout('')
+    context.stdout('Add checks to your settings.json:')
+    context.stdout('  {')
+    context.stdout('    "checks": [')
+    context.stdout('      { "name": "lint", "command": "npm run lint" },')
+    context.stdout('      { "name": "test", "command": "npm test" }')
+    context.stdout('    ]')
+    context.stdout('  }')
+    return { exitCode: 0 }
   }
 
   const dustPath = `${context.cwd}/.dust`

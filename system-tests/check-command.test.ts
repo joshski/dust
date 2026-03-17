@@ -6,7 +6,7 @@ import {
 } from './support/content-builders'
 import { runSession } from './support/run-session'
 
-test('check command reports error when no checks are configured', async () => {
+test('check command exits 0 with a hint when no checks are configured', async () => {
   const session = await runSession({
     fileSystemTree: {
       project: {
@@ -29,9 +29,9 @@ test('check command reports error when no checks are configured', async () => {
       {
         command: 'bin/dust check',
         result: {
-          exitCode: 1,
-          // Should report error and provide helpful instructions
-          stderr: expect.stringMatching(
+          exitCode: 0,
+          // Should hint the user to add checks, not block them
+          stdout: expect.stringMatching(
             /No checks configured.*settings\.json/s
           ),
         },
