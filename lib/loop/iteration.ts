@@ -180,6 +180,7 @@ async function runPreflightChecks(
       })
       return { failed: true, output: installResult.output }
     }
+    onAgentEvent?.({ type: 'preflight-completed', step: 'install' })
   }
 
   onLoopEvent({ type: 'loop.running_checks' })
@@ -196,7 +197,11 @@ async function runPreflightChecks(
   }
 
   onLoopEvent({ type: 'loop.checks_passed' })
-  onAgentEvent?.({ type: 'preflight-completed' })
+  onAgentEvent?.({
+    type: 'preflight-completed',
+    step: 'checks',
+    output: checkResult.output,
+  })
   return { failed: false }
 }
 

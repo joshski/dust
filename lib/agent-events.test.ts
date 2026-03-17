@@ -108,7 +108,10 @@ describe('formatAgentEvent', () => {
   })
 
   test('formats preflight-completed event', () => {
-    const result = formatAgentEvent({ type: 'preflight-completed' })
+    const result = formatAgentEvent({
+      type: 'preflight-completed',
+      step: 'checks',
+    })
     expect(result).toBe('⚙ Pre-flight checks passed')
   })
 

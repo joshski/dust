@@ -1069,8 +1069,9 @@ Usage: \`dust bucket tool asset-upload <file>\``
     expect(preflightStarted).toBeDefined()
     const preflightCompleted = onAgentEvent.events.find(
       event => event.type === 'preflight-completed'
-    )
+    ) as { step: string } | undefined
     expect(preflightCompleted).toBeDefined()
+    expect(preflightCompleted!.step).toBe('checks')
   })
 
   test('runs install command before checks when installCommand is configured', async () => {
