@@ -146,6 +146,8 @@ export interface BucketDependencies {
   clearInterval: (id: unknown) => void
   /** Optional override for the agent runner (default: claudeRun). Used for testing. */
   run?: typeof claudeRun
+  /** Shell runner for pre-flight commands (install, check). Used for testing. */
+  shellRunner?: import('../../cli/process-runner').ShellRunner
 }
 
 /**
@@ -279,6 +281,7 @@ function toRepositoryDependencies(
     revealFamily: (familyName: string) => {
       state.revealedFamilies.add(familyName)
     },
+    shellRunner: bucketDeps.shellRunner,
   }
 }
 

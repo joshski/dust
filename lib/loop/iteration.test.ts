@@ -50,6 +50,12 @@ function createMockSpawn(pullExitCode = 0) {
     createMockChildProcess(pullExitCode)) as LoopDependencies['spawn']
 }
 
+function createPassingShellRunner(): LoopDependencies['shellRunner'] {
+  return {
+    run: async () => ({ exitCode: 0, output: '' }),
+  }
+}
+
 function createLoopDeps(
   overrides: Partial<LoopDependencies> = {}
 ): LoopDependencies {
@@ -59,6 +65,7 @@ function createLoopDeps(
     sleep: async () => {},
     postEvent: async () => {},
     session: createTestSessionConfig(),
+    shellRunner: createPassingShellRunner(),
     ...overrides,
   }
 }
@@ -379,8 +386,11 @@ describe('runOneIteration', () => {
       'Implement the task at `.dust/tasks/task.md`'
     )
     expect(capturedPrompt).toContain('Do the thing.')
-    expect(capturedPrompt).toContain('`bun install` to install dependencies')
-    expect(capturedPrompt).toContain('`bunx dust check`')
+    // Loop handles install and checks, so agent prompt should NOT contain them
+    expect(capturedPrompt).not.toContain(
+      '`bun install` to install dependencies'
+    )
+    expect(capturedPrompt).not.toContain('Run `bunx dust check` to verify')
     expect(capturedPrompt).toContain(
       'Deletion of the completed task file (`.dust/tasks/task.md`)'
     )
@@ -772,10 +782,11 @@ describe('runOneIteration', () => {
       purpose: string
     }
     expect(startedEvent).toBeDefined()
-    expect(startedEvent.prompt).toContain(
+    // Loop handles install and checks, so agent prompt should NOT contain them
+    expect(startedEvent.prompt).not.toContain(
       '`bun install` to install dependencies'
     )
-    expect(startedEvent.prompt).toContain('`bunx dust check`')
+    expect(startedEvent.prompt).not.toContain('Run `bunx dust check` to verify')
     expect(startedEvent.agentType).toBe('claude')
     expect(startedEvent.purpose).toBe('task')
   })
@@ -943,5 +954,240 @@ Usage: \`dust bucket tool asset-upload <file>\``
     expect(capturedPrompt).not.toContain('## Available Tools')
     // Should not have trailing newlines from empty toolsSection
     expect(capturedPrompt?.endsWith('\n\n')).toBe(false)
+  })
+
+  test('spawns check-fix agent when pre-flight checks fail', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+          },
+        },
+      },
+    })
+    let capturedPrompt: string | undefined
+    const loopDeps = createLoopDeps({
+      run: async prompt => {
+        capturedPrompt = prompt
+      },
+      shellRunner: {
+        run: async () => ({
+          exitCode: 1,
+          output: '✗ lint\n\nError: unused variable',
+        }),
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    const result = await runOneIteration(
+      dependencies,
+      loopDeps,
+      onLoopEvent,
+      onAgentEvent
+    )
+
+    expect(result).toBe('ran_check_fix')
+    expect(capturedPrompt).toContain('checks are failing')
+    expect(capturedPrompt).toContain('unused variable')
+    expect(capturedPrompt).not.toContain('Implement the task')
+  })
+
+  test('emits check-fix agent events when checks fail', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+          },
+        },
+      },
+    })
+    const loopDeps = createLoopDeps({
+      run: async () => {},
+      shellRunner: {
+        run: async () => ({
+          exitCode: 1,
+          output: 'test failures',
+        }),
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
+
+    const startedEvent = onAgentEvent.events.find(
+      event => event.type === 'agent-session-started'
+    ) as { title: string; purpose: string }
+    expect(startedEvent).toBeDefined()
+    expect(startedEvent.title).toBe('Fixing failing checks')
+    expect(startedEvent.purpose).toBe('check-fix')
+
+    const checksFailedEvent = onLoopEvent.events.find(
+      event => event.type === 'loop.checks_failed'
+    )
+    expect(checksFailedEvent).toBeDefined()
+  })
+
+  test('emits checks_passed event when pre-flight checks succeed', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+          },
+        },
+      },
+    })
+    const loopDeps = createLoopDeps({
+      run: async () => {},
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
+
+    const checksPassedEvent = onLoopEvent.events.find(
+      event => event.type === 'loop.checks_passed'
+    )
+    expect(checksPassedEvent).toBeDefined()
+  })
+
+  test('runs install command before checks when installCommand is configured', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+          },
+        },
+      },
+    })
+    dependencies.settings = {
+      dustCommand: 'dust',
+      installCommand: 'bun install',
+    }
+    const commandsRun: string[] = []
+    const loopDeps = createLoopDeps({
+      run: async () => {},
+      shellRunner: {
+        run: async command => {
+          commandsRun.push(command)
+          return { exitCode: 0, output: '' }
+        },
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
+
+    expect(commandsRun).toEqual(['bun install', 'dust check'])
+    const installingEvent = onLoopEvent.events.find(
+      event => event.type === 'loop.installing'
+    )
+    expect(installingEvent).toBeDefined()
+  })
+
+  test('spawns check-fix agent when install command fails', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+          },
+        },
+      },
+    })
+    dependencies.settings = {
+      dustCommand: 'dust',
+      installCommand: 'bun install',
+    }
+    let capturedPrompt: string | undefined
+    const loopDeps = createLoopDeps({
+      run: async prompt => {
+        capturedPrompt = prompt
+      },
+      shellRunner: {
+        run: async () => ({
+          exitCode: 1,
+          output: 'install error: package not found',
+        }),
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    const result = await runOneIteration(
+      dependencies,
+      loopDeps,
+      onLoopEvent,
+      onAgentEvent
+    )
+
+    expect(result).toBe('ran_check_fix')
+    expect(capturedPrompt).toContain('package not found')
+    const installFailedEvent = onLoopEvent.events.find(
+      event => event.type === 'loop.install_failed'
+    )
+    expect(installFailedEvent).toBeDefined()
+  })
+
+  test('returns ran_check_fix even when fix agent throws', async () => {
+    const dependencies = createDependencies()
+    const loopDeps = createLoopDeps({
+      run: async () => {
+        throw new Error('agent crashed')
+      },
+      shellRunner: {
+        run: async () => ({
+          exitCode: 1,
+          output: 'check failure',
+        }),
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    const result = await runOneIteration(
+      dependencies,
+      loopDeps,
+      onLoopEvent,
+      onAgentEvent
+    )
+
+    expect(result).toBe('ran_check_fix')
+  })
+
+  test('handles non-Error throws from check-fix agent', async () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const loopDeps = createLoopDeps({
+      run: async () => {
+        throw 'string error from fix agent'
+      },
+      shellRunner: {
+        run: async () => ({
+          exitCode: 1,
+          output: 'check failure',
+        }),
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    const result = await runOneIteration(
+      dependencies,
+      loopDeps,
+      onLoopEvent,
+      onAgentEvent
+    )
+
+    expect(result).toBe('ran_check_fix')
+    expect(context.stderrLines.join('\n')).toContain(
+      'string error from fix agent'
+    )
   })
 })

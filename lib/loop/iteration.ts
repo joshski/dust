@@ -5,6 +5,7 @@ import type { DockerSpawnConfig, SpawnOptions } from '../claude/types'
 import type { DockerDependencies } from '../docker/docker-agent'
 import { readEnvConfig, type SessionConfig } from '../env-config'
 import { createLogger } from '../logging'
+import { type ShellRunner, defaultShellRunner } from '../cli/process-runner'
 import { buildUnattendedEnv } from '../session'
 import { DUST_VERSION } from '../version'
 import type { CommandDependencies } from '../cli/types'
@@ -48,6 +49,8 @@ export interface LoopDependencies {
   fetch?: typeof fetch
   /** Optional overrides for Docker dependency functions (for testing) */
   dockerDeps?: Partial<DockerDependencies>
+  /** Shell runner for executing pre-flight commands (install, check) */
+  shellRunner?: ShellRunner
 }
 
 export function createDefaultDependencies(): LoopDependencies {
@@ -58,6 +61,7 @@ export function createDefaultDependencies(): LoopDependencies {
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
     postEvent: createPostEvent(fetch),
     session: envConfig.session,
+    shellRunner: defaultShellRunner,
   }
 }
 
@@ -66,6 +70,7 @@ type IterationResult =
   | 'ran_claude'
   | 'claude_error'
   | 'resolved_pull_conflict'
+  | 'ran_check_fix'
 
 type LogFn = (message: string) => void
 
@@ -144,6 +149,85 @@ async function handleGitConflict(
       error: errorMessage,
     })
     return undefined
+  }
+}
+
+/**
+ * Run pre-flight install and checks before task selection.
+ * Returns the check output if checks failed, undefined if everything passed.
+ */
+async function runPreflightChecks(
+  cwd: string,
+  dustCommand: string,
+  installCommand: string | undefined,
+  shellRunner: ShellRunner,
+  onLoopEvent: LoopEmitFn
+): Promise<{ failed: true; output: string } | { failed: false }> {
+  if (installCommand) {
+    onLoopEvent({ type: 'loop.installing' })
+    const installResult = await shellRunner.run(installCommand, cwd)
+    if (installResult.exitCode !== 0) {
+      onLoopEvent({
+        type: 'loop.install_failed',
+        output: installResult.output,
+      })
+      return { failed: true, output: installResult.output }
+    }
+  }
+
+  onLoopEvent({ type: 'loop.running_checks' })
+  const checkResult = await shellRunner.run(`${dustCommand} check`, cwd)
+  if (checkResult.exitCode !== 0) {
+    onLoopEvent({ type: 'loop.checks_failed', output: checkResult.output })
+    return { failed: true, output: checkResult.output }
+  }
+
+  onLoopEvent({ type: 'loop.checks_passed' })
+  return { failed: false }
+}
+
+/**
+ * Spawn an agent to fix failing checks.
+ */
+async function handleCheckFailure(
+  checkOutput: string,
+  dustCommand: string,
+  runParameters: AgentRunParams,
+  onAgentEvent: SendAgentEventFn | undefined,
+  context: { cwd: string; stderr: (msg: string) => void },
+  agentName: string,
+  agentType: string,
+  logger: LogFn
+): Promise<IterationResult> {
+  const prompt = buildCheckFixPrompt(dustCommand, checkOutput)
+
+  onAgentEvent?.({
+    type: 'agent-session-started',
+    title: 'Fixing failing checks',
+    prompt,
+    agentType,
+    purpose: 'check-fix',
+    ...getEnvironmentContext(context.cwd),
+  })
+
+  try {
+    await runParameters.run(prompt, {
+      spawnOptions: runParameters.spawnOptions,
+      onRawEvent: runParameters.onRawEvent,
+    })
+    log(`${agentName} finished fixing checks`)
+    onAgentEvent?.({ type: 'agent-session-ended', success: true })
+    return 'ran_check_fix'
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger(`${agentName} error fixing checks: ${errorMessage}`)
+    context.stderr(`${agentName} exited with error: ${errorMessage}`)
+    onAgentEvent?.({
+      type: 'agent-session-ended',
+      success: false,
+      error: errorMessage,
+    })
+    return 'ran_check_fix'
   }
 }
 
@@ -244,7 +328,30 @@ export async function runOneIteration(
     }
   }
 
-  // Step 2: Check for available tasks
+  // Step 2: Run pre-flight install and checks
+  const shellRunner = loopDependencies.shellRunner ?? defaultShellRunner
+  const preflightResult = await runPreflightChecks(
+    context.cwd,
+    settings.dustCommand,
+    settings.installCommand,
+    shellRunner,
+    onLoopEvent
+  )
+
+  if (preflightResult.failed) {
+    return handleCheckFailure(
+      preflightResult.output,
+      settings.dustCommand,
+      { run, prompt: '', spawnOptions, onRawEvent },
+      onAgentEvent,
+      context,
+      agentName,
+      agentType,
+      logger
+    )
+  }
+
+  // Step 3: Check for available tasks
   onLoopEvent({ type: 'loop.checking_tasks' })
   const { tasks, invalidTasks } = await findAvailableTasks(dependencies)
 
@@ -257,7 +364,7 @@ export async function runOneIteration(
     return 'no_tasks'
   }
 
-  // Step 3: Invoke the agent with the first available task
+  // Step 4: Invoke the agent with the first available task
   const task = tasks[0]
   log(`found ${tasks.length} task(s), picking: ${task.title ?? task.path}`)
   onLoopEvent({ type: 'loop.tasks_found' })
@@ -268,7 +375,8 @@ export async function runOneIteration(
     hooksInstalled,
     task.title ?? undefined,
     task.path,
-    settings.installCommand
+    settings.installCommand,
+    true // skipPreflightSteps — loop handles install and checks
   )
   const taskPrompt = buildTaskPrompt(
     task.path,
@@ -286,6 +394,20 @@ export async function runOneIteration(
     agentType,
     logger
   )
+}
+
+function buildCheckFixPrompt(dustCommand: string, checkOutput: string): string {
+  return `Note: Do NOT run \`${dustCommand} agent\`.
+
+The project's checks are failing. Your only job is to fix them.
+
+\`${dustCommand} check\` output:
+
+${checkOutput}
+
+Fix all failing checks. Then:
+1. Run \`${dustCommand} check\` to verify everything passes
+2. Commit and push the fix`
 }
 
 function buildGitConflictPrompt(errorMessage: string): string {

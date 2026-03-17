@@ -16,7 +16,8 @@ export function buildImplementationInstructions(
   hooksInstalled: boolean,
   taskTitle?: string,
   taskPath?: string,
-  installCommand?: string
+  installCommand?: string,
+  skipPreflightSteps?: boolean
 ): string {
   const steps: string[] = []
   let step = 1
@@ -26,15 +27,17 @@ export function buildImplementationInstructions(
 
   steps.push(`Note: Do NOT run \`${bin} agent\`.`, '')
 
-  if (installCommand) {
+  if (!skipPreflightSteps && installCommand) {
     steps.push(`${step}. Run \`${installCommand}\` to install dependencies`)
     step++
   }
 
-  steps.push(
-    `${step}. Run \`${bin} check\` to verify the project is in a good state`
-  )
-  step++
+  if (!skipPreflightSteps) {
+    steps.push(
+      `${step}. Run \`${bin} check\` to verify the project is in a good state`
+    )
+    step++
+  }
 
   steps.push(`${step}. Implement the task`)
   step++

@@ -119,6 +119,7 @@ function createBucketDependencies(
     bucket: createTestBucketConfig(),
     session: createTestSessionConfig(),
     runtime: createTestRuntimeConfig(),
+    shellRunner: { run: async () => ({ exitCode: 0, output: '' }) },
     ...overrides,
   }
 }

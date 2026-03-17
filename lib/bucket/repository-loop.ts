@@ -543,6 +543,7 @@ export async function runRepositoryLoop(
       postEvent: noOpPostEvent,
       session: repoDeps.session,
       agentType,
+      shellRunner: repoDeps.shellRunner,
     }
 
     const abortController = new AbortController()

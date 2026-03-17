@@ -111,6 +111,8 @@ export interface RepositoryDependencies {
   ) => Promise<ToolExecutionResult>
   /** Mark a tool family as revealed (for progressive disclosure) */
   revealFamily?: (familyName: string) => void
+  /** Shell runner for pre-flight commands (install, check) */
+  shellRunner?: import('../cli/process-runner').ShellRunner
 }
 
 /**

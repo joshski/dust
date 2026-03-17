@@ -151,4 +151,47 @@ describe('buildImplementationInstructions', () => {
     expect(result).not.toContain('install dependencies')
     expect(result).toContain('1. Run `dust check`')
   })
+
+  test('omits install and initial check when skipPreflightSteps is true', () => {
+    const result = buildImplementationInstructions(
+      'dust',
+      false,
+      'Add feature',
+      undefined,
+      'bun install',
+      true
+    )
+
+    expect(result).not.toContain('install dependencies')
+    expect(result).not.toContain('Run `dust check` to verify')
+    expect(result).toContain('1. Implement the task')
+  })
+
+  test('preserves pre-commit check when skipPreflightSteps is true and hooks not installed', () => {
+    const result = buildImplementationInstructions(
+      'dust',
+      false,
+      'Add feature',
+      undefined,
+      'bun install',
+      true
+    )
+
+    expect(result).toContain('`dust check` before committing')
+  })
+
+  test('skipPreflightSteps with hooks installed omits all check steps', () => {
+    const result = buildImplementationInstructions(
+      'dust',
+      true,
+      'Add feature',
+      undefined,
+      'bun install',
+      true
+    )
+
+    expect(result).not.toContain('install dependencies')
+    expect(result).not.toContain('dust check')
+    expect(result).toContain('1. Implement the task')
+  })
 })

@@ -63,6 +63,7 @@ function createLoopDeps(
     sleep: async () => {},
     postEvent: async () => {},
     session: createTestSessionConfig(),
+    shellRunner: { run: async () => ({ exitCode: 0, output: '' }) },
     ...overrides,
   }
 }

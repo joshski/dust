@@ -614,6 +614,7 @@ describe('runRepositoryLoop', () => {
       session: createTestSessionConfig(),
       runtime: createTestRuntimeConfig(),
       auth: createTestAuthConfig(),
+      shellRunner: { run: async () => ({ exitCode: 0, output: '' }) },
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -655,6 +656,7 @@ describe('runRepositoryLoop', () => {
       session: createTestSessionConfig(),
       runtime: createTestRuntimeConfig(),
       auth: createTestAuthConfig(),
+      shellRunner: { run: async () => ({ exitCode: 0, output: '' }) },
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -698,6 +700,7 @@ describe('runRepositoryLoop', () => {
       session: createTestSessionConfig(),
       runtime: createTestRuntimeConfig(),
       auth: createTestAuthConfig(),
+      shellRunner: { run: async () => ({ exitCode: 0, output: '' }) },
     }
 
     await runRepositoryLoop(repoState, repoDeps)
@@ -833,6 +836,7 @@ describe('runRepositoryLoop', () => {
       session: createTestSessionConfig(),
       runtime: createTestRuntimeConfig(),
       auth: createTestAuthConfig(),
+      shellRunner: { run: async () => ({ exitCode: 0, output: '' }) },
     }
 
     await runRepositoryLoop(repoState, repoDeps)

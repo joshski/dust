@@ -119,6 +119,7 @@ function createRepositoryDependencies(
     session: createTestSessionConfig(),
     runtime: createTestRuntimeConfig(),
     auth: createTestAuthConfig(),
+    shellRunner: { run: async () => ({ exitCode: 0, output: '' }) },
     ...overrides,
   }
 }

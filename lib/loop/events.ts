@@ -61,6 +61,28 @@ export interface LoopDockerErrorEvent {
   error: string
 }
 
+export interface LoopInstallingEvent {
+  type: 'loop.installing'
+}
+
+export interface LoopInstallFailedEvent {
+  type: 'loop.install_failed'
+  output: string
+}
+
+export interface LoopRunningChecksEvent {
+  type: 'loop.running_checks'
+}
+
+export interface LoopChecksPassedEvent {
+  type: 'loop.checks_passed'
+}
+
+export interface LoopChecksFailedEvent {
+  type: 'loop.checks_failed'
+  output: string
+}
+
 export type LoopEvent =
   | LoopWarningEvent
   | LoopStartedEvent
@@ -75,6 +97,11 @@ export type LoopEvent =
   | LoopDockerBuildingEvent
   | LoopDockerBuiltEvent
   | LoopDockerErrorEvent
+  | LoopInstallingEvent
+  | LoopInstallFailedEvent
+  | LoopRunningChecksEvent
+  | LoopChecksPassedEvent
+  | LoopChecksFailedEvent
 
 export type LoopEmitFn = (event: LoopEvent) => void
 
@@ -110,5 +137,15 @@ export function formatLoopEvent(event: LoopEvent): string | null {
       return `Docker image ${event.imageTag} ready`
     case 'loop.docker_error':
       return `Docker error: ${event.error}`
+    case 'loop.installing':
+      return 'Installing dependencies'
+    case 'loop.install_failed':
+      return 'Dependency install failed'
+    case 'loop.running_checks':
+      return 'Running checks'
+    case 'loop.checks_passed':
+      return 'Checks passed'
+    case 'loop.checks_failed':
+      return 'Checks failed'
   }
 }

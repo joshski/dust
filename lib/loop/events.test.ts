@@ -47,4 +47,22 @@ describe('formatLoopEvent', () => {
       formatLoopEvent({ type: 'loop.docker_error', error: 'Build failed' })
     ).toBe('Docker error: Build failed')
   })
+
+  test('formats pre-flight check events correctly', () => {
+    expect(formatLoopEvent({ type: 'loop.installing' })).toBe(
+      'Installing dependencies'
+    )
+    expect(
+      formatLoopEvent({ type: 'loop.install_failed', output: 'error' })
+    ).toBe('Dependency install failed')
+    expect(formatLoopEvent({ type: 'loop.running_checks' })).toBe(
+      'Running checks'
+    )
+    expect(formatLoopEvent({ type: 'loop.checks_passed' })).toBe(
+      'Checks passed'
+    )
+    expect(
+      formatLoopEvent({ type: 'loop.checks_failed', output: 'lint error' })
+    ).toBe('Checks failed')
+  })
 })
