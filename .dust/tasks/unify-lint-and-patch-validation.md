@@ -51,7 +51,7 @@ function validateArtifacts(
 
 ## Blocked By
 
-- [Migrate Validators to Parsed Artifacts](migrate-validators-to-parsed-artifacts.md)
+(none)
 
 ## Definition of Done
 
