@@ -10,6 +10,7 @@
     "lib/biome/index.ts",
     "lib/bucket/server-messages.ts",
     "lib/validation/index.ts",
+    "lib/patch/index.ts",
     "lib/proxy/git-credential-proxy.ts",
     "lib/proxy/claude-api-proxy.ts",
     "scripts/end-to-end/claude-oauth-apikey-helper-poc.ts",

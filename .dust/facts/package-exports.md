@@ -1,6 +1,6 @@
 # Package Exports
 
-The `@joshski/dust` package exposes ten entry points for downstream consumers.
+The `@joshski/dust` package exposes eleven entry points for downstream consumers.
 
 ## Available Exports
 
@@ -122,6 +122,24 @@ const result = await validatePatch(fileSystem, dustPath, {
 ```
 
 See [Patch Validation](./patch-validation.md) for detailed API documentation.
+
+### @joshski/dust/patch
+
+High-level API for building multi-file artifact patches from structured objects with automatic validation.
+
+```typescript
+import { buildArtifactPatch, serializeFact } from "@joshski/dust/patch";
+
+const result = await buildArtifactPatch(fileSystem, dustPath, {
+  facts: {
+    'new-fact': { title: 'New Fact', body: 'Description here.' },
+    'old-fact': null,  // delete
+  },
+});
+// result: { valid: boolean, violations: Violation[], patch: ArtifactPatch }
+```
+
+When deleting artifacts, the API automatically discovers and updates other artifacts that reference the deleted files.
 
 ## Related Facts
 

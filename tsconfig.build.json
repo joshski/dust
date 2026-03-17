@@ -25,6 +25,8 @@
     "lib/biome/index.ts",
     "lib/filesystem/emulator.ts",
     "lib/validation/index.ts",
-    "lib/validation/overlay-filesystem.ts"
+    "lib/validation/overlay-filesystem.ts",
+    "lib/patch/index.ts",
+    "lib/patch/fact.ts"
   ]
 }

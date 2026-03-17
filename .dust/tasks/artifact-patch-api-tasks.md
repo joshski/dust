@@ -4,7 +4,7 @@ Extend `buildArtifactPatch()` to support task artifacts, including workflow task
 
 ## Context
 
-This builds on [Artifact Patch API: Facts](artifact-patch-api-facts.md) to add task support. Tasks are more complex than facts—they have `blockedBy`, `principles`, and `definitionOfDone` sections with cross-file relationships. The design decisions require:
+This builds on the `@joshski/dust/patch` entry point to add task support. Tasks are more complex than facts—they have `blockedBy`, `principles`, and `definitionOfDone` sections with cross-file relationships. The design decisions require:
 
 - **Markdown body field**: Tasks should accept a `body` field for prose content between the title and structured sections
 - **Workflow tasks with type discriminator**: Workflow tasks (Refine Idea, Decompose Idea, etc.) use the same `tasks` object but with a `type` field that determines valid attributes
@@ -79,7 +79,7 @@ Add `serializeTask` to the `@joshski/dust/patch` entry point.
 
 ## Blocked By
 
-- [Artifact Patch API: Facts](artifact-patch-api-facts.md)
+(none)
 
 ## Definition of Done
 
