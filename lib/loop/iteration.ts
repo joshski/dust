@@ -162,11 +162,12 @@ async function runPreflightChecks(
   installCommand: string | undefined,
   shellRunner: ShellRunner,
   onLoopEvent: LoopEmitFn,
-  onAgentEvent?: SendAgentEventFn
+  onAgentEvent?: SendAgentEventFn,
+  title?: string
 ): Promise<{ failed: true; output: string } | { failed: false }> {
   if (installCommand) {
     onLoopEvent({ type: 'loop.installing' })
-    onAgentEvent?.({ type: 'preflight-started', step: 'install' })
+    onAgentEvent?.({ type: 'preflight-started', step: 'install', title })
     const installResult = await shellRunner.run(installCommand, cwd)
     if (installResult.exitCode !== 0) {
       onLoopEvent({
@@ -177,6 +178,7 @@ async function runPreflightChecks(
         type: 'preflight-failed',
         step: 'install',
         output: installResult.output,
+        title,
       })
       return { failed: true, output: installResult.output }
     }
@@ -184,7 +186,7 @@ async function runPreflightChecks(
   }
 
   onLoopEvent({ type: 'loop.running_checks' })
-  onAgentEvent?.({ type: 'preflight-started', step: 'checks' })
+  onAgentEvent?.({ type: 'preflight-started', step: 'checks', title })
   const checkResult = await shellRunner.run(`${dustCommand} check`, cwd)
   if (checkResult.exitCode !== 0) {
     onLoopEvent({ type: 'loop.checks_failed', output: checkResult.output })
@@ -192,6 +194,7 @@ async function runPreflightChecks(
       type: 'preflight-failed',
       step: 'checks',
       output: checkResult.output,
+      title,
     })
     return { failed: true, output: checkResult.output }
   }
@@ -347,7 +350,25 @@ export async function runOneIteration(
     }
   }
 
-  // Step 2: Run pre-flight install and checks
+  // Step 2: Check for available tasks (before preflight — gives us the title early)
+  onLoopEvent({ type: 'loop.checking_tasks' })
+  const { tasks, invalidTasks } = await findAvailableTasks(dependencies)
+
+  if (tasks.length === 0) {
+    log('no tasks available')
+    if (invalidTasks.length > 0) {
+      printSkippedTasks(context, invalidTasks)
+    }
+    onLoopEvent({ type: 'loop.no_tasks' })
+    return 'no_tasks'
+  }
+
+  const task = tasks[0]
+  const taskTitle = task.title ?? task.path
+  log(`found ${tasks.length} task(s), picking: ${taskTitle}`)
+  onLoopEvent({ type: 'loop.tasks_found' })
+
+  // Step 3: Run pre-flight install and checks
   const shellRunner = loopDependencies.shellRunner ?? defaultShellRunner
   const preflightResult = await runPreflightChecks(
     context.cwd,
@@ -355,7 +376,8 @@ export async function runOneIteration(
     settings.installCommand,
     shellRunner,
     onLoopEvent,
-    onAgentEvent
+    onAgentEvent,
+    taskTitle
   )
 
   if (preflightResult.failed) {
@@ -371,23 +393,7 @@ export async function runOneIteration(
     )
   }
 
-  // Step 3: Check for available tasks
-  onLoopEvent({ type: 'loop.checking_tasks' })
-  const { tasks, invalidTasks } = await findAvailableTasks(dependencies)
-
-  if (tasks.length === 0) {
-    log('no tasks available')
-    if (invalidTasks.length > 0) {
-      printSkippedTasks(context, invalidTasks)
-    }
-    onLoopEvent({ type: 'loop.no_tasks' })
-    return 'no_tasks'
-  }
-
-  // Step 4: Invoke the agent with the first available task
-  const task = tasks[0]
-  log(`found ${tasks.length} task(s), picking: ${task.title ?? task.path}`)
-  onLoopEvent({ type: 'loop.tasks_found' })
+  // Step 4: Invoke the agent with the selected task
 
   const taskContent = await fileSystem.readFile(`${context.cwd}/${task.path}`)
   const instructions = buildImplementationInstructions(

@@ -1163,7 +1163,16 @@ Usage: \`dust bucket tool asset-upload <file>\``
   })
 
   test('returns ran_check_fix even when fix agent throws', async () => {
-    const dependencies = createDependencies()
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+          },
+        },
+      },
+    })
     const loopDeps = createLoopDeps({
       run: async () => {
         throw new Error('agent crashed')
@@ -1188,7 +1197,16 @@ Usage: \`dust bucket tool asset-upload <file>\``
   })
 
   test('handles non-Error throws from check-fix agent', async () => {
-    const dependencies = createDependencies()
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+          },
+        },
+      },
+    })
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >

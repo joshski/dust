@@ -25,9 +25,9 @@ export type AgentSessionEvent =
   | { type: 'agent-session-activity' }
   | { type: 'agent-event'; provider: string; rawEvent: Record<string, unknown> }
   | { type: 'command-event'; commandEvent: CommandEvent }
-  | { type: 'preflight-started'; step: string }
+  | { type: 'preflight-started'; step: string; title?: string }
   | { type: 'preflight-completed'; step: string; output?: string }
-  | { type: 'preflight-failed'; step: string; output: string }
+  | { type: 'preflight-failed'; step: string; output: string; title?: string }
 
 // Unified wire format for both HTTP and WebSocket paths
 export interface EventMessage {
