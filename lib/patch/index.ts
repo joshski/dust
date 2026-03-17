@@ -10,14 +10,24 @@ import type { Violation } from '../lint/validators/types'
 import { type ArtifactPatch, validatePatch } from '../validation/index'
 import { MARKDOWN_LINK_PATTERN } from '../markdown/markdown-utilities'
 import { type FactInput, buildFactFiles, serializeFact } from './fact'
+import {
+  type TaskInput,
+  type StandardTaskInput,
+  type WorkflowTaskInput,
+  buildTaskFiles,
+  serializeTask,
+} from './task'
 
 // Re-export types and functions
 export { serializeFact } from './fact'
 export type { FactInput } from './fact'
+export { serializeTask } from './task'
+export type { TaskInput, StandardTaskInput, WorkflowTaskInput } from './task'
 export type { ArtifactPatch, Violation }
 
 export interface ArtifactPatchInput {
   facts?: Record<string, FactInput | null>
+  tasks?: Record<string, TaskInput | null>
 }
 
 export interface BuildArtifactPatchResult {
@@ -96,17 +106,123 @@ function removeLinksToDeletedPaths(
   const globalPattern = new RegExp(MARKDOWN_LINK_PATTERN.source, 'g')
   const sourceDir = sourceFilePath.substring(0, sourceFilePath.lastIndexOf('/'))
 
-  return content.replace(globalPattern, (match, text, target) => {
+  let linksRemoved = false
+  let result = content.replace(globalPattern, (match, text, target) => {
     // Normalize the target path for comparison
     const normalizedTarget = normalizeTargetPath(target, sourceDir)
 
     if (normalizedTarget !== null && deletedPaths.has(normalizedTarget)) {
       // Replace the link with just the text
+      linksRemoved = true
       return text
     }
 
     return match
   })
+
+  // Only clean up Blocked By sections if we actually removed a link
+  if (linksRemoved) {
+    result = cleanupBlockedBySection(result)
+  }
+
+  return result
+}
+
+/**
+ * Filters blocked-by items to keep only those containing links.
+ */
+function filterBlockedByItems(items: string[]): string[] {
+  return items.filter(item => MARKDOWN_LINK_PATTERN.test(item))
+}
+
+/**
+ * Renders a cleaned-up Blocked By section.
+ */
+function renderBlockedByContent(
+  heading: string,
+  items: string[],
+  hasRealContent: boolean
+): string[] {
+  const result = [heading]
+  if (hasRealContent) {
+    result.push(...filterBlockedByItems(items))
+  } else {
+    result.push('', '(none)')
+  }
+  return result
+}
+
+/**
+ * Cleans up ## Blocked By sections by removing orphaned bullet points
+ * (bullets that only contain plain text from removed links) and
+ * ensuring an empty section shows (none).
+ */
+function cleanupBlockedBySection(content: string): string {
+  const lines = content.split('\n')
+  const result: string[] = []
+  let inBlockedBy = false
+  let blockedByStart = -1
+  let blockedByItems: string[] = []
+  let hasRealContent = false
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+
+    // Check for section headings
+    if (line.startsWith('## ')) {
+      // End of previous Blocked By section
+      if (inBlockedBy) {
+        const sectionLines = renderBlockedByContent(
+          lines[blockedByStart],
+          blockedByItems,
+          hasRealContent
+        )
+        result.push(...sectionLines)
+        inBlockedBy = false
+        blockedByItems = []
+        hasRealContent = false
+      }
+
+      // Check if this is a Blocked By section
+      if (line.trimEnd() === '## Blocked By') {
+        inBlockedBy = true
+        blockedByStart = i
+        continue
+      }
+    }
+
+    if (inBlockedBy) {
+      // Collect lines in the Blocked By section
+      if (line.startsWith('- ')) {
+        blockedByItems.push(line)
+        if (MARKDOWN_LINK_PATTERN.test(line)) {
+          hasRealContent = true
+        }
+      } else if (line.trim() === '(none)') {
+        // Already marked as none
+        hasRealContent = false
+      } else if (line.trim() !== '') {
+        // Some other content
+        blockedByItems.push(line)
+        hasRealContent = true
+      }
+      continue
+    }
+
+    result.push(line)
+  }
+
+  // Handle Blocked By section at end of file
+  if (inBlockedBy) {
+    const sectionLines = renderBlockedByContent(
+      lines[blockedByStart],
+      blockedByItems,
+      hasRealContent
+    )
+    result.push(...sectionLines)
+  }
+
+  return result.join('\n')
 }
 
 /**
@@ -191,6 +307,20 @@ export async function buildArtifactPatch(
       } else {
         const factFiles = buildFactFiles(factInput, slug)
         Object.assign(files, factFiles)
+      }
+    }
+  }
+
+  // Process tasks
+  if (input.tasks) {
+    for (const [slug, taskInput] of Object.entries(input.tasks)) {
+      if (taskInput === null) {
+        const relativePath = `tasks/${slug}.md`
+        files[relativePath] = null
+        deletedPaths.add(relativePath)
+      } else {
+        const taskFiles = buildTaskFiles(taskInput, slug)
+        Object.assign(files, taskFiles)
       }
     }
   }

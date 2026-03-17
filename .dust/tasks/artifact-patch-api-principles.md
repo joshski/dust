@@ -4,7 +4,7 @@ Extend `buildArtifactPatch()` to support principle artifacts with hierarchy vali
 
 ## Context
 
-This builds on [Artifact Patch API: Tasks](artifact-patch-api-tasks.md) to add principle support. Principles have a tree hierarchy with parent/child relationships that must remain bidirectionally consistent. The design decisions require:
+This builds on the `@joshski/dust/patch` entry point to add principle support. Principles have a tree hierarchy with parent/child relationships that must remain bidirectionally consistent. The design decisions require:
 
 - **Markdown body field**: Principles should accept a `body` field for the opening sentence and any additional content
 - **Bidirectional link validation**: If `child-principle` declares `parentPrinciple: 'parent'`, then `parent` must list `child-principle` in its `subPrinciples`
@@ -72,7 +72,7 @@ Add `serializePrinciple` to the `@joshski/dust/patch` entry point.
 
 ## Blocked By
 
-- [Artifact Patch API: Tasks](artifact-patch-api-tasks.md)
+(none)
 
 ## Definition of Done
 

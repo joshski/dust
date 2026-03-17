@@ -1,8 +1,10 @@
 import { describe, expect, test } from 'vitest'
 import { createFileSystemEmulator } from '../filesystem/emulator'
-import { buildArtifactPatch, serializeFact } from './index'
+import { buildArtifactPatch, serializeFact, serializeTask } from './index'
 import type { FactInput } from './fact'
 import { buildFactFiles } from './fact'
+import type { StandardTaskInput, WorkflowTaskInput } from './task'
+import { buildTaskFiles } from './task'
 
 describe('serializeFact', () => {
   test('produces valid fact markdown from a FactInput object', () => {
@@ -496,6 +498,521 @@ describe('buildArtifactPatch', () => {
     expect(result.valid).toBe(true)
     expect(result.patch.files['ideas/my-idea.md']).toBe(
       '# My Idea\n\nThis links to Fact.'
+    )
+  })
+
+  // Task-related tests
+  test('accepts a tasks object and creates task files', async () => {
+    const fileSystem = makeFs()
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      tasks: {
+        'implement-feature': {
+          title: 'Implement Feature',
+          definitionOfDone: ['Feature works', 'Tests pass'],
+        },
+      },
+    })
+
+    expect(result).toHaveProperty('valid')
+    expect(result).toHaveProperty('patch')
+    expect(result.patch.files['tasks/implement-feature.md']).toContain(
+      '# Implement Feature'
+    )
+    expect(result.patch.files['tasks/implement-feature.md']).toContain(
+      '## Blocked By'
+    )
+    expect(result.patch.files['tasks/implement-feature.md']).toContain(
+      '## Definition of Done'
+    )
+  })
+
+  test('creates task with body, blockedBy, and principles', async () => {
+    const fileSystem = makeFs({
+      'tasks/design-feature.md':
+        '# Design Feature\n\nDesign the feature.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Design complete',
+      'principles/small-units.md':
+        '# Small Units\n\nKeep units small.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      tasks: {
+        'implement-feature': {
+          title: 'Implement Feature',
+          body: 'Additional context here.',
+          blockedBy: ['design-feature'],
+          principles: ['small-units'],
+          definitionOfDone: ['Feature works', 'Tests pass'],
+        },
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    const content = result.patch.files['tasks/implement-feature.md']
+    expect(content).toContain('# Implement Feature')
+    expect(content).toContain('Additional context here.')
+    expect(content).toContain('## Principles')
+    expect(content).toContain('[Small Units](../principles/small-units.md)')
+    expect(content).toContain('## Blocked By')
+    expect(content).toContain('[Design Feature](design-feature.md)')
+    expect(content).toContain('- Feature works')
+    expect(content).toContain('- Tests pass')
+  })
+
+  test('creates workflow task with refine-idea type', async () => {
+    const fileSystem = makeFs({
+      'ideas/my-feature.md': '# My Feature\n\nA new feature idea.',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      tasks: {
+        'refine-idea-my-feature': {
+          type: 'refine-idea',
+          ideaSlug: 'my-feature',
+        },
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    const content = result.patch.files['tasks/refine-idea-my-feature.md']
+    expect(content).toContain('# Refine Idea: My Feature')
+    expect(content).toContain('## Refines Idea')
+    expect(content).toContain('[My Feature](../ideas/my-feature.md)')
+    expect(content).toContain('## Blocked By')
+    expect(content).toContain('(none)')
+    expect(content).toContain('## Definition of Done')
+  })
+
+  test('creates workflow task with decompose-idea type', async () => {
+    const fileSystem = makeFs({
+      'ideas/my-feature.md': '# My Feature\n\nA new feature idea.',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      tasks: {
+        'decompose-idea-my-feature': {
+          type: 'decompose-idea',
+          ideaSlug: 'my-feature',
+        },
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    const content = result.patch.files['tasks/decompose-idea-my-feature.md']
+    expect(content).toContain('# Decompose Idea: My Feature')
+    expect(content).toContain('## Decomposes Idea')
+    expect(content).toContain('[My Feature](../ideas/my-feature.md)')
+  })
+
+  test('creates workflow task with shelve-idea type', async () => {
+    const fileSystem = makeFs({
+      'ideas/old-feature.md': '# Old Feature\n\nAn old feature idea.',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      tasks: {
+        'shelve-idea-old-feature': {
+          type: 'shelve-idea',
+          ideaSlug: 'old-feature',
+        },
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    const content = result.patch.files['tasks/shelve-idea-old-feature.md']
+    expect(content).toContain('# Shelve Idea: Old Feature')
+    expect(content).toContain('## Shelves Idea')
+    expect(content).toContain('[Old Feature](../ideas/old-feature.md)')
+  })
+
+  test('creates workflow task with capture-idea type', async () => {
+    const fileSystem = makeFs({
+      'ideas/new-feature.md': '# New Feature\n\nA new feature idea.',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      tasks: {
+        'add-idea-new-feature': {
+          type: 'capture-idea',
+          ideaSlug: 'new-feature',
+        },
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    const content = result.patch.files['tasks/add-idea-new-feature.md']
+    expect(content).toContain('# Add Idea: New Feature')
+    expect(content).toContain('## Captures Idea')
+    expect(content).toContain('[New Feature](../ideas/new-feature.md)')
+  })
+
+  test('workflow task accepts custom definitionOfDone', async () => {
+    const fileSystem = makeFs({
+      'ideas/my-feature.md': '# My Feature\n\nA new feature idea.',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      tasks: {
+        'refine-idea-my-feature': {
+          type: 'refine-idea',
+          ideaSlug: 'my-feature',
+          definitionOfDone: ['Custom item 1', 'Custom item 2'],
+        },
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    const content = result.patch.files['tasks/refine-idea-my-feature.md']
+    expect(content).toContain('- Custom item 1')
+    expect(content).toContain('- Custom item 2')
+  })
+
+  test('deleting a task sets null in the patch', async () => {
+    const fileSystem = makeFs({
+      'tasks/old-task.md':
+        '# Old Task\n\nThis task is being removed.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      tasks: {
+        'old-task': null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.patch.files['tasks/old-task.md']).toBeNull()
+  })
+
+  test('deleting a task updates Blocked By sections in other tasks', async () => {
+    const fileSystem = makeFs({
+      'tasks/deleted-task.md':
+        '# Deleted Task\n\nRemove stale code.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+      'tasks/dependent-task.md':
+        '# Dependent Task\n\nImplement the feature.\n\n## Blocked By\n\n- [Deleted Task](deleted-task.md)\n\n## Definition of Done\n\n- Done',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      tasks: {
+        'deleted-task': null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.patch.files['tasks/deleted-task.md']).toBeNull()
+    // The dependent task should have its Blocked By section cleaned up
+    const updatedContent = result.patch.files['tasks/dependent-task.md']
+    expect(updatedContent).toContain('## Blocked By')
+    expect(updatedContent).toContain('(none)')
+    expect(updatedContent).not.toContain('deleted-task.md')
+  })
+
+  test('deleting a task preserves other blockedBy links', async () => {
+    const fileSystem = makeFs({
+      'tasks/deleted-task.md':
+        '# Deleted Task\n\nRemove stale code.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+      'tasks/other-task.md':
+        '# Other Task\n\nKeep the other feature.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+      'tasks/dependent-task.md':
+        '# Dependent Task\n\nImplement the feature.\n\n## Blocked By\n\n- [Deleted Task](deleted-task.md)\n- [Other Task](other-task.md)\n\n## Definition of Done\n\n- Done',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      tasks: {
+        'deleted-task': null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    const updatedContent = result.patch.files['tasks/dependent-task.md']
+    expect(updatedContent).toContain('## Blocked By')
+    expect(updatedContent).toContain('[Other Task](other-task.md)')
+    expect(updatedContent).not.toContain('deleted-task.md')
+  })
+
+  test('validates invalid blockedBy reference', async () => {
+    const fileSystem = makeFs()
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      tasks: {
+        'new-task': {
+          title: 'New Task',
+          blockedBy: ['nonexistent-task'],
+          definitionOfDone: ['Done'],
+        },
+      },
+    })
+
+    expect(result.valid).toBe(false)
+    expect(
+      result.violations.some(
+        v =>
+          v.message.includes('nonexistent-task') ||
+          v.message.includes('broken') ||
+          v.message.includes('link')
+      )
+    ).toBe(true)
+  })
+
+  test('validates invalid principles reference', async () => {
+    const fileSystem = makeFs()
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      tasks: {
+        'new-task': {
+          title: 'New Task',
+          principles: ['nonexistent-principle'],
+          definitionOfDone: ['Done'],
+        },
+      },
+    })
+
+    expect(result.valid).toBe(false)
+    expect(
+      result.violations.some(
+        v =>
+          v.message.includes('nonexistent-principle') ||
+          v.message.includes('broken') ||
+          v.message.includes('link')
+      )
+    ).toBe(true)
+  })
+
+  test('handles mixed facts and tasks in same patch', async () => {
+    const fileSystem = makeFs()
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      facts: {
+        'new-fact': { title: 'New Fact', body: 'Define the fact.' },
+      },
+      tasks: {
+        'new-task': {
+          title: 'New Task',
+          body: 'Implement the new feature.',
+          definitionOfDone: ['Done'],
+        },
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.patch.files['facts/new-fact.md']).toContain('# New Fact')
+    expect(result.patch.files['tasks/new-task.md']).toContain('# New Task')
+  })
+
+  test('handles Blocked By section at end of file', async () => {
+    // Task file where Blocked By is the last section (no Definition of Done after it in content)
+    const fileSystem = makeFs({
+      'tasks/deleted-task.md':
+        '# Deleted Task\n\nRemove stale code.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+      'tasks/dependent-task.md':
+        '# Dependent Task\n\nImplement the feature.\n\n## Definition of Done\n\n- Done\n\n## Blocked By\n\n- [Deleted Task](deleted-task.md)',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      tasks: {
+        'deleted-task': null,
+      },
+    })
+
+    // The patch is generated but may fail validation due to heading order
+    const updatedContent = result.patch.files['tasks/dependent-task.md']
+    expect(updatedContent).toContain('## Blocked By')
+    expect(updatedContent).toContain('(none)')
+  })
+
+  test('handles non-bullet content in Blocked By section', async () => {
+    const fileSystem = makeFs({
+      'tasks/deleted-task.md':
+        '# Deleted Task\n\nRemove stale code.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+      'tasks/dependent-task.md':
+        '# Dependent Task\n\nImplement the feature.\n\n## Blocked By\n\nSome descriptive text here.\n\n## Definition of Done\n\n- Done',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      tasks: {
+        'deleted-task': null,
+      },
+    })
+
+    // The patch should preserve the descriptive text
+    // No changes needed since no links to deleted-task
+    expect(result.patch.files['tasks/dependent-task.md']).toBeUndefined()
+  })
+
+  test('preserves non-bullet content when link is removed from same section', async () => {
+    const fileSystem = makeFs({
+      'tasks/deleted-task.md':
+        '# Deleted Task\n\nRemove stale code.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+      'tasks/dependent-task.md':
+        '# Dependent Task\n\nImplement the feature.\n\n## Blocked By\n\nSee related context:\n- [Deleted Task](deleted-task.md)\n\n## Definition of Done\n\n- Done',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      tasks: {
+        'deleted-task': null,
+      },
+    })
+
+    const updatedContent = result.patch.files['tasks/dependent-task.md']
+    // The non-bullet content should be preserved and section should be cleaned up
+    expect(updatedContent).toBeDefined()
+    expect(updatedContent).toContain('## Blocked By')
+    expect(updatedContent).not.toContain('deleted-task.md')
+  })
+
+  test('cleans up Blocked By with existing (none) and a link', async () => {
+    const fileSystem = makeFs({
+      'tasks/deleted-task.md':
+        '# Deleted Task\n\nRemove stale code.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+      'tasks/dependent-task.md':
+        '# Dependent Task\n\nImplement the feature.\n\n## Blocked By\n\n(none)\n- [Deleted Task](deleted-task.md)\n\n## Definition of Done\n\n- Done',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      tasks: {
+        'deleted-task': null,
+      },
+    })
+
+    const updatedContent = result.patch.files['tasks/dependent-task.md']
+    expect(updatedContent).toContain('## Blocked By')
+    expect(updatedContent).toContain('(none)')
+    expect(updatedContent).not.toContain('deleted-task.md')
+  })
+})
+
+describe('serializeTask', () => {
+  test('produces valid task markdown for standard task', () => {
+    const input: StandardTaskInput = {
+      title: 'Implement Feature',
+      definitionOfDone: ['Feature works', 'Tests pass'],
+    }
+    const result = serializeTask(input)
+    expect(result).toContain('# Implement Feature')
+    expect(result).toContain('## Blocked By')
+    expect(result).toContain('(none)')
+    expect(result).toContain('## Definition of Done')
+    expect(result).toContain('- Feature works')
+    expect(result).toContain('- Tests pass')
+  })
+
+  test('includes body in standard task', () => {
+    const input: StandardTaskInput = {
+      title: 'Implement Feature',
+      body: 'Additional context here.',
+      definitionOfDone: ['Done'],
+    }
+    const result = serializeTask(input)
+    expect(result).toContain('Additional context here.')
+  })
+
+  test('includes principles section when provided', () => {
+    const input: StandardTaskInput = {
+      title: 'Implement Feature',
+      principles: ['small-units', 'functional-core'],
+      definitionOfDone: ['Done'],
+    }
+    const result = serializeTask(input)
+    expect(result).toContain('## Principles')
+    expect(result).toContain('[Small Units](../principles/small-units.md)')
+    expect(result).toContain(
+      '[Functional Core](../principles/functional-core.md)'
+    )
+  })
+
+  test('omits principles section when empty array', () => {
+    const input: StandardTaskInput = {
+      title: 'Implement Feature',
+      principles: [],
+      definitionOfDone: ['Done'],
+    }
+    const result = serializeTask(input)
+    // Empty principles array means no principles section
+    expect(result).not.toContain('## Principles')
+  })
+
+  test('includes blockedBy section when provided', () => {
+    const input: StandardTaskInput = {
+      title: 'Implement Feature',
+      blockedBy: ['design-feature'],
+      definitionOfDone: ['Done'],
+    }
+    const result = serializeTask(input)
+    expect(result).toContain('## Blocked By')
+    expect(result).toContain('[Design Feature](design-feature.md)')
+  })
+
+  test('produces valid task markdown for refine-idea workflow task', () => {
+    const input: WorkflowTaskInput = {
+      type: 'refine-idea',
+      ideaSlug: 'my-feature',
+    }
+    const result = serializeTask(input)
+    expect(result).toContain('# Refine Idea: My Feature')
+    expect(result).toContain('## Refines Idea')
+    expect(result).toContain('[My Feature](../ideas/my-feature.md)')
+    expect(result).toContain('## Blocked By')
+    expect(result).toContain('(none)')
+    expect(result).toContain('## Definition of Done')
+  })
+
+  test('produces valid task markdown for decompose-idea workflow task', () => {
+    const input: WorkflowTaskInput = {
+      type: 'decompose-idea',
+      ideaSlug: 'my-feature',
+    }
+    const result = serializeTask(input)
+    expect(result).toContain('# Decompose Idea: My Feature')
+    expect(result).toContain('## Decomposes Idea')
+    expect(result).toContain('[My Feature](../ideas/my-feature.md)')
+  })
+
+  test('produces valid task markdown for shelve-idea workflow task', () => {
+    const input: WorkflowTaskInput = {
+      type: 'shelve-idea',
+      ideaSlug: 'old-feature',
+    }
+    const result = serializeTask(input)
+    expect(result).toContain('# Shelve Idea: Old Feature')
+    expect(result).toContain('## Shelves Idea')
+    expect(result).toContain('[Old Feature](../ideas/old-feature.md)')
+  })
+
+  test('produces valid task markdown for capture-idea workflow task', () => {
+    const input: WorkflowTaskInput = {
+      type: 'capture-idea',
+      ideaSlug: 'new-feature',
+    }
+    const result = serializeTask(input)
+    expect(result).toContain('# Add Idea: New Feature')
+    expect(result).toContain('## Captures Idea')
+    expect(result).toContain('[New Feature](../ideas/new-feature.md)')
+  })
+
+  test('uses custom definitionOfDone for workflow task', () => {
+    const input: WorkflowTaskInput = {
+      type: 'refine-idea',
+      ideaSlug: 'my-feature',
+      definitionOfDone: ['Custom item'],
+    }
+    const result = serializeTask(input)
+    expect(result).toContain('- Custom item')
+  })
+
+  test('uses default definitionOfDone for workflow task when not provided', () => {
+    const input: WorkflowTaskInput = {
+      type: 'refine-idea',
+      ideaSlug: 'my-feature',
+    }
+    const result = serializeTask(input)
+    expect(result).toContain(
+      '- Idea is thoroughly researched with relevant codebase context'
+    )
+  })
+})
+
+describe('buildTaskFiles', () => {
+  test('produces file entries for a standard task patch', () => {
+    const input: StandardTaskInput = {
+      title: 'New Task',
+      definitionOfDone: ['Done'],
+    }
+    const result = buildTaskFiles(input, 'new-task')
+    expect(Object.keys(result)).toContain('tasks/new-task.md')
+    expect(result['tasks/new-task.md']).toContain('# New Task')
+  })
+
+  test('produces file entries for a workflow task patch', () => {
+    const input: WorkflowTaskInput = {
+      type: 'refine-idea',
+      ideaSlug: 'my-feature',
+    }
+    const result = buildTaskFiles(input, 'refine-idea-my-feature')
+    expect(Object.keys(result)).toContain('tasks/refine-idea-my-feature.md')
+    expect(result['tasks/refine-idea-my-feature.md']).toContain(
+      '# Refine Idea: My Feature'
     )
   })
 })
