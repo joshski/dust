@@ -1,30 +1,62 @@
 # Integrate FTA
 
-Integrate FTA (Fast TypeScript Analyzer) into dust workflows to measure code complexity.
+Integrate FTA (Fast TypeScript Analyzer) into dust workflows to measure code complexity. **Status: Declined** - oxlint already provides equivalent functionality.
 
 See [FTA documentation](https://ftaproject.dev/docs/getting-started) for details.
 
-## Current Analysis
+## Research Findings
 
-Running `bunx fta-cli lib` or `npx fta-cli lib` produces identical results. Current status (51 files):
+### What FTA Measures
 
-| Assessment | Count | Notes |
-|------------|-------|-------|
-| Needs improvement (60+) | 2 | Both test files |
-| Could be better (50-60) | 12 | Mix of tests and implementation |
-| OK (<50) | 37 | Most files |
+FTA produces a composite "FTA Score" based on:
+- Cyclomatic complexity
+- Halstead metrics (operators, operands, volume, difficulty, effort, predicted bugs)
+- Line count
 
-Top offenders:
-- `loop/*.test.ts` - 67.21
-- `cli/wire.test.ts` - 63.11
-- `claude/vcr.test.ts` - 58.68
-- `cli/commands/lint-markdown.ts` - 58.47
+### Comparison with oxlint
 
-## Potential Integration Points
+oxlint already has a `complexity` rule (ESLint-compatible) that measures cyclomatic complexity at the **function level**. Currently not enabled in dust but available.
 
-- Add `bin/dust check fta` or similar command
-- Include in pre-push hooks to catch complexity regressions
-- Set thresholds that fail builds when exceeded
+| Aspect | oxlint | FTA |
+|--------|--------|-----|
+| Cyclomatic complexity | ✓ (function-level) | ✓ (file-level) |
+| Halstead metrics | ✗ | ✓ |
+| Actionability | High (specific functions) | Low (entire files) |
+| Threshold enforcement | ✓ (configurable) | ✓ (configurable) |
+| Already integrated | ✓ | ✗ |
+
+### Current Analysis (Updated)
+
+Running `npx fta-cli lib` on 117 files:
+- 37 files flagged as "Needs improvement" (60+)
+- Top offenders are mostly large test files (2255+ lines)
+- Score correlates strongly with file size
+
+Running `bunx oxlint -W complexity .`:
+- 12 functions flagged with cyclomatic complexity > 20
+- Identifies specific functions to refactor
+- More actionable than file-level scores
+
+### Recommendation: Decline
+
+1. **Redundant complexity checking** - oxlint's `complexity` rule already provides cyclomatic complexity analysis at function-level granularity
+2. **File-level scoring less actionable** - FTA scores entire files, making it harder to identify what specifically needs refactoring
+3. **Score heavily weighted by size** - FTA's worst scores are large test files, not necessarily poorly structured code
+4. **Minimal unique value** - Halstead metrics (volume, difficulty, predicted bugs) are not commonly used in practice and don't provide clear refactoring guidance
+5. **Additional dependency** - Adds maintenance burden for marginal benefit
+
+### Alternative
+
+Enable oxlint's `complexity` rule in `.oxlintrc.json` to catch function-level complexity issues:
+```json
+{
+  "rules": {
+    "complexity": "warn"
+  }
+}
+```
+
+This provides actionable feedback (specific functions to simplify) without adding a new tool.
 
 ## Related
 
