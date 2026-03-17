@@ -161,14 +161,21 @@ async function runPreflightChecks(
   dustCommand: string,
   installCommand: string | undefined,
   shellRunner: ShellRunner,
-  onLoopEvent: LoopEmitFn
+  onLoopEvent: LoopEmitFn,
+  onAgentEvent?: SendAgentEventFn
 ): Promise<{ failed: true; output: string } | { failed: false }> {
   if (installCommand) {
     onLoopEvent({ type: 'loop.installing' })
+    onAgentEvent?.({ type: 'preflight-started', step: 'install' })
     const installResult = await shellRunner.run(installCommand, cwd)
     if (installResult.exitCode !== 0) {
       onLoopEvent({
         type: 'loop.install_failed',
+        output: installResult.output,
+      })
+      onAgentEvent?.({
+        type: 'preflight-failed',
+        step: 'install',
         output: installResult.output,
       })
       return { failed: true, output: installResult.output }
@@ -176,13 +183,20 @@ async function runPreflightChecks(
   }
 
   onLoopEvent({ type: 'loop.running_checks' })
+  onAgentEvent?.({ type: 'preflight-started', step: 'checks' })
   const checkResult = await shellRunner.run(`${dustCommand} check`, cwd)
   if (checkResult.exitCode !== 0) {
     onLoopEvent({ type: 'loop.checks_failed', output: checkResult.output })
+    onAgentEvent?.({
+      type: 'preflight-failed',
+      step: 'checks',
+      output: checkResult.output,
+    })
     return { failed: true, output: checkResult.output }
   }
 
   onLoopEvent({ type: 'loop.checks_passed' })
+  onAgentEvent?.({ type: 'preflight-completed' })
   return { failed: false }
 }
 
@@ -335,7 +349,8 @@ export async function runOneIteration(
     settings.dustCommand,
     settings.installCommand,
     shellRunner,
-    onLoopEvent
+    onLoopEvent,
+    onAgentEvent
   )
 
   if (preflightResult.failed) {

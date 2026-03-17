@@ -98,6 +98,28 @@ describe('formatAgentEvent', () => {
     })
     expect(result).toBeNull()
   })
+
+  test('formats preflight-started event', () => {
+    const result = formatAgentEvent({
+      type: 'preflight-started',
+      step: 'install',
+    })
+    expect(result).toBe('⚙ Pre-flight: install')
+  })
+
+  test('formats preflight-completed event', () => {
+    const result = formatAgentEvent({ type: 'preflight-completed' })
+    expect(result).toBe('⚙ Pre-flight checks passed')
+  })
+
+  test('formats preflight-failed event', () => {
+    const result = formatAgentEvent({
+      type: 'preflight-failed',
+      step: 'checks',
+      output: 'lint error',
+    })
+    expect(result).toBe('⚙ Pre-flight failed: checks')
+  })
 })
 
 describe('createHeartbeatThrottler', () => {

@@ -1029,6 +1029,14 @@ Usage: \`dust bucket tool asset-upload <file>\``
       event => event.type === 'loop.checks_failed'
     )
     expect(checksFailedEvent).toBeDefined()
+
+    // Verify wire events for preflight failure
+    const preflightFailed = onAgentEvent.events.find(
+      event => event.type === 'preflight-failed'
+    ) as { step: string; output: string }
+    expect(preflightFailed).toBeDefined()
+    expect(preflightFailed.step).toBe('checks')
+    expect(preflightFailed.output).toBe('test failures')
   })
 
   test('emits checks_passed event when pre-flight checks succeed', async () => {
@@ -1053,6 +1061,16 @@ Usage: \`dust bucket tool asset-upload <file>\``
       event => event.type === 'loop.checks_passed'
     )
     expect(checksPassedEvent).toBeDefined()
+
+    // Verify wire events were emitted
+    const preflightStarted = onAgentEvent.events.find(
+      event => event.type === 'preflight-started'
+    )
+    expect(preflightStarted).toBeDefined()
+    const preflightCompleted = onAgentEvent.events.find(
+      event => event.type === 'preflight-completed'
+    )
+    expect(preflightCompleted).toBeDefined()
   })
 
   test('runs install command before checks when installCommand is configured', async () => {
@@ -1133,6 +1151,14 @@ Usage: \`dust bucket tool asset-upload <file>\``
       event => event.type === 'loop.install_failed'
     )
     expect(installFailedEvent).toBeDefined()
+
+    // Verify wire events for install failure
+    const preflightFailed = onAgentEvent.events.find(
+      event => event.type === 'preflight-failed'
+    ) as { step: string; output: string }
+    expect(preflightFailed).toBeDefined()
+    expect(preflightFailed.step).toBe('install')
+    expect(preflightFailed.output).toContain('package not found')
   })
 
   test('returns ran_check_fix even when fix agent throws', async () => {

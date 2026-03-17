@@ -455,12 +455,22 @@ describe('runLoop', () => {
 
     await runLoop(dependencies, loopDeps)
 
-    // Only agent session events are posted (loop.* events are filtered out)
+    // Events are posted over the wire (loop.* events are filtered out)
     expect(postedEvents.length).toBeGreaterThan(0)
     expect(postedEvents[0].url).toBe('http://example.com/events')
     expect(postedEvents[0].payload.sequence).toBe(1)
-    expect(postedEvents[0].payload.event.type).toBe('agent-session-started')
-    expect((postedEvents[0].payload.event as { title?: string }).title).toBe(
+
+    // Preflight events come first, then session events
+    const preflightStarted = postedEvents.find(
+      event => event.payload.event.type === 'preflight-started'
+    )
+    expect(preflightStarted).toBeDefined()
+
+    const sessionStarted = postedEvents.find(
+      event => event.payload.event.type === 'agent-session-started'
+    )
+    expect(sessionStarted).toBeDefined()
+    expect((sessionStarted!.payload.event as { title?: string }).title).toBe(
       'Task'
     )
 

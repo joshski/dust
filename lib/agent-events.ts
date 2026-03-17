@@ -25,6 +25,9 @@ export type AgentSessionEvent =
   | { type: 'agent-session-activity' }
   | { type: 'agent-event'; provider: string; rawEvent: Record<string, unknown> }
   | { type: 'command-event'; commandEvent: CommandEvent }
+  | { type: 'preflight-started'; step: string }
+  | { type: 'preflight-completed' }
+  | { type: 'preflight-failed'; step: string; output: string }
 
 // Unified wire format for both HTTP and WebSocket paths
 export interface EventMessage {
@@ -114,5 +117,11 @@ export function formatAgentEvent(event: AgentSessionEvent): string | null {
     case 'agent-event':
     case 'command-event':
       return null
+    case 'preflight-started':
+      return `⚙ Pre-flight: ${event.step}`
+    case 'preflight-completed':
+      return '⚙ Pre-flight checks passed'
+    case 'preflight-failed':
+      return `⚙ Pre-flight failed: ${event.step}`
   }
 }
