@@ -24,14 +24,14 @@ Add a new command (e.g., `dust lint-code` or extend `dust lint`) that checks sou
 
 5. **File naming patterns** - Flag non-conventional filenames (e.g., inconsistent casing, unclear names).
 
-## Relationship to FTA Integration
+## Relationship to Complexity Rules
 
-The [Integrate FTA](integrate-fta.md) idea proposes using FTA (Fast TypeScript Analyzer) for TypeScript-specific complexity analysis. This idea differs in scope:
+The [Enable oxlint complexity rules as errors](enable-oxlint-complexity-rules-as-errors.md) idea proposes using oxlint's `complexity` rule for TypeScript-specific complexity analysis. This idea differs in scope:
 
-- **FTA integration**: TypeScript-specific, requires `bunx fta-cli`, provides detailed complexity scores
+- **Complexity rules**: TypeScript-specific, uses oxlint (already in use), provides function-level complexity scores
 - **Built-in lints**: Language-agnostic, zero dependencies, simple metrics only
 
-These ideas are complementary. Built-in lints provide baseline checks that work everywhere, while FTA (or similar tools) provide deeper analysis for specific languages.
+These ideas are complementary. Built-in lints provide baseline checks that work everywhere, while oxlint complexity rules provide deeper analysis for TypeScript projects.
 
 ## Principle Alignment
 
