@@ -20,6 +20,45 @@ const WORKFLOW_PREFIX_TO_SECTION: Record<string, string> = {
   'Expedite Idea: ': 'Expedites Idea',
 }
 
+function validateH2Heading(
+  filePath: string,
+  line: string,
+  lineNumber: number,
+  inOpenQuestions: boolean,
+  currentQuestionLine: number | null
+): Violation[] {
+  const violations: Violation[] = []
+
+  if (inOpenQuestions && currentQuestionLine !== null) {
+    violations.push({
+      file: filePath,
+      message: 'Question has no options listed beneath it',
+      line: currentQuestionLine,
+    })
+  }
+  if (inOpenQuestions && line !== '## Open Questions') {
+    violations.push({
+      file: filePath,
+      message:
+        'Open Questions must be the last section in an idea file. Move this section above ## Open Questions.',
+      line: lineNumber,
+    })
+  }
+  const headingText = line.slice(3).trimEnd()
+  if (
+    headingText.toLowerCase() === 'open questions' &&
+    headingText !== 'Open Questions'
+  ) {
+    violations.push({
+      file: filePath,
+      message: `Heading "${line.trimEnd()}" should be "## Open Questions"`,
+      line: lineNumber,
+    })
+  }
+
+  return violations
+}
+
 export function validateIdeaOpenQuestions(
   filePath: string,
   content: string
@@ -39,37 +78,8 @@ export function validateIdeaOpenQuestions(
     const trimmedLine = line.trimEnd()
     const nonWhitespaceLine = line.trim()
 
-    // h2 heading: enters or exits the Open Questions section
-    if (line.startsWith('## ')) {
-      if (inOpenQuestions && currentQuestionLine !== null) {
-        violations.push({
-          file: filePath,
-          message: 'Question has no options listed beneath it',
-          line: currentQuestionLine,
-        })
-      }
-      const headingText = line.slice(3).trimEnd()
-      if (
-        headingText.toLowerCase() === 'open questions' &&
-        headingText !== 'Open Questions'
-      ) {
-        violations.push({
-          file: filePath,
-          message: `Heading "${line.trimEnd()}" should be "## Open Questions"`,
-          line: i + 1,
-        })
-      }
-      inOpenQuestions = line === '## Open Questions'
-      currentQuestionLine = null
-      inOption = false
-      inCodeBlock = false
-      continue
-    }
-
-    if (!inOpenQuestions) continue
-
-    // Track fenced code blocks only while inside Open Questions.
-    if (line.startsWith('```')) {
+    // Track fenced code blocks — skip headings inside them
+    if (inOpenQuestions && line.startsWith('```')) {
       if (!inOption && !inCodeBlock) {
         violations.push({
           file: filePath,
@@ -81,6 +91,26 @@ export function validateIdeaOpenQuestions(
       continue
     }
     if (inCodeBlock) continue
+
+    // h2 heading: enters or exits the Open Questions section
+    if (line.startsWith('## ')) {
+      violations.push(
+        ...validateH2Heading(
+          filePath,
+          line,
+          i + 1,
+          inOpenQuestions,
+          currentQuestionLine
+        )
+      )
+      inOpenQuestions = line === '## Open Questions'
+      currentQuestionLine = null
+      inOption = false
+      inCodeBlock = false
+      continue
+    }
+
+    if (!inOpenQuestions) continue
 
     // h3 heading: a question (must end with ?)
     if (line.startsWith('### ')) {

@@ -4,9 +4,13 @@ import {
   type Idea,
   type IdeaOpenQuestion,
   type IdeaOption,
+  type ParsedIdeaContent,
+  ideaContentToMarkdown,
   parseIdea as parseIdeaImpl,
+  parseIdeaContent,
   parseOpenQuestions,
 } from './ideas'
+import { extractTitle } from '../markdown/markdown-utilities'
 import {
   type Principle,
   parsePrinciple as parsePrincipleImpl,
@@ -44,6 +48,7 @@ export type {
   IdeaOption,
   OpenQuestionResponse,
   ParsedCaptureIdeaTask,
+  ParsedIdeaContent,
   Principle,
   Task,
   WorkflowTaskMatch,
@@ -63,7 +68,10 @@ export interface TaskGraph {
 // Re-export constants and standalone functions
 export {
   CAPTURE_IDEA_PREFIX,
+  extractTitle,
   findAllWorkflowTasks,
+  ideaContentToMarkdown,
+  parseIdeaContent,
   parseOpenQuestions,
   parseResolvedQuestions,
 }

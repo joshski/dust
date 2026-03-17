@@ -97,6 +97,12 @@ const ideasHint = 'Run `dust ideas` to understand what has been proposed...'
 - May not work in environments where `dust` isn't directly available
 - Shifts complexity to environment setup
 
+## Related
+
+- [Workflow Tasks](../facts/workflow-tasks.md) - Documents the `dustCommand` parameter pattern
+- [Package Exports](../facts/package-exports.md)
+- [Agent-Agnostic Design](../principles/agent-agnostic-design.md)
+
 ## Open Questions
 
 ### Should audit templates reference dust commands at all?
@@ -132,9 +138,3 @@ Both ideas involve replacing directory references with command invocations in te
 
 #### Option: No - separate concerns
 The promote-commands idea focuses on workflow tasks where `DustSettings` is available. This idea focuses on the audits API where settings may not be available. Different solutions may be appropriate.
-
-## Related
-
-- [Workflow Tasks](../facts/workflow-tasks.md) - Documents the `dustCommand` parameter pattern
-- [Package Exports](../facts/package-exports.md)
-- [Agent-Agnostic Design](../principles/agent-agnostic-design.md)

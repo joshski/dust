@@ -399,9 +399,10 @@ This is an idea.
 Some notes.
 `
     const violations = validateIdeaOpenQuestions('idea.md', content)
-    expect(violations).toHaveLength(1)
+    expect(violations).toHaveLength(2)
     expect(violations[0].message).toContain('no options')
     expect(violations[0].line).toBe(7)
+    expect(violations[1].message).toContain('must be the last section')
   })
 
   test('ignores headings in other sections', () => {
@@ -665,6 +666,46 @@ Nope.
     expect(violations[0].message).toBe(
       'Heading "## OPEN QUESTIONS" should be "## Open Questions"'
     )
+  })
+
+  test('reports violation when a section appears after Open Questions', () => {
+    const content = `# My Idea
+
+## Open Questions
+
+### Should we do it?
+
+#### Yes
+
+Sure.
+
+## Related Ideas
+
+- [Other idea](other-idea.md)
+`
+    const violations = validateIdeaOpenQuestions('idea.md', content)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe(
+      'Open Questions must be the last section in an idea file. Move this section above ## Open Questions.'
+    )
+  })
+
+  test('allows Open Questions as last section', () => {
+    const content = `# My Idea
+
+## Related Ideas
+
+- [Other idea](other-idea.md)
+
+## Open Questions
+
+### Should we do it?
+
+#### Yes
+
+Sure.
+`
+    expect(validateIdeaOpenQuestions('idea.md', content)).toHaveLength(0)
   })
 })
 

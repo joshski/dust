@@ -22,6 +22,12 @@ export interface Idea {
   openQuestions: IdeaOpenQuestion[]
 }
 
+export interface ParsedIdeaContent {
+  title: string | null
+  body: string
+  openQuestions: IdeaOpenQuestion[]
+}
+
 /**
  * Parses the ## Open Questions section from idea markdown content.
  * Extracts each ### question heading and its #### option children.
@@ -144,4 +150,108 @@ export async function parseIdea(
     content,
     openQuestions,
   }
+}
+
+/**
+ * Strips the ## Open Questions section from idea markdown content.
+ * Preserves all content before and after the section.
+ */
+function stripOpenQuestionsSection(content: string): string {
+  const lines = content.split('\n')
+  const result: string[] = []
+  let inOpenQuestions = false
+  let inCodeFence = false
+
+  for (const line of lines) {
+    if (line.startsWith('```')) {
+      inCodeFence = !inCodeFence
+      if (!inOpenQuestions) result.push(line)
+      continue
+    }
+
+    if (inCodeFence) {
+      if (!inOpenQuestions) result.push(line)
+      continue
+    }
+
+    if (line.startsWith('## ')) {
+      inOpenQuestions = line.trimEnd() === '## Open Questions'
+      if (!inOpenQuestions) result.push(line)
+      continue
+    }
+
+    if (!inOpenQuestions) {
+      result.push(line)
+    }
+  }
+
+  // Trim trailing blank lines
+  while (result.length > 0 && result[result.length - 1]!.trim() === '') {
+    result.pop()
+  }
+
+  return result.join('\n') + '\n'
+}
+
+/**
+ * Strips the # title line from markdown content.
+ */
+function stripTitle(content: string): string {
+  const match = content.match(/^#\s+.+\n+/)
+  if (!match) return content
+  return content.slice(match[0].length)
+}
+
+/**
+ * Parses idea markdown into a structured object that can be bound to a UI
+ * and serialized back to markdown.
+ */
+export function parseIdeaContent(markdown: string): ParsedIdeaContent {
+  const title = extractTitle(markdown)
+  const openQuestions = parseOpenQuestions(markdown)
+  const body = stripTitle(stripOpenQuestionsSection(markdown))
+
+  return { title, body, openQuestions }
+}
+
+/**
+ * Serializes a ParsedIdeaContent back to markdown.
+ * Open Questions are appended as the last section.
+ */
+export function ideaContentToMarkdown(
+  content: ParsedIdeaContent,
+  options?: { includeOpenQuestions?: boolean }
+): string {
+  const includeOQ = options?.includeOpenQuestions ?? true
+  const parts: string[] = []
+
+  if (content.title) {
+    parts.push(`# ${content.title}`)
+    parts.push('')
+  }
+
+  if (content.body) {
+    parts.push(content.body.trimEnd())
+    parts.push('')
+  }
+
+  if (includeOQ && content.openQuestions.length > 0) {
+    parts.push('## Open Questions')
+    parts.push('')
+
+    for (const q of content.openQuestions) {
+      parts.push(`### ${q.question}`)
+      parts.push('')
+      for (const o of q.options) {
+        parts.push(`#### ${o.name}`)
+        parts.push('')
+        if (o.description) {
+          parts.push(o.description)
+          parts.push('')
+        }
+      }
+    }
+  }
+
+  return parts.join('\n')
 }
