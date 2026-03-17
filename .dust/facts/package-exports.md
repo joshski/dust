@@ -128,12 +128,21 @@ See [Patch Validation](./patch-validation.md) for detailed API documentation.
 High-level API for building multi-file artifact patches from structured objects with automatic validation.
 
 ```typescript
-import { buildArtifactPatch, serializeFact } from "@joshski/dust/patch";
+import { buildArtifactPatch, serializeFact, serializeIdea } from "@joshski/dust/patch";
 
 const result = await buildArtifactPatch(fileSystem, dustPath, {
   facts: {
     'new-fact': { title: 'New Fact', body: 'Description here.' },
     'old-fact': null,  // delete
+  },
+  ideas: {
+    'new-idea': {
+      title: 'New Idea',
+      body: 'Description of the idea.',
+      openQuestions: [
+        { question: 'Which approach?', options: [{ name: 'A', description: 'Option A' }] },
+      ],
+    },
   },
 });
 // result: { valid: boolean, violations: Violation[], patch: ArtifactPatch }

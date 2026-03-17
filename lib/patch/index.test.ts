@@ -3,11 +3,14 @@ import { createFileSystemEmulator } from '../filesystem/emulator'
 import {
   buildArtifactPatch,
   serializeFact,
+  serializeIdea,
   serializePrinciple,
   serializeTask,
 } from './index'
 import type { FactInput } from './fact'
 import { buildFactFiles } from './fact'
+import type { IdeaInput } from './idea'
+import { buildIdeaFiles } from './idea'
 import type { PrincipleInput } from './principle'
 import { buildPrincipleFiles } from './principle'
 import type { StandardTaskInput, WorkflowTaskInput } from './task'
@@ -1786,5 +1789,348 @@ describe('buildArtifactPatch with principles', () => {
     expect(result.patch.files['principles/deleted.md']).toBeNull()
     // Related should not be in the patch since cleanup produced identical content
     expect(result.patch.files['principles/related.md']).toBeUndefined()
+  })
+})
+
+describe('serializeIdea', () => {
+  test('produces valid idea markdown from an IdeaInput object', () => {
+    const input: IdeaInput = {
+      title: 'My Idea',
+    }
+    const result = serializeIdea(input)
+    expect(result).toBe('# My Idea\n')
+  })
+
+  test('includes body content', () => {
+    const input: IdeaInput = {
+      title: 'My Idea',
+      body: 'Description of the idea.',
+    }
+    const result = serializeIdea(input)
+    expect(result).toBe('# My Idea\n\nDescription of the idea.\n')
+  })
+
+  test('handles multi-line body content', () => {
+    const input: IdeaInput = {
+      title: 'My Idea',
+      body: 'First paragraph.\n\nSecond paragraph.\n\n## Context\n\nAdditional background.',
+    }
+    const result = serializeIdea(input)
+    expect(result).toBe(
+      '# My Idea\n\nFirst paragraph.\n\nSecond paragraph.\n\n## Context\n\nAdditional background.\n'
+    )
+  })
+
+  test('includes open questions section', () => {
+    const input: IdeaInput = {
+      title: 'My Idea',
+      body: 'Description.',
+      openQuestions: [
+        {
+          question: 'Which approach should we take?',
+          options: [
+            { name: 'Option A', description: 'Description of option A.' },
+            { name: 'Option B', description: 'Description of option B.' },
+          ],
+        },
+      ],
+    }
+    const result = serializeIdea(input)
+    expect(result).toContain('## Open Questions')
+    expect(result).toContain('### Which approach should we take?')
+    expect(result).toContain('#### Option A')
+    expect(result).toContain('Description of option A.')
+    expect(result).toContain('#### Option B')
+    expect(result).toContain('Description of option B.')
+  })
+
+  test('handles multiple open questions', () => {
+    const input: IdeaInput = {
+      title: 'My Idea',
+      openQuestions: [
+        {
+          question: 'First question?',
+          options: [
+            { name: 'A', description: 'First A.' },
+            { name: 'B', description: 'First B.' },
+          ],
+        },
+        {
+          question: 'Second question?',
+          options: [
+            { name: 'X', description: 'Second X.' },
+            { name: 'Y', description: 'Second Y.' },
+          ],
+        },
+      ],
+    }
+    const result = serializeIdea(input)
+    expect(result).toContain('### First question?')
+    expect(result).toContain('### Second question?')
+    expect(result).toContain('#### A')
+    expect(result).toContain('#### X')
+  })
+
+  test('handles option without description', () => {
+    const input: IdeaInput = {
+      title: 'My Idea',
+      openQuestions: [
+        {
+          question: 'Choose one?',
+          options: [
+            { name: 'Simple', description: '' },
+            { name: 'Detailed', description: 'Has a description.' },
+          ],
+        },
+      ],
+    }
+    const result = serializeIdea(input)
+    expect(result).toContain('#### Simple')
+    expect(result).toContain('#### Detailed')
+    expect(result).toContain('Has a description.')
+  })
+
+  test('omits open questions section when empty array', () => {
+    const input: IdeaInput = {
+      title: 'My Idea',
+      body: 'Description.',
+      openQuestions: [],
+    }
+    const result = serializeIdea(input)
+    expect(result).not.toContain('## Open Questions')
+  })
+
+  test('omits open questions section when undefined', () => {
+    const input: IdeaInput = {
+      title: 'My Idea',
+      body: 'Description.',
+    }
+    const result = serializeIdea(input)
+    expect(result).not.toContain('## Open Questions')
+  })
+})
+
+describe('buildIdeaFiles', () => {
+  test('produces file entries for an idea patch', () => {
+    const input: IdeaInput = {
+      title: 'New Idea',
+      body: 'Description here.',
+    }
+    const result = buildIdeaFiles(input, 'new-idea')
+    expect(Object.keys(result)).toContain('ideas/new-idea.md')
+    expect(result['ideas/new-idea.md']).toContain('# New Idea')
+  })
+})
+
+describe('buildArtifactPatch with ideas', () => {
+  const dustPath = '/project/.dust'
+
+  function makeFs(files: Record<string, string> = {}) {
+    const tree = {
+      project: {
+        '.dust': {
+          principles: {} as Record<string, string>,
+          facts: {} as Record<string, string>,
+          ideas: {} as Record<string, string>,
+          tasks: {} as Record<string, string>,
+        },
+      },
+    }
+    const flatFiles: Record<string, string> = {}
+    for (const [path, content] of Object.entries(files)) {
+      flatFiles[`${dustPath}/${path}`] = content
+    }
+    return createFileSystemEmulator(tree, flatFiles)
+  }
+
+  test('accepts an ideas object and creates idea files', async () => {
+    const fileSystem = makeFs()
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      ideas: {
+        'new-feature': {
+          title: 'New Feature',
+          body: 'A new feature idea.',
+        },
+      },
+    })
+
+    expect(result).toHaveProperty('valid')
+    expect(result).toHaveProperty('patch')
+    expect(result.patch.files['ideas/new-feature.md']).toContain(
+      '# New Feature'
+    )
+    expect(result.patch.files['ideas/new-feature.md']).toContain(
+      'A new feature idea.'
+    )
+  })
+
+  test('creates idea with open questions', async () => {
+    const fileSystem = makeFs()
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      ideas: {
+        'new-feature': {
+          title: 'New Feature',
+          body: 'Description of the feature idea.',
+          openQuestions: [
+            {
+              question: 'Which approach should we take?',
+              options: [
+                { name: 'Option A', description: 'Description of option A.' },
+                { name: 'Option B', description: 'Description of option B.' },
+              ],
+            },
+          ],
+        },
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    const content = result.patch.files['ideas/new-feature.md']
+    expect(content).toContain('# New Feature')
+    expect(content).toContain('## Open Questions')
+    expect(content).toContain('### Which approach should we take?')
+    expect(content).toContain('#### Option A')
+    expect(content).toContain('#### Option B')
+  })
+
+  test('deleting an idea sets null in the patch', async () => {
+    const fileSystem = makeFs({
+      'ideas/old-idea.md': '# Old Idea\n\nThis idea is being removed.',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      ideas: {
+        'old-idea': null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.patch.files['ideas/old-idea.md']).toBeNull()
+  })
+
+  test('deleting an idea updates workflow tasks that reference it', async () => {
+    const fileSystem = makeFs({
+      'ideas/deleted-idea.md': '# Deleted Idea\n\nThis idea is being removed.',
+      'tasks/decompose-idea-deleted-idea.md':
+        '# Decompose Idea: Deleted Idea\n\nCreate tasks from this idea.\n\n## Decomposes Idea\n\n- [Deleted Idea](../ideas/deleted-idea.md)\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      ideas: {
+        'deleted-idea': null,
+      },
+    })
+
+    expect(result.patch.files['ideas/deleted-idea.md']).toBeNull()
+    // The workflow task should have its link removed
+    const updatedTask =
+      result.patch.files['tasks/decompose-idea-deleted-idea.md']
+    expect(updatedTask).not.toContain('deleted-idea.md')
+    expect(updatedTask).toContain('Deleted Idea')
+    // Validation fails because workflow task sections require a valid link
+    expect(result.valid).toBe(false)
+  })
+
+  test('deleting an idea updates multiple workflow task types', async () => {
+    const fileSystem = makeFs({
+      'ideas/my-idea.md': '# My Idea\n\nAn idea.',
+      'tasks/refine-idea-my-idea.md':
+        '# Refine Idea: My Idea\n\nRefine this idea.\n\n## Refines Idea\n\n- [My Idea](../ideas/my-idea.md)\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+      'tasks/shelve-idea-my-idea.md':
+        '# Shelve Idea: My Idea\n\nArchive this idea.\n\n## Shelves Idea\n\n- [My Idea](../ideas/my-idea.md)\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      ideas: {
+        'my-idea': null,
+      },
+    })
+
+    expect(result.patch.files['ideas/my-idea.md']).toBeNull()
+    expect(result.patch.files['tasks/refine-idea-my-idea.md']).not.toContain(
+      'my-idea.md'
+    )
+    expect(result.patch.files['tasks/shelve-idea-my-idea.md']).not.toContain(
+      'my-idea.md'
+    )
+    // Validation fails because workflow task sections require a valid link
+    expect(result.valid).toBe(false)
+  })
+
+  test('deleting an idea removes references from other ideas', async () => {
+    const fileSystem = makeFs({
+      'ideas/deleted-idea.md': '# Deleted Idea\n\nThis idea is being removed.',
+      'ideas/linked-idea.md':
+        '# Linked Idea\n\nThis relates to [Deleted Idea](deleted-idea.md).',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      ideas: {
+        'deleted-idea': null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.patch.files['ideas/deleted-idea.md']).toBeNull()
+    expect(result.patch.files['ideas/linked-idea.md']).toBe(
+      '# Linked Idea\n\nThis relates to Deleted Idea.'
+    )
+  })
+
+  test('handles mixed facts, ideas, principles, and tasks in same patch', async () => {
+    const fileSystem = makeFs()
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      facts: {
+        'new-fact': { title: 'New Fact', body: 'Define the fact.' },
+      },
+      ideas: {
+        'new-idea': { title: 'New Idea', body: 'Describe the idea.' },
+      },
+      principles: {
+        'new-principle': {
+          title: 'New Principle',
+          body: 'Guide development.',
+        },
+      },
+      tasks: {
+        'new-task': {
+          title: 'New Task',
+          body: 'Implement the feature.',
+          definitionOfDone: ['Done'],
+        },
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.patch.files['facts/new-fact.md']).toContain('# New Fact')
+    expect(result.patch.files['ideas/new-idea.md']).toContain('# New Idea')
+    expect(result.patch.files['principles/new-principle.md']).toContain(
+      '# New Principle'
+    )
+    expect(result.patch.files['tasks/new-task.md']).toContain('# New Task')
+  })
+
+  test('validates idea title matches filename', async () => {
+    const fileSystem = makeFs()
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      ideas: {
+        'wrong-name': { title: 'Correct Name', body: 'Mismatched title.' },
+      },
+    })
+
+    expect(result.valid).toBe(false)
+    expect(
+      result.violations.some(v => v.message.toLowerCase().includes('title'))
+    ).toBe(true)
+  })
+
+  test('validates opening sentence requirement', async () => {
+    const fileSystem = makeFs()
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      ideas: {
+        'no-sentence': { title: 'No Sentence' },
+      },
+    })
+
+    expect(result.valid).toBe(false)
+    expect(
+      result.violations.some(v => v.message.includes('opening sentence'))
+    ).toBe(true)
   })
 })

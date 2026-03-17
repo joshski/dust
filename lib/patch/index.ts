@@ -10,6 +10,7 @@ import type { Violation } from '../lint/validators/types'
 import { type ArtifactPatch, validatePatch } from '../validation/index'
 import { MARKDOWN_LINK_PATTERN } from '../markdown/markdown-utilities'
 import { type FactInput, buildFactFiles, serializeFact } from './fact'
+import { type IdeaInput, buildIdeaFiles, serializeIdea } from './idea'
 import {
   type PrincipleInput,
   buildPrincipleFiles,
@@ -26,6 +27,8 @@ import {
 // Re-export types and functions
 export { serializeFact } from './fact'
 export type { FactInput } from './fact'
+export { serializeIdea } from './idea'
+export type { IdeaInput, IdeaOpenQuestion } from './idea'
 export { serializePrinciple } from './principle'
 export type { PrincipleInput } from './principle'
 export { serializeTask } from './task'
@@ -34,6 +37,7 @@ export type { ArtifactPatch, Violation }
 
 export interface ArtifactPatchInput {
   facts?: Record<string, FactInput | null>
+  ideas?: Record<string, IdeaInput | null>
   principles?: Record<string, PrincipleInput | null>
   tasks?: Record<string, TaskInput | null>
 }
@@ -569,6 +573,22 @@ function processTasks(
   }
 }
 
+function processIdeas(
+  ideas: Record<string, IdeaInput | null>,
+  accumulator: PatchAccumulator
+): void {
+  for (const [slug, ideaInput] of Object.entries(ideas)) {
+    if (ideaInput === null) {
+      const relativePath = `ideas/${slug}.md`
+      accumulator.files[relativePath] = null
+      accumulator.deletedPaths.add(relativePath)
+    } else {
+      const ideaFiles = buildIdeaFiles(ideaInput, slug)
+      Object.assign(accumulator.files, ideaFiles)
+    }
+  }
+}
+
 interface ProcessPrinciplesResult {
   deletedSlugs: Set<string>
   hierarchyViolations: Violation[]
@@ -692,6 +712,10 @@ export async function buildArtifactPatch(
 
   if (input.facts) {
     processFacts(input.facts, accumulator)
+  }
+
+  if (input.ideas) {
+    processIdeas(input.ideas, accumulator)
   }
 
   if (input.principles) {
