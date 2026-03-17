@@ -1,6 +1,6 @@
 # Validation-safe artifact patch API
 
-Expose an API for building multi-file artifact patches as structured objects with automatic relationship validation.
+Expose an API for building multi-file artifact patches from structured objects with automatic relationship validation.
 
 ## Context
 
@@ -42,29 +42,96 @@ The repository exposes parsed artifact objects (Idea, Task, Fact, Principle) but
 
 ## Proposed Direction
 
-Expose artifact relationships and changes as typed objects rather than requiring callers to manipulate markdown strings:
+Expose an API where callers express the desired state of artifacts as typed objects. The API validates relationships between those artifacts (and existing artifacts on the filesystem), then produces an `ArtifactPatch` ready for application:
 
 ```typescript
-// Hypothetical API
-import { buildPatchFromChanges } from '@joshski/dust/patch'
+import { buildArtifactPatch } from '@joshski/dust/patch'
 
-const patch = buildPatchFromChanges(fileSystem, dustPath, [
-  { type: 'delete-task', slug: 'old-task' },
-  { type: 'update-task', slug: 'another-task', changes: { blockedBy: ['remaining-task'] } },
-  { type: 'create-fact', slug: 'new-fact', title: 'New Fact', content: 'Description.' },
-])
+const result = await buildArtifactPatch(fileSystem, dustPath, {
+  tasks: {
+    'my-task': {
+      title: 'My Task',
+      blockedBy: ['other-task'],
+      principles: ['actionable-errors'],
+      definitionOfDone: ['Task is completed'],
+    },
+  },
+  facts: {
+    'new-fact': {
+      title: 'New Fact',
+      content: 'Description of the fact.',
+    },
+  },
+  deletions: ['tasks/old-task'],
+})
 
-const result = await validatePatch(fileSystem, dustPath, patch)
-// patch.files is the generated markdown, ready to apply if result.valid
+// result: { valid: boolean, violations: Violation[], patch: ArtifactPatch }
+// patch.files contains generated markdown, ready to apply if result.valid
 ```
 
-This would:
-- Generate valid markdown automatically from structured change descriptors
-- Rewrite references in related files (e.g., removing a deleted task from `## Blocked By` sections)
-- Validate the resulting changeset before any writes occur
-- Return a standard `ArtifactPatch` that existing tooling can apply
+This approach:
+- Uses full object replacement (callers provide complete artifact state)
+- Generates valid markdown automatically from structured objects
+- Validates all relationships before returning the patch
+- Returns a standard `ArtifactPatch` that existing tooling can apply
+- Does not require callers to think in terms of "changes"—just express desired state
 
-## Relationship Types to Consider
+### Handling Deletions
+
+Deletions are expressed as a separate array of paths. For reference-safe deletion (e.g., removing a task and updating `## Blocked By` sections in other tasks), callers would:
+
+1. Provide the deletion in the `deletions` array
+2. Provide updated versions of tasks that previously referenced the deleted task
+
+The API validates that the resulting state has no broken references.
+
+### Handling Renames
+
+Renames are composed from delete + create. To rename `old-task` to `new-task`:
+
+```typescript
+const result = await buildArtifactPatch(fileSystem, dustPath, {
+  tasks: {
+    'new-task': { title: 'New Task', /* ... */ },
+  },
+  deletions: ['tasks/old-task'],
+})
+```
+
+Callers are responsible for providing updated references in any artifacts that linked to the old slug.
+
+### Principle Hierarchy
+
+Tree manipulation for principles uses full object replacement with explicit relationships:
+
+```typescript
+const result = await buildArtifactPatch(fileSystem, dustPath, {
+  principles: {
+    'child-principle': {
+      title: 'Child Principle',
+      parentPrinciple: 'new-parent',
+      subPrinciples: [],
+      content: 'Description here.',
+    },
+    'new-parent': {
+      title: 'New Parent',
+      parentPrinciple: null,
+      subPrinciples: ['child-principle'],
+      content: 'Parent description.',
+    },
+    'old-parent': {
+      title: 'Old Parent',
+      parentPrinciple: null,
+      subPrinciples: [], // child-principle removed
+      content: 'Old parent description.',
+    },
+  },
+})
+```
+
+The API validates bidirectional link consistency—if `child-principle` declares `parentPrinciple: 'new-parent'`, then `new-parent` must include `child-principle` in its `subPrinciples` array (either in the patch or on disk).
+
+## Relationship Types
 
 Based on codebase analysis, artifacts have these relationships:
 
@@ -77,19 +144,15 @@ Based on codebase analysis, artifacts have these relationships:
 | Workflow task → idea | Yes | Transition tasks (`Refine Idea:`, etc.) link to target idea |
 | Markdown links | Yes | Any markdown link must resolve to existing file |
 
-The principle hierarchy is the most complex—adding or removing a principle requires updating both parent and child links to maintain bidirectional integrity.
+## Implementation Path
 
-## Implementation Considerations
+1. **Artifact serializers** — Each artifact type needs a serializer that produces valid markdown from a typed object. The inverse of `parseIdea()`, `parseTask()`, etc. One serializer already exists: `ideaContentToMarkdown()` in `lib/artifacts/ideas.ts`.
 
-1. **Change descriptor types** — Define a discriminated union of change operations per artifact type (create, update, delete, rename).
+2. **Input types** — Define TypeScript types for artifact inputs that mirror the parsed types but without `slug` (derived from the key) and without `content` (the raw markdown field that gets reconstructed).
 
-2. **Markdown generation** — Each artifact type needs a serializer that produces valid markdown from the parsed object structure. This is the inverse of the existing `parseFact()`, `parseIdea()`, etc.
+3. **Patch builder** — Combine serialized artifacts into an `ArtifactPatch`, merge with deletion entries, and run validation.
 
-3. **Reference resolution** — For deletions and renames, the API must discover all files referencing the target and generate updates for them.
-
-4. **Dry-run by default** — The API returns a patch that can be inspected before applying. This fits the existing `validatePatch()` → apply workflow.
-
-5. **Error granularity** — Changes that can't be expressed (e.g., deleting a principle with children) should fail fast with clear errors, not produce invalid patches.
+4. **Reference resolution** — For deletions, callers must explicitly provide updated versions of artifacts that referenced the deleted item. The API validates that no broken references exist in the final state.
 
 ## Alignment with Principles
 
@@ -107,91 +170,96 @@ The principle hierarchy is the most complex—adding or removing a principle req
 
 ## Open Questions
 
-### Should the API support partial updates or require full object replacement?
-
-#### Partial update descriptors
-
-Allow targeted changes like `{ blockedBy: ['new-task'] }` that merge with existing content:
-
-```typescript
-{ type: 'update-task', slug: 'my-task', changes: { blockedBy: ['new-blocker'] } }
-```
-
-This minimizes data the caller must provide and avoids overwriting unrelated sections. However, it requires diffing against existing content and defining merge semantics for each field.
-
-#### Full object replacement
-
-Require callers to supply the complete parsed object:
-
-```typescript
-{ type: 'update-task', slug: 'my-task', task: { title, blockedBy, definitionOfDone, ... } }
-```
-
-Simpler implementation (no merge logic) but forces callers to first read the full object and preserve unmodified fields.
-
-### Should rename operations be first-class?
-
-#### Explicit rename change type
-
-Add a dedicated rename operation that handles reference rewriting:
-
-```typescript
-{ type: 'rename-task', oldSlug: 'old-name', newSlug: 'new-name' }
-```
-
-This clearly expresses intent and enables the API to rewrite all references automatically.
-
-#### Compose from delete + create
-
-Callers express rename as a delete of the old file plus create of the new file. The API would need to infer that this is a rename (matching content/title) to update references, or callers manually update references.
-
-More primitive, but potentially ambiguous when filenames change alongside content changes.
-
-### How should principle hierarchy changes be expressed?
-
-#### Tree manipulation operations
-
-Provide operations specific to the principle tree:
-
-```typescript
-{ type: 'reparent-principle', slug: 'child-principle', newParent: 'new-parent-slug' }
-{ type: 'add-sub-principle', parent: 'parent-slug', child: 'child-slug' }
-```
-
-These encapsulate the bidirectional link maintenance logic.
-
-#### Generic update with computed side effects
-
-Use standard update operations and have the API compute necessary link changes:
-
-```typescript
-{ type: 'update-principle', slug: 'child', changes: { parentPrinciple: 'new-parent' } }
-// API generates updates to both old and new parent's ## Sub-Principles sections
-```
-
-More uniform but hides complexity—callers may not realize their "one change" becomes multiple file edits.
-
 ### What level of abstraction should the public API expose?
 
-#### High-level: change descriptors only
+#### Option: High-level only
 
-Expose only the change-to-patch transformation. Callers submit structured changes, receive a patch:
+Expose only `buildArtifactPatch()` that takes artifact objects and returns a validated patch:
 
 ```typescript
-const patch = await buildPatchFromChanges(fileSystem, dustPath, changes)
-// patch.files contains ready-to-apply markdown
+const result = await buildArtifactPatch(fileSystem, dustPath, { tasks, facts, ... })
 ```
 
-Simple for consumers but less flexible.
+Simple for consumers but less flexible for callers who want fine-grained control.
 
-#### Low-level: expose serializers separately
+#### Option: Both high-level and serializers
 
-Also expose individual artifact serializers for callers who need fine-grained control:
+Also expose individual artifact serializers for callers who need direct markdown generation:
 
 ```typescript
-import { serializeTask, serializePrinciple } from '@joshski/dust/serializers'
+import { serializeTask, serializeFact } from '@joshski/dust/serializers'
 
 const markdown = serializeTask(taskObject)
 ```
 
-More power but more API surface to maintain.
+More power but more API surface to maintain. Serializers would need their own input types (without the raw `content` field).
+
+### Should the API auto-update referencing artifacts on deletion?
+
+#### Option: Require explicit updates
+
+Callers must provide updated versions of all artifacts that reference a deleted item. The API only validates—it does not discover or modify references.
+
+```typescript
+const result = await buildArtifactPatch(fileSystem, dustPath, {
+  tasks: {
+    'dependent-task': { blockedBy: [] }, // caller removed the reference
+  },
+  deletions: ['tasks/old-task'],
+})
+```
+
+This keeps the API simple and predictable. Callers have full control but must track references themselves.
+
+#### Option: Auto-discover and update references
+
+The API scans existing artifacts, discovers references to deleted items, and generates updates:
+
+```typescript
+const result = await buildArtifactPatch(fileSystem, dustPath, {
+  deletions: ['tasks/old-task'],
+})
+// result.patch.files includes updated versions of tasks that referenced old-task
+```
+
+More convenient but adds complexity and may produce unexpected changes.
+
+### How should body content be expressed for artifacts?
+
+#### Option: Markdown body field
+
+Include a `body` field for content that appears between the title and structured sections:
+
+```typescript
+{
+  tasks: {
+    'my-task': {
+      title: 'My Task',
+      body: 'This task addresses the widget performance issue.\n\nAdditional context here.',
+      blockedBy: [],
+      definitionOfDone: ['Widget loads in under 100ms'],
+    },
+  },
+}
+```
+
+This handles the common case of prose content. The serializer would place the body after the opening sentence line.
+
+#### Option: Opening sentence only
+
+Only support the opening sentence (first line of prose) with a separate field. Any additional body content would require using the lower-level serializer API.
+
+```typescript
+{
+  tasks: {
+    'my-task': {
+      title: 'My Task',
+      openingSentence: 'This task addresses the widget performance issue.',
+      blockedBy: [],
+      definitionOfDone: ['Widget loads in under 100ms'],
+    },
+  },
+}
+```
+
+Simpler but limits expressiveness for artifacts that need longer descriptions.
