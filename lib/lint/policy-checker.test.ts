@@ -100,6 +100,7 @@ describe('analyzePolicyViolations', () => {
         'try { work() } catch { cleanup() }',
         'vi.doThing()',
         'const cast = raw as number as Target',
+        'getFactory().mock()',
       ].join('\n')
     )
 

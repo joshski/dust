@@ -110,13 +110,8 @@ function isUnknownKeywordTypeNode(node: ts.TypeNode): boolean {
   return node.kind === ts.SyntaxKind.UnknownKeyword
 }
 
-function checkNode(
-  sourceFile: ts.SourceFile,
-  node: ts.Node,
-  filePath: string,
-  diagnostics: PolicyDiagnostic[]
-): void {
-  if (
+function isNodeWithBindingName(node: ts.Node): boolean {
+  return (
     ts.isVariableDeclaration(node) ||
     ts.isParameter(node) ||
     ts.isFunctionDeclaration(node) ||
@@ -132,59 +127,84 @@ function checkNode(
     ts.isImportSpecifier(node) ||
     ts.isBindingElement(node) ||
     ts.isCatchClause(node)
-  ) {
-    if (
-      'name' in node &&
-      node.name &&
-      (ts.isIdentifier(node.name) ||
-        ts.isObjectBindingPattern(node.name) ||
-        ts.isArrayBindingPattern(node.name))
-    ) {
-      visitBindingName(sourceFile, node.name, filePath, diagnostics)
-    }
-  }
+  )
+}
 
-  if (
-    ts.isCallExpression(node) &&
-    ts.isPropertyAccessExpression(node.expression)
-  ) {
-    const callTarget = node.expression
-    if (
-      ts.isIdentifier(callTarget.expression) &&
-      callTarget.expression.text === 'vi'
-    ) {
-      const message = MOCKING_METHOD_MESSAGES.get(callTarget.name.text)
-      if (message) {
-        diagnostics.push(
-          diagnostic(
-            sourceFile,
-            callTarget,
-            'no-vitest-mocking',
-            filePath,
-            message
-          )
-        )
-      }
-    }
-  }
+function hasBindableName(
+  node: ts.Node
+): node is ts.Node & { name: ts.BindingName } {
+  return (
+    'name' in node &&
+    node.name != null &&
+    (ts.isIdentifier(node.name as ts.Node) ||
+      ts.isObjectBindingPattern(node.name as ts.Node) ||
+      ts.isArrayBindingPattern(node.name as ts.Node))
+  )
+}
 
-  if (
-    filePath.endsWith('.test.ts') &&
-    ts.isAsExpression(node) &&
-    ts.isAsExpression(node.expression)
-  ) {
-    if (isUnknownKeywordTypeNode(node.expression.type)) {
-      diagnostics.push(
-        diagnostic(
-          sourceFile,
-          node.type,
-          'no-unsafe-double-cast',
-          filePath,
-          "Avoid double-casting with 'as unknown as'. Prefer typed helpers/adapters, or add a local suppression with rationale at unavoidable interop boundaries."
-        )
-      )
-    }
+function checkAbbreviatedNames(
+  sourceFile: ts.SourceFile,
+  node: ts.Node,
+  filePath: string,
+  diagnostics: PolicyDiagnostic[]
+): void {
+  if (isNodeWithBindingName(node) && hasBindableName(node)) {
+    visitBindingName(sourceFile, node.name, filePath, diagnostics)
   }
+}
+
+function checkVitestMocking(
+  sourceFile: ts.SourceFile,
+  node: ts.Node,
+  filePath: string,
+  diagnostics: PolicyDiagnostic[]
+): void {
+  if (!ts.isCallExpression(node)) return
+  if (!ts.isPropertyAccessExpression(node.expression)) return
+
+  const callTarget = node.expression
+  if (!ts.isIdentifier(callTarget.expression)) return
+  if (callTarget.expression.text !== 'vi') return
+
+  const message = MOCKING_METHOD_MESSAGES.get(callTarget.name.text)
+  if (message) {
+    diagnostics.push(
+      diagnostic(sourceFile, callTarget, 'no-vitest-mocking', filePath, message)
+    )
+  }
+}
+
+function checkUnsafeDoubleCast(
+  sourceFile: ts.SourceFile,
+  node: ts.Node,
+  filePath: string,
+  diagnostics: PolicyDiagnostic[]
+): void {
+  if (!filePath.endsWith('.test.ts')) return
+  if (!ts.isAsExpression(node)) return
+  if (!ts.isAsExpression(node.expression)) return
+  if (!isUnknownKeywordTypeNode(node.expression.type)) return
+
+  diagnostics.push(
+    diagnostic(
+      sourceFile,
+      node.type,
+      'no-unsafe-double-cast',
+      filePath,
+      "Avoid double-casting with 'as unknown as'. Prefer typed helpers/adapters, or add a local suppression with rationale at unavoidable interop boundaries."
+    )
+  )
+}
+
+function checkNode(
+  sourceFile: ts.SourceFile,
+  node: ts.Node,
+  filePath: string,
+  diagnostics: PolicyDiagnostic[]
+): void {
+  checkAbbreviatedNames(sourceFile, node, filePath, diagnostics)
+  checkVitestMocking(sourceFile, node, filePath, diagnostics)
+  checkUnsafeDoubleCast(sourceFile, node, filePath, diagnostics)
 
   ts.forEachChild(node, child =>
     checkNode(sourceFile, child, filePath, diagnostics)

@@ -38,11 +38,21 @@ import type {
   PrincipleRelationships,
   Violation,
 } from '../../lint/validators/types'
-import type { CommandDependencies, CommandResult, GlobScanner } from '../types'
+import type {
+  CommandDependencies,
+  CommandResult,
+  FileSystem,
+  GlobScanner,
+} from '../types'
 
 interface ScanResult {
   files: string[]
   exists: boolean
+}
+
+interface ValidationResult {
+  violations: Violation[]
+  didValidate: boolean
 }
 
 /**
@@ -68,71 +78,63 @@ async function safeScanDir(
   }
 }
 
-export async function lintMarkdown(
-  dependencies: CommandDependencies
-): Promise<CommandResult> {
-  const { context, fileSystem, globScanner: glob } = dependencies
-  const dustPath = `${context.cwd}/.dust`
-
-  // Try to scan the .dust directory - if it doesn't exist, report the error
-  const dustScan = await safeScanDir(glob, dustPath)
-  if (!dustScan.exists) {
-    context.stderr('Error: .dust directory not found')
-    context.stderr("Run 'dust init' to initialize a Dust repository")
-    return { exitCode: 1 }
-  }
-  const dustFiles = dustScan.files
-
-  const violations: Violation[] = []
-
-  // Validate directory structure
-  context.stdout('Validating directory structure...')
-  violations.push(...(await validateDirectoryStructure(dustPath, fileSystem)))
-
-  // Validate settings.json schema
-  const settingsPath = join(dustPath, 'config', 'settings.json')
-  if (fileSystem.exists(settingsPath)) {
-    context.stdout('Validating settings.json...')
-    try {
-      const settingsContent = await fileSystem.readFile(settingsPath)
-      const settingsViolations = validateSettingsJson(settingsContent)
-      for (const sv of settingsViolations) {
-        violations.push({
-          file: settingsPath,
-          message: sv.message,
-        })
-      }
-    } catch (error) {
-      // File may have been deleted between exists check and read - skip it
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        throw error
-      }
+async function safeReadFile(
+  fileSystem: FileSystem,
+  filePath: string
+): Promise<string | null> {
+  try {
+    return await fileSystem.readFile(filePath)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null
     }
+    throw error
   }
+}
 
-  // Validate all markdown files for links
-  context.stdout('Validating links in .dust/...')
+async function validateSettingsFile(
+  fileSystem: FileSystem,
+  settingsPath: string
+): Promise<ValidationResult> {
+  if (!fileSystem.exists(settingsPath)) {
+    return { violations: [], didValidate: false }
+  }
+  const content = await safeReadFile(fileSystem, settingsPath)
+  if (content === null) {
+    return { violations: [], didValidate: false }
+  }
+  const violations = validateSettingsJson(content).map(sv => ({
+    file: settingsPath,
+    message: sv.message,
+  }))
+  return { violations, didValidate: true }
+}
 
+async function validateMarkdownLinks(
+  fileSystem: FileSystem,
+  dustPath: string,
+  dustFiles: string[]
+): Promise<Violation[]> {
+  const violations: Violation[] = []
   for (const file of dustFiles) {
     if (!file.endsWith('.md')) continue
-
     const filePath = `${dustPath}/${file}`
-    try {
-      const content = await fileSystem.readFile(filePath)
+    const content = await safeReadFile(fileSystem, filePath)
+    if (content !== null) {
       violations.push(...validateLinks(filePath, content, fileSystem))
-    } catch (error) {
-      // File may have been deleted between scan and read - skip it
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        throw error
-      }
     }
   }
+  return violations
+}
 
-  // Validate opening sentences and title-filename matching in all content directories
+async function validateContentFiles(
+  glob: GlobScanner,
+  fileSystem: FileSystem,
+  dustPath: string
+): Promise<Violation[]> {
   const contentDirs = ['principles', 'facts', 'ideas', 'tasks']
-  context.stdout('Validating content files...')
+  const violations: Violation[] = []
 
-  // Validate that content directories only contain markdown files
   for (const dir of contentDirs) {
     const dirPath = `${dustPath}/${dir}`
     violations.push(
@@ -146,161 +148,186 @@ export async function lintMarkdown(
 
     for (const file of files) {
       if (!file.endsWith('.md')) continue
-
       const filePath = `${dirPath}/${file}`
-      let content: string
-      try {
-        content = await fileSystem.readFile(filePath)
-      } catch (error) {
-        // File may have been deleted between scan and read - skip it
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-          continue
-        }
-        throw error
-      }
+      const content = await safeReadFile(fileSystem, filePath)
+      if (content === null) continue
 
       const openingSentenceViolation = validateOpeningSentence(
         filePath,
         content
       )
-      if (openingSentenceViolation) {
-        violations.push(openingSentenceViolation)
-      }
+      if (openingSentenceViolation) violations.push(openingSentenceViolation)
 
-      const openingSentenceLengthViolation = validateOpeningSentenceLength(
-        filePath,
-        content
-      )
-      if (openingSentenceLengthViolation) {
-        violations.push(openingSentenceLengthViolation)
-      }
+      const lengthViolation = validateOpeningSentenceLength(filePath, content)
+      if (lengthViolation) violations.push(lengthViolation)
 
-      const titleFilenameViolation = validateTitleFilenameMatch(
-        filePath,
-        content
-      )
-      if (titleFilenameViolation) {
-        violations.push(titleFilenameViolation)
-      }
+      const titleViolation = validateTitleFilenameMatch(filePath, content)
+      if (titleViolation) violations.push(titleViolation)
     }
   }
 
-  // Validate idea files specifically
-  const ideasPath = `${dustPath}/ideas`
-  const { files: ideaFiles } = await safeScanDir(glob, ideasPath)
-  if (ideaFiles.length > 0) {
-    context.stdout('Validating idea files in .dust/ideas/...')
+  return violations
+}
 
-    for (const file of ideaFiles) {
-      if (!file.endsWith('.md')) continue
+async function validateIdeaFiles(
+  glob: GlobScanner,
+  fileSystem: FileSystem,
+  ideasPath: string
+): Promise<ValidationResult> {
+  const { files } = await safeScanDir(glob, ideasPath)
+  if (files.length === 0) return { violations: [], didValidate: false }
 
-      const filePath = `${ideasPath}/${file}`
-      let content: string
-      try {
-        content = await fileSystem.readFile(filePath)
-      } catch (error) {
-        // File may have been deleted between scan and read - skip it
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-          continue
-        }
-        throw error
-      }
-
+  const violations: Violation[] = []
+  for (const file of files) {
+    if (!file.endsWith('.md')) continue
+    const filePath = `${ideasPath}/${file}`
+    const content = await safeReadFile(fileSystem, filePath)
+    if (content !== null) {
       violations.push(...validateIdeaOpenQuestions(filePath, content))
     }
   }
+  return { violations, didValidate: true }
+}
 
-  // Validate task files specifically
-  const tasksPath = `${dustPath}/tasks`
-  const { files: taskFiles } = await safeScanDir(glob, tasksPath)
-  if (taskFiles.length > 0) {
-    context.stdout('Validating task files in .dust/tasks/...')
+async function validateTaskFiles(
+  glob: GlobScanner,
+  fileSystem: FileSystem,
+  tasksPath: string,
+  ideasPath: string
+): Promise<ValidationResult> {
+  const { files } = await safeScanDir(glob, tasksPath)
+  if (files.length === 0) return { violations: [], didValidate: false }
 
-    for (const file of taskFiles) {
-      if (!file.endsWith('.md')) continue
+  const violations: Violation[] = []
+  for (const file of files) {
+    if (!file.endsWith('.md')) continue
+    const filePath = `${tasksPath}/${file}`
+    const content = await safeReadFile(fileSystem, filePath)
+    if (content === null) continue
 
-      const filePath = `${tasksPath}/${file}`
-      let content: string
-      try {
-        content = await fileSystem.readFile(filePath)
-      } catch (error) {
-        // File may have been deleted between scan and read - skip it
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-          continue
-        }
-        throw error
-      }
+    const filenameViolation = validateFilename(filePath)
+    if (filenameViolation) violations.push(filenameViolation)
 
-      const filenameViolation = validateFilename(filePath)
-      if (filenameViolation) {
-        violations.push(filenameViolation)
-      }
+    violations.push(...validateTaskHeadings(filePath, content))
+    violations.push(...validateSemanticLinks(filePath, content))
 
-      violations.push(...validateTaskHeadings(filePath, content))
-      violations.push(...validateSemanticLinks(filePath, content))
+    const imperativeViolation = validateImperativeOpeningSentence(
+      filePath,
+      content
+    )
+    if (imperativeViolation) violations.push(imperativeViolation)
 
-      const imperativeViolation = validateImperativeOpeningSentence(
-        filePath,
-        content
-      )
-      if (imperativeViolation) {
-        violations.push(imperativeViolation)
-      }
+    const ideaTransitionViolation = validateIdeaTransitionTitle(
+      filePath,
+      content,
+      ideasPath,
+      fileSystem
+    )
+    if (ideaTransitionViolation) violations.push(ideaTransitionViolation)
 
-      const ideaTransitionViolation = validateIdeaTransitionTitle(
+    violations.push(
+      ...validateWorkflowTaskBodySection(
         filePath,
         content,
         ideasPath,
         fileSystem
       )
-      if (ideaTransitionViolation) {
-        violations.push(ideaTransitionViolation)
-      }
+    )
+  }
+  return { violations, didValidate: true }
+}
 
-      violations.push(
-        ...validateWorkflowTaskBodySection(
-          filePath,
-          content,
-          ideasPath,
-          fileSystem
-        )
-      )
-    }
+async function validatePrincipleFiles(
+  glob: GlobScanner,
+  fileSystem: FileSystem,
+  principlesPath: string
+): Promise<ValidationResult> {
+  const { files } = await safeScanDir(glob, principlesPath)
+  if (files.length === 0) return { violations: [], didValidate: false }
+
+  const violations: Violation[] = []
+  const allPrincipleRelationships: PrincipleRelationships[] = []
+
+  for (const file of files) {
+    if (!file.endsWith('.md')) continue
+    const filePath = `${principlesPath}/${file}`
+    const content = await safeReadFile(fileSystem, filePath)
+    if (content === null) continue
+
+    violations.push(...validatePrincipleHierarchySections(filePath, content))
+    violations.push(...validatePrincipleHierarchyLinks(filePath, content))
+    allPrincipleRelationships.push(
+      extractPrincipleRelationships(filePath, content)
+    )
   }
 
-  // Validate principle files hierarchy
+  violations.push(...validateBidirectionalLinks(allPrincipleRelationships))
+  violations.push(...validateNoCycles(allPrincipleRelationships))
+
+  return { violations, didValidate: true }
+}
+
+export async function lintMarkdown(
+  dependencies: CommandDependencies
+): Promise<CommandResult> {
+  const { context, fileSystem, globScanner: glob } = dependencies
+  const dustPath = `${context.cwd}/.dust`
+
+  const dustScan = await safeScanDir(glob, dustPath)
+  if (!dustScan.exists) {
+    context.stderr('Error: .dust directory not found')
+    context.stderr("Run 'dust init' to initialize a Dust repository")
+    return { exitCode: 1 }
+  }
+
+  const violations: Violation[] = []
+
+  context.stdout('Validating directory structure...')
+  violations.push(...(await validateDirectoryStructure(dustPath, fileSystem)))
+
+  const settingsPath = join(dustPath, 'config', 'settings.json')
+  const settingsResult = await validateSettingsFile(fileSystem, settingsPath)
+  if (settingsResult.didValidate) {
+    context.stdout('Validating settings.json...')
+    violations.push(...settingsResult.violations)
+  }
+
+  context.stdout('Validating links in .dust/...')
+  violations.push(
+    ...(await validateMarkdownLinks(fileSystem, dustPath, dustScan.files))
+  )
+
+  context.stdout('Validating content files...')
+  violations.push(...(await validateContentFiles(glob, fileSystem, dustPath)))
+
+  const ideasPath = `${dustPath}/ideas`
+  const ideaResult = await validateIdeaFiles(glob, fileSystem, ideasPath)
+  if (ideaResult.didValidate) {
+    context.stdout('Validating idea files in .dust/ideas/...')
+    violations.push(...ideaResult.violations)
+  }
+
+  const tasksPath = `${dustPath}/tasks`
+  const taskResult = await validateTaskFiles(
+    glob,
+    fileSystem,
+    tasksPath,
+    ideasPath
+  )
+  if (taskResult.didValidate) {
+    context.stdout('Validating task files in .dust/tasks/...')
+    violations.push(...taskResult.violations)
+  }
+
   const principlesPath = `${dustPath}/principles`
-  const { files: principleFiles } = await safeScanDir(glob, principlesPath)
-  if (principleFiles.length > 0) {
+  const principleResult = await validatePrincipleFiles(
+    glob,
+    fileSystem,
+    principlesPath
+  )
+  if (principleResult.didValidate) {
     context.stdout('Validating principle hierarchy in .dust/principles/...')
-
-    const allPrincipleRelationships: PrincipleRelationships[] = []
-
-    for (const file of principleFiles) {
-      if (!file.endsWith('.md')) continue
-
-      const filePath = `${principlesPath}/${file}`
-      let content: string
-      try {
-        content = await fileSystem.readFile(filePath)
-      } catch (error) {
-        // File may have been deleted between scan and read - skip it
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
-          continue
-        }
-        throw error
-      }
-
-      violations.push(...validatePrincipleHierarchySections(filePath, content))
-      violations.push(...validatePrincipleHierarchyLinks(filePath, content))
-
-      allPrincipleRelationships.push(
-        extractPrincipleRelationships(filePath, content)
-      )
-    }
-
-    violations.push(...validateBidirectionalLinks(allPrincipleRelationships))
-    violations.push(...validateNoCycles(allPrincipleRelationships))
+    violations.push(...principleResult.violations)
   }
 
   if (violations.length === 0) {

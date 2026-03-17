@@ -431,6 +431,29 @@ const _CI_FILES = [
   'Jenkinsfile',
 ]
 
+const CI_CHECK_PATTERNS: Record<string, string[]> = {
+  linting: ['eslint', 'lint:', 'npm run lint', 'bun run lint'],
+  formatting: ['prettier', 'format:', '--check'],
+  'type-checking': ['tsc', 'typecheck', 'type-check'],
+  build: [
+    'build:',
+    'npm run build',
+    'bun run build',
+    'go build',
+    'cargo build',
+  ],
+  'unit-tests': [
+    'test:',
+    'npm test',
+    'bun test',
+    'pytest',
+    'go test',
+    'cargo test',
+  ],
+  'unused-code': ['knip', 'unused'],
+  vetting: ['go vet'],
+}
+
 // --- Pure Functions ---
 
 /**
@@ -536,54 +559,10 @@ export function detectCIChecks(ciFiles: CIFileContent[]): Set<string> {
 
   for (const file of ciFiles) {
     const content = file.content.toLowerCase()
-
-    // Detect common CI check patterns
-    if (
-      content.includes('eslint') ||
-      content.includes('lint:') ||
-      content.includes('npm run lint') ||
-      content.includes('bun run lint')
-    ) {
-      ciChecks.add('linting')
-    }
-    if (
-      content.includes('prettier') ||
-      content.includes('format:') ||
-      content.includes('--check')
-    ) {
-      ciChecks.add('formatting')
-    }
-    if (
-      content.includes('tsc') ||
-      content.includes('typecheck') ||
-      content.includes('type-check')
-    ) {
-      ciChecks.add('type-checking')
-    }
-    if (
-      content.includes('build:') ||
-      content.includes('npm run build') ||
-      content.includes('bun run build') ||
-      content.includes('go build') ||
-      content.includes('cargo build')
-    ) {
-      ciChecks.add('build')
-    }
-    if (
-      content.includes('test:') ||
-      content.includes('npm test') ||
-      content.includes('bun test') ||
-      content.includes('pytest') ||
-      content.includes('go test') ||
-      content.includes('cargo test')
-    ) {
-      ciChecks.add('unit-tests')
-    }
-    if (content.includes('knip') || content.includes('unused')) {
-      ciChecks.add('unused-code')
-    }
-    if (content.includes('go vet')) {
-      ciChecks.add('vetting')
+    for (const [category, patterns] of Object.entries(CI_CHECK_PATTERNS)) {
+      if (patterns.some(pattern => content.includes(pattern))) {
+        ciChecks.add(category)
+      }
     }
   }
 
