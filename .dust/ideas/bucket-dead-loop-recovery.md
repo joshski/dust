@@ -12,7 +12,7 @@ The `dust bucket` repository loop (`lib/bucket/repository.ts:321`) runs `while (
 
 The only recovery path today is removing the repo from the remote's list (triggering cleanup) and then re-adding it (triggering a fresh clone and new loop). But since the remote doesn't know the loop died, it wouldn't know to do this.
 
-This is especially relevant to [Run dust check before starting agent session](run-dust-check-before-starting-agent-session.md) and [Abort infinite loops](abort-infinite-loops.md), both of which propose exiting the loop under certain conditions. Without recovery, those features would leave repositories permanently stuck.
+This is especially relevant to [Block repositories on persistent check failures](block-repositories-on-persistent-check-failures.md) and [Abort infinite loops](abort-infinite-loops.md), both of which propose exiting the loop under certain conditions. Without recovery, those features would leave repositories permanently stuck.
 
 ## Related Code
 

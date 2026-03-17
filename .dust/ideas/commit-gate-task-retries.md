@@ -18,7 +18,7 @@ The loop already does a `git pull` at the start of each iteration. After a faile
 ## Related ideas
 
 - [Abort infinite loops](abort-infinite-loops.md) — complementary; abort-infinite-loops counts consecutive failures, this idea prevents retries until the codebase changes
-- [Run dust check before starting agent session](run-dust-check-before-starting-agent-session.md) — pre-flight checks catch some failures earlier, but don't address rate limits or provider errors
+- [Block repositories on persistent check failures](block-repositories-on-persistent-check-failures.md) — pre-flight checks catch some failures earlier; blocking prevents burning iterations on unfixable check failures
 - [Bucket dead loop recovery](bucket-dead-loop-recovery.md) — handles loop death; commit-gating prevents the loop from needing to die
 
 ## Implementation Considerations

@@ -26,7 +26,7 @@ Automatically create a new task file (e.g., `.dust/tasks/diagnose-stalled-<task>
 
 ### Pause and wait for external signal
 
-In bucket mode, mark the repository as "stalled" and stop the loop. When the server receives a push webhook (indicating someone may have fixed the problem), unblock the repository. This is similar to the `checks_failed` blocking in [Run dust check before starting agent session](run-dust-check-before-starting-agent-session.md).
+In bucket mode, mark the repository as "stalled" and stop the loop. When the server receives a push webhook (indicating someone may have fixed the problem), unblock the repository. This is similar to the `checks_failed` blocking in [Block repositories on persistent check failures](block-repositories-on-persistent-check-failures.md).
 
 ## Related ideas
 
