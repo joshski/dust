@@ -17,6 +17,12 @@ import {
 } from './principles'
 import { parseTask as parseTaskImpl, type Task } from './tasks'
 import {
+  type ParsedArtifact,
+  type ParsedMarkdownLink,
+  type ParsedSection,
+  parseArtifact,
+} from './parsed-artifact'
+import {
   type AllWorkflowTasks,
   CAPTURE_IDEA_PREFIX,
   type CreateIdeaTransitionTaskResult,
@@ -47,8 +53,11 @@ export type {
   IdeaOpenQuestion,
   IdeaOption,
   OpenQuestionResponse,
+  ParsedArtifact,
   ParsedCaptureIdeaTask,
   ParsedIdeaContent,
+  ParsedMarkdownLink,
+  ParsedSection,
   Principle,
   Task,
   WorkflowTaskMatch,
@@ -71,6 +80,7 @@ export {
   extractTitle,
   findAllWorkflowTasks,
   ideaContentToMarkdown,
+  parseArtifact,
   parseIdeaContent,
   parseOpenQuestions,
   parseResolvedQuestions,

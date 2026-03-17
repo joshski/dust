@@ -42,7 +42,7 @@ The validators become pure functions: `(artifact: ParsedArtifact) => Violation[]
 
 ## Blocked By
 
-- [Add ParsedArtifact with Line Numbers](add-parsedartifact-with-line-numbers.md)
+(none)
 
 ## Definition of Done
 
