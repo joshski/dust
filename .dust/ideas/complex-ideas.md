@@ -2,17 +2,15 @@
 
 Allow ideas to be marked as "complex" when they require multiple phases of exploration, rather than tracking dependencies between separate idea files.
 
-This is an alternative approach to [Idea dependencies](idea-dependencies.md) that addresses the same motivation—enabling ambitious, multi-part planning—without introducing inter-idea ordering relationships.
-
 ## Motivation
 
 The [Some Big Design Up Front](../principles/some-big-design-up-front.md) principle observes that AI agents lower the cost of architectural exploration. Users want to plan ambitious work before implementation begins. The question is how to express that scope.
 
-Idea dependencies propose external relationships between ideas: "Idea A requires Idea B." Complex ideas propose internal structure: "Idea A has phases 1, 2, 3."
+This proposal uses internal structure: "Idea A has phases 1, 2, 3." Each phase represents a distinct exploration area that must be refined before moving on.
 
-## How It Could Work
+## How It Would Work
 
-A complex idea would contain multiple `## Phase` sections, each representing a distinct exploration area. Workflow tasks would operate on individual phases rather than the whole idea:
+A complex idea contains multiple `## Phase` sections. Workflow tasks operate on individual phases rather than the whole idea:
 
 ```markdown
 # Multi-tenant Architecture
@@ -32,76 +30,85 @@ Design the authentication and authorization model for tenants.
 Determine how tenant-specific configuration will be managed.
 ```
 
-A `refine-idea` task could target a specific phase: "Refine Idea: Multi-tenant Architecture (Phase 1: Data Isolation)". Each phase would have its own open questions and resolution cycle.
+Phases are strictly sequential—Phase 2 cannot begin until Phase 1 is complete. This matches document order and keeps the model simple.
 
-## Comparison with Idea Dependencies
+### Phase Completion
 
-| Aspect | Idea Dependencies | Complex Ideas |
-|--------|------------------|---------------|
-| Number of files | Multiple ideas | Single idea |
-| Ordering mechanism | External links between files | Internal section order |
-| Granularity | Idea-level | Phase-level |
-| Flexibility | Can reorder by changing links | Phases are sequential by default |
-| Completion tracking | Delete or transition linked idea | Mark phase as resolved within file |
-| Small Units principle | Aligned (separate files) | Tension (larger files) |
-| Discovery | See relationships across files | See full scope in one file |
+Phase completion is tracked by adding "(Completed)" to the phase heading:
 
-## Advantages Over Idea Dependencies
+```markdown
+## Phase 1: Data Isolation (Completed)
+```
 
-1. **No orphan risk** — Dependencies between ideas can break if one idea is shelved or renamed. Phases within a single file cannot become orphaned.
+This is visible, simple, and requires no new syntax. When all phases are marked complete, the idea is ready for decomposition.
 
-2. **Cohesive narrative** — A complex idea tells its complete story in one place. Dependencies require readers to navigate multiple files to understand the full picture.
+### Workflow Task Targeting
 
-3. **Simpler workflow** — No new completion signals needed. Phases can use existing open questions format to track resolution.
+A `Refine Idea` task would target a specific phase:
 
-4. **Natural sequencing** — Document order implies phase order without needing explicit "requires" links.
+```
+Refine Idea: Multi-tenant Architecture (Phase 1: Data Isolation)
+```
 
-## Disadvantages
+Each phase would have its own open questions and resolution cycle. When a phase's open questions are resolved, the task marks it "(Completed)" and creates a task for the next phase (if any).
 
-1. **Larger files** — Violates [Small Units](../principles/small-units.md) more directly. A complex idea could grow quite large.
+## Alignment with Principles
 
-2. **Less flexibility** — Phases are implicitly sequential. Dependencies allow arbitrary ordering.
+| Principle | Alignment |
+|-----------|-----------|
+| [Small Units](../principles/small-units.md) | Tension — files grow larger, but phases keep exploration focused |
+| [Some Big Design Up Front](../principles/some-big-design-up-front.md) | Strong — enables thorough multi-part exploration before implementation |
+| [Lightweight Planning](../principles/lightweight-planning.md) | Moderate — no new file types, but adds phase parsing |
 
-3. **Harder to parallelize** — Two agents couldn't easily work on different phases of the same idea, whereas they could work on separate dependent ideas.
+The Small Units tension is acceptable because:
+1. Phases keep each exploration area discrete even within a larger file
+2. The alternative (idea dependencies) adds more conceptual overhead
+3. A cohesive narrative in one file aids understanding
 
-4. **Mixing concerns** — Different phases might have different priority levels or timelines, but they're bundled together.
+## Implementation Considerations
+
+Based on codebase analysis:
+
+1. **Idea parsing** — `lib/artifacts/ideas.ts` defines `parseIdea()`. Would need to extract `## Phase` sections and their completion status. Phases could use the existing `IdeaOpenQuestion` structure for their open questions.
+
+2. **Workflow task creation** — `createRefineIdeaTask()` would need to accept an optional phase identifier. The task title format `Refine Idea: <Idea Title> (Phase N: <Phase Title>)` fits existing patterns.
+
+3. **Task matching** — `findWorkflowTaskForIdea()` would need to handle phase-scoped tasks. The `WorkflowTaskMatch` type would gain an optional `phase` field.
+
+4. **Completion tracking** — Parse "(Completed)" suffix in phase headings. Simple string matching, no new markdown syntax.
+
+5. **Validation** — `idea-validator.ts` would validate that referenced phases exist and aren't already complete.
 
 ## Open Questions
 
-### Should phases support parallel execution?
+### How should open questions work with phases?
 
-#### Phases are strictly sequential
+#### Each phase has its own `## Open Questions` section
 
-Phase 2 cannot begin until Phase 1 is complete. This matches the document order and keeps the model simple. The constraint ensures thorough exploration of each phase before moving on.
+Phases contain their own open questions block. When refining Phase 1, only Phase 1's open questions appear. This keeps each phase self-contained.
 
-#### Phases can declare their own dependencies
+```markdown
+## Phase 1: Data Isolation
 
-Allow `### Requires` within a phase section to reference other phases by name. This enables parallel exploration where phases are independent, while still supporting sequential exploration where needed.
+Description here.
 
-### How would phase completion be tracked?
+### Open Questions
 
-#### Checkboxes within phase headers
+#### Should we use row-level security?
 
-Use markdown checkboxes: `## Phase 1: Data Isolation [x]`. Simple and visible, but adds non-standard syntax.
+Option A, Option B...
+```
 
-#### A dedicated "Completed Phases" section
+#### Single `## Open Questions` section for the whole idea
 
-List completed phases in a separate section at the bottom. Keeps phase content clean but requires scrolling to see status.
+All open questions live at the end of the file. Questions are tagged or grouped by phase. Simpler structure but less encapsulated.
 
-#### Phase-specific workflow tasks
+### What happens when the last phase is completed?
 
-Generate `Refine Idea Phase: Multi-tenant Architecture / Data Isolation` tasks. Completion is tracked by task deletion. Adds workflow task complexity.
+#### Auto-transition to ready for decomposition
 
-### Could both approaches coexist?
+When all phases are marked "(Completed)", the idea automatically becomes eligible for a `Decompose Idea` task. No manual step needed.
 
-#### Yes, use both as appropriate
+#### Manual final review
 
-Simple multi-part work uses phases within a single idea. Work that spans truly independent domains uses separate ideas with dependencies. This is flexible but adds conceptual overhead.
-
-#### No, choose one approach
-
-Having two ways to express multi-part work is confusing. Pick the one that best fits the principles and use it consistently.
-
-## Related Ideas
-
-- [Idea dependencies](idea-dependencies.md) — The alternative approach this idea competes with
+Completing the last phase triggers a `Finalize Idea` task that reviews the whole idea before decomposition. Adds a checkpoint but also complexity.
