@@ -31,7 +31,6 @@ This uses the default threshold of 20, which is a reasonable balance between all
 
 ## Blocked By
 
-- [Reduce complexity in parsing functions](reduce-complexity-in-parsing-functions.md)
 - [Reduce complexity in lint functions](reduce-complexity-in-lint-functions.md)
 - [Reduce complexity in command functions](reduce-complexity-in-command-functions.md)
 - [Reduce complexity in loop functions](reduce-complexity-in-loop-functions.md)

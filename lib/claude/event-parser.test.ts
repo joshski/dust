@@ -218,4 +218,12 @@ describe('parseRawEvent', () => {
 
     expect(events).toEqual([])
   })
+
+  test('returns empty when type is not a string', () => {
+    const raw = { type: 123, data: 'whatever' }
+
+    const events = [...parseRawEvent(raw)]
+
+    expect(events).toEqual([])
+  })
 })

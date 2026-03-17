@@ -129,6 +129,88 @@ function parseTool(t: unknown, allowChildren: boolean): ToolDefinition | null {
   return result
 }
 
+function parseRepositoryItem(r: unknown): RepositoryListItem | null {
+  if (typeof r !== 'object' || r === null) {
+    return null
+  }
+  const repo = r as Record<string, unknown>
+  if (typeof repo.name !== 'string' || typeof repo.gitUrl !== 'string') {
+    return null
+  }
+  if (
+    typeof repo.id !== 'number' ||
+    typeof repo.url !== 'string' ||
+    typeof repo.hasTask !== 'boolean'
+  ) {
+    return null
+  }
+  const item: RepositoryListItem = {
+    id: repo.id,
+    name: repo.name,
+    gitUrl: repo.gitUrl,
+    url: repo.url,
+    hasTask: repo.hasTask,
+  }
+  if (typeof repo.gitSshUrl === 'string') {
+    item.gitSshUrl = repo.gitSshUrl
+  }
+  if (typeof repo.agentProvider === 'string') {
+    item.agentProvider = repo.agentProvider
+  }
+  return item
+}
+
+function parseRepositoryList(
+  message: Record<string, unknown>
+): RepositoryListMessage | null {
+  if (!Array.isArray(message.repositories)) {
+    return null
+  }
+  const repositories: RepositoryListItem[] = []
+  for (const r of message.repositories) {
+    const item = parseRepositoryItem(r)
+    if (item === null) {
+      return null
+    }
+    repositories.push(item)
+  }
+  return { type: 'repository-list', repositories }
+}
+
+function parseTaskAvailable(
+  message: Record<string, unknown>
+): TaskAvailableMessage | null {
+  if (typeof message.repository !== 'string') {
+    return null
+  }
+  return { type: 'task-available', repository: message.repository }
+}
+
+function parseToolDefinitions(
+  message: Record<string, unknown>
+): ToolDefinitionsMessage | null {
+  if (!Array.isArray(message.tools)) {
+    return null
+  }
+  const tools: ToolDefinition[] = []
+  for (const t of message.tools) {
+    const tool = parseTool(t, true)
+    if (tool === null) {
+      return null
+    }
+    tools.push(tool)
+  }
+  return { type: 'tool-definitions', tools }
+}
+
+type MessageParser = (message: Record<string, unknown>) => ServerMessage | null
+
+const messageParsers: Record<string, MessageParser> = {
+  'repository-list': parseRepositoryList,
+  'task-available': parseTaskAvailable,
+  'tool-definitions': parseToolDefinitions,
+}
+
 /**
  * Parse and validate a server message from raw JSON data.
  * Returns the typed message if valid, or null if invalid.
@@ -139,66 +221,12 @@ export function parseServerMessage(data: unknown): ServerMessage | null {
   }
 
   const message = data as Record<string, unknown>
+  const messageType = message.type
 
-  if (message.type === 'repository-list') {
-    if (!Array.isArray(message.repositories)) {
-      return null
-    }
-    const repositories: RepositoryListItem[] = []
-    for (const r of message.repositories) {
-      if (typeof r !== 'object' || r === null) {
-        return null
-      }
-      const repo = r as Record<string, unknown>
-      if (typeof repo.name !== 'string' || typeof repo.gitUrl !== 'string') {
-        return null
-      }
-      if (
-        typeof repo.id !== 'number' ||
-        typeof repo.url !== 'string' ||
-        typeof repo.hasTask !== 'boolean'
-      ) {
-        return null
-      }
-      const item: RepositoryListItem = {
-        id: repo.id,
-        name: repo.name,
-        gitUrl: repo.gitUrl,
-        url: repo.url,
-        hasTask: repo.hasTask,
-      }
-      if (typeof repo.gitSshUrl === 'string') {
-        item.gitSshUrl = repo.gitSshUrl
-      }
-      if (typeof repo.agentProvider === 'string') {
-        item.agentProvider = repo.agentProvider
-      }
-      repositories.push(item)
-    }
-    return { type: 'repository-list', repositories }
+  if (typeof messageType !== 'string') {
+    return null
   }
 
-  if (message.type === 'task-available') {
-    if (typeof message.repository !== 'string') {
-      return null
-    }
-    return { type: 'task-available', repository: message.repository }
-  }
-
-  if (message.type === 'tool-definitions') {
-    if (!Array.isArray(message.tools)) {
-      return null
-    }
-    const tools: ToolDefinition[] = []
-    for (const t of message.tools) {
-      const tool = parseTool(t, true)
-      if (tool === null) {
-        return null
-      }
-      tools.push(tool)
-    }
-    return { type: 'tool-definitions', tools }
-  }
-
-  return null
+  const parser = messageParsers[messageType]
+  return parser ? parser(message) : null
 }

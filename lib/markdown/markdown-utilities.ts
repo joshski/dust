@@ -17,6 +17,61 @@ export function extractTitle(content: string): string | null {
  */
 export const MARKDOWN_LINK_PATTERN = /\[([^\]]+)\]\(([^)]+)\)/
 
+function findH1Index(lines: string[]): number {
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].match(/^#\s+.+$/)) {
+      return i
+    }
+  }
+  return -1
+}
+
+function findFirstNonBlankLineAfter(
+  lines: string[],
+  startIndex: number
+): number {
+  for (let i = startIndex + 1; i < lines.length; i++) {
+    if (lines[i].trim() !== '') {
+      return i
+    }
+  }
+  return -1
+}
+
+const LIST_ITEM_PREFIXES = ['-', '*', '+']
+const STRUCTURAL_PREFIXES = ['#', '```', '>']
+
+function isStructuralElement(line: string): boolean {
+  if (STRUCTURAL_PREFIXES.some(prefix => line.startsWith(prefix))) {
+    return true
+  }
+  if (LIST_ITEM_PREFIXES.some(prefix => line.startsWith(prefix))) {
+    return true
+  }
+  return /^\d+\./.test(line)
+}
+
+function isBlockBreak(line: string): boolean {
+  return STRUCTURAL_PREFIXES.some(prefix => line.startsWith(prefix))
+}
+
+function collectParagraph(lines: string[], startIndex: number): string {
+  const parts: string[] = []
+  for (let i = startIndex; i < lines.length; i++) {
+    const line = lines[i].trim()
+    if (line === '' || isBlockBreak(line)) {
+      break
+    }
+    parts.push(line)
+  }
+  return parts.join(' ')
+}
+
+function extractFirstSentence(paragraph: string): string | null {
+  const match = paragraph.match(/^(.+?[.?!])(?:\s|$)/)
+  return match ? match[1] : null
+}
+
 /**
  * Extracts the first sentence from the first paragraph after the H1 heading.
  * Returns null if no valid opening paragraph exists.
@@ -28,71 +83,21 @@ export const MARKDOWN_LINK_PATTERN = /\[([^\]]+)\]\(([^)]+)\)/
  */
 export function extractOpeningSentence(content: string): string | null {
   const lines = content.split('\n')
-
-  // Find the H1 heading
-  let h1Index = -1
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].match(/^#\s+.+$/)) {
-      h1Index = i
-      break
-    }
-  }
-
+  const h1Index = findH1Index(lines)
   if (h1Index === -1) {
     return null
   }
 
-  // Find the first non-blank line after the H1
-  let paragraphStart = -1
-  for (let i = h1Index + 1; i < lines.length; i++) {
-    const line = lines[i].trim()
-    if (line !== '') {
-      paragraphStart = i
-      break
-    }
-  }
-
+  const paragraphStart = findFirstNonBlankLineAfter(lines, h1Index)
   if (paragraphStart === -1) {
     return null
   }
 
-  const firstLine = lines[paragraphStart]
-  const trimmedFirstLine = firstLine.trim()
-
-  // Check if it's a plain paragraph (not heading, list item, or code block)
-  if (
-    trimmedFirstLine.startsWith('#') ||
-    trimmedFirstLine.startsWith('-') ||
-    trimmedFirstLine.startsWith('*') ||
-    trimmedFirstLine.startsWith('+') ||
-    trimmedFirstLine.match(/^\d+\./) ||
-    trimmedFirstLine.startsWith('```') ||
-    trimmedFirstLine.startsWith('>')
-  ) {
+  const trimmedFirstLine = lines[paragraphStart].trim()
+  if (isStructuralElement(trimmedFirstLine)) {
     return null
   }
 
-  // Collect the full paragraph (until blank line or end)
-  let paragraph = ''
-  for (let i = paragraphStart; i < lines.length; i++) {
-    const line = lines[i].trim()
-    if (line === '') break
-    // Stop if we hit another structural element
-    if (
-      line.startsWith('#') ||
-      line.startsWith('```') ||
-      line.startsWith('>')
-    ) {
-      break
-    }
-    paragraph += (paragraph ? ' ' : '') + line
-  }
-
-  // Extract the first sentence (ends with . ? or !)
-  const sentenceMatch = paragraph.match(/^(.+?[.?!])(?:\s|$)/)
-  if (!sentenceMatch) {
-    return null
-  }
-
-  return sentenceMatch[1]
+  const paragraph = collectParagraph(lines, paragraphStart)
+  return extractFirstSentence(paragraph)
 }
