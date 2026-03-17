@@ -5,6 +5,7 @@
  * A task is blocked if its "## Blocked By" section references task files that still exist.
  */
 
+import { parseArtifact } from '../../artifacts/parsed-artifact'
 import { validateTaskHeadings } from '../../lint/validators/content-validator'
 import {
   extractOpeningSentence,
@@ -124,9 +125,11 @@ export async function findUnblockedTasks(
     if (hasRequiredHeadings(content)) {
       validTaskFiles.push({ file, content })
     } else {
-      const violations = validateTaskHeadings(`.dust/tasks/${file}`, content)
+      const filePath = `.dust/tasks/${file}`
+      const artifact = parseArtifact(filePath, content)
+      const violations = validateTaskHeadings(artifact)
       invalidTasks.push({
-        path: `.dust/tasks/${file}`,
+        path: filePath,
         messages: violations.map(v => v.message),
       })
     }

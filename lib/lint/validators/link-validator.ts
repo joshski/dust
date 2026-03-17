@@ -3,150 +3,134 @@
  */
 
 import { dirname, resolve } from 'node:path'
+import type {
+  ParsedArtifact,
+  ParsedMarkdownLink,
+} from '../../artifacts/parsed-artifact'
 import type { ReadableFileSystem } from '../../filesystem/types'
-import { MARKDOWN_LINK_PATTERN } from '../../markdown/markdown-utilities'
 import type { Violation } from './types'
 
 interface SemanticRule {
-  section: string
+  sectionHeading: string
   requiredPath: string
   description: string
 }
 
 const SEMANTIC_RULES: SemanticRule[] = [
   {
-    section: '## Principles',
+    sectionHeading: 'Principles',
     requiredPath: '/.dust/principles/',
     description: 'principle',
   },
   {
-    section: '## Blocked By',
+    sectionHeading: 'Blocked By',
     requiredPath: '/.dust/tasks/',
     description: 'task',
   },
 ]
 
+function isExternalOrAnchorLink(target: string): boolean {
+  return (
+    target.startsWith('http://') ||
+    target.startsWith('https://') ||
+    target.startsWith('#')
+  )
+}
+
+function isAnchorLink(target: string): boolean {
+  return target.startsWith('#')
+}
+
+function isExternalLink(target: string): boolean {
+  return target.startsWith('http://') || target.startsWith('https://')
+}
+
 export function validateLinks(
-  filePath: string,
-  content: string,
+  artifact: ParsedArtifact,
   fileSystem: ReadableFileSystem
 ): Violation[] {
   const violations: Violation[] = []
-  const lines = content.split('\n')
-  const fileDir = dirname(filePath)
+  const fileDir = dirname(artifact.filePath)
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    const linkPattern = new RegExp(MARKDOWN_LINK_PATTERN.source, 'g')
-    let match: RegExpExecArray | null = linkPattern.exec(line)
+  for (const link of artifact.allLinks) {
+    if (isExternalOrAnchorLink(link.target)) {
+      continue
+    }
 
-    while (match) {
-      const linkTarget = match[2]
+    if (link.target.startsWith('/')) {
+      violations.push({
+        file: artifact.filePath,
+        message: `Absolute link not allowed: "${link.target}" (use a relative path instead)`,
+        line: link.line,
+      })
+      continue
+    }
 
-      const isExternalOrAnchorLink =
-        linkTarget.startsWith('http://') ||
-        linkTarget.startsWith('https://') ||
-        linkTarget.startsWith('#')
+    const targetPath = link.target.split('#')[0]
+    const resolvedPath = resolve(fileDir, targetPath)
 
-      if (isExternalOrAnchorLink) {
-        match = linkPattern.exec(line)
-        continue
-      }
-
-      if (linkTarget.startsWith('/')) {
-        violations.push({
-          file: filePath,
-          message: `Absolute link not allowed: "${linkTarget}" (use a relative path instead)`,
-          line: i + 1,
-        })
-        match = linkPattern.exec(line)
-        continue
-      }
-
-      const targetPath = linkTarget.split('#')[0]
-      const resolvedPath = resolve(fileDir, targetPath)
-
-      if (!fileSystem.exists(resolvedPath)) {
-        violations.push({
-          file: filePath,
-          message: `Broken link: "${linkTarget}"`,
-          line: i + 1,
-        })
-      }
-      match = linkPattern.exec(line)
+    if (!fileSystem.exists(resolvedPath)) {
+      violations.push({
+        file: artifact.filePath,
+        message: `Broken link: "${link.target}"`,
+        line: link.line,
+      })
     }
   }
 
   return violations
 }
 
-export function validateSemanticLinks(
-  filePath: string,
-  content: string
-): Violation[] {
-  const violations: Violation[] = []
-  const lines = content.split('\n')
-  const fileDir = dirname(filePath)
+function validateSectionLink(
+  artifact: ParsedArtifact,
+  link: ParsedMarkdownLink,
+  rule: SemanticRule
+): Violation | null {
+  const sectionLabel = `## ${rule.sectionHeading}`
 
-  let currentSection: string | null = null
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-
-    // Check if this line is a heading
-    if (line.startsWith('## ')) {
-      currentSection = line
-      continue
+  if (isAnchorLink(link.target)) {
+    return {
+      file: artifact.filePath,
+      message: `Link in "${sectionLabel}" must point to a ${rule.description} file, not an anchor: "${link.target}"`,
+      line: link.line,
     }
+  }
 
-    // Skip if not in a section we care about
-    const rule = SEMANTIC_RULES.find(r => r.section === currentSection)
+  if (isExternalLink(link.target)) {
+    return {
+      file: artifact.filePath,
+      message: `Link in "${sectionLabel}" must point to a ${rule.description} file, not an external URL: "${link.target}"`,
+      line: link.line,
+    }
+  }
+
+  const fileDir = dirname(artifact.filePath)
+  const targetPath = link.target.split('#')[0]
+  const resolvedPath = resolve(fileDir, targetPath)
+
+  if (!resolvedPath.includes(rule.requiredPath)) {
+    return {
+      file: artifact.filePath,
+      message: `Link in "${sectionLabel}" must point to a ${rule.description} file: "${link.target}"`,
+      line: link.line,
+    }
+  }
+
+  return null
+}
+
+export function validateSemanticLinks(artifact: ParsedArtifact): Violation[] {
+  const violations: Violation[] = []
+
+  for (const section of artifact.sections) {
+    const rule = SEMANTIC_RULES.find(r => r.sectionHeading === section.heading)
     if (!rule) continue
 
-    // Find links on this line
-    const linkPattern = new RegExp(MARKDOWN_LINK_PATTERN.source, 'g')
-    let match: RegExpExecArray | null = linkPattern.exec(line)
-
-    while (match) {
-      const linkTarget = match[2]
-
-      // Anchor links are not allowed in semantic sections
-      if (linkTarget.startsWith('#')) {
-        violations.push({
-          file: filePath,
-          message: `Link in "${rule.section}" must point to a ${rule.description} file, not an anchor: "${linkTarget}"`,
-          line: i + 1,
-        })
-        match = linkPattern.exec(line)
-        continue
+    for (const link of section.links) {
+      const violation = validateSectionLink(artifact, link, rule)
+      if (violation) {
+        violations.push(violation)
       }
-
-      // External links are not allowed in semantic sections
-      if (
-        linkTarget.startsWith('http://') ||
-        linkTarget.startsWith('https://')
-      ) {
-        violations.push({
-          file: filePath,
-          message: `Link in "${rule.section}" must point to a ${rule.description} file, not an external URL: "${linkTarget}"`,
-          line: i + 1,
-        })
-        match = linkPattern.exec(line)
-        continue
-      }
-
-      const targetPath = linkTarget.split('#')[0]
-      const resolvedPath = resolve(fileDir, targetPath)
-
-      // Check if the resolved path contains the required path segment
-      if (!resolvedPath.includes(rule.requiredPath)) {
-        violations.push({
-          file: filePath,
-          message: `Link in "${rule.section}" must point to a ${rule.description} file: "${linkTarget}"`,
-          line: i + 1,
-        })
-      }
-      match = linkPattern.exec(line)
     }
   }
 
@@ -154,70 +138,46 @@ export function validateSemanticLinks(
 }
 
 export function validatePrincipleHierarchyLinks(
-  filePath: string,
-  content: string
+  artifact: ParsedArtifact
 ): Violation[] {
   const violations: Violation[] = []
-  const lines = content.split('\n')
-  const fileDir = dirname(filePath)
+  const hierarchySections = ['Parent Principle', 'Sub-Principles']
 
-  let currentSection: string | null = null
+  for (const section of artifact.sections) {
+    if (!hierarchySections.includes(section.heading)) continue
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
+    const sectionLabel = `## ${section.heading}`
+    const fileDir = dirname(artifact.filePath)
 
-    if (line.startsWith('## ')) {
-      currentSection = line
-      continue
-    }
-
-    if (
-      currentSection !== '## Parent Principle' &&
-      currentSection !== '## Sub-Principles'
-    ) {
-      continue
-    }
-
-    const linkPattern = new RegExp(MARKDOWN_LINK_PATTERN.source, 'g')
-    let match: RegExpExecArray | null = linkPattern.exec(line)
-
-    while (match) {
-      const linkTarget = match[2]
-
-      if (linkTarget.startsWith('#')) {
+    for (const link of section.links) {
+      if (isAnchorLink(link.target)) {
         violations.push({
-          file: filePath,
-          message: `Link in "${currentSection}" must point to a principle file, not an anchor: "${linkTarget}"`,
-          line: i + 1,
+          file: artifact.filePath,
+          message: `Link in "${sectionLabel}" must point to a principle file, not an anchor: "${link.target}"`,
+          line: link.line,
         })
-        match = linkPattern.exec(line)
         continue
       }
 
-      if (
-        linkTarget.startsWith('http://') ||
-        linkTarget.startsWith('https://')
-      ) {
+      if (isExternalLink(link.target)) {
         violations.push({
-          file: filePath,
-          message: `Link in "${currentSection}" must point to a principle file, not an external URL: "${linkTarget}"`,
-          line: i + 1,
+          file: artifact.filePath,
+          message: `Link in "${sectionLabel}" must point to a principle file, not an external URL: "${link.target}"`,
+          line: link.line,
         })
-        match = linkPattern.exec(line)
         continue
       }
 
-      const targetPath = linkTarget.split('#')[0]
+      const targetPath = link.target.split('#')[0]
       const resolvedPath = resolve(fileDir, targetPath)
 
       if (!resolvedPath.includes('/.dust/principles/')) {
         violations.push({
-          file: filePath,
-          message: `Link in "${currentSection}" must point to a principle file: "${linkTarget}"`,
-          line: i + 1,
+          file: artifact.filePath,
+          message: `Link in "${sectionLabel}" must point to a principle file: "${link.target}"`,
+          line: link.line,
         })
       }
-      match = linkPattern.exec(line)
     }
   }
 

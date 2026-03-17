@@ -3,6 +3,7 @@
  */
 
 import { basename } from 'node:path'
+import { parseArtifact } from '../../artifacts/parsed-artifact'
 import { findAllWorkflowTasks } from '../../artifacts/workflow-tasks'
 import {
   extractPrincipleRelationships,
@@ -134,7 +135,8 @@ async function buildPrincipleHierarchy(
   for (const file of mdFiles) {
     const filePath = `${principlesPath}/${file}`
     const content = await fileSystem.readFile(filePath)
-    relationships.push(extractPrincipleRelationships(filePath, content))
+    const artifact = parseArtifact(filePath, content)
+    relationships.push(extractPrincipleRelationships(artifact))
     const title = extractTitle(content) || basename(file, '.md')
     titleMap.set(filePath, title)
   }

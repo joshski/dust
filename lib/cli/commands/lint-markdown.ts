@@ -3,6 +3,10 @@
  */
 
 import { isAbsolute, join, relative, sep } from 'node:path'
+import {
+  type ParsedArtifact,
+  parseArtifact,
+} from '../../artifacts/parsed-artifact'
 import { validateSettingsJson } from '../../config/settings'
 import {
   validateImperativeOpeningSentence,
@@ -121,7 +125,8 @@ async function validateMarkdownLinks(
     const filePath = `${dustPath}/${file}`
     const content = await safeReadFile(fileSystem, filePath)
     if (content !== null) {
-      violations.push(...validateLinks(filePath, content, fileSystem))
+      const artifact = parseArtifact(filePath, content)
+      violations.push(...validateLinks(artifact, fileSystem))
     }
   }
   return violations
@@ -152,16 +157,15 @@ async function validateContentFiles(
       const content = await safeReadFile(fileSystem, filePath)
       if (content === null) continue
 
-      const openingSentenceViolation = validateOpeningSentence(
-        filePath,
-        content
-      )
+      const artifact = parseArtifact(filePath, content)
+
+      const openingSentenceViolation = validateOpeningSentence(artifact)
       if (openingSentenceViolation) violations.push(openingSentenceViolation)
 
-      const lengthViolation = validateOpeningSentenceLength(filePath, content)
+      const lengthViolation = validateOpeningSentenceLength(artifact)
       if (lengthViolation) violations.push(lengthViolation)
 
-      const titleViolation = validateTitleFilenameMatch(filePath, content)
+      const titleViolation = validateTitleFilenameMatch(artifact)
       if (titleViolation) violations.push(titleViolation)
     }
   }
@@ -183,7 +187,8 @@ async function validateIdeaFiles(
     const filePath = `${ideasPath}/${file}`
     const content = await safeReadFile(fileSystem, filePath)
     if (content !== null) {
-      violations.push(...validateIdeaOpenQuestions(filePath, content))
+      const artifact = parseArtifact(filePath, content)
+      violations.push(...validateIdeaOpenQuestions(artifact))
     }
   }
   return { violations, didValidate: true }
@@ -205,33 +210,26 @@ async function validateTaskFiles(
     const content = await safeReadFile(fileSystem, filePath)
     if (content === null) continue
 
+    const artifact = parseArtifact(filePath, content)
+
     const filenameViolation = validateFilename(filePath)
     if (filenameViolation) violations.push(filenameViolation)
 
-    violations.push(...validateTaskHeadings(filePath, content))
-    violations.push(...validateSemanticLinks(filePath, content))
+    violations.push(...validateTaskHeadings(artifact))
+    violations.push(...validateSemanticLinks(artifact))
 
-    const imperativeViolation = validateImperativeOpeningSentence(
-      filePath,
-      content
-    )
+    const imperativeViolation = validateImperativeOpeningSentence(artifact)
     if (imperativeViolation) violations.push(imperativeViolation)
 
     const ideaTransitionViolation = validateIdeaTransitionTitle(
-      filePath,
-      content,
+      artifact,
       ideasPath,
       fileSystem
     )
     if (ideaTransitionViolation) violations.push(ideaTransitionViolation)
 
     violations.push(
-      ...validateWorkflowTaskBodySection(
-        filePath,
-        content,
-        ideasPath,
-        fileSystem
-      )
+      ...validateWorkflowTaskBodySection(artifact, ideasPath, fileSystem)
     )
   }
   return { violations, didValidate: true }
@@ -254,11 +252,11 @@ async function validatePrincipleFiles(
     const content = await safeReadFile(fileSystem, filePath)
     if (content === null) continue
 
-    violations.push(...validatePrincipleHierarchySections(filePath, content))
-    violations.push(...validatePrincipleHierarchyLinks(filePath, content))
-    allPrincipleRelationships.push(
-      extractPrincipleRelationships(filePath, content)
-    )
+    const artifact = parseArtifact(filePath, content)
+
+    violations.push(...validatePrincipleHierarchySections(artifact))
+    violations.push(...validatePrincipleHierarchyLinks(artifact))
+    allPrincipleRelationships.push(extractPrincipleRelationships(artifact))
   }
 
   violations.push(...validateBidirectionalLinks(allPrincipleRelationships))

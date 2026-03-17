@@ -2,8 +2,8 @@
  * Filename validation for .dust markdown files
  */
 
+import type { ParsedArtifact } from '../../artifacts/parsed-artifact'
 import { titleToFilename } from '../../artifacts/workflow-tasks'
-import { extractTitle } from '../../markdown/markdown-utilities'
 import type { Violation } from './types'
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.md$/
@@ -21,21 +21,20 @@ export function validateFilename(filePath: string): Violation | null {
 }
 
 export function validateTitleFilenameMatch(
-  filePath: string,
-  content: string
+  artifact: ParsedArtifact
 ): Violation | null {
-  const title = extractTitle(content)
+  const title = artifact.title
   if (!title) {
     return null // No title to validate against
   }
 
-  const parts = filePath.split('/')
+  const parts = artifact.filePath.split('/')
   const actualFilename = parts[parts.length - 1]
   const expectedFilename = titleToFilename(title)
 
   if (actualFilename !== expectedFilename) {
     return {
-      file: filePath,
+      file: artifact.filePath,
       message: `Filename "${actualFilename}" does not match title "${title}" (expected "${expectedFilename}")`,
     }
   }

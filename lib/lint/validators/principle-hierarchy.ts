@@ -3,87 +3,71 @@
  */
 
 import { dirname, resolve } from 'node:path'
-import { MARKDOWN_LINK_PATTERN } from '../../markdown/markdown-utilities'
+import type { ParsedArtifact } from '../../artifacts/parsed-artifact'
 import type { PrincipleRelationships, Violation } from './types'
 
 export type { PrincipleRelationships }
 
-const REQUIRED_PRINCIPLE_HEADINGS = ['## Parent Principle', '## Sub-Principles']
+const REQUIRED_PRINCIPLE_HEADINGS = ['Parent Principle', 'Sub-Principles']
 
 export function validatePrincipleHierarchySections(
-  filePath: string,
-  content: string
+  artifact: ParsedArtifact
 ): Violation[] {
   const violations: Violation[] = []
+  const sectionHeadings = new Set(artifact.sections.map(s => s.heading))
+
   for (const heading of REQUIRED_PRINCIPLE_HEADINGS) {
-    if (!content.includes(heading)) {
+    if (!sectionHeadings.has(heading)) {
       violations.push({
-        file: filePath,
-        message: `Missing required heading: "${heading}"`,
+        file: artifact.filePath,
+        message: `Missing required heading: "## ${heading}"`,
       })
     }
   }
   return violations
 }
 
+function isLocalPrincipleLink(target: string, resolvedPath: string): boolean {
+  const isLocalLink =
+    !target.startsWith('#') &&
+    !target.startsWith('http://') &&
+    !target.startsWith('https://')
+
+  return isLocalLink && resolvedPath.includes('/.dust/principles/')
+}
+
 export function extractPrincipleRelationships(
-  filePath: string,
-  content: string
+  artifact: ParsedArtifact
 ): PrincipleRelationships {
-  const lines = content.split('\n')
-  const fileDir = dirname(filePath)
+  const fileDir = dirname(artifact.filePath)
   const parentPrinciples: string[] = []
   const subPrinciples: string[] = []
 
-  let currentSection: string | null = null
-
-  for (const line of lines) {
-    if (line.startsWith('## ')) {
-      currentSection = line
-      continue
-    }
-
+  for (const section of artifact.sections) {
     if (
-      currentSection !== '## Parent Principle' &&
-      currentSection !== '## Sub-Principles'
+      section.heading !== 'Parent Principle' &&
+      section.heading !== 'Sub-Principles'
     ) {
       continue
     }
 
-    const linkPattern = new RegExp(MARKDOWN_LINK_PATTERN.source, 'g')
-    let match: RegExpExecArray | null = linkPattern.exec(line)
-
-    while (match) {
-      const linkTarget = match[2]
-
-      const isLocalLink =
-        !linkTarget.startsWith('#') &&
-        !linkTarget.startsWith('http://') &&
-        !linkTarget.startsWith('https://')
-
-      if (!isLocalLink) {
-        match = linkPattern.exec(line)
-        continue
-      }
-
-      const targetPath = linkTarget.split('#')[0]
+    for (const link of section.links) {
+      const targetPath = link.target.split('#')[0]
       const resolvedPath = resolve(fileDir, targetPath)
 
-      if (!resolvedPath.includes('/.dust/principles/')) {
-        match = linkPattern.exec(line)
+      if (!isLocalPrincipleLink(link.target, resolvedPath)) {
         continue
       }
 
-      if (currentSection === '## Parent Principle') {
+      if (section.heading === 'Parent Principle') {
         parentPrinciples.push(resolvedPath)
       } else {
         subPrinciples.push(resolvedPath)
       }
-      match = linkPattern.exec(line)
     }
   }
 
-  return { filePath, parentPrinciples, subPrinciples }
+  return { filePath: artifact.filePath, parentPrinciples, subPrinciples }
 }
 
 export function validateBidirectionalLinks(

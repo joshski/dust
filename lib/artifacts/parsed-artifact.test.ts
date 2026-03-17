@@ -408,5 +408,41 @@ const x = 1
       // Section contains only blank lines, so endLine falls back
       expect(result.sections[0].endLine).toBe(3) // Falls back to section start
     })
+
+    test('handles multiple H1 headings without intervening sections', () => {
+      const content = `# First Title
+
+Some content.
+
+# Second Title
+
+More content.
+`
+      const result = parseArtifact('/path/to/file.md', content)
+      // Only first H1 becomes the title
+      expect(result.title).toBe('First Title')
+      expect(result.titleLine).toBe(1)
+      // No sections because there were no H2+ headings
+      expect(result.sections).toHaveLength(0)
+    })
+
+    test('handles H1 closing a section', () => {
+      const content = `# First Title
+
+## A Section
+
+Content in section.
+
+# Another H1
+
+Different content.
+`
+      const result = parseArtifact('/path/to/file.md', content)
+      expect(result.title).toBe('First Title')
+      // The section should be closed when the second H1 is encountered
+      expect(result.sections).toHaveLength(1)
+      expect(result.sections[0].heading).toBe('A Section')
+      expect(result.sections[0].endLine).toBe(5) // Last non-empty line before H1
+    })
   })
 })

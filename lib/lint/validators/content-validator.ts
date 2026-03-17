@@ -2,10 +2,10 @@
  * Content validation for .dust markdown files
  */
 
-import { extractOpeningSentence } from '../../markdown/markdown-utilities'
+import type { ParsedArtifact } from '../../artifacts/parsed-artifact'
 import type { Violation } from './types'
 
-const REQUIRED_HEADINGS = ['## Blocked By', '## Definition of Done']
+const REQUIRED_TASK_HEADINGS = ['Blocked By', 'Definition of Done']
 
 const MAX_OPENING_SENTENCE_LENGTH = 150 // Enforces concise summaries that fit comfortably in a single line of context
 
@@ -25,13 +25,12 @@ const NON_IMPERATIVE_STARTERS = new Set([
 ])
 
 export function validateOpeningSentence(
-  filePath: string,
-  content: string
+  artifact: ParsedArtifact
 ): Violation | null {
-  const openingSentence = extractOpeningSentence(content)
-  if (!openingSentence) {
+  if (!artifact.openingSentence) {
     return {
-      file: filePath,
+      file: artifact.filePath,
+      line: artifact.titleLine ?? undefined,
       message: 'Missing or malformed opening sentence after H1 heading',
     }
   }
@@ -39,16 +38,16 @@ export function validateOpeningSentence(
 }
 
 export function validateOpeningSentenceLength(
-  filePath: string,
-  content: string
+  artifact: ParsedArtifact
 ): Violation | null {
-  const openingSentence = extractOpeningSentence(content)
+  const openingSentence = artifact.openingSentence
   if (!openingSentence) {
     return null // Missing sentence is handled by validateOpeningSentence
   }
   if (openingSentence.length > MAX_OPENING_SENTENCE_LENGTH) {
     return {
-      file: filePath,
+      file: artifact.filePath,
+      line: artifact.openingSentenceLine ?? undefined,
       message: `Opening sentence is ${openingSentence.length} characters (max ${MAX_OPENING_SENTENCE_LENGTH}). Split into multiple sentences; only the first sentence is checked.`,
     }
   }
@@ -56,10 +55,9 @@ export function validateOpeningSentenceLength(
 }
 
 export function validateImperativeOpeningSentence(
-  filePath: string,
-  content: string
+  artifact: ParsedArtifact
 ): Violation | null {
-  const openingSentence = extractOpeningSentence(content)
+  const openingSentence = artifact.openingSentence
   if (!openingSentence) {
     return null
   }
@@ -73,7 +71,8 @@ export function validateImperativeOpeningSentence(
         ? `${openingSentence.slice(0, 40)}...`
         : openingSentence
     return {
-      file: filePath,
+      file: artifact.filePath,
+      line: artifact.openingSentenceLine ?? undefined,
       message: `Opening sentence should use imperative form (e.g., "Add X" not "This adds X"). Found: "${preview}"`,
     }
   }
@@ -81,16 +80,15 @@ export function validateImperativeOpeningSentence(
   return null
 }
 
-export function validateTaskHeadings(
-  filePath: string,
-  content: string
-): Violation[] {
+export function validateTaskHeadings(artifact: ParsedArtifact): Violation[] {
   const violations: Violation[] = []
-  for (const heading of REQUIRED_HEADINGS) {
-    if (!content.includes(heading)) {
+  const sectionHeadings = new Set(artifact.sections.map(s => s.heading))
+
+  for (const heading of REQUIRED_TASK_HEADINGS) {
+    if (!sectionHeadings.has(heading)) {
       violations.push({
-        file: filePath,
-        message: `Missing required heading: "${heading}"`,
+        file: artifact.filePath,
+        message: `Missing required heading: "## ${heading}"`,
       })
     }
   }

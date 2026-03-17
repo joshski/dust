@@ -6,6 +6,7 @@
  */
 
 import { relative } from 'node:path'
+import { parseArtifact } from '../artifacts/parsed-artifact'
 import type { ReadableFileSystem } from '../filesystem/types'
 import {
   validateImperativeOpeningSentence,
@@ -143,14 +144,16 @@ function relativizeViolations(
 const CONTENT_DIRS = ['principles', 'facts', 'ideas', 'tasks']
 
 function validateContentFile(filePath: string, content: string): Violation[] {
+  const artifact = parseArtifact(filePath, content)
   const violations: Violation[] = []
-  const openingSentence = validateOpeningSentence(filePath, content)
+
+  const openingSentence = validateOpeningSentence(artifact)
   if (openingSentence) violations.push(openingSentence)
 
-  const openingSentenceLength = validateOpeningSentenceLength(filePath, content)
+  const openingSentenceLength = validateOpeningSentenceLength(artifact)
   if (openingSentenceLength) violations.push(openingSentenceLength)
 
-  const titleFilename = validateTitleFilenameMatch(filePath, content)
+  const titleFilename = validateTitleFilenameMatch(artifact)
   if (titleFilename) violations.push(titleFilename)
 
   return violations
@@ -162,30 +165,27 @@ function validateTaskFile(
   ideasPath: string,
   overlayFs: ReadableFileSystem
 ): Violation[] {
+  const artifact = parseArtifact(filePath, content)
   const violations: Violation[] = []
 
   const filenameViolation = validateFilename(filePath)
   if (filenameViolation) violations.push(filenameViolation)
 
-  violations.push(...validateTaskHeadings(filePath, content))
-  violations.push(...validateSemanticLinks(filePath, content))
+  violations.push(...validateTaskHeadings(artifact))
+  violations.push(...validateSemanticLinks(artifact))
 
-  const imperativeViolation = validateImperativeOpeningSentence(
-    filePath,
-    content
-  )
+  const imperativeViolation = validateImperativeOpeningSentence(artifact)
   if (imperativeViolation) violations.push(imperativeViolation)
 
   const ideaTransition = validateIdeaTransitionTitle(
-    filePath,
-    content,
+    artifact,
     ideasPath,
     overlayFs
   )
   if (ideaTransition) violations.push(ideaTransition)
 
   violations.push(
-    ...validateWorkflowTaskBodySection(filePath, content, ideasPath, overlayFs)
+    ...validateWorkflowTaskBodySection(artifact, ideasPath, overlayFs)
   )
 
   return violations
@@ -237,7 +237,8 @@ async function validatePrincipleRelationships(
       if (!file.endsWith('.md')) continue
       const filePath = `${principlesPath}/${file}`
       const content = await overlayFs.readFile(filePath)
-      allRelationships.push(extractPrincipleRelationships(filePath, content))
+      const artifact = parseArtifact(filePath, content)
+      allRelationships.push(extractPrincipleRelationships(artifact))
     }
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
@@ -289,15 +290,16 @@ export async function validatePatch(
 
     const filePath = `${dustPath}/${relativePath}`
     const dir = relativePath.split('/')[0]
+    const artifact = parseArtifact(filePath, content)
 
-    violations.push(...validateLinks(filePath, content, overlayFs))
+    violations.push(...validateLinks(artifact, overlayFs))
 
     if (CONTENT_DIRS.includes(dir)) {
       violations.push(...validateContentFile(filePath, content))
     }
 
     if (dir === 'ideas') {
-      violations.push(...validateIdeaOpenQuestions(filePath, content))
+      violations.push(...validateIdeaOpenQuestions(artifact))
     }
 
     if (dir === 'tasks') {
@@ -307,8 +309,8 @@ export async function validatePatch(
     }
 
     if (dir === 'principles') {
-      violations.push(...validatePrincipleHierarchySections(filePath, content))
-      violations.push(...validatePrincipleHierarchyLinks(filePath, content))
+      violations.push(...validatePrincipleHierarchySections(artifact))
+      violations.push(...validatePrincipleHierarchyLinks(artifact))
     }
   }
 

@@ -2,15 +2,12 @@
  * Idea file validation for .dust markdown files
  */
 
+import type { ParsedArtifact } from '../../artifacts/parsed-artifact'
 import {
   IDEA_TRANSITION_PREFIXES,
   titleToFilename,
 } from '../../artifacts/workflow-tasks'
 import type { ReadableFileSystem } from '../../filesystem/types'
-import {
-  extractTitle,
-  MARKDOWN_LINK_PATTERN,
-} from '../../markdown/markdown-utilities'
 import type { Violation } from './types'
 
 const WORKFLOW_PREFIX_TO_SECTION: Record<string, string> = {
@@ -60,11 +57,11 @@ function validateH2Heading(
 }
 
 export function validateIdeaOpenQuestions(
-  filePath: string,
-  content: string
+  artifact: ParsedArtifact
 ): Violation[] {
   const violations: Violation[] = []
-  const lines = content.split('\n')
+  const lines = artifact.rawContent.split('\n')
+  const filePath = artifact.filePath
   const topLevelStructureMessage =
     'Open Questions must use `### Question?` headings and `#### Option` headings at the top level. Put supporting markdown (including lists and code blocks) under an option heading. Run `dust new idea` to see the expected format.'
 
@@ -167,12 +164,11 @@ export function validateIdeaOpenQuestions(
 }
 
 export function validateIdeaTransitionTitle(
-  filePath: string,
-  content: string,
+  artifact: ParsedArtifact,
   ideasPath: string,
   fileSystem: ReadableFileSystem
 ): Violation | null {
-  const title = extractTitle(content)
+  const title = artifact.title
   if (!title) {
     return null
   }
@@ -183,7 +179,7 @@ export function validateIdeaTransitionTitle(
       const ideaFilename = titleToFilename(ideaTitle)
       if (!fileSystem.exists(`${ideasPath}/${ideaFilename}`)) {
         return {
-          file: filePath,
+          file: artifact.filePath,
           message: `Idea transition task references non-existent idea: "${ideaTitle}" (expected file "${ideaFilename}" in ideas/)`,
         }
       }
@@ -194,46 +190,13 @@ export function validateIdeaTransitionTitle(
   return null
 }
 
-function extractSectionContent(
-  content: string,
-  sectionHeading: string
-): { content: string; startLine: number } | null {
-  const lines = content.split('\n')
-  let inSection = false
-  let sectionContent = ''
-  let startLine = 0
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-
-    if (line.startsWith('## ')) {
-      if (inSection) break
-      if (line.trimEnd() === `## ${sectionHeading}`) {
-        inSection = true
-        startLine = i + 1
-      }
-      continue
-    }
-
-    if (line.startsWith('# ') && inSection) break
-
-    if (inSection) {
-      sectionContent += `${line}\n`
-    }
-  }
-
-  if (!inSection) return null
-  return { content: sectionContent, startLine }
-}
-
 export function validateWorkflowTaskBodySection(
-  filePath: string,
-  content: string,
+  artifact: ParsedArtifact,
   ideasPath: string,
   fileSystem: ReadableFileSystem
 ): Violation[] {
   const violations: Violation[] = []
-  const title = extractTitle(content)
+  const title = artifact.title
   if (!title) return violations
 
   let matchedPrefix: string | null = null
@@ -247,49 +210,34 @@ export function validateWorkflowTaskBodySection(
   if (!matchedPrefix) return violations
 
   const expectedHeading = WORKFLOW_PREFIX_TO_SECTION[matchedPrefix]
-  const section = extractSectionContent(content, expectedHeading)
+  const section = artifact.sections.find(
+    s => s.heading === expectedHeading && s.level === 2
+  )
 
   if (!section) {
     violations.push({
-      file: filePath,
+      file: artifact.filePath,
       message: `Workflow task with "${matchedPrefix.trim()}" prefix is missing required "## ${expectedHeading}" section. Add a section with a link to the idea file, e.g.:\n\n## ${expectedHeading}\n\n- [Idea Title](../ideas/idea-slug.md)`,
     })
     return violations
   }
 
-  const linkRegex = new RegExp(MARKDOWN_LINK_PATTERN.source, 'g')
-  const links: { text: string; target: string; line: number }[] = []
-  const sectionLines = section.content.split('\n')
-
-  for (let i = 0; i < sectionLines.length; i++) {
-    const line = sectionLines[i]
-    let match: RegExpExecArray | null = linkRegex.exec(line)
-    while (match !== null) {
-      links.push({
-        text: match[1],
-        target: match[2],
-        line: section.startLine + i + 1,
-      })
-      match = linkRegex.exec(line)
-    }
-  }
-
-  if (links.length === 0) {
+  if (section.links.length === 0) {
     violations.push({
-      file: filePath,
+      file: artifact.filePath,
       message: `"## ${expectedHeading}" section contains no link. Add a markdown link to the idea file, e.g.:\n\n- [Idea Title](../ideas/idea-slug.md)`,
       line: section.startLine,
     })
     return violations
   }
 
-  const ideaLinks = links.filter(
+  const ideaLinks = section.links.filter(
     l => l.target.includes('/ideas/') || l.target.startsWith('../ideas/')
   )
 
   if (ideaLinks.length === 0) {
     violations.push({
-      file: filePath,
+      file: artifact.filePath,
       message: `"## ${expectedHeading}" section contains no link to an idea file. Links must point to a file in ../ideas/, e.g.:\n\n- [Idea Title](../ideas/idea-slug.md)`,
       line: section.startLine,
     })
@@ -305,7 +253,7 @@ export function validateWorkflowTaskBodySection(
 
     if (!fileSystem.exists(ideaFilePath)) {
       violations.push({
-        file: filePath,
+        file: artifact.filePath,
         message: `Link to idea "${link.text}" points to non-existent file: ${ideaSlug}.md. Either create the idea file at ideas/${ideaSlug}.md or update the link to point to an existing idea.`,
         line: link.line,
       })

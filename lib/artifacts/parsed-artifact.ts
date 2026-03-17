@@ -21,6 +21,7 @@ export interface ParsedSection {
 
 export interface ParsedArtifact {
   filePath: string
+  rawContent: string
   title: string | null
   titleLine: number | null
   openingSentence: string | null
@@ -67,9 +68,23 @@ export function parseArtifact(
 
     // Find H1 title (first occurrence only)
     const h1Match = line.match(/^#\s+(.+)$/)
-    if (h1Match && title === null) {
-      title = h1Match[1].trim()
-      titleLine = lineNumber
+    if (h1Match) {
+      if (title === null) {
+        title = h1Match[1].trim()
+        titleLine = lineNumber
+      } else {
+        // Subsequent H1 headings close the current section
+        // (H1s in the middle of a file act as section boundaries)
+        if (currentSection !== null) {
+          currentSection.endLine = findLastNonEmptyLine(
+            lines,
+            currentSection.startLine,
+            lineNumber - 2
+          )
+          sections.push(currentSection)
+          currentSection = null
+        }
+      }
       continue
     }
 
@@ -134,6 +149,7 @@ export function parseArtifact(
 
   return {
     filePath,
+    rawContent: content,
     title,
     titleLine,
     openingSentence,

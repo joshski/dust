@@ -100,6 +100,7 @@ import {
 } from '../lint/validators/filename-validator'
 import { validateSemanticLinks } from '../lint/validators/link-validator'
 import type { Violation } from '../lint/validators/types'
+import { parseArtifact } from '../artifacts/parsed-artifact'
 
 /**
  * Default environment context values for tests
@@ -295,19 +296,20 @@ const defaultTestSettings: DustSettings = { dustCommand: 'dust' }
  * Lints a task file by running all validators and collecting violations.
  */
 export function lintTaskFile(filePath: string, content: string): Violation[] {
+  const artifact = parseArtifact(filePath, content)
   const violations: Violation[] = []
   const v1 = validateFilename(filePath)
   if (v1) violations.push(v1)
-  const v2 = validateTitleFilenameMatch(filePath, content)
+  const v2 = validateTitleFilenameMatch(artifact)
   if (v2) violations.push(v2)
-  const v3 = validateOpeningSentence(filePath, content)
+  const v3 = validateOpeningSentence(artifact)
   if (v3) violations.push(v3)
-  const v4 = validateOpeningSentenceLength(filePath, content)
+  const v4 = validateOpeningSentenceLength(artifact)
   if (v4) violations.push(v4)
-  const v5 = validateImperativeOpeningSentence(filePath, content)
+  const v5 = validateImperativeOpeningSentence(artifact)
   if (v5) violations.push(v5)
-  violations.push(...validateTaskHeadings(filePath, content))
-  violations.push(...validateSemanticLinks(filePath, content))
+  violations.push(...validateTaskHeadings(artifact))
+  violations.push(...validateSemanticLinks(artifact))
   return violations
 }
 

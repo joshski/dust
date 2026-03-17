@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'vitest'
+import { parseArtifact } from '../../artifacts/parsed-artifact'
 import {
   IDEA_TRANSITION_PREFIXES,
   titleToFilename,
@@ -126,17 +127,14 @@ describe('titleToFilename', () => {
 describe('validateTitleFilenameMatch', () => {
   test('returns null when title matches filename', () => {
     const content = '# Enable Flow State\n\nDescription.'
-    expect(
-      validateTitleFilenameMatch('/path/to/enable-flow-state.md', content)
-    ).toBeNull()
+    const artifact = parseArtifact('/path/to/enable-flow-state.md', content)
+    expect(validateTitleFilenameMatch(artifact)).toBeNull()
   })
 
   test('returns violation when title does not match filename', () => {
     const content = '# Enable Flow State\n\nDescription.'
-    const violation = validateTitleFilenameMatch(
-      '/path/to/wrong-filename.md',
-      content
-    )
+    const artifact = parseArtifact('/path/to/wrong-filename.md', content)
+    const violation = validateTitleFilenameMatch(artifact)
     expect(violation).not.toBeNull()
     expect(violation?.message).toContain('wrong-filename.md')
     expect(violation?.message).toContain('Enable Flow State')
@@ -145,38 +143,37 @@ describe('validateTitleFilenameMatch', () => {
 
   test('returns null when no title exists', () => {
     const content = 'No heading in this file.'
-    expect(
-      validateTitleFilenameMatch('/path/to/some-file.md', content)
-    ).toBeNull()
+    const artifact = parseArtifact('/path/to/some-file.md', content)
+    expect(validateTitleFilenameMatch(artifact)).toBeNull()
   })
 
   test('handles hyphens in titles correctly', () => {
     const content = '# Agent-Agnostic Design\n\nDescription.'
-    expect(
-      validateTitleFilenameMatch('/path/to/agent-agnostic-design.md', content)
-    ).toBeNull()
+    const artifact = parseArtifact('/path/to/agent-agnostic-design.md', content)
+    expect(validateTitleFilenameMatch(artifact)).toBeNull()
   })
 
   test('handles special characters in titles', () => {
     const content = '# Decouple `dust loop claude` from git\n\nDescription.'
-    expect(
-      validateTitleFilenameMatch(
-        '/path/to/decouple-dust-loop-claude-from-git.md',
-        content
-      )
-    ).toBeNull()
+    const artifact = parseArtifact(
+      '/path/to/decouple-dust-loop-claude-from-git.md',
+      content
+    )
+    expect(validateTitleFilenameMatch(artifact)).toBeNull()
   })
 })
 
 describe('validateOpeningSentence', () => {
   test('returns null for valid opening sentence', () => {
     const content = '# Title\n\nThis is a valid opening sentence.'
-    expect(validateOpeningSentence('file.md', content)).toBeNull()
+    const artifact = parseArtifact('file.md', content)
+    expect(validateOpeningSentence(artifact)).toBeNull()
   })
 
   test('returns violation when opening sentence is missing', () => {
     const content = '# Title\n\n## Another Heading'
-    const violation = validateOpeningSentence('file.md', content)
+    const artifact = parseArtifact('file.md', content)
+    const violation = validateOpeningSentence(artifact)
     expect(violation).not.toBeNull()
     expect(violation?.message).toContain(
       'Missing or malformed opening sentence'
@@ -185,13 +182,15 @@ describe('validateOpeningSentence', () => {
 
   test('returns violation when no content after H1', () => {
     const content = '# Title'
-    const violation = validateOpeningSentence('file.md', content)
+    const artifact = parseArtifact('file.md', content)
+    const violation = validateOpeningSentence(artifact)
     expect(violation).not.toBeNull()
   })
 
   test('returns violation when first paragraph has no sentence ending', () => {
     const content = '# Title\n\nNo sentence ending here'
-    const violation = validateOpeningSentence('file.md', content)
+    const artifact = parseArtifact('file.md', content)
+    const violation = validateOpeningSentence(artifact)
     expect(violation).not.toBeNull()
   })
 })
@@ -199,21 +198,24 @@ describe('validateOpeningSentence', () => {
 describe('validateOpeningSentenceLength', () => {
   test('returns null for sentence within limit', () => {
     const content = '# Title\n\nThis is a short sentence.'
-    expect(validateOpeningSentenceLength('file.md', content)).toBeNull()
+    const artifact = parseArtifact('file.md', content)
+    expect(validateOpeningSentenceLength(artifact)).toBeNull()
   })
 
   test('returns null for sentence exactly at limit', () => {
     // Create a sentence exactly 150 characters long (including the period)
     const sentence = `${'A'.repeat(149)}.`
     const content = `# Title\n\n${sentence}`
-    expect(validateOpeningSentenceLength('file.md', content)).toBeNull()
+    const artifact = parseArtifact('file.md', content)
+    expect(validateOpeningSentenceLength(artifact)).toBeNull()
   })
 
   test('returns violation for sentence exceeding limit', () => {
     // Create a sentence 151 characters long
     const sentence = `${'A'.repeat(150)}.`
     const content = `# Title\n\n${sentence}`
-    const violation = validateOpeningSentenceLength('file.md', content)
+    const artifact = parseArtifact('file.md', content)
+    const violation = validateOpeningSentenceLength(artifact)
     expect(violation).not.toBeNull()
     expect(violation?.message).toContain('151 characters')
     expect(violation?.message).toContain('max 150')
@@ -222,7 +224,8 @@ describe('validateOpeningSentenceLength', () => {
   test('returns null when opening sentence is missing', () => {
     // Missing sentence is handled by validateOpeningSentence, not this function
     const content = '# Title\n\n## Another Heading'
-    expect(validateOpeningSentenceLength('file.md', content)).toBeNull()
+    const artifact = parseArtifact('file.md', content)
+    expect(validateOpeningSentenceLength(artifact)).toBeNull()
   })
 })
 
@@ -230,64 +233,70 @@ describe('validateImperativeOpeningSentence', () => {
   test('passes for imperative sentences', () => {
     expect(
       validateImperativeOpeningSentence(
-        'file.md',
-        '# Title\n\nAdd authentication to the login page.'
+        parseArtifact(
+          'file.md',
+          '# Title\n\nAdd authentication to the login page.'
+        )
       )
     ).toBeNull()
     expect(
       validateImperativeOpeningSentence(
-        'file.md',
-        '# Title\n\nReplace the old caching layer.'
+        parseArtifact('file.md', '# Title\n\nReplace the old caching layer.')
       )
     ).toBeNull()
     expect(
       validateImperativeOpeningSentence(
-        'file.md',
-        '# Title\n\nFix the race condition in the worker pool.'
+        parseArtifact(
+          'file.md',
+          '# Title\n\nFix the race condition in the worker pool.'
+        )
       )
     ).toBeNull()
   })
 
   test('fails for sentences starting with articles', () => {
-    const violation = validateImperativeOpeningSentence(
+    const artifact = parseArtifact(
       'file.md',
       '# Title\n\nThe authentication system needs updating.'
     )
+    const violation = validateImperativeOpeningSentence(artifact)
     expect(violation).not.toBeNull()
     expect(violation?.message).toContain('imperative form')
   })
 
   test('fails for sentences starting with demonstratives', () => {
-    const violation = validateImperativeOpeningSentence(
+    const artifact = parseArtifact(
       'file.md',
       '# Title\n\nThis task adds authentication.'
     )
+    const violation = validateImperativeOpeningSentence(artifact)
     expect(violation).not.toBeNull()
     expect(violation?.message).toContain('imperative form')
   })
 
   test('fails for sentences starting with pronouns', () => {
-    const violation = validateImperativeOpeningSentence(
+    const artifact = parseArtifact(
       'file.md',
       '# Title\n\nWe need to add authentication.'
     )
+    const violation = validateImperativeOpeningSentence(artifact)
     expect(violation).not.toBeNull()
     expect(violation?.message).toContain('imperative form')
   })
 
   test('fails for sentences starting with gerunds', () => {
-    const violation = validateImperativeOpeningSentence(
+    const artifact = parseArtifact(
       'file.md',
       '# Title\n\nAdding authentication to the login page.'
     )
+    const violation = validateImperativeOpeningSentence(artifact)
     expect(violation).not.toBeNull()
     expect(violation?.message).toContain('imperative form')
   })
 
   test('returns null when there is no opening sentence', () => {
-    expect(
-      validateImperativeOpeningSentence('file.md', '# Title\n\n## Heading')
-    ).toBeNull()
+    const artifact = parseArtifact('file.md', '# Title\n\n## Heading')
+    expect(validateImperativeOpeningSentence(artifact)).toBeNull()
   })
 })
 
@@ -297,7 +306,9 @@ describe('validateIdeaOpenQuestions', () => {
 
 This is a simple idea.
 `
-    expect(validateIdeaOpenQuestions('idea.md', content)).toHaveLength(0)
+    expect(
+      validateIdeaOpenQuestions(parseArtifact('idea.md', content))
+    ).toHaveLength(0)
   })
 
   test('returns no violations for valid Open Questions section', () => {
@@ -327,7 +338,9 @@ Large ecosystem, widely adopted.
 
 Simpler API, smaller bundle.
 `
-    expect(validateIdeaOpenQuestions('idea.md', content)).toHaveLength(0)
+    expect(
+      validateIdeaOpenQuestions(parseArtifact('idea.md', content))
+    ).toHaveLength(0)
   })
 
   test('returns violation when question heading does not end with question mark', () => {
@@ -343,7 +356,9 @@ This is an idea.
 
 Some analysis.
 `
-    const violations = validateIdeaOpenQuestions('idea.md', content)
+    const violations = validateIdeaOpenQuestions(
+      parseArtifact('idea.md', content)
+    )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('Questions must end with "?"')
     expect(violations[0].line).toBe(7)
@@ -358,7 +373,9 @@ This is an idea.
 
 ### Should we take our own payments?
 `
-    const violations = validateIdeaOpenQuestions('idea.md', content)
+    const violations = validateIdeaOpenQuestions(
+      parseArtifact('idea.md', content)
+    )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('no options')
     expect(violations[0].line).toBe(7)
@@ -379,7 +396,9 @@ This is an idea.
 
 Large ecosystem.
 `
-    const violations = validateIdeaOpenQuestions('idea.md', content)
+    const violations = validateIdeaOpenQuestions(
+      parseArtifact('idea.md', content)
+    )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('no options')
     expect(violations[0].line).toBe(7)
@@ -398,7 +417,9 @@ This is an idea.
 
 Some notes.
 `
-    const violations = validateIdeaOpenQuestions('idea.md', content)
+    const violations = validateIdeaOpenQuestions(
+      parseArtifact('idea.md', content)
+    )
     expect(violations).toHaveLength(2)
     expect(violations[0].message).toContain('no options')
     expect(violations[0].line).toBe(7)
@@ -416,7 +437,9 @@ This is an idea.
 
 #### And this is not an option
 `
-    expect(validateIdeaOpenQuestions('idea.md', content)).toHaveLength(0)
+    expect(
+      validateIdeaOpenQuestions(parseArtifact('idea.md', content))
+    ).toHaveLength(0)
   })
 
   test('reports multiple violations', () => {
@@ -438,7 +461,9 @@ Some analysis.
 
 Some analysis.
 `
-    const violations = validateIdeaOpenQuestions('idea.md', content)
+    const violations = validateIdeaOpenQuestions(
+      parseArtifact('idea.md', content)
+    )
     expect(violations).toHaveLength(2)
   })
 
@@ -450,7 +475,9 @@ Some analysis.
 - Should we do X?
 - Should we do Y?
 `
-    const violations = validateIdeaOpenQuestions('idea.md', content)
+    const violations = validateIdeaOpenQuestions(
+      parseArtifact('idea.md', content)
+    )
     expect(violations).toHaveLength(2)
     expect(violations[0].message).toContain('top level')
     expect(violations[0].line).toBe(5)
@@ -464,7 +491,9 @@ Some analysis.
 
 * Should we do X?
 `
-    const violations = validateIdeaOpenQuestions('idea.md', content)
+    const violations = validateIdeaOpenQuestions(
+      parseArtifact('idea.md', content)
+    )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('top level')
   })
@@ -482,7 +511,9 @@ Some analysis.
 
 Some analysis.
 `
-    const violations = validateIdeaOpenQuestions('idea.md', content)
+    const violations = validateIdeaOpenQuestions(
+      parseArtifact('idea.md', content)
+    )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('top level')
     expect(violations[0].line).toBe(7)
@@ -496,7 +527,9 @@ Some analysis.
 1. Should we do X?
 2. Should we do Y?
 `
-    const violations = validateIdeaOpenQuestions('idea.md', content)
+    const violations = validateIdeaOpenQuestions(
+      parseArtifact('idea.md', content)
+    )
     expect(violations).toHaveLength(2)
     expect(violations[0].message).toContain('top level')
     expect(violations[0].line).toBe(5)
@@ -514,7 +547,9 @@ This is stray top-level text.
 
 #### Option A
 `
-    const violations = validateIdeaOpenQuestions('idea.md', content)
+    const violations = validateIdeaOpenQuestions(
+      parseArtifact('idea.md', content)
+    )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('top level')
     expect(violations[0].line).toBe(5)
@@ -529,7 +564,9 @@ This is stray top-level text.
 ### Not a real question heading
 \`\`\`
 `
-    const violations = validateIdeaOpenQuestions('idea.md', content)
+    const violations = validateIdeaOpenQuestions(
+      parseArtifact('idea.md', content)
+    )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('top level')
     expect(violations[0].line).toBe(5)
@@ -553,7 +590,9 @@ Example:
 
 Some analysis.
 `
-    expect(validateIdeaOpenQuestions('idea.md', content)).toHaveLength(0)
+    expect(
+      validateIdeaOpenQuestions(parseArtifact('idea.md', content))
+    ).toHaveLength(0)
   })
 
   test('allows markdown lists inside Open Questions option descriptions', () => {
@@ -573,7 +612,9 @@ Pros:
 - Fewer dependencies
 - Easier setup
 `
-    expect(validateIdeaOpenQuestions('idea.md', content)).toHaveLength(0)
+    expect(
+      validateIdeaOpenQuestions(parseArtifact('idea.md', content))
+    ).toHaveLength(0)
   })
 
   test('allows bullet points in other sections', () => {
@@ -592,7 +633,9 @@ Pros:
 
 Some analysis.
 `
-    expect(validateIdeaOpenQuestions('idea.md', content)).toHaveLength(0)
+    expect(
+      validateIdeaOpenQuestions(parseArtifact('idea.md', content))
+    ).toHaveLength(0)
   })
 
   test('reports violation for "## open questions" (all lowercase)', () => {
@@ -612,7 +655,9 @@ Good idea.
 
 Bad idea.
 `
-    const violations = validateIdeaOpenQuestions('idea.md', content)
+    const violations = validateIdeaOpenQuestions(
+      parseArtifact('idea.md', content)
+    )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toBe(
       'Heading "## open questions" should be "## Open Questions"'
@@ -637,7 +682,9 @@ Sure.
 
 Nope.
 `
-    const violations = validateIdeaOpenQuestions('idea.md', content)
+    const violations = validateIdeaOpenQuestions(
+      parseArtifact('idea.md', content)
+    )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toBe(
       'Heading "## Open questions" should be "## Open Questions"'
@@ -661,7 +708,9 @@ Sure.
 
 Nope.
 `
-    const violations = validateIdeaOpenQuestions('idea.md', content)
+    const violations = validateIdeaOpenQuestions(
+      parseArtifact('idea.md', content)
+    )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toBe(
       'Heading "## OPEN QUESTIONS" should be "## Open Questions"'
@@ -683,7 +732,9 @@ Sure.
 
 - [Other idea](other-idea.md)
 `
-    const violations = validateIdeaOpenQuestions('idea.md', content)
+    const violations = validateIdeaOpenQuestions(
+      parseArtifact('idea.md', content)
+    )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toBe(
       'Open Questions must be the last section in an idea file. Move this section above ## Open Questions.'
@@ -705,7 +756,9 @@ Sure.
 
 Sure.
 `
-    expect(validateIdeaOpenQuestions('idea.md', content)).toHaveLength(0)
+    expect(
+      validateIdeaOpenQuestions(parseArtifact('idea.md', content))
+    ).toHaveLength(0)
   })
 })
 
@@ -715,7 +768,7 @@ describe('validateTaskHeadings', () => {
 ## Blocked By
 ## Definition of Done`
 
-    const violations = validateTaskHeadings('task.md', content)
+    const violations = validateTaskHeadings(parseArtifact('task.md', content))
     expect(violations).toHaveLength(0)
   })
 
@@ -723,7 +776,7 @@ describe('validateTaskHeadings', () => {
     const content = `# Task
 ## Blocked By`
 
-    const violations = validateTaskHeadings('task.md', content)
+    const violations = validateTaskHeadings(parseArtifact('task.md', content))
     expect(violations).toHaveLength(1)
   })
 })
@@ -738,24 +791,16 @@ describe('validateLinks', () => {
         },
       },
     })
-
-    const violations = validateLinks(
-      '/project/.dust/tasks/task.md',
-      content,
-      fileSystem
-    )
+    const artifact = parseArtifact('/project/.dust/tasks/task.md', content)
+    const violations = validateLinks(artifact, fileSystem)
     expect(violations).toHaveLength(0)
   })
 
   test('reports broken links', () => {
     const content = '[Missing](../principles/missing.md)'
     const fileSystem = createFileSystemEmulator()
-
-    const violations = validateLinks(
-      '/project/.dust/tasks/task.md',
-      content,
-      fileSystem
-    )
+    const artifact = parseArtifact('/project/.dust/tasks/task.md', content)
+    const violations = validateLinks(artifact, fileSystem)
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('Broken link')
   })
@@ -763,36 +808,24 @@ describe('validateLinks', () => {
   test('skips external links', () => {
     const content = '[External](https://example.com)'
     const fileSystem = createFileSystemEmulator()
-
-    const violations = validateLinks(
-      '/project/.dust/tasks/task.md',
-      content,
-      fileSystem
-    )
+    const artifact = parseArtifact('/project/.dust/tasks/task.md', content)
+    const violations = validateLinks(artifact, fileSystem)
     expect(violations).toHaveLength(0)
   })
 
   test('skips anchor links', () => {
     const content = '[Section](#section)'
     const fileSystem = createFileSystemEmulator()
-
-    const violations = validateLinks(
-      '/project/.dust/tasks/task.md',
-      content,
-      fileSystem
-    )
+    const artifact = parseArtifact('/project/.dust/tasks/task.md', content)
+    const violations = validateLinks(artifact, fileSystem)
     expect(violations).toHaveLength(0)
   })
 
   test('reports absolute links', () => {
     const content = '[Task](/project/.dust/tasks/task.md)'
     const fileSystem = createFileSystemEmulator()
-
-    const violations = validateLinks(
-      '/project/.dust/tasks/task.md',
-      content,
-      fileSystem
-    )
+    const artifact = parseArtifact('/project/.dust/tasks/task.md', content)
+    const violations = validateLinks(artifact, fileSystem)
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('Absolute link not allowed')
     expect(violations[0].message).toContain('use a relative path instead')
@@ -803,12 +836,8 @@ describe('validateLinks', () => {
 Line 2
 [Missing](../principles/missing.md)`
     const fileSystem = createFileSystemEmulator()
-
-    const violations = validateLinks(
-      '/project/.dust/tasks/task.md',
-      content,
-      fileSystem
-    )
+    const artifact = parseArtifact('/project/.dust/tasks/task.md', content)
+    const violations = validateLinks(artifact, fileSystem)
     expect(violations[0].line).toBe(3)
   })
 })
@@ -820,11 +849,8 @@ describe('validateSemanticLinks', () => {
 [Principle](../principles/my-principle.md)
 ## Blocked By
 ## Definition of Done`
-
-    const violations = validateSemanticLinks(
-      '/project/.dust/tasks/task.md',
-      content
-    )
+    const artifact = parseArtifact('/project/.dust/tasks/task.md', content)
+    const violations = validateSemanticLinks(artifact)
     expect(violations).toHaveLength(0)
   })
 
@@ -834,11 +860,8 @@ describe('validateSemanticLinks', () => {
 [Task](../tasks/other-task.md)
 ## Blocked By
 ## Definition of Done`
-
-    const violations = validateSemanticLinks(
-      '/project/.dust/tasks/task.md',
-      content
-    )
+    const artifact = parseArtifact('/project/.dust/tasks/task.md', content)
+    const violations = validateSemanticLinks(artifact)
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('## Principles')
     expect(violations[0].message).toContain('principle file')
@@ -851,11 +874,8 @@ describe('validateSemanticLinks', () => {
 ## Blocked By
 [Blocker](../tasks/blocker-task.md)
 ## Definition of Done`
-
-    const violations = validateSemanticLinks(
-      '/project/.dust/tasks/task.md',
-      content
-    )
+    const artifact = parseArtifact('/project/.dust/tasks/task.md', content)
+    const violations = validateSemanticLinks(artifact)
     expect(violations).toHaveLength(0)
   })
 
@@ -865,11 +885,8 @@ describe('validateSemanticLinks', () => {
 ## Blocked By
 [Principle](../principles/my-principle.md)
 ## Definition of Done`
-
-    const violations = validateSemanticLinks(
-      '/project/.dust/tasks/task.md',
-      content
-    )
+    const artifact = parseArtifact('/project/.dust/tasks/task.md', content)
+    const violations = validateSemanticLinks(artifact)
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('## Blocked By')
     expect(violations[0].message).toContain('task file')
@@ -882,11 +899,8 @@ describe('validateSemanticLinks', () => {
 [External](https://example.com)
 ## Blocked By
 ## Definition of Done`
-
-    const violations = validateSemanticLinks(
-      '/project/.dust/tasks/task.md',
-      content
-    )
+    const artifact = parseArtifact('/project/.dust/tasks/task.md', content)
+    const violations = validateSemanticLinks(artifact)
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('## Principles')
     expect(violations[0].message).toContain('external URL')
@@ -899,11 +913,8 @@ describe('validateSemanticLinks', () => {
 [Section](#section)
 ## Blocked By
 ## Definition of Done`
-
-    const violations = validateSemanticLinks(
-      '/project/.dust/tasks/task.md',
-      content
-    )
+    const artifact = parseArtifact('/project/.dust/tasks/task.md', content)
+    const violations = validateSemanticLinks(artifact)
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('## Principles')
     expect(violations[0].message).toContain('anchor')
@@ -916,11 +927,8 @@ describe('validateSemanticLinks', () => {
 ## Blocked By
 ## Definition of Done
 [Any Link](../random/file.md)`
-
-    const violations = validateSemanticLinks(
-      '/project/.dust/tasks/task.md',
-      content
-    )
+    const artifact = parseArtifact('/project/.dust/tasks/task.md', content)
+    const violations = validateSemanticLinks(artifact)
     expect(violations).toHaveLength(0)
   })
 
@@ -932,11 +940,8 @@ describe('validateSemanticLinks', () => {
 [Principle3](../principles/principle3.md)
 ## Blocked By
 ## Definition of Done`
-
-    const violations = validateSemanticLinks(
-      '/project/.dust/tasks/task.md',
-      content
-    )
+    const artifact = parseArtifact('/project/.dust/tasks/task.md', content)
+    const violations = validateSemanticLinks(artifact)
     expect(violations).toHaveLength(1)
     expect(violations[0].line).toBe(4)
   })
@@ -1316,8 +1321,7 @@ This is a principle.
 - (none)
 `
     const violations = validatePrincipleHierarchySections(
-      'principle.md',
-      content
+      parseArtifact('principle.md', content)
     )
     expect(violations).toHaveLength(0)
   })
@@ -1332,8 +1336,7 @@ This is a principle.
 - (none)
 `
     const violations = validatePrincipleHierarchySections(
-      'principle.md',
-      content
+      parseArtifact('principle.md', content)
     )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('## Parent Principle')
@@ -1349,8 +1352,7 @@ This is a principle.
 - (none)
 `
     const violations = validatePrincipleHierarchySections(
-      'principle.md',
-      content
+      parseArtifact('principle.md', content)
     )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('## Sub-Principles')
@@ -1362,8 +1364,7 @@ This is a principle.
 This is a principle.
 `
     const violations = validatePrincipleHierarchySections(
-      'principle.md',
-      content
+      parseArtifact('principle.md', content)
     )
     expect(violations).toHaveLength(2)
   })
@@ -1384,8 +1385,7 @@ This is a principle.
 - [Child](child-principle.md)
 `
     const violations = validatePrincipleHierarchyLinks(
-      '/project/.dust/principles/principle.md',
-      content
+      parseArtifact('/project/.dust/principles/principle.md', content)
     )
     expect(violations).toHaveLength(0)
   })
@@ -1402,8 +1402,7 @@ This is a principle.
 - (none)
 `
     const violations = validatePrincipleHierarchyLinks(
-      '/project/.dust/principles/principle.md',
-      content
+      parseArtifact('/project/.dust/principles/principle.md', content)
     )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('## Parent Principle')
@@ -1422,8 +1421,7 @@ This is a principle.
 - [Idea](../ideas/idea.md)
 `
     const violations = validatePrincipleHierarchyLinks(
-      '/project/.dust/principles/principle.md',
-      content
+      parseArtifact('/project/.dust/principles/principle.md', content)
     )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('## Sub-Principles')
@@ -1442,8 +1440,7 @@ This is a principle.
 - (none)
 `
     const violations = validatePrincipleHierarchyLinks(
-      '/project/.dust/principles/principle.md',
-      content
+      parseArtifact('/project/.dust/principles/principle.md', content)
     )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('external URL')
@@ -1461,8 +1458,7 @@ This is a principle.
 - (none)
 `
     const violations = validatePrincipleHierarchyLinks(
-      '/project/.dust/principles/principle.md',
-      content
+      parseArtifact('/project/.dust/principles/principle.md', content)
     )
     expect(violations).toHaveLength(1)
     expect(violations[0].message).toContain('anchor')
@@ -1480,8 +1476,7 @@ This is a principle.
 - (none)
 `
     const violations = validatePrincipleHierarchyLinks(
-      '/project/.dust/principles/principle.md',
-      content
+      parseArtifact('/project/.dust/principles/principle.md', content)
     )
     expect(violations[0].line).toBe(5)
   })
@@ -1501,8 +1496,7 @@ describe('extractPrincipleRelationships', () => {
 - [Child2](child2.md)
 `
     const rel = extractPrincipleRelationships(
-      '/project/.dust/principles/principle.md',
-      content
+      parseArtifact('/project/.dust/principles/principle.md', content)
     )
     expect(rel.filePath).toBe('/project/.dust/principles/principle.md')
     expect(rel.parentPrinciples).toEqual([
@@ -1526,8 +1520,7 @@ describe('extractPrincipleRelationships', () => {
 - [Child](child.md)
 `
     const rel = extractPrincipleRelationships(
-      '/project/.dust/principles/principle.md',
-      content
+      parseArtifact('/project/.dust/principles/principle.md', content)
     )
     expect(rel.parentPrinciples).toEqual([])
     expect(rel.subPrinciples).toEqual(['/project/.dust/principles/child.md'])
@@ -1545,8 +1538,7 @@ describe('extractPrincipleRelationships', () => {
 - (none)
 `
     const rel = extractPrincipleRelationships(
-      '/project/.dust/principles/principle.md',
-      content
+      parseArtifact('/project/.dust/principles/principle.md', content)
     )
     expect(rel.parentPrinciples).toEqual([
       '/project/.dust/principles/parent.md',
@@ -1566,8 +1558,7 @@ describe('extractPrincipleRelationships', () => {
 - (none)
 `
     const rel = extractPrincipleRelationships(
-      '/project/.dust/principles/principle.md',
-      content
+      parseArtifact('/project/.dust/principles/principle.md', content)
     )
     expect(rel.parentPrinciples).toEqual([])
     expect(rel.subPrinciples).toEqual([])
@@ -1585,8 +1576,7 @@ describe('extractPrincipleRelationships', () => {
 - (none)
 `
     const rel = extractPrincipleRelationships(
-      '/project/.dust/principles/principle.md',
-      content
+      parseArtifact('/project/.dust/principles/principle.md', content)
     )
     expect(rel.parentPrinciples).toEqual([])
     expect(rel.subPrinciples).toEqual([])
@@ -1604,8 +1594,7 @@ describe('extractPrincipleRelationships', () => {
 - [HTTP](http://example.com)
 `
     const rel = extractPrincipleRelationships(
-      '/project/.dust/principles/principle.md',
-      content
+      parseArtifact('/project/.dust/principles/principle.md', content)
     )
     expect(rel.parentPrinciples).toEqual([])
     expect(rel.subPrinciples).toEqual([])
@@ -2829,9 +2818,12 @@ describe('validateIdeaTransitionTitle', () => {
   test('returns null for non-transition task title', () => {
     const content = '# Add User Authentication\n\nImplement auth.'
     const fileSystem = createFileSystemEmulator()
-    const violation = validateIdeaTransitionTitle(
+    const artifact = parseArtifact(
       '/project/.dust/tasks/add-user-authentication.md',
-      content,
+      content
+    )
+    const violation = validateIdeaTransitionTitle(
+      artifact,
       '/project/.dust/ideas',
       fileSystem
     )
@@ -2847,9 +2839,12 @@ describe('validateIdeaTransitionTitle', () => {
         },
       },
     })
-    const violation = validateIdeaTransitionTitle(
+    const artifact = parseArtifact(
       '/project/.dust/tasks/refine-idea-my-great-idea.md',
-      content,
+      content
+    )
+    const violation = validateIdeaTransitionTitle(
+      artifact,
       '/project/.dust/ideas',
       fileSystem
     )
@@ -2866,9 +2861,12 @@ describe('validateIdeaTransitionTitle', () => {
         },
       },
     })
-    const violation = validateIdeaTransitionTitle(
+    const artifact = parseArtifact(
       '/project/.dust/tasks/decompose-idea-my-great-idea.md',
-      content,
+      content
+    )
+    const violation = validateIdeaTransitionTitle(
+      artifact,
       '/project/.dust/ideas',
       fileSystem
     )
@@ -2884,9 +2882,12 @@ describe('validateIdeaTransitionTitle', () => {
         },
       },
     })
-    const violation = validateIdeaTransitionTitle(
+    const artifact = parseArtifact(
       '/project/.dust/tasks/shelve-idea-my-great-idea.md',
-      content,
+      content
+    )
+    const violation = validateIdeaTransitionTitle(
+      artifact,
       '/project/.dust/ideas',
       fileSystem
     )
@@ -2902,9 +2903,12 @@ describe('validateIdeaTransitionTitle', () => {
         },
       },
     })
-    const violation = validateIdeaTransitionTitle(
+    const artifact = parseArtifact(
       '/project/.dust/tasks/refine-idea-nonexistent-idea.md',
-      content,
+      content
+    )
+    const violation = validateIdeaTransitionTitle(
+      artifact,
       '/project/.dust/ideas',
       fileSystem
     )
@@ -2916,9 +2920,9 @@ describe('validateIdeaTransitionTitle', () => {
   test('returns null when content has no title', () => {
     const content = 'No heading in this file.'
     const fileSystem = createFileSystemEmulator()
+    const artifact = parseArtifact('/project/.dust/tasks/some-task.md', content)
     const violation = validateIdeaTransitionTitle(
-      '/project/.dust/tasks/some-task.md',
-      content,
+      artifact,
       '/project/.dust/ideas',
       fileSystem
     )
@@ -2951,8 +2955,7 @@ Do something.
 (none)
 `
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/regular-task.md',
-      content,
+      parseArtifact('/project/.dust/tasks/regular-task.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -2965,8 +2968,7 @@ Do something.
     })
     const content = 'Just some text without a heading.'
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/no-title.md',
-      content,
+      parseArtifact('/project/.dust/tasks/no-title.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -2991,8 +2993,7 @@ Research and refine this idea.
 (none)
 `
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/refine-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/refine-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -3023,8 +3024,7 @@ This section has no links.
 (none)
 `
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/refine-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/refine-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -3054,8 +3054,7 @@ Research and refine this idea.
 (none)
 `
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/refine-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/refine-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -3085,8 +3084,7 @@ Research and refine this idea.
 (none)
 `
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/refine-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/refine-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -3116,8 +3114,7 @@ Research and refine this idea.
 (none)
 `
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/refine-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/refine-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -3142,8 +3139,7 @@ Create tasks from this idea.
 (none)
 `
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/decompose-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/decompose-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -3169,8 +3165,7 @@ Archive this idea.
 (none)
 `
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/shelve-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/shelve-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -3202,8 +3197,7 @@ Research and refine this idea.
 (none)
 `
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/refine-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/refine-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -3235,8 +3229,7 @@ Research and refine this idea.
 (none)
 `
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/refine-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/refine-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -3267,8 +3260,7 @@ Research and refine this idea.
 (none)
 `
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/refine-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/refine-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -4168,8 +4160,7 @@ Do something.
 ## Blocked By
 ## Definition of Done`
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/regular-task.md',
-      content,
+      parseArtifact('/project/.dust/tasks/regular-task.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -4192,8 +4183,7 @@ Refine this idea.
 ## Blocked By
 ## Definition of Done`
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/refine-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/refine-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -4219,8 +4209,7 @@ Create tasks from this idea.
 ## Blocked By
 ## Definition of Done`
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/decompose-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/decompose-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -4246,8 +4235,7 @@ Archive this idea.
 ## Blocked By
 ## Definition of Done`
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/shelve-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/shelve-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -4277,8 +4265,7 @@ No links here.
 ## Blocked By
 ## Definition of Done`
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/refine-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/refine-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -4306,8 +4293,7 @@ Refine this idea.
 ## Blocked By
 ## Definition of Done`
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/refine-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/refine-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -4335,8 +4321,7 @@ Refine this idea.
 ## Blocked By
 ## Definition of Done`
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/refine-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/refine-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -4365,8 +4350,7 @@ Refine this idea.
 ## Blocked By
 ## Definition of Done`
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/refine-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/refine-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -4379,8 +4363,7 @@ Refine this idea.
     })
     const content = 'Just some content without a title.'
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/some-file.md',
-      content,
+      parseArtifact('/project/.dust/tasks/some-file.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -4408,8 +4391,7 @@ Refine this idea.
 
 ## Blocked By`
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/refine-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/refine-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
@@ -4437,8 +4419,7 @@ Refine this idea.
 
 ## Blocked By`
     const violations = validateWorkflowTaskBodySection(
-      '/project/.dust/tasks/refine-idea-my-idea.md',
-      content,
+      parseArtifact('/project/.dust/tasks/refine-idea-my-idea.md', content),
       '/project/.dust/ideas',
       fileSystem
     )
