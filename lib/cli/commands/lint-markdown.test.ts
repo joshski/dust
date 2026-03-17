@@ -2797,13 +2797,9 @@ This is an idea.
       },
     })
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
-    let ideaReadCount = 0
     fileSystem.readFile = async (path: string) => {
       if (path.includes('/ideas/')) {
-        ideaReadCount++
-        if (ideaReadCount === 3) {
-          throw new Error('Permission denied')
-        }
+        throw new Error('Permission denied')
       }
       return originalReadFile(path)
     }
@@ -3604,17 +3600,9 @@ This is a principle.
       },
     })
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
-    let ideaReadCount = 0
     fileSystem.readFile = async (path: string) => {
       if (path.includes('/ideas/')) {
-        ideaReadCount++
-        // Ideas are read at:
-        // 1. Line 544: .dust root links validation
-        // 2. Line 568: content validation
-        // Throw on the 2nd read (content validation) to hit line 574
-        if (ideaReadCount === 2) {
-          throw new Error('Permission denied')
-        }
+        throw new Error('Permission denied')
       }
       return originalReadFile(path)
     }
@@ -3636,16 +3624,11 @@ This is a principle.
       },
     })
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
-    let ideaReadCount = 0
     fileSystem.readFile = async (path: string) => {
       if (path.includes('/ideas/')) {
-        ideaReadCount++
-        // Throw ENOENT on the 2nd read (content validation) to hit lines 571-572
-        if (ideaReadCount === 2) {
-          const error = new Error('ENOENT: file deleted')
-          ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-          throw error
-        }
+        const error = new Error('ENOENT: file deleted')
+        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
+        throw error
       }
       return originalReadFile(path)
     }
@@ -3654,7 +3637,7 @@ This is a principle.
     expect(result.exitCode).toBe(0)
   })
 
-  test('rethrows non-ENOENT errors when scanning directories', async () => {
+  test('rethrows non-ENOENT errors when reading directories', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -3663,14 +3646,14 @@ This is a principle.
         },
       },
     })
-    // Make the scan function throw a non-ENOENT error
-    fileSystem.scan = (): AsyncIterable<string> => ({
-      [Symbol.asyncIterator]: () => ({
-        async next(): Promise<IteratorResult<string>> {
-          throw new Error('Permission denied')
-        },
-      }),
-    })
+    // Make the readdir function throw a non-ENOENT error
+    const originalReaddir = fileSystem.readdir.bind(fileSystem)
+    fileSystem.readdir = async (path: string) => {
+      if (path.includes('/principles')) {
+        throw new Error('Permission denied')
+      }
+      return originalReaddir(path)
+    }
 
     await expect(
       lintMarkdown(createDependencies(context, fileSystem))
@@ -3689,18 +3672,9 @@ This is a principle.
       },
     })
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
-    let taskReadCount = 0
     fileSystem.readFile = async (path: string) => {
       if (path.includes('/tasks/')) {
-        taskReadCount++
-        // Task files are read 3 times:
-        // 1. Line 544: .dust root links validation
-        // 2. Line 568: content validation
-        // 3. Line 615: task-specific validation
-        // We want to throw non-ENOENT on the 3rd read to test line 621
-        if (taskReadCount === 3) {
-          throw new Error('Permission denied')
-        }
+        throw new Error('Permission denied')
       }
       return originalReadFile(path)
     }
@@ -3723,18 +3697,9 @@ This is a principle.
       },
     })
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
-    let principleReadCount = 0
     fileSystem.readFile = async (path: string) => {
       if (path.includes('/principles/')) {
-        principleReadCount++
-        // Principle files are read 3 times:
-        // 1. Line 544: .dust root links validation
-        // 2. Line 568: content validation
-        // 3. Line 648: principle hierarchy validation
-        // We want to throw non-ENOENT on the 3rd read to test line 654
-        if (principleReadCount === 3) {
-          throw new Error('Permission denied')
-        }
+        throw new Error('Permission denied')
       }
       return originalReadFile(path)
     }
@@ -3744,7 +3709,7 @@ This is a principle.
     ).rejects.toThrow('Permission denied')
   })
 
-  test('skips task files that disappear between scan and task-specific validation (ENOENT)', async () => {
+  test('skips task files that disappear between scan and read (ENOENT)', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -3762,20 +3727,11 @@ Implement the task functionality.
       },
     })
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
-    let taskReadCount = 0
     fileSystem.readFile = async (path: string) => {
       if (path.includes('/tasks/')) {
-        taskReadCount++
-        // Task files are read 3 times:
-        // 1. Line 544: .dust root links validation
-        // 2. Line 568: content validation
-        // 3. Line 615: task-specific validation
-        // We want to throw ENOENT on the 3rd read to test line 618-619
-        if (taskReadCount === 3) {
-          const error = new Error('ENOENT: file deleted')
-          ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-          throw error
-        }
+        const error = new Error('ENOENT: file deleted')
+        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
+        throw error
       }
       return originalReadFile(path)
     }
@@ -3785,7 +3741,7 @@ Implement the task functionality.
     expect(result.exitCode).toBe(0)
   })
 
-  test('skips principle files that disappear between scan and hierarchy validation (ENOENT)', async () => {
+  test('skips principle files that disappear between scan and read (ENOENT)', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -3798,20 +3754,11 @@ Implement the task functionality.
       },
     })
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
-    let principleReadCount = 0
     fileSystem.readFile = async (path: string) => {
       if (path.includes('/principles/')) {
-        principleReadCount++
-        // Principle files are read 3 times:
-        // 1. Line 544: .dust root links validation
-        // 2. Line 568: content validation
-        // 3. Line 648: principle hierarchy validation
-        // We want to throw ENOENT on the 3rd read to test line 651-652
-        if (principleReadCount === 3) {
-          const error = new Error('ENOENT: file deleted')
-          ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-          throw error
-        }
+        const error = new Error('ENOENT: file deleted')
+        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
+        throw error
       }
       return originalReadFile(path)
     }

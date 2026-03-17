@@ -76,7 +76,7 @@ describe('validatePatch', () => {
   test('patch with valid link to existing file', async () => {
     const fileSystem = makeFs({
       'principles/existing.md':
-        '# Existing Principle\n\nThis principle exists already.',
+        '# Existing\n\nThis principle exists already.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
     })
     const result = await validatePatch(fileSystem, dustPath, {
       files: {

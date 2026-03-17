@@ -56,3 +56,52 @@ describe('createFileSystemEmulator with flatFiles', () => {
     expect(entries.toSorted()).toEqual(['dead-code.md', 'security.md'])
   })
 })
+
+describe('createFileSystemEmulator scan', () => {
+  test('yields files in directory', async () => {
+    const fileSystem = createFileSystemEmulator(
+      {},
+      {
+        '/docs/readme.md': '# Readme',
+        '/docs/guide.md': '# Guide',
+        '/docs/nested/deep.md': '# Deep',
+        '/other/file.md': '# Other',
+      }
+    )
+
+    const files: string[] = []
+    for await (const file of fileSystem.scan('/docs')) {
+      files.push(file)
+    }
+    expect(files.toSorted()).toEqual([
+      'guide.md',
+      'nested/deep.md',
+      'readme.md',
+    ])
+  })
+
+  test('throws ENOENT for non-existent directory', async () => {
+    const fileSystem = createFileSystemEmulator({})
+
+    const collectFiles = async () => {
+      const files: string[] = []
+      for await (const file of fileSystem.scan('/nonexistent')) {
+        files.push(file)
+      }
+      return files
+    }
+    await expect(collectFiles()).rejects.toThrow('ENOENT')
+  })
+
+  test('yields empty for empty directory', async () => {
+    const fileSystem = createFileSystemEmulator({
+      docs: {},
+    })
+
+    const files: string[] = []
+    for await (const file of fileSystem.scan('/docs')) {
+      files.push(file)
+    }
+    expect(files).toEqual([])
+  })
+})
