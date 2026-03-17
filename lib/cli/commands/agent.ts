@@ -21,6 +21,8 @@ function agentGreeting(vars: TemplateVarsWithInstructions): string {
   return dedent`
     🤖 Hello ${vars.agentName}, welcome to dust!
 
+    Dust is a CLI tool for managing software development workflows through markdown artifacts. It stores tasks, ideas, principles, and facts in \`.dust/\` directories, giving you structured context about the project and a backlog to work from.
+
     CRITICAL: You MUST run exactly ONE of the commands below before doing anything else.
 
     Determine the user's intent and run the matching command NOW:
