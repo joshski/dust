@@ -867,4 +867,60 @@ Expedite this idea.
       facts: [{ path: '.dust/facts/my-fact.md', title: 'my-fact' }],
     })
   })
+
+  test('handles missing emitEvent gracefully when listing items', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          facts: { 'fact.md': '# My Fact' },
+        },
+      },
+    })
+
+    const context = {
+      cwd: '/project',
+      stdout: () => {},
+      stderr: () => {},
+      emitEvent: undefined,
+    }
+
+    const result = await list({
+      arguments: ['facts'],
+      context,
+      fileSystem,
+      globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
+      settings: { dustCommand: 'dust' },
+    })
+
+    expect(result.exitCode).toBe(0)
+  })
+
+  test('handles missing emitEvent gracefully when no items exist', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          facts: {},
+        },
+      },
+    })
+
+    const context = {
+      cwd: '/project',
+      stdout: () => {},
+      stderr: () => {},
+      emitEvent: undefined,
+    }
+
+    const result = await list({
+      arguments: ['facts'],
+      context,
+      fileSystem,
+      globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
+      settings: { dustCommand: 'dust' },
+    })
+
+    expect(result.exitCode).toBe(0)
+  })
 })

@@ -62,6 +62,58 @@ const TYPE_EXPLANATIONS: Record<ListType, string> = {
     'Facts are current state documentation. Facts capture how things work today, providing context for agents and contributors.',
 }
 
+interface CollectedItem {
+  path: string
+  title: string
+  status?: string
+}
+
+type ListEvent =
+  | { type: 'facts-listed'; facts: { path: string; title: string }[] }
+  | {
+      type: 'ideas-listed'
+      ideas: { path: string; title: string; status: string }[]
+    }
+  | {
+      type: 'principles-listed'
+      principles: { path: string; title: string }[]
+    }
+
+type EventEmitter = ((event: ListEvent) => void) | undefined
+
+function emitListEvent(
+  emitEvent: (event: ListEvent) => void,
+  type: ListType,
+  items: CollectedItem[]
+): void {
+  if (type === 'facts') {
+    emitEvent({
+      type: 'facts-listed',
+      facts: items.map(i => ({ path: i.path, title: i.title })),
+    })
+    return
+  }
+
+  if (type === 'ideas') {
+    emitEvent({
+      type: 'ideas-listed',
+      ideas: items.map(i => ({
+        path: i.path,
+        title: i.title,
+        status: i.status as string,
+      })),
+    })
+    return
+  }
+
+  if (type === 'principles') {
+    emitEvent({
+      type: 'principles-listed',
+      principles: items.map(i => ({ path: i.path, title: i.title })),
+    })
+  }
+}
+
 interface PrincipleNode {
   filePath: string
   title: string
@@ -138,6 +190,135 @@ function renderHierarchy(
   }
 }
 
+function parseTypesToList(commandArguments: string[]): ListType[] {
+  if (commandArguments.length === 0) {
+    return [...VALID_TYPES]
+  }
+  return commandArguments.filter(a =>
+    VALID_TYPES.includes(a as ListType)
+  ) as ListType[]
+}
+
+interface WorkflowTasksMap {
+  workflowTasksByIdeaSlug: Map<string, { type: IdeaWorkflowType }>
+}
+
+type IdeaWorkflowType =
+  | 'refine-idea'
+  | 'decompose-idea'
+  | 'shelve-idea'
+  | 'expedite-idea'
+
+function getIdeaStatus(
+  slug: string,
+  workflowTasks: WorkflowTasksMap | null
+): IdeaStatus {
+  const workflowTask = workflowTasks?.workflowTasksByIdeaSlug.get(slug)
+  return workflowTask ? workflowTypeToStatus(workflowTask.type) : 'draft'
+}
+
+function collectItem(
+  type: ListType,
+  relativePath: string,
+  displayTitle: string,
+  slug: string,
+  workflowTasks: WorkflowTasksMap | null
+): CollectedItem | null {
+  if (type === 'ideas') {
+    return {
+      path: relativePath,
+      title: displayTitle,
+      status: getIdeaStatus(slug, workflowTasks),
+    }
+  }
+  if (type === 'facts' || type === 'principles') {
+    return { path: relativePath, title: displayTitle }
+  }
+  return null
+}
+
+interface OutputArtifactParams {
+  title: string | null
+  slug: string
+  openingSentence: string | null
+  relativePath: string
+  colors: ReturnType<typeof getColors>
+  stdout: (line: string) => void
+}
+
+function outputArtifact(parameters: OutputArtifactParams): void {
+  const { title, slug, openingSentence, relativePath, colors, stdout } =
+    parameters
+  const displayTitle = title || slug
+  stdout(`${colors.bold}# ${displayTitle}${colors.reset}`)
+  if (openingSentence) {
+    stdout(`${colors.dim}${openingSentence}${colors.reset}`)
+  }
+  stdout(`${colors.cyan}→ ${relativePath}${colors.reset}`)
+  stdout('')
+}
+
+interface ListTypeContext {
+  type: ListType
+  dirPath: string
+  mdFiles: string[]
+  colors: ReturnType<typeof getColors>
+  fileSystem: ReadableFileSystem
+  workflowTasks: WorkflowTasksMap | null
+  stdout: (line: string) => void
+  emitEvent: EventEmitter
+}
+
+async function processListType(context: ListTypeContext): Promise<void> {
+  const { type, dirPath, mdFiles, colors, fileSystem, workflowTasks } = context
+  const { stdout, emitEvent } = context
+
+  if (type === 'principles') {
+    const hierarchy = await buildPrincipleHierarchy(dirPath, fileSystem)
+    if (hierarchy.length > 0) {
+      stdout(`${colors.dim}Hierarchy:${colors.reset}`)
+      renderHierarchy(hierarchy, line => stdout(line))
+      stdout('')
+    }
+  }
+
+  const collectedItems: CollectedItem[] = []
+
+  for (const file of mdFiles) {
+    const filePath = `${dirPath}/${file}`
+    const content = await fileSystem.readFile(filePath)
+    const title = extractTitle(content)
+    const openingSentence = extractOpeningSentence(content)
+    const relativePath = `.dust/${type}/${file}`
+    const slug = file.replace('.md', '')
+    const displayTitle = title || slug
+
+    const item = collectItem(
+      type,
+      relativePath,
+      displayTitle,
+      slug,
+      workflowTasks
+    )
+    if (item) {
+      collectedItems.push(item)
+    }
+
+    outputArtifact({
+      title,
+      slug,
+      openingSentence,
+      relativePath,
+      colors,
+      stdout,
+    })
+  }
+
+  if (emitEvent) {
+    emitListEvent(emitEvent, type, collectedItems)
+  }
+}
+
 export async function list(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
@@ -156,12 +337,7 @@ export async function list(
     return { exitCode: 1 }
   }
 
-  const typesToList: ListType[] =
-    commandArguments.length === 0
-      ? [...VALID_TYPES]
-      : (commandArguments.filter(a =>
-          VALID_TYPES.includes(a as ListType)
-        ) as ListType[])
+  const typesToList = parseTypesToList(commandArguments)
 
   if (commandArguments.length > 0 && typesToList.length === 0) {
     context.stderr(`Invalid type: ${commandArguments[0]}`)
@@ -175,7 +351,6 @@ export async function list(
     typesToList.length === 1 &&
     typesToList[0] === 'tasks'
 
-  // Pre-fetch workflow tasks if we're listing ideas (to determine status)
   const workflowTasks =
     typesToList.includes('ideas') && fileSystem.exists(dustPath)
       ? await findAllWorkflowTasks(fileSystem, dustPath)
@@ -183,7 +358,6 @@ export async function list(
 
   for (const type of typesToList) {
     const dirPath = `${dustPath}/${type}`
-
     const dirExists = fileSystem.exists(dirPath)
     const files = dirExists ? await fileSystem.readdir(dirPath) : []
     const mdFiles = files.filter(f => f.endsWith('.md')).toSorted()
@@ -197,13 +371,8 @@ export async function list(
         context.stdout(`No ${type} found.`)
         context.stdout('')
       }
-      // Emit empty events for requested types
-      if (type === 'facts') {
-        context.emitEvent?.({ type: 'facts-listed', facts: [] })
-      } else if (type === 'ideas') {
-        context.emitEvent?.({ type: 'ideas-listed', ideas: [] })
-      } else if (type === 'principles') {
-        context.emitEvent?.({ type: 'principles-listed', principles: [] })
+      if (context.emitEvent) {
+        emitListEvent(context.emitEvent, type, [])
       }
       continue
     }
@@ -213,79 +382,16 @@ export async function list(
     context.stdout(TYPE_EXPLANATIONS[type])
     context.stdout('')
 
-    // Show principle hierarchy above the flat list
-    if (type === 'principles') {
-      const hierarchy = await buildPrincipleHierarchy(dirPath, fileSystem)
-      if (hierarchy.length > 0) {
-        context.stdout(`${colors.dim}Hierarchy:${colors.reset}`)
-        renderHierarchy(hierarchy, line => context.stdout(line))
-        context.stdout('')
-      }
-    }
-
-    // Collect artifact data for events
-    const collectedItems: Array<{
-      path: string
-      title: string
-      status?: string
-    }> = []
-
-    for (const file of mdFiles) {
-      const filePath = `${dirPath}/${file}`
-      const content = await fileSystem.readFile(filePath)
-      const title = extractTitle(content)
-      const openingSentence = extractOpeningSentence(content)
-      const relativePath = `.dust/${type}/${file}`
-      const slug = file.replace('.md', '')
-
-      // Collect for event emission
-      const displayTitle = title || slug
-      if (type === 'ideas') {
-        const workflowTask = workflowTasks?.workflowTasksByIdeaSlug.get(slug)
-        const status: IdeaStatus = workflowTask
-          ? workflowTypeToStatus(workflowTask.type)
-          : 'draft'
-        collectedItems.push({ path: relativePath, title: displayTitle, status })
-      } else if (type === 'facts' || type === 'principles') {
-        collectedItems.push({ path: relativePath, title: displayTitle })
-      }
-
-      if (title) {
-        context.stdout(`${colors.bold}# ${title}${colors.reset}`)
-      } else {
-        context.stdout(`${colors.bold}# ${slug}${colors.reset}`)
-      }
-
-      if (openingSentence) {
-        context.stdout(`${colors.dim}${openingSentence}${colors.reset}`)
-      }
-
-      context.stdout(`${colors.cyan}→ ${relativePath}${colors.reset}`)
-      context.stdout('')
-    }
-
-    // Emit events after processing each type
-    if (type === 'facts') {
-      context.emitEvent?.({
-        type: 'facts-listed',
-        facts: collectedItems.map(i => ({ path: i.path, title: i.title })),
-      })
-    } else if (type === 'ideas') {
-      // status is always set when type === 'ideas' (see line 232 above)
-      context.emitEvent?.({
-        type: 'ideas-listed',
-        ideas: collectedItems.map(i => ({
-          path: i.path,
-          title: i.title,
-          status: i.status as string,
-        })),
-      })
-    } else if (type === 'principles') {
-      context.emitEvent?.({
-        type: 'principles-listed',
-        principles: collectedItems.map(i => ({ path: i.path, title: i.title })),
-      })
-    }
+    await processListType({
+      type,
+      dirPath,
+      mdFiles,
+      colors,
+      fileSystem,
+      workflowTasks,
+      stdout: context.stdout,
+      emitEvent: context.emitEvent,
+    })
   }
 
   if (showTaskCreationHint) {

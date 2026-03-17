@@ -140,6 +140,117 @@ function relativizeViolations(
   }))
 }
 
+const CONTENT_DIRS = ['principles', 'facts', 'ideas', 'tasks']
+
+function validateContentFile(filePath: string, content: string): Violation[] {
+  const violations: Violation[] = []
+  const openingSentence = validateOpeningSentence(filePath, content)
+  if (openingSentence) violations.push(openingSentence)
+
+  const openingSentenceLength = validateOpeningSentenceLength(filePath, content)
+  if (openingSentenceLength) violations.push(openingSentenceLength)
+
+  const titleFilename = validateTitleFilenameMatch(filePath, content)
+  if (titleFilename) violations.push(titleFilename)
+
+  return violations
+}
+
+function validateTaskFile(
+  filePath: string,
+  content: string,
+  ideasPath: string,
+  overlayFs: ReadableFileSystem
+): Violation[] {
+  const violations: Violation[] = []
+
+  const filenameViolation = validateFilename(filePath)
+  if (filenameViolation) violations.push(filenameViolation)
+
+  violations.push(...validateTaskHeadings(filePath, content))
+  violations.push(...validateSemanticLinks(filePath, content))
+
+  const imperativeViolation = validateImperativeOpeningSentence(
+    filePath,
+    content
+  )
+  if (imperativeViolation) violations.push(imperativeViolation)
+
+  const ideaTransition = validateIdeaTransitionTitle(
+    filePath,
+    content,
+    ideasPath,
+    overlayFs
+  )
+  if (ideaTransition) violations.push(ideaTransition)
+
+  violations.push(
+    ...validateWorkflowTaskBodySection(filePath, content, ideasPath, overlayFs)
+  )
+
+  return violations
+}
+
+interface PatchFileSets {
+  absolutePatchFiles: Map<string, string>
+  deletedPaths: Set<string>
+}
+
+function parsePatchFiles(
+  dustPath: string,
+  patch: ArtifactPatch
+): PatchFileSets {
+  const absolutePatchFiles = new Map<string, string>()
+  const deletedPaths = new Set<string>()
+  for (const [relativePath, content] of Object.entries(patch.files)) {
+    const absolutePath = `${dustPath}/${relativePath}`
+    if (content === null) {
+      deletedPaths.add(absolutePath)
+    } else {
+      absolutePatchFiles.set(absolutePath, content)
+    }
+  }
+  return { absolutePatchFiles, deletedPaths }
+}
+
+function collectPatchDirs(patch: ArtifactPatch): Set<string> {
+  const patchDirs = new Set<string>()
+  for (const relativePath of Object.keys(patch.files)) {
+    const dir = relativePath.split('/')[0]
+    if (CONTENT_DIRS.includes(dir)) {
+      patchDirs.add(dir)
+    }
+  }
+  return patchDirs
+}
+
+async function validatePrincipleRelationships(
+  dustPath: string,
+  overlayFs: ReadableFileSystem
+): Promise<Violation[]> {
+  const allRelationships: PrincipleRelationships[] = []
+  const principlesPath = `${dustPath}/principles`
+
+  try {
+    const existingFiles = await overlayFs.readdir(principlesPath)
+    for (const file of existingFiles) {
+      if (!file.endsWith('.md')) continue
+      const filePath = `${principlesPath}/${file}`
+      const content = await overlayFs.readFile(filePath)
+      allRelationships.push(extractPrincipleRelationships(filePath, content))
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw error
+    }
+  }
+
+  return [
+    ...validateBidirectionalLinks(allRelationships),
+    ...validateNoCycles(allRelationships),
+  ]
+}
+
 /**
  * Validates a patch of artifact changes against existing .dust/ content.
  *
@@ -154,19 +265,7 @@ export async function validatePatch(
   options: ValidatePatchOptions = {}
 ): Promise<ValidationResult> {
   const cwd = options.cwd ?? process.cwd()
-  // Convert relative patch paths to absolute, separating additions from deletions
-  const absolutePatchFiles = new Map<string, string>()
-  const deletedPaths = new Set<string>()
-  for (const [relativePath, content] of Object.entries(patch.files)) {
-    const absolutePath = `${dustPath}/${relativePath}`
-    if (content === null) {
-      deletedPaths.add(absolutePath)
-    } else {
-      absolutePatchFiles.set(absolutePath, content)
-    }
-  }
-
-  // Create overlay filesystem
+  const { absolutePatchFiles, deletedPaths } = parsePatchFiles(dustPath, patch)
   const overlayFs = createOverlayFileSystem(
     fileSystem,
     absolutePatchFiles,
@@ -176,24 +275,14 @@ export async function validatePatch(
   const violations: Violation[] = []
   violations.push(...validatePatchRootEntries(fileSystem, dustPath, patch))
 
-  const contentDirs = ['principles', 'facts', 'ideas', 'tasks']
-
-  // Validate content directory files for directories that have patch files
-  const patchDirs = new Set<string>()
-  for (const relativePath of Object.keys(patch.files)) {
-    const dir = relativePath.split('/')[0]
-    if (contentDirs.includes(dir)) {
-      patchDirs.add(dir)
-    }
-  }
-
+  const patchDirs = collectPatchDirs(patch)
   for (const dir of patchDirs) {
     violations.push(
       ...(await validateContentDirectoryFiles(`${dustPath}/${dir}`, overlayFs))
     )
   }
 
-  // Run per-file validators only on added/changed patch files (not deletions)
+  const ideasPath = `${dustPath}/ideas`
   for (const [relativePath, content] of Object.entries(patch.files)) {
     if (content === null) continue
     if (!relativePath.endsWith('.md')) continue
@@ -201,95 +290,35 @@ export async function validatePatch(
     const filePath = `${dustPath}/${relativePath}`
     const dir = relativePath.split('/')[0]
 
-    // Link validation (uses overlay fs so links to existing files resolve)
     violations.push(...validateLinks(filePath, content, overlayFs))
 
-    // Content validation for content directories
-    if (contentDirs.includes(dir)) {
-      const openingSentence = validateOpeningSentence(filePath, content)
-      if (openingSentence) violations.push(openingSentence)
-
-      const openingSentenceLength = validateOpeningSentenceLength(
-        filePath,
-        content
-      )
-      if (openingSentenceLength) violations.push(openingSentenceLength)
-
-      const titleFilename = validateTitleFilenameMatch(filePath, content)
-      if (titleFilename) violations.push(titleFilename)
+    if (CONTENT_DIRS.includes(dir)) {
+      violations.push(...validateContentFile(filePath, content))
     }
 
-    // Idea-specific validation
     if (dir === 'ideas') {
       violations.push(...validateIdeaOpenQuestions(filePath, content))
     }
 
-    // Task-specific validation
     if (dir === 'tasks') {
-      const filenameViolation = validateFilename(filePath)
-      if (filenameViolation) violations.push(filenameViolation)
-
-      violations.push(...validateTaskHeadings(filePath, content))
-      violations.push(...validateSemanticLinks(filePath, content))
-
-      const imperativeViolation = validateImperativeOpeningSentence(
-        filePath,
-        content
-      )
-      if (imperativeViolation) violations.push(imperativeViolation)
-
-      const ideasPath = `${dustPath}/ideas`
-      const ideaTransition = validateIdeaTransitionTitle(
-        filePath,
-        content,
-        ideasPath,
-        overlayFs
-      )
-      if (ideaTransition) violations.push(ideaTransition)
-
       violations.push(
-        ...validateWorkflowTaskBodySection(
-          filePath,
-          content,
-          ideasPath,
-          overlayFs
-        )
+        ...validateTaskFile(filePath, content, ideasPath, overlayFs)
       )
     }
 
-    // Principle-specific per-file validation
     if (dir === 'principles') {
       violations.push(...validatePrincipleHierarchySections(filePath, content))
       violations.push(...validatePrincipleHierarchyLinks(filePath, content))
     }
   }
 
-  // Cross-file principle validation: gather ALL principles (existing + patched)
   const hasPrinciplePatches = Object.keys(patch.files).some(p =>
     p.startsWith('principles/')
   )
   if (hasPrinciplePatches) {
-    const allRelationships: PrincipleRelationships[] = []
-
-    // Gather existing principle files
-    const principlesPath = `${dustPath}/principles`
-    try {
-      const existingFiles = await overlayFs.readdir(principlesPath)
-      for (const file of existingFiles) {
-        if (!file.endsWith('.md')) continue
-        const filePath = `${principlesPath}/${file}`
-        const content = await overlayFs.readFile(filePath)
-        allRelationships.push(extractPrincipleRelationships(filePath, content))
-      }
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-        throw error
-      }
-      // principles directory may not exist
-    }
-
-    violations.push(...validateBidirectionalLinks(allRelationships))
-    violations.push(...validateNoCycles(allRelationships))
+    violations.push(
+      ...(await validatePrincipleRelationships(dustPath, overlayFs))
+    )
   }
 
   return {
