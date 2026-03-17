@@ -55,6 +55,7 @@ const result = await buildArtifactPatch(fileSystem, dustPath, {
       principles: ['actionable-errors'],
       definitionOfDone: ['Task is completed'],
     },
+    'old-task': null,  // delete
   },
   facts: {
     'new-fact': {
@@ -62,7 +63,6 @@ const result = await buildArtifactPatch(fileSystem, dustPath, {
       content: 'Description of the fact.',
     },
   },
-  deletions: ['tasks/old-task'],
 })
 
 // result: { valid: boolean, violations: Violation[], patch: ArtifactPatch }
@@ -78,9 +78,20 @@ This approach:
 
 ### Handling Deletions
 
-Deletions are expressed as a separate array of paths. For reference-safe deletion (e.g., removing a task and updating `## Blocked By` sections in other tasks), callers would:
+Deletions can be expressed by setting a slug's value to `null`, mirroring the existing `validatePatch` API:
 
-1. Provide the deletion in the `deletions` array
+```typescript
+const result = await buildArtifactPatch(fileSystem, dustPath, {
+  tasks: {
+    'my-task': { title: 'My Task', blockedBy: [], /* ... */ },
+    'old-task': null,  // delete
+  },
+})
+```
+
+For reference-safe deletion (e.g., removing a task and updating `## Blocked By` sections in other tasks), callers would:
+
+1. Set the deleted artifact to `null`
 2. Provide updated versions of tasks that previously referenced the deleted task
 
 The API validates that the resulting state has no broken references.
@@ -93,8 +104,8 @@ Renames are composed from delete + create. To rename `old-task` to `new-task`:
 const result = await buildArtifactPatch(fileSystem, dustPath, {
   tasks: {
     'new-task': { title: 'New Task', /* ... */ },
+    'old-task': null,  // delete
   },
-  deletions: ['tasks/old-task'],
 })
 ```
 
@@ -204,8 +215,8 @@ Callers must provide updated versions of all artifacts that reference a deleted 
 const result = await buildArtifactPatch(fileSystem, dustPath, {
   tasks: {
     'dependent-task': { blockedBy: [] }, // caller removed the reference
+    'old-task': null,  // delete
   },
-  deletions: ['tasks/old-task'],
 })
 ```
 
@@ -217,7 +228,9 @@ The API scans existing artifacts, discovers references to deleted items, and gen
 
 ```typescript
 const result = await buildArtifactPatch(fileSystem, dustPath, {
-  deletions: ['tasks/old-task'],
+  tasks: {
+    'old-task': null,  // delete
+  },
 })
 // result.patch.files includes updated versions of tasks that referenced old-task
 ```
@@ -263,3 +276,31 @@ Only support the opening sentence (first line of prose) with a separate field. A
 ```
 
 Simpler but limits expressiveness for artifacts that need longer descriptions.
+
+### Should workflow task types be supported?
+
+#### Option: Workflow-specific input types
+
+Workflow tasks (Capture Idea, Refine Idea, Decompose Idea, etc.) have additional structure beyond regular tasks—they link to ideas and follow specific title patterns. The repository currently has dedicated methods for creating these (`createCaptureIdeaTask`, `createRefineIdeaTask`, etc.).
+
+Add input types for workflow tasks that enforce their structure:
+
+```typescript
+{
+  workflowTasks: {
+    'refine-idea-my-feature': {
+      type: 'refine-idea',
+      ideaSlug: 'my-feature',
+      definitionOfDone: ['Requirements clarified'],
+    },
+  },
+}
+```
+
+The API would generate the title prefix and idea link automatically. This prevents invalid workflow task structures.
+
+#### Option: Use regular task inputs
+
+Treat workflow tasks as regular tasks. Callers must construct the correct title and include the idea link manually. Validation catches structural errors after the fact.
+
+Simpler API surface but pushes workflow task knowledge to callers.
