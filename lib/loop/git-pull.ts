@@ -1,11 +1,11 @@
 import type { spawn as nodeSpawn } from 'node:child_process'
 
-type GitPullResult = { success: true } | { success: false; message: string }
+type PullResult = { success: true } | { success: false; message: string }
 
 export async function gitPull(
   cwd: string,
   spawn: typeof nodeSpawn
-): Promise<GitPullResult> {
+): Promise<PullResult> {
   return new Promise(resolve => {
     const proc = spawn('git', ['pull'], {
       cwd,

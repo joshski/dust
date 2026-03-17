@@ -22,7 +22,7 @@ import {
   stubEnv,
   waitFor,
 } from '../../test/test-utilities'
-import { createTimeEmulator, type TimeEmulator } from '../../test/time-emulator'
+import { createTimeEmulator } from '../../test/time-emulator'
 import type { CommandDependencies } from '../types'
 import {
   type AuthFileSystemDependencies,

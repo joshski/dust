@@ -18,7 +18,7 @@ interface ScheduledTimer {
 /**
  * Time emulator for deterministic control over timer-based code.
  */
-export interface TimeEmulator {
+interface TimeEmulator {
   /** Create a one-shot timeout, returns an ID for clearing. */
   createTimeout: (callback: TimeoutCallback, ms: number) => unknown
   /** Clear a timeout by ID. */

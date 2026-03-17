@@ -294,6 +294,181 @@ export function setupFallbackTimeout(
   })
 }
 
+/** Result of Docker setup phase */
+interface DockerSetupResult {
+  config: DockerSpawnConfig | undefined
+  stopGitProxy: (() => void) | undefined
+  stopApiProxy: (() => void) | undefined
+  shouldExit: boolean
+}
+
+/**
+ * Handle Docker configuration during loop initialization.
+ * Returns config and cleanup functions, or signals early exit on error.
+ */
+async function setupDockerConfig(
+  repoState: RepositoryState,
+  repoDeps: RepositoryDependencies,
+  onLoopEvent: LoopEmitFn
+): Promise<DockerSetupResult> {
+  const { spawn } = repoDeps
+  const dockerDeps = {
+    spawn: repoDeps.dockerDeps?.spawn ?? spawn,
+    homedir: repoDeps.dockerDeps?.homedir ?? os.homedir,
+    existsSync: repoDeps.dockerDeps?.existsSync ?? fsExistsSync,
+  }
+
+  const dockerResult = await prepareDockerConfig(
+    repoState.path,
+    dockerDeps,
+    onLoopEvent
+  )
+
+  if ('error' in dockerResult) {
+    log(`Docker error: ${dockerResult.error}`)
+    appendLogLine(
+      repoState.logBuffer,
+      createLogLine(dockerResult.error, 'stderr')
+    )
+    return {
+      config: undefined,
+      stopGitProxy: undefined,
+      stopApiProxy: undefined,
+      shouldExit: false,
+    }
+  }
+
+  if (!('config' in dockerResult)) {
+    return {
+      config: undefined,
+      stopGitProxy: undefined,
+      stopApiProxy: undefined,
+      shouldExit: false,
+    }
+  }
+
+  /* v8 ignore start -- Docker mode requires complex setup with real Docker */
+  if (!repoDeps.auth.claudeCodeOauthToken) {
+    log('CLAUDE_CODE_OAUTH_TOKEN is not set, cannot run in Docker mode')
+    appendLogLine(
+      repoState.logBuffer,
+      createLogLine(
+        'Docker mode requires CLAUDE_CODE_OAUTH_TOKEN. Run `claude setup-token` and export the token.',
+        'stderr'
+      )
+    )
+    return {
+      config: undefined,
+      stopGitProxy: undefined,
+      stopApiProxy: undefined,
+      shouldExit: true,
+    }
+  }
+
+  // Start proxies for Docker containers — secrets stay on the host
+  const gitProxy = await createGitCredentialProxyServer({ spawn })
+  log(`git credential proxy started on port ${gitProxy.port}`)
+
+  const apiProxy = await createClaudeApiProxyServer()
+  log(`claude api proxy started on port ${apiProxy.port}`)
+
+  return {
+    config: {
+      ...dockerResult.config,
+      gitProxyUrl: `http://host.docker.internal:${gitProxy.port}`,
+      claudeApiProxyUrl: `http://host.docker.internal:${apiProxy.port}`,
+    },
+    stopGitProxy: gitProxy.stop,
+    stopApiProxy: apiProxy.stop,
+    shouldExit: false,
+  }
+  /* v8 ignore stop */
+}
+
+/**
+ * Create the agent run function based on agent type.
+ */
+function createAgentRun(
+  isCodex: boolean,
+  spawn: RepositoryDependencies['spawn'],
+  run: RepositoryDependencies['run'],
+  createStdoutSink: () => OutputSink
+): typeof claudeRun {
+  if (isCodex) {
+    const codexBufferSinkDeps: CodexRunnerDependencies = {
+      ...codexDefaultRunnerDependencies,
+      spawnCodex: (prompt, options = {}) => {
+        const spawnDeps = {
+          ...codexSpawnDefaultDependencies,
+          spawn,
+        }
+        return codexDefaultRunnerDependencies.spawnCodex(
+          prompt,
+          options,
+          spawnDeps
+        )
+      },
+      createStdoutSink,
+    }
+    return createCodexBufferRun(codexRun, codexBufferSinkDeps)
+  }
+
+  const bufferSinkDeps: RunnerDependencies = {
+    ...defaultRunnerDependencies,
+    createStdoutSink,
+  }
+  return createBufferRun(run, bufferSinkDeps)
+}
+
+/**
+ * Handle the no-tasks result: check for pending signals or wait.
+ * Returns true if should continue immediately, false to wait.
+ */
+function handleNoTasksResult(
+  repoState: RepositoryState,
+  repoName: string
+): boolean {
+  if (repoState.taskAvailablePending) {
+    repoState.taskAvailablePending = false
+    log(`${repoName}: task signal received during iteration, rechecking`)
+    appendLogLine(
+      repoState.logBuffer,
+      createLogLine(
+        'Task signal received during iteration, rechecking...',
+        'stdout'
+      )
+    )
+    return true
+  }
+
+  log(`${repoName}: no tasks available, waiting`)
+  appendLogLine(
+    repoState.logBuffer,
+    createLogLine('Waiting for tasks...', 'stdout')
+  )
+  return false
+}
+
+/**
+ * Cleanup Docker proxies when loop ends.
+ */
+function cleanupDockerProxies(
+  repoName: string,
+  stopGitProxy: (() => void) | undefined,
+  stopApiProxy: (() => void) | undefined
+): void {
+  /* v8 ignore start -- Proxy cleanup only runs in Docker mode */
+  if (stopGitProxy) {
+    stopGitProxy()
+    log(`git credential proxy stopped for ${repoName}`)
+  }
+  if (stopApiProxy) {
+    stopApiProxy()
+    log(`claude api proxy stopped for ${repoName}`)
+  }
+  /* v8 ignore stop */
+}
+
 /**
  * Run the async loop for a single repository.
  */
@@ -322,8 +497,6 @@ export async function runRepositoryLoop(
     runtime,
   }
 
-  // Wrap run to redirect agent output to the repo's log buffer
-  // instead of writing directly to process.stdout
   const loopState: LoopState = {
     partialLine: '',
     sequence: 0,
@@ -331,7 +504,6 @@ export async function runRepositoryLoop(
   }
 
   const onLoopEvent = createLoopEventHandler(repoState.logBuffer)
-
   const onAgentEvent = createAgentEventHandler({
     repoState,
     sendEvent,
@@ -340,60 +512,11 @@ export async function runRepositoryLoop(
     loopState,
   })
 
-  // Install git hooks before starting iterations
   const hooksInstalled = await manageGitHooks(commandDeps)
 
-  // Check for Docker mode (.dust/Dockerfile)
-  let dockerConfig: DockerSpawnConfig | undefined
-  let stopGitProxy: (() => void) | undefined
-  let stopApiProxy: (() => void) | undefined
-  const dockerDeps = {
-    spawn: repoDeps.dockerDeps?.spawn ?? spawn,
-    homedir: repoDeps.dockerDeps?.homedir ?? os.homedir,
-    existsSync: repoDeps.dockerDeps?.existsSync ?? fsExistsSync,
-  }
-
-  const dockerResult = await prepareDockerConfig(
-    repoState.path,
-    dockerDeps,
-    onLoopEvent
-  )
-
-  if ('error' in dockerResult) {
-    log(`Docker error: ${dockerResult.error}`)
-    appendLogLine(
-      repoState.logBuffer,
-      createLogLine(dockerResult.error, 'stderr')
-    )
-  } else if ('config' in dockerResult) {
-    /* v8 ignore start -- Docker mode requires complex setup with real Docker */
-    if (!repoDeps.auth.claudeCodeOauthToken) {
-      log('CLAUDE_CODE_OAUTH_TOKEN is not set, cannot run in Docker mode')
-      appendLogLine(
-        repoState.logBuffer,
-        createLogLine(
-          'Docker mode requires CLAUDE_CODE_OAUTH_TOKEN. Run `claude setup-token` and export the token.',
-          'stderr'
-        )
-      )
-      return
-    }
-
-    // Start proxies for Docker containers — secrets stay on the host
-    const gitProxy = await createGitCredentialProxyServer({ spawn })
-    stopGitProxy = gitProxy.stop
-    log(`git credential proxy started on port ${gitProxy.port}`)
-
-    const apiProxy = await createClaudeApiProxyServer()
-    stopApiProxy = apiProxy.stop
-    log(`claude api proxy started on port ${apiProxy.port}`)
-
-    dockerConfig = {
-      ...dockerResult.config,
-      gitProxyUrl: `http://host.docker.internal:${gitProxy.port}`,
-      claudeApiProxyUrl: `http://host.docker.internal:${apiProxy.port}`,
-    }
-    /* v8 ignore stop */
+  const dockerSetup = await setupDockerConfig(repoState, repoDeps, onLoopEvent)
+  if (dockerSetup.shouldExit) {
+    return
   }
 
   log(`loop started for ${repoName} at ${repoState.path}`)
@@ -401,44 +524,17 @@ export async function runRepositoryLoop(
   while (repoState.lifecycle.type === 'running') {
     loopState.agentSessionId = crypto.randomUUID()
 
-    // Select agent based on agentProvider (re-read each iteration so changes take effect)
     const isCodex = repoState.repository.agentProvider === 'codex'
     const agentType = isCodex ? 'codex' : 'claude'
     log(
       `${repoName}: agentProvider=${repoState.repository.agentProvider ?? '(unset)'}, using ${agentType}`
     )
 
-    // Shared sink creation for both agent types
     const createStdoutSink = createStdoutSinkFactory(
       loopState,
       repoState.logBuffer
     )
-
-    let bufferRun: typeof claudeRun
-    if (isCodex) {
-      const codexBufferSinkDeps: CodexRunnerDependencies = {
-        ...codexDefaultRunnerDependencies,
-        spawnCodex: (prompt, options = {}) => {
-          const spawnDeps = {
-            ...codexSpawnDefaultDependencies,
-            spawn,
-          }
-          return codexDefaultRunnerDependencies.spawnCodex(
-            prompt,
-            options,
-            spawnDeps
-          )
-        },
-        createStdoutSink,
-      }
-      bufferRun = createCodexBufferRun(codexRun, codexBufferSinkDeps)
-    } else {
-      const bufferSinkDeps: RunnerDependencies = {
-        ...defaultRunnerDependencies,
-        createStdoutSink,
-      }
-      bufferRun = createBufferRun(run, bufferSinkDeps)
-    }
+    const bufferRun = createAgentRun(isCodex, spawn, run, createStdoutSink)
 
     const loopDeps: LoopDependencies = {
       spawn,
@@ -448,138 +544,188 @@ export async function runRepositoryLoop(
       session: repoDeps.session,
       agentType,
     }
+
     const abortController = new AbortController()
-    const cancelCurrentIteration = createCancelHandler(abortController)
+    updateLifecycleCancel(repoState, abortController)
 
-    /* v8 ignore start - defensive guard and cancel callback */
-    // Update the lifecycle's cancel function to also abort the current iteration
-    if (repoState.lifecycle.type === 'running') {
-      const { loopPromise } = repoState.lifecycle
-      repoState.lifecycle = {
-        type: 'running',
-        loopPromise,
-        cancel: () => {
-          cancelCurrentIteration()
-          repoState.lifecycle = { type: 'stopping' }
-        },
-      }
-    }
-    /* v8 ignore stop */
+    const toolsSection = formatToolsSection(
+      repoDeps.getTools?.() ?? [],
+      repoDeps.getRevealedFamilies?.()
+    )
 
-    let result: Awaited<ReturnType<typeof runOneIteration>>
-    // Get current tools and format for prompt injection
-    const tools = repoDeps.getTools?.() ?? []
-    const revealedFamilies = repoDeps.getRevealedFamilies?.()
-    const toolsSection = formatToolsSection(tools, revealedFamilies)
+    const proxy = await startIterationProxy(
+      repoState,
+      repoDeps,
+      loopState,
+      sendEvent,
+      sessionId,
+      repoName
+    )
 
-    // Start a per-iteration command events proxy so subprocesses can send
-    // command events (e.g. principles-listed, check-passed) enriched with
-    // the correct session/repository context.
-    /* v8 ignore start -- proxy callbacks only invoked by real subprocesses */
-    const proxy = await startCommandEventsProxy({
-      forwardEvent: commandEvent => {
-        if (sendEvent && sessionId) {
-          loopState.sequence++
-          sendEvent(
-            buildEventMessage({
-              sequence: loopState.sequence,
-              sessionId,
-              repository: repoName,
-              repoId: repoState.repository.id,
-              event: {
-                type: 'command-event',
-                commandEvent: commandEvent.event,
-              },
-              agentSessionId: loopState.agentSessionId,
-            })
-          )
-        }
-      },
-      getTools: () => repoDeps.getTools?.() ?? [],
-      forwardToolExecution:
-        repoDeps.forwardToolExecution ??
-        (() =>
-          Promise.resolve({
-            status: 'error' as const,
-            error: 'Tool execution not available',
-          })),
-      revealFamily: repoDeps.revealFamily,
-    })
-    /* v8 ignore stop */
+    const result = await executeIteration(
+      commandDeps,
+      loopDeps,
+      onLoopEvent,
+      onAgentEvent,
+      repoState,
+      repoName,
+      hooksInstalled,
+      abortController,
+      agentType,
+      dockerSetup.config,
+      toolsSection,
+      proxy,
+      sleep
+    )
 
-    try {
-      result = await runOneIteration(
-        commandDeps,
-        loopDeps,
-        onLoopEvent,
-        onAgentEvent,
-        {
-          hooksInstalled,
-          signal: abortController.signal,
-          repositoryId: repoState.repository.id.toString(),
-          onRawEvent: createHeartbeatThrottler(onAgentEvent, agentType),
-          docker: dockerConfig,
-          toolsSection,
-          proxyPort: proxy.port,
-        }
-      )
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error)
-      log(`iteration error for ${repoName}: ${msg}`)
-      appendLogLine(
-        repoState.logBuffer,
-        createLogLine(`Loop error: ${msg}`, 'stderr')
-      )
-      // Wait before retrying to avoid tight error loops
-      await sleep(10000)
+    if (result === 'error') {
       continue
-    } finally {
-      await proxy.stop()
     }
 
     if (result === 'no_tasks') {
-      // Check if a task-available signal arrived while we were busy
-      if (repoState.taskAvailablePending) {
-        repoState.taskAvailablePending = false
-        log(`${repoName}: task signal received during iteration, rechecking`)
-        appendLogLine(
-          repoState.logBuffer,
-          createLogLine(
-            'Task signal received during iteration, rechecking...',
-            'stdout'
-          )
-        )
+      if (handleNoTasksResult(repoState, repoName)) {
         continue
       }
-
-      log(`${repoName}: no tasks available, waiting`)
-      appendLogLine(
-        repoState.logBuffer,
-        createLogLine('Waiting for tasks...', 'stdout')
-      )
-      await new Promise<void>(function waitForTasks(resolve) {
-        const wakeUpForThisWait = createWakeUpHandler(repoState, resolve)
-        repoState.wakeUp = wakeUpForThisWait
-        // Fallback timeout so the loop isn't stuck forever if no signal arrives
-        setupFallbackTimeout(repoState, sleep, resolve, wakeUpForThisWait)
-      })
+      await waitForTasks(repoState, sleep)
     }
   }
 
-  /* v8 ignore start -- Proxy cleanup only runs in Docker mode */
-  if (stopGitProxy) {
-    stopGitProxy()
-    log(`git credential proxy stopped for ${repoName}`)
-  }
-  if (stopApiProxy) {
-    stopApiProxy()
-    log(`claude api proxy stopped for ${repoName}`)
-  }
-  /* v8 ignore stop */
-
+  cleanupDockerProxies(
+    repoName,
+    dockerSetup.stopGitProxy,
+    dockerSetup.stopApiProxy
+  )
   log(`loop stopped for ${repoName}`)
   appendLogLine(
     repoState.logBuffer,
     createLogLine(`Stopped loop for ${repoName}`, 'stdout')
   )
+}
+
+/**
+ * Update the lifecycle cancel function to abort the current iteration.
+ */
+function updateLifecycleCancel(
+  repoState: RepositoryState,
+  abortController: AbortController
+): void {
+  /* v8 ignore start - defensive guard and cancel callback */
+  if (repoState.lifecycle.type !== 'running') {
+    return
+  }
+  const { loopPromise } = repoState.lifecycle
+  const cancelCurrentIteration = createCancelHandler(abortController)
+  repoState.lifecycle = {
+    type: 'running',
+    loopPromise,
+    cancel: () => {
+      cancelCurrentIteration()
+      repoState.lifecycle = { type: 'stopping' }
+    },
+  }
+  /* v8 ignore stop */
+}
+
+/**
+ * Start the command events proxy for this iteration.
+ */
+async function startIterationProxy(
+  repoState: RepositoryState,
+  repoDeps: RepositoryDependencies,
+  loopState: LoopState,
+  sendEvent: SendEventFn | undefined,
+  sessionId: string | undefined,
+  repoName: string
+): Promise<{ port: number; stop: () => Promise<void> }> {
+  /* v8 ignore start -- proxy callbacks only invoked by real subprocesses */
+  return startCommandEventsProxy({
+    forwardEvent: commandEvent => {
+      if (sendEvent && sessionId) {
+        loopState.sequence++
+        sendEvent(
+          buildEventMessage({
+            sequence: loopState.sequence,
+            sessionId,
+            repository: repoName,
+            repoId: repoState.repository.id,
+            event: { type: 'command-event', commandEvent: commandEvent.event },
+            agentSessionId: loopState.agentSessionId,
+          })
+        )
+      }
+    },
+    getTools: () => repoDeps.getTools?.() ?? [],
+    forwardToolExecution:
+      repoDeps.forwardToolExecution ??
+      (() =>
+        Promise.resolve({
+          status: 'error' as const,
+          error: 'Tool execution not available',
+        })),
+    revealFamily: repoDeps.revealFamily,
+  })
+  /* v8 ignore stop */
+}
+
+/**
+ * Execute a single iteration with error handling.
+ * Returns the iteration result or 'error' if an exception occurred.
+ */
+async function executeIteration(
+  commandDeps: CommandDependencies,
+  loopDeps: LoopDependencies,
+  onLoopEvent: LoopEmitFn,
+  onAgentEvent: SendAgentEventFn,
+  repoState: RepositoryState,
+  repoName: string,
+  hooksInstalled: boolean,
+  abortController: AbortController,
+  agentType: string,
+  dockerConfig: DockerSpawnConfig | undefined,
+  toolsSection: string,
+  proxy: { port: number; stop: () => Promise<void> },
+  sleep: RepositoryDependencies['sleep']
+): Promise<Awaited<ReturnType<typeof runOneIteration>> | 'error'> {
+  try {
+    return await runOneIteration(
+      commandDeps,
+      loopDeps,
+      onLoopEvent,
+      onAgentEvent,
+      {
+        hooksInstalled,
+        signal: abortController.signal,
+        repositoryId: repoState.repository.id.toString(),
+        onRawEvent: createHeartbeatThrottler(onAgentEvent, agentType),
+        docker: dockerConfig,
+        toolsSection,
+        proxyPort: proxy.port,
+      }
+    )
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error)
+    log(`iteration error for ${repoName}: ${msg}`)
+    appendLogLine(
+      repoState.logBuffer,
+      createLogLine(`Loop error: ${msg}`, 'stderr')
+    )
+    await sleep(10000)
+    return 'error'
+  } finally {
+    await proxy.stop()
+  }
+}
+
+/**
+ * Wait for tasks to become available.
+ */
+async function waitForTasks(
+  repoState: RepositoryState,
+  sleep: RepositoryDependencies['sleep']
+): Promise<void> {
+  await new Promise<void>(resolve => {
+    const wakeUpForThisWait = createWakeUpHandler(repoState, resolve)
+    repoState.wakeUp = wakeUpForThisWait
+    setupFallbackTimeout(repoState, sleep, resolve, wakeUpForThisWait)
+  })
 }

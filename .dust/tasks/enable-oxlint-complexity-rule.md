@@ -31,7 +31,6 @@ This uses the default threshold of 20, which is a reasonable balance between all
 
 ## Blocked By
 
-- [Reduce complexity in loop functions](reduce-complexity-in-loop-functions.md)
 - [Reduce complexity in agent and UI functions](reduce-complexity-in-agent-and-ui-functions.md)
 
 ## Definition of Done

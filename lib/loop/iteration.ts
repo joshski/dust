@@ -1,7 +1,7 @@
 import { spawn as nodeSpawn } from 'node:child_process'
 import os from 'node:os'
 import { run as claudeRun } from '../claude/run'
-import type { DockerSpawnConfig } from '../claude/types'
+import type { DockerSpawnConfig, SpawnOptions } from '../claude/types'
 import type { DockerDependencies } from '../docker/docker-agent'
 import { readEnvConfig, type SessionConfig } from '../env-config'
 import { createLogger } from '../logging'
@@ -95,6 +95,102 @@ export async function findAvailableTasks(
   return { tasks: result.tasks, invalidTasks: result.invalidTasks }
 }
 
+/** Parameters for running the agent (extracted for reduced complexity) */
+interface AgentRunParams {
+  run: typeof claudeRun
+  prompt: string
+  spawnOptions: SpawnOptions
+  onRawEvent?: (rawEvent: Record<string, unknown>) => void
+}
+
+/**
+ * Attempt to resolve a git conflict by running the agent.
+ * Returns the iteration result if conflict was handled, undefined to continue.
+ */
+async function handleGitConflict(
+  pullErrorMessage: string,
+  runParameters: AgentRunParams,
+  onAgentEvent: SendAgentEventFn | undefined,
+  context: { cwd: string; stderr: (msg: string) => void },
+  agentName: string,
+  agentType: string
+): Promise<IterationResult | undefined> {
+  log(`git pull failed: ${pullErrorMessage}`)
+
+  onAgentEvent?.({
+    type: 'agent-session-started',
+    title: 'Resolving git conflict',
+    prompt: runParameters.prompt,
+    agentType,
+    purpose: 'git-conflict',
+    ...getEnvironmentContext(context.cwd),
+  })
+
+  try {
+    await runParameters.run(runParameters.prompt, {
+      spawnOptions: runParameters.spawnOptions,
+      onRawEvent: runParameters.onRawEvent,
+    })
+    onAgentEvent?.({ type: 'agent-session-ended', success: true })
+    return 'resolved_pull_conflict'
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    context.stderr(
+      `${agentName} failed to resolve git pull conflict: ${errorMessage}`
+    )
+    onAgentEvent?.({
+      type: 'agent-session-ended',
+      success: false,
+      error: errorMessage,
+    })
+    return undefined
+  }
+}
+
+/**
+ * Execute a task by running the agent.
+ */
+async function executeTask(
+  task: UnblockedTask,
+  runParameters: AgentRunParams,
+  onAgentEvent: SendAgentEventFn | undefined,
+  context: { cwd: string; stderr: (msg: string) => void },
+  agentName: string,
+  agentType: string,
+  logger: LogFn
+): Promise<IterationResult> {
+  const taskName = task.title ?? task.path
+
+  onAgentEvent?.({
+    type: 'agent-session-started',
+    title: taskName,
+    prompt: runParameters.prompt,
+    agentType,
+    purpose: 'task',
+    ...getEnvironmentContext(context.cwd),
+  })
+
+  try {
+    await runParameters.run(runParameters.prompt, {
+      spawnOptions: runParameters.spawnOptions,
+      onRawEvent: runParameters.onRawEvent,
+    })
+    log(`${agentName} completed task: ${taskName}`)
+    onAgentEvent?.({ type: 'agent-session-ended', success: true })
+    return 'ran_claude'
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger(`${agentName} error on task ${taskName}: ${errorMessage}`)
+    context.stderr(`${agentName} exited with error: ${errorMessage}`)
+    onAgentEvent?.({
+      type: 'agent-session-ended',
+      success: false,
+      error: errorMessage,
+    })
+    return 'claude_error'
+  }
+}
+
 export async function runOneIteration(
   dependencies: CommandDependencies,
   loopDependencies: LoopDependencies,
@@ -102,81 +198,49 @@ export async function runOneIteration(
   onAgentEvent?: SendAgentEventFn,
   options: IterationOptions = {}
 ): Promise<IterationResult> {
-  const { context } = dependencies
+  const { context, fileSystem, settings } = dependencies
   const { spawn, run } = loopDependencies
   const agentName = loopDependencies.agentType === 'codex' ? 'Codex' : 'Claude'
+  const agentType = loopDependencies.agentType ?? 'claude'
+  const { onRawEvent, hooksInstalled, signal, logger, repositoryId, docker } = {
+    hooksInstalled: false,
+    logger: log,
+    ...options,
+  }
+  const toolsSection = options.toolsSection ?? ''
 
-  const {
-    onRawEvent,
-    hooksInstalled = false,
-    signal,
-    logger = log,
-    repositoryId,
-    docker,
-    toolsSection = '',
-  } = options
   const baseEnv = buildUnattendedEnv({
     repositoryId,
     proxyPort: options.proxyPort,
     session: loopDependencies.session,
   })
 
+  const spawnOptions: SpawnOptions = {
+    cwd: context.cwd,
+    dangerouslySkipPermissions: true,
+    env: baseEnv,
+    signal,
+    docker,
+  }
+
   // Step 1: Sync with remote
   log('syncing with remote')
   onLoopEvent({ type: 'loop.syncing' })
   const pullResult = await gitPull(context.cwd, spawn)
+
   if (!pullResult.success) {
-    log(`git pull failed: ${pullResult.message}`)
-    onLoopEvent({
-      type: 'loop.sync_skipped',
-      reason: pullResult.message,
-    })
-
-    const prompt = `Note: Do NOT run \`dust agent\`.
-
-git pull failed with the following error:
-
-${pullResult.message}
-
-Please resolve this issue. Common approaches:
-1. If there are merge conflicts, resolve them
-2. If local commits need to be rebased, use git rebase
-3. After resolving, commit any changes and push to remote
-
-Make sure the repository is in a clean state and synced with remote before finishing.`
-
-    onAgentEvent?.({
-      type: 'agent-session-started',
-      title: 'Resolving git conflict',
-      prompt,
-      agentType: loopDependencies.agentType ?? 'claude',
-      purpose: 'git-conflict',
-      ...getEnvironmentContext(context.cwd),
-    })
-    try {
-      await run(prompt, {
-        spawnOptions: {
-          cwd: context.cwd,
-          dangerouslySkipPermissions: true,
-          env: baseEnv,
-          signal,
-          docker,
-        },
-        onRawEvent,
-      })
-      onAgentEvent?.({ type: 'agent-session-ended', success: true })
-      return 'resolved_pull_conflict'
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error)
-      context.stderr(
-        `${agentName} failed to resolve git pull conflict: ${errorMessage}`
-      )
-      onAgentEvent?.({
-        type: 'agent-session-ended',
-        success: false,
-        error: errorMessage,
-      })
+    onLoopEvent({ type: 'loop.sync_skipped', reason: pullResult.message })
+    const conflictPrompt = buildGitConflictPrompt(pullResult.message)
+    const conflictResult = await handleGitConflict(
+      pullResult.message,
+      { run, prompt: conflictPrompt, spawnOptions, onRawEvent },
+      onAgentEvent,
+      context,
+      agentName,
+      agentType
+    )
+    if (conflictResult) {
+      return conflictResult
     }
   }
 
@@ -193,22 +257,60 @@ Make sure the repository is in a clean state and synced with remote before finis
     return 'no_tasks'
   }
 
-  // Step 3: Invoke Claude Code with the first available task
+  // Step 3: Invoke the agent with the first available task
   const task = tasks[0]
   log(`found ${tasks.length} task(s), picking: ${task.title ?? task.path}`)
   onLoopEvent({ type: 'loop.tasks_found' })
-  const taskContent = await dependencies.fileSystem.readFile(
-    `${dependencies.context.cwd}/${task.path}`
-  )
-  const { dustCommand, installCommand } = dependencies.settings
+
+  const taskContent = await fileSystem.readFile(`${context.cwd}/${task.path}`)
   const instructions = buildImplementationInstructions(
-    dustCommand,
+    settings.dustCommand,
     hooksInstalled,
     task.title ?? undefined,
     task.path,
-    installCommand
+    settings.installCommand
   )
-  const prompt = `Implement the task at \`${task.path}\`:
+  const taskPrompt = buildTaskPrompt(
+    task.path,
+    taskContent,
+    instructions,
+    toolsSection
+  )
+
+  return executeTask(
+    task,
+    { run, prompt: taskPrompt, spawnOptions, onRawEvent },
+    onAgentEvent,
+    context,
+    agentName,
+    agentType,
+    logger
+  )
+}
+
+function buildGitConflictPrompt(errorMessage: string): string {
+  return `Note: Do NOT run \`dust agent\`.
+
+git pull failed with the following error:
+
+${errorMessage}
+
+Please resolve this issue. Common approaches:
+1. If there are merge conflicts, resolve them
+2. If local commits need to be rebased, use git rebase
+3. After resolving, commit any changes and push to remote
+
+Make sure the repository is in a clean state and synced with remote before finishing.`
+}
+
+function buildTaskPrompt(
+  taskPath: string,
+  taskContent: string,
+  instructions: string,
+  toolsSection: string
+): string {
+  const suffix = toolsSection ? `\n${toolsSection}` : ''
+  return `Implement the task at \`${taskPath}\`:
 
 ----------
 ${taskContent}
@@ -216,41 +318,5 @@ ${taskContent}
 
 ## How to implement the task
 
-${instructions}${toolsSection ? `\n${toolsSection}` : ''}`
-
-  onAgentEvent?.({
-    type: 'agent-session-started',
-    title: task.title ?? task.path,
-    prompt,
-    agentType: loopDependencies.agentType ?? 'claude',
-    purpose: 'task',
-    ...getEnvironmentContext(context.cwd),
-  })
-  try {
-    await run(prompt, {
-      spawnOptions: {
-        cwd: context.cwd,
-        dangerouslySkipPermissions: true,
-        env: baseEnv,
-        signal,
-        docker,
-      },
-      onRawEvent,
-    })
-    log(`${agentName} completed task: ${task.title ?? task.path}`)
-    onAgentEvent?.({ type: 'agent-session-ended', success: true })
-    return 'ran_claude'
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    logger(
-      `${agentName} error on task ${task.title ?? task.path}: ${errorMessage}`
-    )
-    context.stderr(`${agentName} exited with error: ${errorMessage}`)
-    onAgentEvent?.({
-      type: 'agent-session-ended',
-      success: false,
-      error: errorMessage,
-    })
-    return 'claude_error'
-  }
+${instructions}${suffix}`
 }
