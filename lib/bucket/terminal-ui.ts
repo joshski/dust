@@ -629,6 +629,74 @@ interface HandleKeyInputOptions {
   openBrowser?: (url: string) => void
 }
 
+/** Result of key handler: true = quit, false = continue */
+type KeyHandlerResult = boolean
+
+/** Handler function for a key input */
+type KeyHandler = (
+  state: TerminalUIState,
+  options?: HandleKeyInputOptions
+) => KeyHandlerResult
+
+function handleSelectPrevious(state: TerminalUIState): KeyHandlerResult {
+  selectPrevious(state)
+  state.scrollOffset = 0
+  state.autoScroll = true
+  return false
+}
+
+function handleSelectNext(state: TerminalUIState): KeyHandlerResult {
+  selectNext(state)
+  state.scrollOffset = 0
+  state.autoScroll = true
+  return false
+}
+
+function handleOpenUrl(
+  state: TerminalUIState,
+  options?: HandleKeyInputOptions
+): KeyHandlerResult {
+  if (state.selectedIndex === -1) return false
+  const repoName = state.repositories[state.selectedIndex]
+  if (!repoName) return false
+  const url = state.repositoryUrls.get(repoName)
+  if (url && options?.openBrowser) {
+    options.openBrowser(url)
+  }
+  return false
+}
+
+/** Map of key inputs to their handlers */
+const KEY_HANDLERS: Record<string, KeyHandler> = {
+  q: () => true,
+  [KEYS.CTRL_C]: () => true,
+  [KEYS.LEFT]: handleSelectPrevious,
+  [KEYS.RIGHT]: handleSelectNext,
+  [KEYS.UP]: state => (scrollUp(state, 1), false),
+  [KEYS.DOWN]: state => (scrollDown(state, 1), false),
+  [KEYS.PAGE_UP]: state => (scrollUp(state, getLogAreaHeight(state)), false),
+  [KEYS.PAGE_DOWN]: state => (
+    scrollDown(state, getLogAreaHeight(state)), false
+  ),
+  g: state => (scrollToTop(state), false),
+  [KEYS.HOME]: state => (scrollToTop(state), false),
+  G: state => (scrollToBottom(state), false),
+  [KEYS.END]: state => (scrollToBottom(state), false),
+  o: handleOpenUrl,
+}
+
+/**
+ * Handle mouse scroll events.
+ * Returns true if handled, false if not a mouse event.
+ */
+function handleMouseScroll(state: TerminalUIState, key: string): boolean {
+  const mouseButton = parseSGRMouse(key)
+  if (mouseButton === null) return false
+  if (mouseButton === 64) scrollUp(state, 3)
+  else if (mouseButton === 65) scrollDown(state, 3)
+  return true
+}
+
 /**
  * Handle a key input and update state.
  * Returns true if the UI should quit.
@@ -638,65 +706,9 @@ export function handleKeyInput(
   key: string,
   options?: HandleKeyInputOptions
 ): boolean {
-  // Check for SGR mouse events (scroll wheel)
-  const mouseButton = parseSGRMouse(key)
-  if (mouseButton !== null) {
-    if (mouseButton === 64) {
-      scrollUp(state, 3)
-    } else if (mouseButton === 65) {
-      scrollDown(state, 3)
-    }
-    return false
-  }
+  if (handleMouseScroll(state, key)) return false
 
-  switch (key) {
-    case 'q':
-    case KEYS.CTRL_C:
-      return true
-    case KEYS.LEFT:
-      selectPrevious(state)
-      state.scrollOffset = 0
-      state.autoScroll = true
-      break
-    case KEYS.RIGHT:
-      selectNext(state)
-      state.scrollOffset = 0
-      state.autoScroll = true
-      break
-    case KEYS.UP:
-      scrollUp(state, 1)
-      break
-    case KEYS.DOWN:
-      scrollDown(state, 1)
-      break
-    case KEYS.PAGE_UP:
-      scrollUp(state, getLogAreaHeight(state))
-      break
-    case KEYS.PAGE_DOWN:
-      scrollDown(state, getLogAreaHeight(state))
-      break
-    case 'g':
-    case KEYS.HOME:
-      scrollToTop(state)
-      break
-    case 'G':
-    case KEYS.END:
-      scrollToBottom(state)
-      break
-    case 'o': {
-      // Open the selected repository's URL in the browser
-      if (state.selectedIndex === -1) {
-        // "All" tab - do nothing
-        break
-      }
-      const repoName = state.repositories[state.selectedIndex]
-      if (!repoName) break
-      const url = state.repositoryUrls.get(repoName)
-      if (url && options?.openBrowser) {
-        options.openBrowser(url)
-      }
-      break
-    }
-  }
+  const handler = KEY_HANDLERS[key]
+  if (handler) return handler(state, options)
   return false
 }

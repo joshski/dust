@@ -121,25 +121,11 @@ export function buildDockerRunArguments(
   return dockerArguments
 }
 
-export async function* spawnClaudeCode(
-  prompt: string,
-  options: SpawnOptions = {},
-  dependencies: EventSourceDependencies = defaultDependencies
-): AsyncGenerator<RawEvent> {
-  const {
-    cwd,
-    allowedTools,
-    maxTurns,
-    model,
-    systemPrompt,
-    sessionId,
-    dangerouslySkipPermissions,
-    env,
-    signal,
-    docker,
-  } = options
-
-  const claudeArguments = [
+/**
+ * Build claude command arguments from spawn options.
+ */
+function buildClaudeArguments(prompt: string, options: SpawnOptions): string[] {
+  const result = [
     '-p',
     prompt,
     '--output-format',
@@ -148,24 +134,36 @@ export async function* spawnClaudeCode(
     '--include-partial-messages',
   ]
 
-  if (allowedTools?.length) {
-    claudeArguments.push('--allowedTools', ...allowedTools)
+  if (options.allowedTools?.length) {
+    result.push('--allowedTools', ...options.allowedTools)
   }
-  if (maxTurns) {
-    claudeArguments.push('--max-turns', String(maxTurns))
+  if (options.maxTurns) {
+    result.push('--max-turns', String(options.maxTurns))
   }
-  if (model) {
-    claudeArguments.push('--model', model)
+  if (options.model) {
+    result.push('--model', options.model)
   }
-  if (systemPrompt) {
-    claudeArguments.push('--system-prompt', systemPrompt)
+  if (options.systemPrompt) {
+    result.push('--system-prompt', options.systemPrompt)
   }
-  if (sessionId) {
-    claudeArguments.push('--session-id', sessionId)
+  if (options.sessionId) {
+    result.push('--session-id', options.sessionId)
   }
-  if (dangerouslySkipPermissions) {
-    claudeArguments.push('--dangerously-skip-permissions')
+  if (options.dangerouslySkipPermissions) {
+    result.push('--dangerously-skip-permissions')
   }
+
+  return result
+}
+
+export async function* spawnClaudeCode(
+  prompt: string,
+  options: SpawnOptions = {},
+  dependencies: EventSourceDependencies = defaultDependencies
+): AsyncGenerator<RawEvent> {
+  const { cwd, env, signal, docker } = options
+
+  const claudeArguments = buildClaudeArguments(prompt, options)
 
   // Spawn either directly or via Docker
   const mergedEnv = { ...process.env, ...env }

@@ -31,7 +31,7 @@ This uses the default threshold of 20, which is a reasonable balance between all
 
 ## Blocked By
 
-- [Reduce complexity in agent and UI functions](reduce-complexity-in-agent-and-ui-functions.md)
+(none)
 
 ## Definition of Done
 
