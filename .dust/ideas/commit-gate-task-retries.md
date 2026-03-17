@@ -23,40 +23,78 @@ The loop already does a `git pull` at the start of each iteration. After a faile
 
 ## Implementation Considerations
 
-The core mechanism: after a task fails, record `{ taskFile, commitSha }` in memory. Before picking a task, filter out any task whose last failure was on the current HEAD SHA.
+### Gate Data Structure
 
-This could live in `runOneIteration` (loop.ts) — after `git pull`, get the current SHA, then pass it to `findUnblockedTasks` as a filter. Or keep the filter in the loop layer itself, wrapping the task selection.
+The gate is a `Map<taskPath, commitSha>` recording the SHA at which each task last failed. Tasks are filtered before selection: if `failedSha === currentSha`, skip the task.
 
-For bucket mode, the `task-available` WebSocket signal already triggers a `wakeUp` which re-runs the iteration. A new push (new SHA) would naturally trigger this signal, unblocking the stalled task.
+### Getting the Current SHA
 
-## Open Questions
+`gitPull` in `lib/loop/git-pull.ts` currently returns only success/failure. It needs to be extended to return the HEAD SHA after pulling, or a separate `getHeadSha` function is needed. The SHA is then passed through the iteration so the gate can be checked.
+
+### Loop Layer Changes
+
+The gate state lives in the loop layer (`runLoop` for standalone, `runRepositoryLoop` for bucket mode). After each iteration:
+
+1. If result is `claude_error`, record `{ taskPath: lastTaskPath, sha: currentSha }` in the gate
+2. If result is `ran_claude` (success), clear that task from the gate (if present)
+3. Before task selection, filter out gated tasks
+
+The filtering can happen either:
+- In `runOneIteration` by passing the gate state and current SHA
+- In the loop layer by wrapping `findAvailableTasks` results
+
+Keeping the filter in the loop layer (option 2) is simpler since the gate state already lives there.
+
+### Bucket Mode Integration
+
+For bucket mode, `task-available` WebSocket signals trigger `wakeUp()` which restarts the iteration. A push event naturally triggers this signal. After a pull, if the SHA changed, previously gated tasks become eligible again. The gate clears naturally.
+
+## Resolved Questions
 
 ### Should failed tasks be skipped entirely, or just deprioritized?
 
-#### Skip until new commit (recommended)
+**Decision:** Skip until new commit
 
 Don't attempt the task at all until HEAD changes. Simple, prevents the tight loop. If there are other unblocked tasks, those can still run. If the failed task was the only one, the loop goes idle until a push arrives.
 
-#### Deprioritize with exponential backoff
-
-Still retry, but with increasing delays (10s, 30s, 2min, 10min, ...). This handles cases where the failure is transient (e.g., a rate limit that clears after an hour). More complex and still burns some resources.
-
 ### What about transient errors vs permanent errors?
 
-#### Treat all failures the same
+**Decision:** Treat all failures the same
 
-Any non-zero exit gates the task until a new commit. Simple, but rate limits and network errors might resolve on their own without a code change.
-
-#### Classify errors and gate only permanent ones
-
-Parse the error output to distinguish "rate limit" (transient) from "task impossible" (permanent). Transient errors use exponential backoff; permanent errors gate on commit SHA. More nuanced but requires maintaining error classification logic.
+Any non-zero exit gates the task until a new commit. Simple. Rate limits and network errors might resolve on their own, but requiring a new commit (even a no-op commit) is an acceptable trade-off for simplicity.
 
 ### Should the gate persist across loop restarts?
 
-#### In-memory only (recommended)
+**Decision:** In-memory only
 
 The gate resets when the loop process restarts. This is simple and avoids stale state. If someone restarts the loop, they probably want a fresh attempt.
 
-#### Persist to disk
+## Open Questions
 
-Write the gate state to a file (e.g., `.dust/.task-gates.json`). Survives restarts but needs cleanup logic and could prevent tasks from running after legitimate fixes if the file isn't cleared.
+### Should gated tasks be visible in events or logs?
+
+#### Emit a loop event
+
+Add a new `loop.task_gated` event containing the task path and the SHA at which it failed. This provides visibility for monitoring and debugging, consistent with other `LoopEvent` types.
+
+#### Log internally only
+
+Use the existing debug logger (`createLogger('dust:loop:iteration')`) without emitting a user-visible event. Keeps the event stream clean but makes debugging harder without enabling debug logs.
+
+#### Include in existing no_tasks handling
+
+When all tasks are gated, treat this as a `no_tasks` result but include the gated task paths in the event or log message. Reuses existing code paths but may conflate "no tasks exist" with "tasks exist but are gated."
+
+### How should the gate interact with abort-infinite-loops?
+
+#### Complementary mechanisms
+
+Commit-gating prevents immediate retries; abort-infinite-loops catches tasks that fail repeatedly across multiple commits. The abort counter tracks failures regardless of SHA, so a task that fails on commit A, then again on commit B (after a push), would increment toward the abort threshold. These solve different problems.
+
+#### Commit-gating makes abort unnecessary
+
+If a task is gated until a new commit, it can only fail once per SHA. The abort mechanism becomes relevant only if someone pushes many commits that all fail the same task — an unlikely scenario. Consider simplifying to commit-gating only.
+
+#### Abort counter resets on new SHA
+
+Track abort counter per-SHA rather than globally. A task failing 3 times on the same SHA aborts; a new commit resets the counter. This combines both ideas but adds complexity.
