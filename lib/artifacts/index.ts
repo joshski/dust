@@ -89,6 +89,39 @@ export type { IdeaInProgress }
 
 export type ArtifactType = 'ideas' | 'tasks' | 'principles' | 'facts'
 
+const ARTIFACT_TYPES: ArtifactType[] = ['ideas', 'tasks', 'principles', 'facts']
+
+export const DUST_PATH_PREFIX = '.dust/'
+
+/**
+ * Parses an artifact path into its type and slug components.
+ * This is the inverse of ArtifactsRepository.artifactPath().
+ * Works with relative paths (e.g., '.dust/tasks/my-task.md').
+ */
+export function parseArtifactPath(
+  path: string
+): { type: ArtifactType; slug: string } | null {
+  if (!path.startsWith(DUST_PATH_PREFIX) || !path.endsWith('.md')) {
+    return null
+  }
+
+  const withoutPrefix = path.slice(DUST_PATH_PREFIX.length)
+  const slashIndex = withoutPrefix.indexOf('/')
+  if (slashIndex === -1) {
+    return null
+  }
+
+  const type = withoutPrefix.slice(0, slashIndex)
+  if (!ARTIFACT_TYPES.includes(type as ArtifactType)) {
+    return null
+  }
+
+  const filename = withoutPrefix.slice(slashIndex + 1)
+  const slug = filename.slice(0, -3) // Remove .md
+
+  return { type: type as ArtifactType, slug }
+}
+
 export interface ReadOnlyArtifactsRepository {
   artifactPath(type: ArtifactType, slug: string): string
   parseIdea(options: { slug: string }): Promise<Idea>

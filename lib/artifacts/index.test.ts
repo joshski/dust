@@ -3,6 +3,8 @@ import { createFileSystemEmulator } from '../test/test-utilities'
 import {
   buildArtifactsRepository,
   buildReadOnlyArtifactsRepository,
+  DUST_PATH_PREFIX,
+  parseArtifactPath,
 } from './index'
 
 function createFileSystem() {
@@ -84,6 +86,58 @@ This section tests the h1 break logic.
     },
   })
 }
+
+describe('DUST_PATH_PREFIX', () => {
+  test('is .dust/', () => {
+    expect(DUST_PATH_PREFIX).toBe('.dust/')
+  })
+})
+
+describe('parseArtifactPath', () => {
+  test('parses a task path', () => {
+    expect(parseArtifactPath('.dust/tasks/my-task.md')).toEqual({
+      type: 'tasks',
+      slug: 'my-task',
+    })
+  })
+
+  test('parses an idea path', () => {
+    expect(parseArtifactPath('.dust/ideas/cool-idea.md')).toEqual({
+      type: 'ideas',
+      slug: 'cool-idea',
+    })
+  })
+
+  test('parses a principle path', () => {
+    expect(parseArtifactPath('.dust/principles/small-units.md')).toEqual({
+      type: 'principles',
+      slug: 'small-units',
+    })
+  })
+
+  test('parses a fact path', () => {
+    expect(parseArtifactPath('.dust/facts/bun-runtime.md')).toEqual({
+      type: 'facts',
+      slug: 'bun-runtime',
+    })
+  })
+
+  test('returns null for non-dust paths', () => {
+    expect(parseArtifactPath('other/path.md')).toBeNull()
+  })
+
+  test('returns null for non-md files', () => {
+    expect(parseArtifactPath('.dust/tasks/my-task.txt')).toBeNull()
+  })
+
+  test('returns null for unknown artifact types', () => {
+    expect(parseArtifactPath('.dust/unknown/thing.md')).toBeNull()
+  })
+
+  test('returns null for files directly in .dust/', () => {
+    expect(parseArtifactPath('.dust/readme.md')).toBeNull()
+  })
+})
 
 describe('buildArtifactsRepository', () => {
   describe('artifactPath', () => {
