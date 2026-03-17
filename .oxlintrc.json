@@ -2,6 +2,7 @@
   "jsPlugins": ["./lib/oxlint/plugins/dust.js"],
   "rules": {
     "dust/command-exports-matching-filename": "error",
-    "max-depth": ["error", { "max": 4 }]
+    "max-depth": ["error", { "max": 4 }],
+    "complexity": ["error", { "max": 20 }]
   }
 }

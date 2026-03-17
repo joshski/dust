@@ -26,7 +26,7 @@ Add a new command (e.g., `dust lint-code` or extend `dust lint`) that checks sou
 
 ## Relationship to Complexity Rules
 
-The oxlint `complexity` rule provides TypeScript-specific complexity analysis (see the [Enable oxlint complexity rule](../tasks/enable-oxlint-complexity-rule.md) task). This idea differs in scope:
+The oxlint `complexity` rule (now enabled in `.oxlintrc.json`) provides TypeScript-specific complexity analysis. This idea differs in scope:
 
 - **Complexity rules**: TypeScript-specific, uses oxlint (already in use), provides function-level complexity scores
 - **Built-in lints**: Language-agnostic, zero dependencies, simple metrics only
