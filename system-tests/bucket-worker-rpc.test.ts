@@ -39,7 +39,7 @@ import {
 } from '../lib/cli/commands/bucket-worker'
 import type { CommandDependencies } from '../lib/cli/types'
 import { createFileSystem, defaultFileSystemPrimitives } from '../lib/cli/wire'
-import { stubEnv } from '../lib/test/test-utilities'
+import { stubEnv, waitFor } from '../lib/test/test-utilities'
 import { createBucketServerEmulator } from './support/bucket-server-emulator'
 
 const DUST_BIN = join(process.cwd(), 'bin', 'dust')
@@ -97,7 +97,10 @@ function createRealFileSystem() {
  * LLM emulator that spawns `dust check` instead of calling Claude.
  * Exercises the RPC chain: dust check subprocess → HTTP POST → proxy → WebSocket.
  */
-function createLlmEmulator(onComplete: () => void): typeof claudeRun {
+function createLlmEmulator(
+  onComplete: () => void,
+  hasEventsForwarded: () => boolean
+): typeof claudeRun {
   let callCount = 0
 
   return async function fakeRun(
@@ -127,8 +130,8 @@ function createLlmEmulator(onComplete: () => void): typeof claudeRun {
       child.on('error', reject)
     })
 
-    // Allow proxy to forward events before triggering shutdown
-    await new Promise(resolve => setTimeout(resolve, 200))
+    // Wait for proxy to forward events before triggering shutdown
+    await waitFor(() => expect(hasEventsForwarded()).toBe(true))
 
     if (callCount >= 1) {
       onComplete()
@@ -158,7 +161,19 @@ describe('bucket worker RPC integration', () => {
       ])
 
       let triggerShutdown: (() => void) | undefined
-      const fakeRun = createLlmEmulator(() => triggerShutdown?.())
+      const hasEventsForwarded = () => {
+        const messages = serverEmulator.messages.map(m => m.parsed) as Array<
+          Record<string, unknown>
+        >
+        const eventTypes = messages
+          .filter(m => (m.event as Record<string, unknown>)?.type)
+          .map(m => (m.event as Record<string, unknown>).type as string)
+        return eventTypes.includes('command-event')
+      }
+      const fakeRun = createLlmEmulator(
+        () => triggerShutdown?.(),
+        hasEventsForwarded
+      )
 
       const fileSystem = createRealFileSystem()
       const authFileSystem = createAuthFileSystem({

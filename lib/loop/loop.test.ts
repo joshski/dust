@@ -9,6 +9,7 @@ import {
   createTestSessionConfig,
   restoreEnv,
   stubEnv,
+  waitFor,
 } from '../test/test-utilities'
 import type { CommandDependencies } from '../cli/types'
 import type { LoopDependencies } from './iteration'
@@ -964,12 +965,14 @@ describe('integration: HTTP event posting', () => {
       await runLoop(dependencies, loopDeps)
 
       // Yield to I/O until events arrive (including raw events)
-      const hasExpectedEvents = () =>
-        receivedEvents.some(e => e.event.type === 'agent-session-ended') &&
-        receivedEvents.some(e => e.event.type === 'agent-event')
-      for (let i = 0; i < 100 && !hasExpectedEvents(); i++) {
-        await new Promise(resolve => setTimeout(resolve, 5))
-      }
+      await waitFor(() => {
+        expect(
+          receivedEvents.some(e => e.event.type === 'agent-session-ended')
+        ).toBe(true)
+        expect(receivedEvents.some(e => e.event.type === 'agent-event')).toBe(
+          true
+        )
+      })
 
       // Verify events were received by the HTTP server
       expect(receivedEvents.length).toBeGreaterThan(0)

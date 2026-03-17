@@ -20,6 +20,7 @@ import {
   createTestSessionConfig,
   restoreEnv,
   stubEnv,
+  waitFor,
 } from '../../test/test-utilities'
 import { createTimeEmulator, type TimeEmulator } from '../../test/time-emulator'
 import type { CommandDependencies } from '../types'
@@ -861,9 +862,7 @@ describe('connectWebSocket', () => {
 
     ws.emit('close', { code: 1006, reason: 'Connection lost' })
 
-    await new Promise(resolve => setTimeout(resolve, 10))
-
-    expect(connectionAttempts).toBe(2)
+    await waitFor(() => expect(connectionAttempts).toBe(2))
     expect(
       context.stdoutLines.filter(line => line.includes('Connecting')).length
     ).toBe(2)
@@ -1332,10 +1331,10 @@ describe('connectWebSocket', () => {
     })
 
     // Wait for the async catch handler to fire
-    await new Promise(resolve => setTimeout(resolve, 50))
-
-    expect(context.stderrLines.join('\n')).toContain(
-      'Failed to handle repository list'
+    await waitFor(() =>
+      expect(context.stderrLines.join('\n')).toContain(
+        'Failed to handle repository list'
+      )
     )
   })
 
@@ -1439,9 +1438,7 @@ describe('connectWebSocket', () => {
       }),
     })
 
-    await new Promise(resolve => setTimeout(resolve, 30))
-
-    expect(repoState.lifecycle.type).toBe('running')
+    await waitFor(() => expect(repoState.lifecycle.type).toBe('running'))
     expect(context.stdoutLines.join('\n')).toContain(
       'Repository loop not running for owner/repo; restarting'
     )
@@ -1527,9 +1524,7 @@ describe('connectWebSocket', () => {
     })
 
     // Wait for the async handleRepositoryList to complete
-    await new Promise(resolve => setTimeout(resolve, 50))
-
-    expect(wokenUp).toBe(true)
+    await waitFor(() => expect(wokenUp).toBe(true))
   })
 })
 

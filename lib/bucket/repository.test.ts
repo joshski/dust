@@ -6,6 +6,7 @@ import {
   createTestAuthConfig,
   createTestRuntimeConfig,
   createTestSessionConfig,
+  waitFor,
 } from '../test/test-utilities'
 import { createLogBuffer, getLogLines } from './log-buffer'
 
@@ -564,9 +565,7 @@ describe('runRepositoryLoop', () => {
     const loopPromise = runRepositoryLoop(repoState, repoDeps)
 
     // Wait for the loop to enter the wait state
-    await new Promise(resolve => setTimeout(resolve, 50))
-
-    expect(sleepCalled).toBe(true)
+    await waitFor(() => expect(sleepCalled).toBe(true))
 
     // Stop on next iteration, then wake up
     repoState.lifecycle = { type: 'stopping' }
@@ -614,10 +613,7 @@ describe('runRepositoryLoop', () => {
 
     // Wait for sleep to be called, which indicates the loop processed
     // the pending flag and then found no tasks on second iteration
-    const checkSleepCalled = () => sleepCalled
-    for (let i = 0; i < 100 && !checkSleepCalled(); i++) {
-      await new Promise(resolve => setTimeout(resolve, 10))
-    }
+    await waitFor(() => expect(sleepCalled).toBe(true))
 
     // The flag should have been cleared and the loop should have retried
     expect(repoState.taskAvailablePending).toBeFalsy()
@@ -661,10 +657,7 @@ describe('runRepositoryLoop', () => {
     const loopPromise = runRepositoryLoop(repoState, repoDeps)
 
     // Wait for the loop to reach the wait state
-    await new Promise(resolve => setTimeout(resolve, 50))
-
-    // wakeUp should be set
-    expect(repoState.wakeUp).toBeDefined()
+    await waitFor(() => expect(repoState.wakeUp).toBeDefined())
 
     // Wake up the loop, then stop it on the next iteration
     repoState.lifecycle = { type: 'stopping' }
@@ -789,17 +782,19 @@ describe('runRepositoryLoop', () => {
     const loopPromise = runRepositoryLoop(repoState, repoDeps)
 
     // First wait state
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await waitFor(() => {
+      expect(repoState.wakeUp).toBeDefined()
+      expect(sleepResolvers.length).toBeGreaterThanOrEqual(1)
+    })
     const firstWakeUp = repoState.wakeUp
-    expect(firstWakeUp).toBeDefined()
-    expect(sleepResolvers.length).toBeGreaterThanOrEqual(1)
 
     // Move into second wait state
     firstWakeUp?.()
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await waitFor(() => {
+      expect(repoState.wakeUp).toBeDefined()
+      expect(sleepResolvers.length).toBeGreaterThanOrEqual(2)
+    })
     const secondWakeUp = repoState.wakeUp
-    expect(secondWakeUp).toBeDefined()
-    expect(sleepResolvers.length).toBeGreaterThanOrEqual(2)
 
     // Resolve the first wait's timeout after second wait is active.
     // This previously cleared the second wakeUp and deadlocked the loop.

@@ -321,6 +321,35 @@ export function stripAnsi(text: string): string {
 }
 
 /**
+ * Cross-runtime waitFor utility.
+ * Polls a condition function until it succeeds (doesn't throw) or timeout expires.
+ * Works with both Vitest and Bun test runners.
+ *
+ * @param condition - A function that throws if the condition isn't met
+ * @param options - Optional timeout and interval settings
+ */
+export async function waitFor(
+  condition: () => void | Promise<void>,
+  options: { timeout?: number; interval?: number } = {}
+): Promise<void> {
+  const timeout = options.timeout ?? 1000
+  const interval = options.interval ?? 50
+  const startTime = Date.now()
+
+  while (true) {
+    try {
+      await condition()
+      return
+    } catch (error) {
+      if (Date.now() - startTime >= timeout) {
+        throw error
+      }
+      await new Promise(resolve => setTimeout(resolve, interval))
+    }
+  }
+}
+
+/**
  * Creates command dependencies for testing, with captured output for assertions.
  *
  * @param settings - Optional DustSettings override
