@@ -140,6 +140,10 @@ export interface BucketDependencies {
   bucket: BucketConfig
   session: SessionConfig
   runtime: RuntimeConfig
+  /** Create an interval timer, returns an ID for clearing. */
+  createInterval: (callback: () => void, ms: number) => unknown
+  /** Clear an interval by ID. */
+  clearInterval: (id: unknown) => void
   /** Optional override for the agent runner (default: claudeRun). Used for testing. */
   run?: typeof claudeRun
 }
@@ -903,7 +907,7 @@ export function setupTUI(
     updateDimensions(state.ui, w, h)
   })
 
-  const renderInterval = setInterval(() => {
+  const renderIntervalId = bucketDeps.createInterval(() => {
     if (!state.shuttingDown) {
       syncAgentStatuses(state)
       bucketDeps.writeStdout(renderFrame(state.ui))
@@ -912,7 +916,7 @@ export function setupTUI(
 
   return {
     cleanup: () => {
-      clearInterval(renderInterval)
+      bucketDeps.clearInterval(renderIntervalId)
       bucketDeps.writeStdout(exitAlternateScreen())
       cleanupResize()
     },

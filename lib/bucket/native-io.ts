@@ -157,6 +157,10 @@ export function createDefaultBucketDependencies(): BucketDependencies {
     isTTY: process.stdout.isTTY ?? false,
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
     getReposDir: () => getReposDir(envConfig.session, homedir()),
+    createInterval: (callback: () => void, ms: number) =>
+      setInterval(callback, ms),
+    clearInterval: (id: unknown) =>
+      clearInterval(id as ReturnType<typeof setInterval>),
     auth: {
       createServer: createLocalServer,
       openBrowser: openBrowser,

@@ -21,6 +21,7 @@ import {
   restoreEnv,
   stubEnv,
 } from '../../test/test-utilities'
+import { createTimeEmulator, type TimeEmulator } from '../../test/time-emulator'
 import type { CommandDependencies } from '../types'
 import {
   type AuthFileSystemDependencies,
@@ -110,6 +111,8 @@ function createBucketDependencies(
     isTTY: false,
     sleep: () => new Promise(() => {}),
     getReposDir: () => '/tmp',
+    createInterval: (callback, ms) => setInterval(callback, ms),
+    clearInterval: id => clearInterval(id as ReturnType<typeof setInterval>),
     auth: createMockAuthDeps(),
     authConfig: createTestAuthConfig(),
     bucket: createTestBucketConfig(),
@@ -2082,22 +2085,25 @@ describe('setupTUI', () => {
     handle.cleanup()
   })
 
-  test('cleanup exits alternate screen and clears render interval', async () => {
+  test('cleanup exits alternate screen and clears render interval', () => {
     const state = createInitialState()
     const written: string[] = []
     let resizeCleanedUp = false
+    const time = createTimeEmulator()
 
     const bucketDependencies = createBucketDependencies({
       writeStdout: (data: string) => written.push(data),
       setupResize: () => () => {
         resizeCleanedUp = true
       },
+      createInterval: time.createInterval,
+      clearInterval: time.clearInterval,
     })
 
     const handle = setupTUI(state, bucketDependencies)
 
-    // Wait for at least one render tick
-    await new Promise(resolve => setTimeout(resolve, 150))
+    // Advance past a render tick (100ms interval)
+    time.advance(150)
 
     const framesBefore = written.filter(s => s.includes('dust bucket')).length
     expect(framesBefore).toBeGreaterThan(0)
@@ -2109,24 +2115,27 @@ describe('setupTUI', () => {
 
     // Verify render loop stopped
     const framesAfter = written.filter(s => s.includes('dust bucket')).length
-    await new Promise(resolve => setTimeout(resolve, 150))
+    time.advance(150)
     const framesLater = written.filter(s => s.includes('dust bucket')).length
     expect(framesLater).toBe(framesAfter)
   })
 
-  test('render loop skips frames when shutting down', async () => {
+  test('render loop skips frames when shutting down', () => {
     const state = createInitialState()
     state.shuttingDown = true
     const written: string[] = []
+    const time = createTimeEmulator()
 
     const bucketDependencies = createBucketDependencies({
       writeStdout: (data: string) => written.push(data),
       setupResize: () => () => {},
+      createInterval: time.createInterval,
+      clearInterval: time.clearInterval,
     })
 
     const handle = setupTUI(state, bucketDependencies)
 
-    await new Promise(resolve => setTimeout(resolve, 150))
+    time.advance(150)
 
     // Only the enterAlternateScreen write should be present, no renderFrame
     const frames = written.filter(s => s.includes('dust bucket'))
