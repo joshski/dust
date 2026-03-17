@@ -1,8 +1,15 @@
 import { describe, expect, test } from 'vitest'
 import { createFileSystemEmulator } from '../filesystem/emulator'
-import { buildArtifactPatch, serializeFact, serializeTask } from './index'
+import {
+  buildArtifactPatch,
+  serializeFact,
+  serializePrinciple,
+  serializeTask,
+} from './index'
 import type { FactInput } from './fact'
 import { buildFactFiles } from './fact'
+import type { PrincipleInput } from './principle'
+import { buildPrincipleFiles } from './principle'
 import type { StandardTaskInput, WorkflowTaskInput } from './task'
 import { buildTaskFiles } from './task'
 
@@ -1014,5 +1021,770 @@ describe('buildTaskFiles', () => {
     expect(result['tasks/refine-idea-my-feature.md']).toContain(
       '# Refine Idea: My Feature'
     )
+  })
+})
+
+describe('serializePrinciple', () => {
+  test('produces valid principle markdown from a PrincipleInput object', () => {
+    const input: PrincipleInput = {
+      title: 'My Principle',
+    }
+    const result = serializePrinciple(input)
+    expect(result).toContain('# My Principle')
+    expect(result).toContain('## Parent Principle')
+    expect(result).toContain('- (none)')
+    expect(result).toContain('## Sub-Principles')
+  })
+
+  test('includes body content', () => {
+    const input: PrincipleInput = {
+      title: 'My Principle',
+      body: 'This principle guides development.',
+    }
+    const result = serializePrinciple(input)
+    expect(result).toContain('# My Principle')
+    expect(result).toContain('This principle guides development.')
+  })
+
+  test('renders parent principle link', () => {
+    const input: PrincipleInput = {
+      title: 'Child Principle',
+      parentPrinciple: 'parent-principle',
+    }
+    const result = serializePrinciple(input)
+    expect(result).toContain('## Parent Principle')
+    expect(result).toContain('[Parent Principle](parent-principle.md)')
+  })
+
+  test('renders sub-principles links', () => {
+    const input: PrincipleInput = {
+      title: 'Parent Principle',
+      subPrinciples: ['child-a', 'child-b'],
+    }
+    const result = serializePrinciple(input)
+    expect(result).toContain('## Sub-Principles')
+    expect(result).toContain('[Child A](child-a.md)')
+    expect(result).toContain('[Child B](child-b.md)')
+  })
+
+  test('handles null parentPrinciple for root principles', () => {
+    const input: PrincipleInput = {
+      title: 'Root Principle',
+      parentPrinciple: null,
+    }
+    const result = serializePrinciple(input)
+    expect(result).toContain('## Parent Principle')
+    expect(result).toContain('- (none)')
+  })
+
+  test('handles empty subPrinciples array', () => {
+    const input: PrincipleInput = {
+      title: 'Leaf Principle',
+      subPrinciples: [],
+    }
+    const result = serializePrinciple(input)
+    expect(result).toContain('## Sub-Principles')
+    expect(result).toContain('- (none)')
+  })
+
+  test('produces complete principle with all fields', () => {
+    const input: PrincipleInput = {
+      title: 'Complete Principle',
+      body: 'A comprehensive description.',
+      parentPrinciple: 'parent',
+      subPrinciples: ['child-one', 'child-two'],
+    }
+    const result = serializePrinciple(input)
+    expect(result).toContain('# Complete Principle')
+    expect(result).toContain('A comprehensive description.')
+    expect(result).toContain('[Parent](parent.md)')
+    expect(result).toContain('[Child One](child-one.md)')
+    expect(result).toContain('[Child Two](child-two.md)')
+  })
+})
+
+describe('buildPrincipleFiles', () => {
+  test('produces file entries for a principle patch', () => {
+    const input: PrincipleInput = {
+      title: 'New Principle',
+      body: 'Description here.',
+    }
+    const result = buildPrincipleFiles(input, 'new-principle')
+    expect(Object.keys(result)).toContain('principles/new-principle.md')
+    expect(result['principles/new-principle.md']).toContain('# New Principle')
+  })
+})
+
+describe('buildArtifactPatch with principles', () => {
+  const dustPath = '/project/.dust'
+
+  function makeFs(files: Record<string, string> = {}) {
+    const tree = {
+      project: {
+        '.dust': {
+          principles: {} as Record<string, string>,
+          facts: {} as Record<string, string>,
+          ideas: {} as Record<string, string>,
+          tasks: {} as Record<string, string>,
+        },
+      },
+    }
+    const flatFiles: Record<string, string> = {}
+    for (const [path, content] of Object.entries(files)) {
+      flatFiles[`${dustPath}/${path}`] = content
+    }
+    return createFileSystemEmulator(tree, flatFiles)
+  }
+
+  test('accepts a principles object and creates principle files', async () => {
+    const fileSystem = makeFs()
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        'new-principle': {
+          title: 'New Principle',
+          body: 'A guiding principle.',
+        },
+      },
+    })
+
+    expect(result).toHaveProperty('valid')
+    expect(result).toHaveProperty('patch')
+    expect(result.patch.files['principles/new-principle.md']).toContain(
+      '# New Principle'
+    )
+    expect(result.patch.files['principles/new-principle.md']).toContain(
+      '## Parent Principle'
+    )
+    expect(result.patch.files['principles/new-principle.md']).toContain(
+      '## Sub-Principles'
+    )
+  })
+
+  test('validates bidirectional parent-child relationship', async () => {
+    const fileSystem = makeFs()
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        'child-principle': {
+          title: 'Child Principle',
+          body: 'Define the child principle.',
+          parentPrinciple: 'new-parent',
+          subPrinciples: [],
+        },
+        'new-parent': {
+          title: 'New Parent',
+          body: 'Define the parent principle.',
+          parentPrinciple: null,
+          subPrinciples: ['child-principle'],
+        },
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.violations).toEqual([])
+  })
+
+  test('fails validation when child declares parent but parent does not list child', async () => {
+    const fileSystem = makeFs()
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        'child-principle': {
+          title: 'Child Principle',
+          parentPrinciple: 'new-parent',
+        },
+        'new-parent': {
+          title: 'New Parent',
+          parentPrinciple: null,
+          subPrinciples: [], // Missing 'child-principle'
+        },
+      },
+    })
+
+    expect(result.valid).toBe(false)
+    expect(
+      result.violations.some(v =>
+        v.message.includes('does not list this principle as a sub-principle')
+      )
+    ).toBe(true)
+  })
+
+  test('fails validation when parent lists child but child does not declare parent', async () => {
+    const fileSystem = makeFs()
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        'child-principle': {
+          title: 'Child Principle',
+          parentPrinciple: null, // Should be 'new-parent'
+        },
+        'new-parent': {
+          title: 'New Parent',
+          parentPrinciple: null,
+          subPrinciples: ['child-principle'],
+        },
+      },
+    })
+
+    expect(result.valid).toBe(false)
+    expect(
+      result.violations.some(v =>
+        v.message.includes('does not list this principle as its parent')
+      )
+    ).toBe(true)
+  })
+
+  test('validates hierarchy against existing principles on disk', async () => {
+    const fileSystem = makeFs({
+      'principles/existing-parent.md':
+        '# Existing Parent\n\nAn existing principle.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- (none)\n',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        'new-child': {
+          title: 'New Child',
+          parentPrinciple: 'existing-parent',
+        },
+      },
+    })
+
+    expect(result.valid).toBe(false)
+    expect(
+      result.violations.some(v =>
+        v.message.includes('does not list this principle as a sub-principle')
+      )
+    ).toBe(true)
+  })
+
+  test('deleting a principle sets null in the patch', async () => {
+    const fileSystem = makeFs({
+      'principles/old-principle.md':
+        '# Old Principle\n\nThis principle is being removed.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- (none)\n',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        'old-principle': null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.patch.files['principles/old-principle.md']).toBeNull()
+  })
+
+  test('deleting a principle updates parent principle to remove child from subPrinciples', async () => {
+    const fileSystem = makeFs({
+      'principles/parent.md':
+        '# Parent\n\nThe parent principle.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- [Child](child.md)\n',
+      'principles/child.md':
+        '# Child\n\nThe child principle.\n\n## Parent Principle\n\n- [Parent](parent.md)\n\n## Sub-Principles\n\n- (none)\n',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        child: null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.patch.files['principles/child.md']).toBeNull()
+    expect(result.patch.files['principles/parent.md']).toContain('- (none)')
+    expect(result.patch.files['principles/parent.md']).not.toContain('child.md')
+  })
+
+  test('deleting a principle updates child principles to clear parentPrinciple', async () => {
+    const fileSystem = makeFs({
+      'principles/parent.md':
+        '# Parent\n\nThe parent principle.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- [Child](child.md)\n',
+      'principles/child.md':
+        '# Child\n\nThe child principle.\n\n## Parent Principle\n\n- [Parent](parent.md)\n\n## Sub-Principles\n\n- (none)\n',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        parent: null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.patch.files['principles/parent.md']).toBeNull()
+    expect(result.patch.files['principles/child.md']).toContain('- (none)')
+    expect(result.patch.files['principles/child.md']).not.toContain('parent.md')
+  })
+
+  test('deleting a principle removes references from task Principles sections', async () => {
+    const fileSystem = makeFs({
+      'principles/deleted-principle.md':
+        '# Deleted Principle\n\nGoing away.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- (none)\n',
+      'tasks/my-task.md':
+        '# My Task\n\nDo something.\n\n## Principles\n\n- [Deleted Principle](../principles/deleted-principle.md)\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done\n',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        'deleted-principle': null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.patch.files['principles/deleted-principle.md']).toBeNull()
+    // The task should have its principle link removed
+    expect(result.patch.files['tasks/my-task.md']).not.toContain(
+      'deleted-principle.md'
+    )
+  })
+
+  test('handles mixed facts, principles, and tasks in same patch', async () => {
+    const fileSystem = makeFs()
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      facts: {
+        'new-fact': { title: 'New Fact', body: 'Define the fact.' },
+      },
+      principles: {
+        'new-principle': {
+          title: 'New Principle',
+          body: 'Guide development.',
+        },
+      },
+      tasks: {
+        'new-task': {
+          title: 'New Task',
+          body: 'Implement the feature.',
+          definitionOfDone: ['Done'],
+        },
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.patch.files['facts/new-fact.md']).toContain('# New Fact')
+    expect(result.patch.files['principles/new-principle.md']).toContain(
+      '# New Principle'
+    )
+    expect(result.patch.files['tasks/new-task.md']).toContain('# New Task')
+  })
+
+  test('handles non-existent principles directory gracefully', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          facts: {},
+        },
+      },
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        'new-principle': {
+          title: 'New Principle',
+          body: 'In sparse repo.',
+        },
+      },
+    })
+
+    expect(result.valid).toBe(true)
+  })
+
+  test('explicit patch entries take precedence over hierarchy cleanup', async () => {
+    const fileSystem = makeFs({
+      'principles/parent.md':
+        '# Parent\n\nThe parent principle.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- [Child](child.md)\n',
+      'principles/child.md':
+        '# Child\n\nThe child principle.\n\n## Parent Principle\n\n- [Parent](parent.md)\n\n## Sub-Principles\n\n- (none)\n',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        child: null,
+        // Explicitly provide an update to the parent
+        parent: {
+          title: 'Parent',
+          body: 'Updated parent content.',
+          parentPrinciple: null,
+          subPrinciples: [],
+        },
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    // The explicit update should be used
+    expect(result.patch.files['principles/parent.md']).toContain(
+      'Updated parent content.'
+    )
+  })
+
+  test('preserves other sub-principles when one is deleted', async () => {
+    const fileSystem = makeFs({
+      'principles/parent.md':
+        '# Parent\n\nThe parent principle.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- [Child A](child-a.md)\n- [Child B](child-b.md)\n',
+      'principles/child-a.md':
+        '# Child A\n\nFirst child.\n\n## Parent Principle\n\n- [Parent](parent.md)\n\n## Sub-Principles\n\n- (none)\n',
+      'principles/child-b.md':
+        '# Child B\n\nSecond child.\n\n## Parent Principle\n\n- [Parent](parent.md)\n\n## Sub-Principles\n\n- (none)\n',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        'child-a': null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.patch.files['principles/child-a.md']).toBeNull()
+    // Parent should still list child-b
+    const updatedParent = result.patch.files['principles/parent.md']
+    expect(updatedParent).not.toContain('child-a.md')
+    expect(updatedParent).toContain('[Child B](child-b.md)')
+  })
+
+  test('re-throws non-ENOENT errors from principles readdir', async () => {
+    const fileSystem = makeFs()
+    const permissionError = new Error('EACCES: permission denied')
+    ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+    const originalReaddir = fileSystem.readdir.bind(fileSystem)
+    fileSystem.readdir = async (path: string) => {
+      if (path === `${dustPath}/principles`) {
+        throw permissionError
+      }
+      return originalReaddir(path)
+    }
+
+    await expect(
+      buildArtifactPatch(fileSystem, dustPath, {
+        principles: {
+          'new-principle': {
+            title: 'New Principle',
+            body: 'Description.',
+          },
+        },
+      })
+    ).rejects.toThrow('EACCES: permission denied')
+  })
+
+  test('skips non-md files when loading existing principle relationships', async () => {
+    const fileSystem = makeFs({
+      'principles/valid-principle.md':
+        '# Valid Principle\n\nA valid principle.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- (none)\n',
+    })
+    fileSystem.files.set(`${dustPath}/principles/data.txt`, 'some text content')
+
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        'new-principle': {
+          title: 'New Principle',
+          body: 'Description.',
+          parentPrinciple: 'valid-principle',
+        },
+      },
+    })
+
+    // Should fail validation because valid-principle doesn't list new-principle
+    expect(result.valid).toBe(false)
+  })
+
+  test('handles principle file with H1 inside section', async () => {
+    // This tests the break condition when a line starts with '# '
+    const fileSystem = makeFs({
+      'principles/unusual.md':
+        '# Unusual Principle\n\nBody.\n\n## Parent Principle\n\n- (none)\n\n# Rogue Heading\n\n## Sub-Principles\n\n- (none)\n',
+    })
+
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        'new-child': {
+          title: 'New Child',
+          body: 'Description.',
+          parentPrinciple: 'unusual',
+        },
+      },
+    })
+
+    // Should fail because unusual doesn't list new-child as sub-principle
+    expect(result.valid).toBe(false)
+  })
+
+  test('does not update principle when cleanup makes no changes', async () => {
+    // The principle doesn't reference the deleted one, so no update needed
+    const fileSystem = makeFs({
+      'principles/deleted.md':
+        '# Deleted\n\nGoing away.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- (none)\n',
+      'principles/unrelated.md':
+        '# Unrelated\n\nNo references to deleted.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- (none)\n',
+    })
+
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        deleted: null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.patch.files['principles/deleted.md']).toBeNull()
+    // Unrelated should not be in the patch because it doesn't reference deleted
+    expect(result.patch.files['principles/unrelated.md']).toBeUndefined()
+  })
+
+  test('handles section cleanup when transitioning between hierarchy sections', async () => {
+    // Parent Principle followed immediately by Sub-Principles
+    const fileSystem = makeFs({
+      'principles/parent.md':
+        '# Parent\n\nA parent.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- [Child](child.md)\n',
+      'principles/child.md':
+        '# Child\n\nThe child.\n\n## Parent Principle\n\n- [Parent](parent.md)\n\n## Sub-Principles\n\n- (none)\n',
+    })
+
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        child: null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    const updatedParent = result.patch.files['principles/parent.md']
+    expect(updatedParent).toContain('## Parent Principle')
+    expect(updatedParent).toContain('## Sub-Principles')
+    expect(updatedParent).toContain('- (none)')
+    expect(updatedParent).not.toContain('child.md')
+  })
+
+  test('handles hierarchy section at end of file during cleanup', async () => {
+    // Sub-Principles is the last section
+    const fileSystem = makeFs({
+      'principles/parent.md':
+        '# Parent\n\nA parent.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- [Child](child.md)',
+      'principles/child.md':
+        '# Child\n\nThe child.\n\n## Parent Principle\n\n- [Parent](parent.md)\n\n## Sub-Principles\n\n- (none)',
+    })
+
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        child: null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    const updatedParent = result.patch.files['principles/parent.md']
+    expect(updatedParent).toContain('## Sub-Principles')
+    expect(updatedParent).toContain('- (none)')
+  })
+
+  test('handles links without .md extension in principle sections', async () => {
+    // Tests the case where a link target doesn't match the .md pattern
+    const fileSystem = makeFs({
+      'principles/parent.md':
+        '# Parent\n\nBody.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- [External](https://example.com)\n',
+    })
+
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        'new-child': {
+          title: 'New Child',
+          body: 'Description.',
+          parentPrinciple: 'parent',
+        },
+      },
+    })
+
+    // Should fail because parent doesn't list new-child
+    expect(result.valid).toBe(false)
+  })
+
+  test('handles orphaned bullet items during cleanup', async () => {
+    // Bullet items without links become orphaned after link removal
+    const fileSystem = makeFs({
+      'principles/parent.md':
+        '# Parent\n\nBody.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- [Child A](child-a.md)\n- orphaned text\n',
+      'principles/child-a.md':
+        '# Child A\n\nThe child.\n\n## Parent Principle\n\n- [Parent](parent.md)\n\n## Sub-Principles\n\n- (none)\n',
+    })
+
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        'child-a': null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    const updatedParent = result.patch.files['principles/parent.md']
+    // After removing child-a link, only orphaned text remains which has no link
+    expect(updatedParent).toContain('## Sub-Principles')
+    // The cleanup should show (none) since no valid links remain
+    expect(updatedParent).toContain('- (none)')
+  })
+
+  test('preserves non-list content in hierarchy sections', async () => {
+    // Non-bullet content should be treated as valid content
+    const fileSystem = makeFs({
+      'principles/parent.md':
+        '# Parent\n\nBody.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\nSome explanation text\n- [Child](child.md)\n',
+      'principles/child.md':
+        '# Child\n\nThe child.\n\n## Parent Principle\n\n- [Parent](parent.md)\n\n## Sub-Principles\n\n- (none)\n',
+    })
+
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        child: null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    const updatedParent = result.patch.files['principles/parent.md']
+    // The explanation text counts as valid content
+    expect(updatedParent).toContain('## Sub-Principles')
+  })
+
+  test('handles ENOENT when principles directory does not exist', async () => {
+    // Create filesystem without principles directory
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          facts: {},
+        },
+      },
+    })
+
+    const originalReaddir = fileSystem.readdir.bind(fileSystem)
+    const enoentError = new Error('ENOENT: no such file or directory')
+    ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
+    fileSystem.readdir = async (path: string) => {
+      if (path === `${dustPath}/principles`) {
+        throw enoentError
+      }
+      return originalReaddir(path)
+    }
+
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        'new-principle': {
+          title: 'New Principle',
+          body: 'Description here.',
+        },
+      },
+    })
+
+    // Should succeed since there are no existing principles to validate against
+    expect(result.valid).toBe(true)
+  })
+
+  test('handles section with multiple links when one is deleted', async () => {
+    // Tests the hasValidContent=true branch (lines 250-252)
+    const fileSystem = makeFs({
+      'principles/parent.md':
+        '# Parent\n\nBody.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- [Child A](child-a.md)\n- [Child B](child-b.md)\n\n## Other Section\n\nContent.\n',
+      'principles/child-a.md':
+        '# Child A\n\nChild A body.\n\n## Parent Principle\n\n- [Parent](parent.md)\n\n## Sub-Principles\n\n- (none)\n',
+      'principles/child-b.md':
+        '# Child B\n\nChild B body.\n\n## Parent Principle\n\n- [Parent](parent.md)\n\n## Sub-Principles\n\n- (none)\n',
+    })
+
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        'child-a': null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    const updatedParent = result.patch.files['principles/parent.md']
+    expect(updatedParent).toContain('[Child B](child-b.md)')
+    expect(updatedParent).not.toContain('child-a.md')
+    expect(updatedParent).toContain('## Other Section')
+  })
+
+  test('handles (none) marker in hierarchy section during cleanup', async () => {
+    // Tests line 279 - existing (none) in section
+    const fileSystem = makeFs({
+      'principles/parent.md':
+        '# Parent\n\nBody.\n\n## Parent Principle\n\n(none)\n\n## Sub-Principles\n\n- [Child](child.md)\n',
+      'principles/child.md':
+        '# Child\n\nChild body.\n\n## Parent Principle\n\n- [Parent](parent.md)\n\n## Sub-Principles\n\n- (none)\n',
+    })
+
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        child: null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    const updatedParent = result.patch.files['principles/parent.md']
+    // Parent Principle section should stay as (none)
+    expect(updatedParent).toContain('## Parent Principle')
+    expect(updatedParent).toContain('## Sub-Principles')
+  })
+
+  test('does not add to patch when cleanup produces identical content', async () => {
+    // Tests line 657 - when updatedContent === content
+    // This tests the case where a related principle mentions the deleted one
+    // but the updatePrincipleHierarchyOnDeletion produces identical content
+    // (e.g., the link was in a non-hierarchy section that doesn't get modified)
+    const fileSystem = makeFs({
+      'principles/deleted.md':
+        '# Deleted\n\nGoing away.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- (none)\n',
+      'principles/other.md':
+        '# Other\n\nAnother principle.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- (none)\n',
+    })
+
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        deleted: null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    expect(result.patch.files['principles/deleted.md']).toBeNull()
+    // Other should not be modified since it doesn't reference deleted
+    expect(result.patch.files['principles/other.md']).toBeUndefined()
+  })
+
+  test('handles non-hierarchy section heading after hierarchy section', async () => {
+    // Tests line 263 - when heading !== Parent Principle or Sub-Principles
+    const fileSystem = makeFs({
+      'principles/parent.md':
+        '# Parent\n\nBody.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- [Child](child.md)\n\n## Related Topics\n\nSome content.\n',
+      'principles/child.md':
+        '# Child\n\nChild body.\n\n## Parent Principle\n\n- [Parent](parent.md)\n\n## Sub-Principles\n\n- (none)\n',
+    })
+
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        child: null,
+      },
+    })
+
+    expect(result.valid).toBe(true)
+    const updatedParent = result.patch.files['principles/parent.md']
+    expect(updatedParent).toContain('## Related Topics')
+    expect(updatedParent).toContain('Some content.')
+  })
+
+  test('skips file modification when cleanup produces identical content', async () => {
+    // This tests line 657 where updatedContent === content (false branch)
+    // Create a situation where the relationship parser detects a connection
+    // but the actual file content doesn't change after cleanup
+    const fileSystem = makeFs({
+      'principles/deleted.md':
+        '# Deleted\n\nGoing away.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- [Related](related.md)\n',
+      'principles/related.md':
+        '# Related\n\nRelated principle.\n\n## Parent Principle\n\n- [Deleted](deleted.md)\n\n## Sub-Principles\n\n- (none)\n',
+    })
+
+    // Mock the filesystem to return different content after the first read
+    // This simulates a case where the file was modified between parsing and cleanup
+    // The content must exactly match what the cleanup function would produce
+    const originalReadFile = fileSystem.readFile.bind(fileSystem)
+    const readCounts = new Map<string, number>()
+    fileSystem.readFile = async (path: string) => {
+      const count = (readCounts.get(path) || 0) + 1
+      readCounts.set(path, count)
+
+      // After the first read of related.md, return content that has no link
+      // This covers both updateRelatedPrinciplesOnDeletion and findReferencesToDeletedPaths
+      if (path === `${dustPath}/principles/related.md` && count > 1) {
+        return '# Related\n\nRelated principle.\n\n## Parent Principle\n\n- (none)\n## Sub-Principles\n\n- (none)'
+      }
+      return originalReadFile(path)
+    }
+
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        deleted: null,
+      },
+    })
+
+    // The file read during cleanup doesn't have the link anymore,
+    // so the cleanup produces identical content and file is not added to patch
+    expect(result.valid).toBe(true)
+    expect(result.patch.files['principles/deleted.md']).toBeNull()
+    // Related should not be in the patch since cleanup produced identical content
+    expect(result.patch.files['principles/related.md']).toBeUndefined()
   })
 })

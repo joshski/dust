@@ -4,7 +4,7 @@ Extend `buildArtifactPatch()` to support idea artifacts.
 
 ## Context
 
-This builds on [Artifact Patch API: Principles](artifact-patch-api-principles.md) to add idea support. Ideas already have a partial serializer (`ideaContentToMarkdown` in `lib/artifacts/ideas.ts`) that needs to be adapted to the public API pattern. The design decisions require:
+This builds on the Artifact Patch API: Principles (now complete) to add idea support. Ideas already have a partial serializer (`ideaContentToMarkdown` in `lib/artifacts/ideas.ts`) that needs to be adapted to the public API pattern. The design decisions require:
 
 - **Markdown body field**: Ideas should accept a `body` field for prose content
 - **Open Questions**: Ideas have structured open questions with options
@@ -76,7 +76,7 @@ Add `serializeIdea` to the `@joshski/dust/patch` entry point.
 
 ## Blocked By
 
-- [Artifact Patch API: Principles](artifact-patch-api-principles.md)
+(none)
 
 ## Definition of Done
 
