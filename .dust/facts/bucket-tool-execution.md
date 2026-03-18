@@ -39,7 +39,9 @@ The `dust bucket tool` subprocess:
 2. For **tool families** (tools with children):
    - If no sub-tool specified (`dust bucket tool sessions`): returns help text listing available sub-tools and marks the family as revealed via **POST `/reveal/:family`**
    - If sub-tool specified (`dust bucket tool sessions search <query>`): executes via **POST `/tools/family%2Fsubtool`** which also marks the family as revealed
-3. For **regular tools**: **POST `/tools/:name`** with `{ "arguments": [...], "repositoryId": "..." }` — requests execution
+3. For **regular tools**:
+   - If no arguments provided AND the tool has required parameters: returns help text showing the tool's parameters and usage example (no proxy request made)
+   - Otherwise: **POST `/tools/:name`** with `{ "arguments": [...], "repositoryId": "..." }` — requests execution
 
 ### Tool Family Revelation
 

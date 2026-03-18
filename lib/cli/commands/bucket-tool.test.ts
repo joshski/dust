@@ -911,4 +911,241 @@ describe('bucketTool', () => {
     expect(result.exitCode).toBe(0)
     expect(context.stdoutLines).toEqual([])
   })
+
+  test('shows help when invoking tool with required parameters but no arguments', async () => {
+    const toolWithRequiredParam: ToolDefinition[] = [
+      {
+        name: 'asset-upload',
+        description: 'Upload a file to dustbucket',
+        endpoint: '/api/assets',
+        method: 'POST',
+        parameters: [
+          {
+            name: 'file',
+            type: 'file',
+            required: true,
+            description: 'The file to upload',
+          },
+        ],
+      },
+    ]
+    const commandDependencies = createCommandDependencies(['asset-upload'])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+
+    const mockFetch = async () => {
+      return new Response(JSON.stringify({ tools: toolWithRequiredParam }), {
+        status: 200,
+      })
+    }
+
+    const result = await bucketTool(
+      commandDependencies,
+      createToolDependencies(createFetchStub(mockFetch)),
+      {
+        DUST_REPOSITORY_ID: 'repo-id',
+        DUST_PROXY_PORT: '4444',
+      }
+    )
+
+    expect(result.exitCode).toBe(0)
+    const stdout = context.stdoutLines.join('\n')
+    expect(stdout).toContain('## asset-upload')
+    expect(stdout).toContain('Upload a file to dustbucket')
+    expect(stdout).toContain('Parameters:')
+    expect(stdout).toContain('- `file` (file, required): The file to upload')
+    expect(stdout).toContain('Usage: `dust bucket tool asset-upload <file>`')
+  })
+
+  test('executes tool with only optional parameters when invoked without arguments', async () => {
+    const toolWithOptionalParams: ToolDefinition[] = [
+      {
+        name: 'sessions',
+        description: 'List recent sessions',
+        endpoint: '/api/sessions',
+        method: 'GET',
+        parameters: [
+          {
+            name: 'limit',
+            type: 'number',
+            required: false,
+            description: 'Max results',
+          },
+        ],
+      },
+    ]
+    const commandDependencies = createCommandDependencies(['sessions'])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+
+    const requests: Array<{ url: string; method: string }> = []
+    const mockFetch = async (input: URL | RequestInfo, init?: RequestInit) => {
+      requests.push({
+        url: String(input),
+        method: String(init?.method ?? 'GET'),
+      })
+
+      if (String(input).endsWith('/tools')) {
+        return new Response(JSON.stringify({ tools: toolWithOptionalParams }), {
+          status: 200,
+        })
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          output: 'Session list here',
+          status: 'success',
+        }),
+        { status: 200 }
+      )
+    }
+
+    const result = await bucketTool(
+      commandDependencies,
+      createToolDependencies(createFetchStub(mockFetch)),
+      {
+        DUST_REPOSITORY_ID: 'repo-id',
+        DUST_PROXY_PORT: '4444',
+      }
+    )
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain('Session list here')
+
+    // Should have executed the tool, not shown help
+    const execRequest = requests.find(r => r.url.includes('/tools/sessions'))
+    expect(execRequest).toBeDefined()
+    expect(execRequest?.method).toBe('POST')
+  })
+
+  test('executes tool with no parameters when invoked without arguments', async () => {
+    const toolWithNoParams: ToolDefinition[] = [
+      {
+        name: 'ping',
+        description: 'Check connectivity',
+        endpoint: '/api/ping',
+        method: 'GET',
+        parameters: [],
+      },
+    ]
+    const commandDependencies = createCommandDependencies(['ping'])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+
+    const requests: Array<{ url: string; method: string }> = []
+    const mockFetch = async (input: URL | RequestInfo, init?: RequestInit) => {
+      requests.push({
+        url: String(input),
+        method: String(init?.method ?? 'GET'),
+      })
+
+      if (String(input).endsWith('/tools')) {
+        return new Response(JSON.stringify({ tools: toolWithNoParams }), {
+          status: 200,
+        })
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          output: 'pong',
+          status: 'success',
+        }),
+        { status: 200 }
+      )
+    }
+
+    const result = await bucketTool(
+      commandDependencies,
+      createToolDependencies(createFetchStub(mockFetch)),
+      {
+        DUST_REPOSITORY_ID: 'repo-id',
+        DUST_PROXY_PORT: '4444',
+      }
+    )
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain('pong')
+
+    // Should have executed the tool, not shown help
+    const execRequest = requests.find(r => r.url.includes('/tools/ping'))
+    expect(execRequest).toBeDefined()
+    expect(execRequest?.method).toBe('POST')
+  })
+
+  test('executes tool with required parameters when arguments are provided', async () => {
+    const toolWithRequiredParam: ToolDefinition[] = [
+      {
+        name: 'asset-upload',
+        description: 'Upload a file',
+        endpoint: '/api/assets',
+        method: 'POST',
+        parameters: [
+          {
+            name: 'file',
+            type: 'file',
+            required: true,
+            description: 'The file to upload',
+          },
+        ],
+      },
+    ]
+    const commandDependencies = createCommandDependencies([
+      'asset-upload',
+      '/tmp/file.png',
+    ])
+    const context = commandDependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+
+    const requests: Array<{ url: string; method: string; body: string }> = []
+    const mockFetch = async (input: URL | RequestInfo, init?: RequestInit) => {
+      requests.push({
+        url: String(input),
+        method: String(init?.method ?? 'GET'),
+        body: String(init?.body ?? ''),
+      })
+
+      if (String(input).endsWith('/tools')) {
+        return new Response(JSON.stringify({ tools: toolWithRequiredParam }), {
+          status: 200,
+        })
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          output: 'https://example.com/uploaded.png',
+          status: 'success',
+        }),
+        { status: 200 }
+      )
+    }
+
+    const result = await bucketTool(
+      commandDependencies,
+      createToolDependencies(createFetchStub(mockFetch)),
+      {
+        DUST_REPOSITORY_ID: 'repo-id',
+        DUST_PROXY_PORT: '4444',
+      }
+    )
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stdoutLines.join('\n')).toContain(
+      'https://example.com/uploaded.png'
+    )
+
+    // Should have executed the tool with arguments
+    const execRequest = requests.find(r =>
+      r.url.includes('/tools/asset-upload')
+    )
+    expect(execRequest).toBeDefined()
+    expect(execRequest?.method).toBe('POST')
+    expect(execRequest?.body).toContain('"/tmp/file.png"')
+  })
 })

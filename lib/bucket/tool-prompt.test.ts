@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { ToolDefinition } from './server-messages'
-import { formatToolFamilyHelp, formatToolsSection } from './tool-prompt'
+import {
+  formatToolFamilyHelp,
+  formatToolHelp,
+  formatToolsSection,
+  hasRequiredParameters,
+} from './tool-prompt'
 
 describe('formatToolsSection', () => {
   it('returns empty string when no tools', () => {
@@ -673,5 +678,199 @@ describe('formatToolFamilyHelp', () => {
     expect(result).toContain('Available operations:')
     // No sub-tool sections
     expect(result).not.toContain('###')
+  })
+})
+
+describe('hasRequiredParameters', () => {
+  it('returns true when tool has required parameters', () => {
+    const tool: ToolDefinition = {
+      name: 'upload',
+      description: 'Upload a file',
+      endpoint: '/api/upload',
+      method: 'POST',
+      parameters: [
+        {
+          name: 'file',
+          type: 'file',
+          required: true,
+          description: 'The file to upload',
+        },
+      ],
+    }
+
+    expect(hasRequiredParameters(tool)).toBe(true)
+  })
+
+  it('returns false when tool has only optional parameters', () => {
+    const tool: ToolDefinition = {
+      name: 'sessions',
+      description: 'List sessions',
+      endpoint: '/api/sessions',
+      method: 'GET',
+      parameters: [
+        {
+          name: 'limit',
+          type: 'number',
+          required: false,
+          description: 'Max results',
+        },
+      ],
+    }
+
+    expect(hasRequiredParameters(tool)).toBe(false)
+  })
+
+  it('returns false when tool has no parameters', () => {
+    const tool: ToolDefinition = {
+      name: 'ping',
+      description: 'Check connectivity',
+      endpoint: '/api/ping',
+      method: 'GET',
+      parameters: [],
+    }
+
+    expect(hasRequiredParameters(tool)).toBe(false)
+  })
+
+  it('returns true when tool has mix of required and optional parameters', () => {
+    const tool: ToolDefinition = {
+      name: 'search',
+      description: 'Search items',
+      endpoint: '/api/search',
+      method: 'GET',
+      parameters: [
+        {
+          name: 'query',
+          type: 'string',
+          required: true,
+          description: 'Search term',
+        },
+        {
+          name: 'limit',
+          type: 'number',
+          required: false,
+          description: 'Max results',
+        },
+      ],
+    }
+
+    expect(hasRequiredParameters(tool)).toBe(true)
+  })
+})
+
+describe('formatToolHelp', () => {
+  it('formats a tool with required parameters', () => {
+    const tool: ToolDefinition = {
+      name: 'asset-upload',
+      description: 'Upload a file to dustbucket and get a public URL.',
+      endpoint: '/api/assets/upload',
+      method: 'POST',
+      parameters: [
+        {
+          name: 'file',
+          type: 'file',
+          required: true,
+          description: 'The file to upload',
+        },
+      ],
+    }
+
+    const result = formatToolHelp(tool)
+
+    expect(result).toContain('## asset-upload')
+    expect(result).toContain(
+      'Upload a file to dustbucket and get a public URL.'
+    )
+    expect(result).toContain('Parameters:')
+    expect(result).toContain('- `file` (file, required): The file to upload')
+    expect(result).toContain('Usage: `dust bucket tool asset-upload <file>`')
+  })
+
+  it('formats a tool with multiple parameters', () => {
+    const tool: ToolDefinition = {
+      name: 'search',
+      description: 'Search through items.',
+      endpoint: '/api/search',
+      method: 'GET',
+      parameters: [
+        {
+          name: 'query',
+          type: 'string',
+          required: true,
+          description: 'Search term',
+        },
+        {
+          name: 'limit',
+          type: 'number',
+          required: false,
+          description: 'Maximum results to return',
+        },
+      ],
+    }
+
+    const result = formatToolHelp(tool)
+
+    expect(result).toContain('## search')
+    expect(result).toContain('- `query` (string, required): Search term')
+    expect(result).toContain(
+      '- `limit` (number, optional): Maximum results to return'
+    )
+    expect(result).toContain(
+      'Usage: `dust bucket tool search <query> [--limit <limit>]`'
+    )
+  })
+
+  it('formats a tool with no parameters', () => {
+    const tool: ToolDefinition = {
+      name: 'ping',
+      description: 'Check server connectivity.',
+      endpoint: '/api/ping',
+      method: 'GET',
+      parameters: [],
+    }
+
+    const result = formatToolHelp(tool)
+
+    expect(result).toContain('## ping')
+    expect(result).toContain('Check server connectivity.')
+    expect(result).not.toContain('Parameters:')
+    expect(result).toContain('Usage: `dust bucket tool ping`')
+  })
+
+  it('formats a tool with only optional parameters', () => {
+    const tool: ToolDefinition = {
+      name: 'sessions',
+      description: 'List recent agent sessions.',
+      endpoint: '/api/sessions',
+      method: 'GET',
+      parameters: [
+        {
+          name: 'limit',
+          type: 'number',
+          required: false,
+          description: 'Maximum sessions to return',
+        },
+        {
+          name: 'category',
+          type: 'string',
+          required: false,
+          description: 'Filter by category',
+        },
+      ],
+    }
+
+    const result = formatToolHelp(tool)
+
+    expect(result).toContain('## sessions')
+    expect(result).toContain('Parameters:')
+    expect(result).toContain(
+      '- `limit` (number, optional): Maximum sessions to return'
+    )
+    expect(result).toContain(
+      '- `category` (string, optional): Filter by category'
+    )
+    expect(result).toContain(
+      'Usage: `dust bucket tool sessions [--limit <limit>] [--category <category>]`'
+    )
   })
 })

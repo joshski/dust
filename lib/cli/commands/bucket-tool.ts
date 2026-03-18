@@ -6,7 +6,11 @@
  */
 
 import type { ToolDefinition } from '../../bucket/server-messages'
-import { formatToolFamilyHelp } from '../../bucket/tool-prompt'
+import {
+  formatToolFamilyHelp,
+  formatToolHelp,
+  hasRequiredParameters,
+} from '../../bucket/tool-prompt'
 import { DUST_PROXY_PORT, parseProxyPort } from '../../command-events-transport'
 import type { CommandDependencies, CommandResult } from '../types'
 
@@ -256,6 +260,12 @@ export async function bucketTool(
   }
 
   // Regular tool execution (no children)
+  // Show help if invoked without arguments and tool has required parameters
+  if (toolArgs.length === 0 && hasRequiredParameters(tool)) {
+    context.stdout(formatToolHelp(tool))
+    return { exitCode: 0 }
+  }
+
   const result = await executeToolViaProxy(
     toolName,
     toolArgs,

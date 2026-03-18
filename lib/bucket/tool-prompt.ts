@@ -5,6 +5,13 @@
 import type { ToolDefinition, ToolParameter } from './server-messages'
 
 /**
+ * Check if a tool has any required parameters.
+ */
+export function hasRequiredParameters(tool: ToolDefinition): boolean {
+  return tool.parameters.some(p => p.required)
+}
+
+/**
  * Format a single parameter for the tools section.
  */
 function formatParameter(param: ToolParameter): string {
@@ -50,6 +57,36 @@ export function formatToolFamilyHelp(family: ToolDefinition): string {
     )
     lines.push('')
   }
+
+  return lines.join('\n')
+}
+
+/**
+ * Format help text for a single (non-family) tool.
+ * Returns detailed help including parameters and usage example.
+ */
+export function formatToolHelp(tool: ToolDefinition): string {
+  const lines: string[] = []
+
+  lines.push(`## ${tool.name}`)
+  lines.push('')
+  lines.push(tool.description)
+  lines.push('')
+
+  if (tool.parameters.length > 0) {
+    lines.push('Parameters:')
+    for (const param of tool.parameters) {
+      lines.push(formatParameter(param))
+    }
+    lines.push('')
+  }
+
+  // Build usage example with parameter placeholders
+  const paramPlaceholders = tool.parameters
+    .map(p => (p.required ? `<${p.name}>` : `[--${p.name} <${p.name}>]`))
+    .join(' ')
+  const usageArgs = paramPlaceholders ? ` ${paramPlaceholders}` : ''
+  lines.push(`Usage: \`dust bucket tool ${tool.name}${usageArgs}\``)
 
   return lines.join('\n')
 }
