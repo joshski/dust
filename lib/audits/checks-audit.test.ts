@@ -1070,14 +1070,6 @@ describe('checksAuditTemplate', () => {
     expect(template).not.toContain('golangci-lint')
   })
 
-  test('includes relevant principles', () => {
-    const template = checksAuditTemplate()
-
-    expect(template).toContain('Agent Autonomy')
-    expect(template).toContain('Stop the Line')
-    expect(template).toContain('Lint Everything')
-  })
-
   test('includes analysis steps', () => {
     const template = checksAuditTemplate()
 

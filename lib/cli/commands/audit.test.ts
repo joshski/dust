@@ -253,57 +253,13 @@ describe('audit command', () => {
     }
   })
 
-  test('stock audits have no principles because they are designed for downstream projects', () => {
-    // component-reuse references the reasonably-dry principle to help agents avoid over-extraction
-    // coverage-exclusions references decoupling and test coverage principles
-    // checks-audit references batteries-included, easy-adoption, stop-the-line, lint-everything, comprehensive-test-coverage
-    // error-handling references actionable-errors, debugging-tooling, stop-the-line principles
-    // global-state references dependency-injection, decoupled-code, test-isolation principles
-    // commit-review references boy scout rule, make the change easy, etc.
-    // ubiquitous-language references naming principles that are universally applicable
-    // ux-audit references actionable-errors and unsurprising-ux principles
-    const auditsWithPrinciples = [
-      'agent-instruction-quality',
-      'algorithms',
-      'checks-audit',
-      'ci-development-parity',
-      'commit-message-quality',
-      'component-reuse',
-      'coverage-exclusions',
-      'data-access-review',
-      'dependency-health',
-      'design-patterns',
-      'documentation-drift',
-      'error-handling',
-      'feedback-loop-speed',
-      'global-state',
-      'idiomatic-style',
-      'logging-and-traceability',
-      'primitive-obsession',
-      'commit-review',
-      'security-review',
-      'single-responsibility-violations',
-      'slow-tests',
-      'suggest-audits',
-      'test-assertions',
-      'test-pyramid',
-      'ubiquitous-language',
-      'ux-audit',
-    ]
+  test('stock audits have no Principles sections (removed to avoid broken links in consumer repos)', () => {
     const audits = loadStockAudits()
     for (const stockAudit of audits) {
-      const goalsMatch = stockAudit.template.match(
-        /## Principles\n\n([\s\S]*?)(?=\n## |\n*$)/
-      )
       expect(
-        goalsMatch,
-        `${stockAudit.name} should have a Principles section`
-      ).not.toBeNull()
-      if (auditsWithPrinciples.includes(stockAudit.name)) {
-        expect(goalsMatch?.[1].trim()).not.toBe('(none)')
-      } else {
-        expect(goalsMatch?.[1].trim()).toBe('(none)')
-      }
+        stockAudit.template,
+        `${stockAudit.name} should not have a Principles section`
+      ).not.toContain('## Principles')
     }
   })
 

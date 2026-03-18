@@ -55,12 +55,6 @@ function dataAccessReview(): string {
 
     If none of these apply, document that finding and skip the detailed analysis.
 
-    ## Principles
-
-    - [Decoupled Code](../principles/decoupled-code.md) - Data access should be isolated for testability
-    - [Fast Feedback](../principles/fast-feedback.md) - Efficient data access enables faster feedback loops
-    - [Maintainable Codebase](../principles/maintainable-codebase.md) - Good data patterns improve maintainability
-
     ## Blocked By
 
     (none)
@@ -109,13 +103,6 @@ function coverageExclusions(): string {
     4. **Label justification quality** - Is the justification well-documented, reasonable, or questionable?
     5. **Evaluate removal potential** - Can the exclusion be removed through decoupling or refactoring?
 
-    ## Principles
-
-    - [Decoupled Code](../principles/decoupled-code.md)
-    - [Unit Test Coverage](../principles/unit-test-coverage.md)
-    - [Comprehensive Test Coverage](../principles/comprehensive-test-coverage.md)
-    - [Make Changes with Confidence](../principles/make-changes-with-confidence.md)
-
     ## Blocked By
 
     (none)
@@ -149,12 +136,6 @@ function componentReuse(): string {
     3. **Parallel structures** - Code that handles similar cases with minor variations
     4. **Extraction opportunities** - Logic that could be unified without forcing unrelated concepts together
 
-    ## Principles
-
-    - [Reasonably DRY](../principles/reasonably-dry.md)
-    - [Decoupled Code](../principles/decoupled-code.md)
-    - [Maintainable Codebase](../principles/maintainable-codebase.md)
-
     ## Blocked By
 
     (none)
@@ -186,10 +167,6 @@ function agentDeveloperExperience(): string {
     3. **Feedback loop speed** - How fast are checks and tests?
     4. **Debugging tools** - Can agents diagnose issues without trial and error?
     5. **Structured logging** - Is system behavior observable through logs?
-
-    ## Principles
-
-    (none)
 
     ## Blocked By
 
@@ -353,13 +330,6 @@ function agentInstructionQuality(): string {
     - **Impact** - How this affects agent effectiveness
     - **Suggested improvement** - Specific fix or action
 
-    ## Principles
-
-    - [Agent Autonomy](../principles/agent-autonomy.md) - Clear instructions enable autonomous work
-    - [Context Window Efficiency](../principles/context-window-efficiency.md) - Concise instructions leave room for reasoning
-    - [Actionable Errors](../principles/actionable-errors.md) - Instructions should guide agents toward correct actions
-    - [Lint Everything](../principles/lint-everything.md) - Prefer static analysis over runtime guidance where possible
-
     ## Blocked By
 
     (none)
@@ -394,10 +364,6 @@ function deadCode(): string {
     3. **Orphaned files** - Files that are not imported anywhere
     4. **Unused dependencies** - Packages in package.json not used in code
     5. **Commented-out code** - Old code left in comments
-
-    ## Principles
-
-    (none)
 
     ## Blocked By
 
@@ -513,12 +479,6 @@ function documentationDrift(): string {
     - **Fix**: remove - Delete the obsolete comment
     \`\`\`
 
-    ## Principles
-
-    - [Agent Autonomy](../principles/agent-autonomy.md) - Accurate documentation enables agents to work without trial and error
-    - [Context Window Efficiency](../principles/context-window-efficiency.md) - Incorrect docs waste context on misleading information
-    - [Maintainable Codebase](../principles/maintainable-codebase.md) - Up-to-date documentation reduces maintenance burden
-
     ## Blocked By
 
     (none)
@@ -555,10 +515,6 @@ function factsVerification(): string {
     2. **Completeness** - Are important implementation details documented?
     3. **Staleness** - Have facts become outdated due to recent changes?
     4. **Relevance** - Are all facts still useful for understanding the project?
-
-    ## Principles
-
-    (none)
 
     ## Blocked By
 
@@ -685,12 +641,6 @@ function feedbackLoopSpeed(): string {
     - Track feedback loop speed over time
     - Make informed decisions about parallelization or caching
 
-    ## Principles
-
-    - [Fast Feedback Loops](../principles/fast-feedback-loops.md) - Directly measures feedback loop speed
-    - [Fast Feedback](../principles/fast-feedback.md) - Identifies bottlenecks in feedback delivery
-    - [Agent Autonomy](../principles/agent-autonomy.md) - Faster feedback means agents can iterate more within context limits
-
     ## Blocked By
 
     (none)
@@ -728,10 +678,6 @@ function ideasFromPrinciples(): string {
     2. **Gap analysis** - Where does the codebase fall short of principles?
     3. **New opportunities** - What work would better achieve each principle?
     4. **Principle alignment** - Are current tasks aligned with stated principles?
-
-    ## Principles
-
-    (none)
 
     ## Blocked By
 
@@ -781,13 +727,6 @@ function commitReview(): string {
     - **File path** - The specific file needing attention
     - **Signal** - What triggered this recommendation (churn, size, commit pattern, incomplete work, test gap)
     - **Specific suggestion** - A concrete action (e.g., "Extract the validation logic into a separate module", not just "consider refactoring")
-
-    ## Principles
-
-    - [Boy Scout Rule](../principles/boy-scout-rule.md) - Leave code better than found, but capture large cleanups as separate tasks
-    - [Make the Change Easy](../principles/make-the-change-easy.md) - Refactor until the change becomes straightforward
-    - [Make Changes with Confidence](../principles/make-changes-with-confidence.md) - Tests and checks enable safe refactoring
-    - [Reasonably DRY](../principles/reasonably-dry.md) - Extract only when duplication represents the same concept
 
     ## Blocked By
 
@@ -855,11 +794,6 @@ function securityReview(): string {
 
     Note: This scan is non-exhaustive. Proper tooling catches far more issues.
 
-    ## Principles
-
-    - [Lint Everything](../principles/lint-everything.md) - Security checks should use dedicated static analysis tools
-    - [Batteries Included](../principles/batteries-included.md) - The audit should suggest appropriate security tooling
-
     ## Blocked By
 
     (none)
@@ -896,10 +830,6 @@ function staleIdeas(): string {
     2. **Relevance** - Has the project evolved past the idea?
     3. **Actionability** - Can the idea be converted to a task?
     4. **Duplication** - Are there overlapping or redundant ideas?
-
-    ## Principles
-
-    (none)
 
     ## Blocked By
 
@@ -948,12 +878,6 @@ function errorHandling(): string {
     - **Pattern** - Which category of issue (swallowed, missing context, fire-and-forget, etc.)
     - **Impact** - What failures could go unnoticed or be hard to debug
     - **Suggestion** - Specific fix (add logging, propagate error, add recovery guidance)
-
-    ## Principles
-
-    - [Actionable Errors](../principles/actionable-errors.md) - Error messages should tell you what to do next
-    - [Debugging Tooling](../principles/debugging-tooling.md) - Agents need readable, structured error output
-    - [Stop the Line](../principles/stop-the-line.md) - Problems should be fixed at source, not hidden
 
     ## Blocked By
 
@@ -1004,12 +928,6 @@ function globalState(): string {
     - **Pattern** - Which category (mutable variable, singleton, registry, etc.)
     - **Impact** - How this affects testability or coupling (e.g., "Tests must reset this state", "Cannot run tests in parallel")
     - **Suggestion** - How to refactor (e.g., "Pass as dependency", "Use factory function", "Move to function scope")
-
-    ## Principles
-
-    - [Dependency Injection](../principles/dependency-injection.md) - Dependencies should be passed in, not accessed globally
-    - [Decoupled Code](../principles/decoupled-code.md) - Code should be organized into independent units
-    - [Test Isolation](../principles/test-isolation.md) - Tests should not affect each other
 
     ## Blocked By
 
@@ -1062,10 +980,6 @@ function repositoryContext(): string {
     5. Review \`.dust/facts/\` for context on current state
     6. Update \`.dust/repository.md\` with current findings, preserving any sections that are still accurate
 
-    ## Principles
-
-    (none)
-
     ## Blocked By
 
     (none)
@@ -1117,13 +1031,6 @@ function slowTests(): string {
     - **Duration** - How long the test takes (if measurable)
     - **Cause** - Why the test is slow (I/O, sleep, setup, etc.)
     - **Suggestion** - Specific optimization (mock the API, use fake timers, share setup, etc.)
-
-    ## Principles
-
-    - [Fast Feedback Loops](../principles/fast-feedback-loops.md) - Tests should run quickly for tight iteration cycles
-    - [Fast Feedback](../principles/fast-feedback.md) - Slow tests discourage frequent validation
-    - [Keep Unit Tests Pure](../principles/keep-unit-tests-pure.md) - Pure tests are faster and more reliable
-    - [Stubs Over Mocks](../principles/stubs-over-mocks.md) - Use stubs to avoid slow real dependencies
 
     ## Blocked By
 
@@ -1194,13 +1101,6 @@ function primitiveObsession(): string {
     - **Constant/type opportunity** - A named constant or existing domain wrapper to encode intent
     - **Incremental migration path** - Steps to introduce the constant/wrapper and migrate call sites safely
 
-    ## Principles
-
-    - [Functional Core, Imperative Shell](../principles/functional-core-imperative-shell.md)
-    - [Small Units](../principles/small-units.md)
-    - [Make the Change Easy](../principles/make-the-change-easy.md)
-    - [Naming Matters](../principles/naming-matters.md)
-
     ## Blocked By
 
     (none)
@@ -1260,14 +1160,6 @@ function singleResponsibilityViolations(): string {
     - **Responsibility split** - Distinct responsibilities currently mixed (for example parsing, execution, presentation)
     - **Severity** - \`high\`, \`medium\`, or \`low\` based on extraction urgency and coupling risk
     - **Suggested extraction plan** - A small-step plan describing what to extract first, with Functional Core, Imperative Shell boundaries preserved
-
-    ## Principles
-
-    - [Functional Core, Imperative Shell](../principles/functional-core-imperative-shell.md)
-    - [Decoupled Code](../principles/decoupled-code.md)
-    - [Small Units](../principles/small-units.md)
-    - [Make the Change Easy](../principles/make-the-change-easy.md)
-    - [Context-Optimised Code](../principles/context-optimised-code.md)
 
     ## Blocked By
 
@@ -1332,12 +1224,6 @@ function ubiquitousLanguage(): string {
     - **Term in question** - The inconsistent or unclear term
     - **Where found** - File paths and locations where the term appears
     - **Recommended action** - Standardize on existing term, or propose a new canonical name
-
-    ## Principles
-
-    - [Naming Matters](../principles/naming-matters.md) - Good naming reduces waste by eliminating confusion
-    - [Consistent Naming](../principles/consistent-naming.md) - Names should follow established conventions
-    - [Clarity Over Brevity](../principles/clarity-over-brevity.md) - Names should be descriptive and self-documenting
 
     ## Blocked By
 
@@ -1404,13 +1290,6 @@ function designPatterns(): string {
       - **Visitor** can often be replaced with discriminated unions and exhaustive pattern matching
       - **Observer** may be superseded by reactive frameworks or event emitters
     - Suggest modern alternatives where appropriate (e.g., discriminated unions, higher-order functions, dependency injection)
-
-    ## Principles
-
-    - [Functional Core, Imperative Shell](../principles/functional-core-imperative-shell.md) - Preserve pure core and thin shell boundaries in recommendations
-    - [Make the Change Easy](../principles/make-the-change-easy.md) - Pattern adoption should simplify future changes
-    - [Decoupled Code](../principles/decoupled-code.md) - Patterns should reduce coupling, not add complexity
-    - [Design for Testability](../principles/design-for-testability.md) - Pattern recommendations should improve testability
 
     ## Blocked By
 
@@ -1567,14 +1446,6 @@ function testAssertions(): string {
     - **Impact** - How this affects test reliability or maintainability
     - **Suggestion** - Specific fix (sort keys, use fake timers, split test, use toMatchObject, etc.)
 
-    ## Principles
-
-    - [Comprehensive Assertions](../principles/comprehensive-assertions.md) — Tension with "precise but not exhaustive"; balance depends on context
-    - [Self-Diagnosing Tests](../principles/self-diagnosing-tests.md) — Informative failures require precise assertions
-    - [Keep Unit Tests Pure](../principles/keep-unit-tests-pure.md) — Determinism is essential for purity
-    - [Reproducible Checks](../principles/reproducible-checks.md) — Deterministic assertions support reproducibility
-    - [Test Isolation](../principles/test-isolation.md) — Fixed delays can cause race conditions between tests
-
     ## Blocked By
 
     (none)
@@ -1626,13 +1497,6 @@ function algorithms(): string {
     - **Data structures involved** - What collections are being processed
     - **Suggested optimization** - Specific fix (e.g., "Convert users array to Set for O(1) lookup", "Add visited Set to prevent cycles")
     - **Acceptable complexity assessment** - Whether the current complexity is acceptable given expected input sizes (e.g., "Acceptable for small configs (<100 items), problematic for large datasets")
-
-    ## Principles
-
-    - [Fast Feedback Loops](../principles/fast-feedback-loops.md) — Efficient algorithms contribute to fast feedback
-    - [Maintainable Codebase](../principles/maintainable-codebase.md) — Understanding complexity aids maintenance
-    - [Context-Optimised Code](../principles/context-optimised-code.md) — Simple, efficient code is easier to understand
-    - [Functional Core, Imperative Shell](../principles/functional-core-imperative-shell.md) — Keep pure analysis logic separate from output formatting
 
     ## Blocked By
 
@@ -1687,12 +1551,6 @@ function loggingAndTraceability(): string {
     - **Issue** - What's missing or problematic
     - **Impact** - How this affects debugging or understanding system behavior
     - **Suggestion** - Specific improvement (add logging, change level, add context, etc.)
-
-    ## Principles
-
-    - [Development Traceability](../principles/development-traceability.md) - Structured logging helps agents understand system behavior
-    - [Debugging Tooling](../principles/debugging-tooling.md) - Agents need effective tools for diagnosing issues
-    - [Actionable Errors](../principles/actionable-errors.md) - Error logs should guide next steps
 
     ## Blocked By
 
@@ -1776,14 +1634,6 @@ function testPyramid(): string {
     - More time spent in integration/e2e than unit tests
     - Unit tests that perform I/O (process spawning, network calls, file system access)
 
-    ## Principles
-
-    - [Fast Feedback Loops](../principles/fast-feedback-loops.md) — Unit-heavy pyramids enable fast feedback
-    - [Keep Unit Tests Pure](../principles/keep-unit-tests-pure.md) — Defines what makes a test a "unit test"
-    - [Unit Test Coverage](../principles/unit-test-coverage.md) — Values unit tests for specific, fast feedback
-    - [Design for Testability](../principles/design-for-testability.md) — Testable code enables unit tests; untestable code forces integration tests
-    - [Functional Core, Imperative Shell](../principles/functional-core-imperative-shell.md) — Keep audit definition pure
-
     ## Blocked By
 
     (none)
@@ -1845,13 +1695,6 @@ function idiomaticStyle(): string {
     - **Testing**: Use framework-specific matchers, follow Arrange-Act-Assert pattern, avoid test interdependence
 
     When the technology or its ecosystem is evolving rapidly, explicitly note when findings should be verified against current documentation.
-
-    ## Principles
-
-    - [Context-Optimised Code](../principles/context-optimised-code.md) - Idiomatic code is easier for agents and humans to understand
-    - [Maintainable Codebase](../principles/maintainable-codebase.md) - Following conventions reduces cognitive load
-    - [Consistent Naming](../principles/consistent-naming.md) - Naming should follow language conventions
-    - [Boy Scout Rule](../principles/boy-scout-rule.md) - Leave code better than you found it
 
     ## Blocked By
 
@@ -1917,11 +1760,6 @@ function uxAudit(): string {
     - **Impact** - How it affects the user's ability to complete their goal
     - **Recommendation** - Specific fix
     - **Verification** - How to verify the fix (e.g., "Screenshot at step 3 should show success message instead of spinner")
-
-    ## Principles
-
-    - [Actionable Errors](../principles/actionable-errors.md) - Error messages should tell users what to do next
-    - [Unsurprising UX](../principles/unsurprising-ux.md) - The interface should be as guessable as possible
 
     ## Blocked By
 
@@ -2064,12 +1902,6 @@ function dependencyHealth(): string {
     - **Details**: Last release was 3 years ago (2021-01-15)
     - **Action**: evaluate if still needed; if so, consider forking or finding alternative
     \`\`\`
-
-    ## Principles
-
-    - [Minimal Dependencies](../principles/minimal-dependencies.md) - Avoid coupling to specific tools; healthy dependencies are easier to swap
-    - [Maintainable Codebase](../principles/maintainable-codebase.md) - Maintained dependencies reduce maintenance burden
-    - [Agent Autonomy](../principles/agent-autonomy.md) - Agents benefit from up-to-date dependencies with accurate documentation
 
     ## Blocked By
 
@@ -2230,13 +2062,6 @@ function ciDevelopmentParity(): string {
     \`\`\`
     \`\`\`
 
-    ## Principles
-
-    - [Reproducible Checks](../principles/reproducible-checks.md) - Ensures same checks run everywhere
-    - [Stop the Line](../principles/stop-the-line.md) - Problems are caught at source, not downstream
-    - [Fast Feedback Loops](../principles/fast-feedback-loops.md) - Developers get consistent feedback locally before pushing
-    - [Agent Autonomy](../principles/agent-autonomy.md) - Agents can trust that passing local checks means CI will pass
-
     ## Blocked By
 
     (none)
@@ -2386,12 +2211,6 @@ function commitMessageQuality(): string {
 
     Group related issues into a single idea file if they suggest a systemic pattern (e.g., "Multiple commits lack issue links" rather than one idea per commit).
 
-    ## Principles
-
-    - [Traceable Decisions](../principles/traceable-decisions.md) - Commit history should explain why changes were made
-    - [Atomic Commits](../principles/atomic-commits.md) - Each commit should tell a complete story
-    - [Agent Autonomy](../principles/agent-autonomy.md) - Agents learn from commit history to understand project patterns
-
     ## Blocked By
 
     (none)
@@ -2490,12 +2309,6 @@ function suggestAudits(): string {
     - [ ] Run \`bin/dust audit security-review\`
     - [ ] Address any findings
     \`\`\`
-
-    ## Principles
-
-    - [Task-First Workflow](../principles/task-first-workflow.md) - Creates tasks as actionable work items
-    - [Lightweight Planning](../principles/lightweight-planning.md) - Suggestions are captured as tasks that can be evaluated and prioritized
-    - [Development Traceability](../principles/development-traceability.md) - Creates visible connection between commit activity and audit suggestions
 
     ## Blocked By
 

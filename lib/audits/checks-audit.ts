@@ -784,13 +784,6 @@ export function checksAuditTemplate(): string {
 
     When multiple ecosystems are detected, create separate ideas for each ecosystem's checks.
 
-    ## Principles
-
-    - [Agent Autonomy](../principles/agent-autonomy.md) - Agents discover appropriate tools rather than following prescriptions
-    - [Stop the Line](../principles/stop-the-line.md) - Comprehensive checks catch problems at source
-    - [Lint Everything](../principles/lint-everything.md) - Static analysis should cover as much as possible
-    - [Comprehensive Test Coverage](../principles/comprehensive-test-coverage.md) - Tests are critical for agent confidence
-
     ## Blocked By
 
     (none)
