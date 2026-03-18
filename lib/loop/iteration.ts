@@ -97,6 +97,8 @@ export interface IterationOptions {
   toolsSection?: string
   /** Port of the command events proxy for this iteration */
   proxyPort?: number
+  /** Branch name when working on a non-default branch */
+  branch?: string
 }
 
 export async function findAvailableTasks(
@@ -423,7 +425,8 @@ export async function runOneIteration(
     task.path,
     taskContent,
     instructions,
-    toolsSection
+    toolsSection,
+    options.branch
   )
 
   return executeTask(
@@ -470,10 +473,14 @@ export function buildTaskPrompt(
   taskPath: string,
   taskContent: string,
   instructions: string,
-  toolsSection: string
+  toolsSection: string,
+  branch?: string
 ): string {
   const suffix = toolsSection ? `\n${toolsSection}` : ''
-  return `Implement the task at \`${taskPath}\`:
+  const branchContext = branch
+    ? `You are working on the \`${branch}\` branch.\n\n`
+    : ''
+  return `${branchContext}Implement the task at \`${taskPath}\`:
 
 ----------
 ${taskContent}

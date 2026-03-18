@@ -576,7 +576,8 @@ export async function runRepositoryLoop(
       dockerSetup.config,
       toolsSection,
       proxy,
-      sleep
+      sleep,
+      repoState.repository.branch
     )
 
     if (result === 'error') {
@@ -685,7 +686,8 @@ async function executeIteration(
   dockerConfig: DockerSpawnConfig | undefined,
   toolsSection: string,
   proxy: { port: number; stop: () => Promise<void> },
-  sleep: RepositoryDependencies['sleep']
+  sleep: RepositoryDependencies['sleep'],
+  branch?: string
 ): Promise<Awaited<ReturnType<typeof runOneIteration>> | 'error'> {
   try {
     return await runOneIteration(
@@ -701,6 +703,7 @@ async function executeIteration(
         docker: dockerConfig,
         toolsSection,
         proxyPort: proxy.port,
+        branch,
       }
     )
   } catch (error) {

@@ -958,6 +958,60 @@ Usage: \`dust bucket tool asset-upload <file>\``
     expect(capturedPrompt?.endsWith('\n\n')).toBe(false)
   })
 
+  test('includes branch context in prompt when branch is specified', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+          },
+        },
+      },
+    })
+    let capturedPrompt: string | undefined
+    const loopDeps = createLoopDeps({
+      run: async prompt => {
+        capturedPrompt = prompt
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent, {
+      branch: 'staging',
+    })
+
+    expect(capturedPrompt).toContain('You are working on the `staging` branch.')
+    expect(
+      capturedPrompt?.startsWith('You are working on the `staging` branch.')
+    ).toBe(true)
+  })
+
+  test('omits branch context in prompt when branch is not specified', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+          },
+        },
+      },
+    })
+    let capturedPrompt: string | undefined
+    const loopDeps = createLoopDeps({
+      run: async prompt => {
+        capturedPrompt = prompt
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent, {})
+
+    expect(capturedPrompt).not.toContain('You are working on')
+    expect(capturedPrompt?.startsWith('Implement the task')).toBe(true)
+  })
+
   test('spawns check-fix agent when pre-flight checks fail', async () => {
     const dependencies = createDependencies({
       project: {
@@ -1307,6 +1361,46 @@ Upload a file.`
 
     expect(prompt).not.toContain('## Available Tools')
     expect(prompt.endsWith('\n\n')).toBe(false)
+  })
+
+  test('includes branch context when branch is specified', () => {
+    const prompt = buildTaskPrompt(
+      '.dust/tasks/task.md',
+      '# Task',
+      'Instructions.',
+      '',
+      'staging'
+    )
+
+    expect(prompt).toContain('You are working on the `staging` branch.')
+    expect(prompt.startsWith('You are working on the `staging` branch.')).toBe(
+      true
+    )
+  })
+
+  test('omits branch context when branch is undefined', () => {
+    const prompt = buildTaskPrompt(
+      '.dust/tasks/task.md',
+      '# Task',
+      'Instructions.',
+      '',
+      undefined
+    )
+
+    expect(prompt).not.toContain('You are working on')
+    expect(prompt.startsWith('Implement the task')).toBe(true)
+  })
+
+  test('omits branch context when branch is not provided', () => {
+    const prompt = buildTaskPrompt(
+      '.dust/tasks/task.md',
+      '# Task',
+      'Instructions.',
+      ''
+    )
+
+    expect(prompt).not.toContain('You are working on')
+    expect(prompt.startsWith('Implement the task')).toBe(true)
   })
 })
 
