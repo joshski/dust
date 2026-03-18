@@ -1,6 +1,6 @@
 # Connection handshake redesign
 
-Redesign the bucket WebSocket handshake so the server responds to the client's opening message with a single payload containing both tool definitions and the repository list. This fixes a bug where tool definitions are lost on reconnection after a server restart.
+Redesign the bucket WebSocket handshake to use a request/response pattern. The server should respond to the client's opening message with a single payload containing both tool definitions and the repository list, fixing a bug where tool definitions are lost on reconnection.
 
 ## Current State
 
