@@ -22,10 +22,14 @@ export function getRepoPath(repoName: string, reposDir: string): string {
 function cloneWithUrl(
   url: string,
   targetPath: string,
-  spawn: typeof nodeSpawn
+  spawn: typeof nodeSpawn,
+  branch?: string
 ): Promise<{ success: boolean; stderr: string }> {
   return new Promise(resolve => {
-    const proc = spawn('git', ['clone', url, targetPath], {
+    const cloneArguments = branch
+      ? ['clone', '--branch', branch, url, targetPath]
+      : ['clone', url, targetPath]
+    const proc = spawn('git', cloneArguments, {
       stdio: ['ignore', 'pipe', 'pipe'],
       env: {
         ...process.env,
@@ -54,12 +58,22 @@ function cloneWithUrl(
  * Tries HTTPS first, falls back to SSH if available and HTTPS fails.
  */
 export async function cloneRepository(
-  repository: { name: string; gitUrl: string; gitSshUrl?: string },
+  repository: {
+    name: string
+    gitUrl: string
+    gitSshUrl?: string
+    branch?: string
+  },
   targetPath: string,
   spawn: typeof nodeSpawn,
   context: CommandDependencies['context']
 ): Promise<boolean> {
-  const httpsResult = await cloneWithUrl(repository.gitUrl, targetPath, spawn)
+  const httpsResult = await cloneWithUrl(
+    repository.gitUrl,
+    targetPath,
+    spawn,
+    repository.branch
+  )
 
   if (httpsResult.success) {
     return true
@@ -72,7 +86,8 @@ export async function cloneRepository(
     const sshResult = await cloneWithUrl(
       repository.gitSshUrl,
       targetPath,
-      spawn
+      spawn,
+      repository.branch
     )
     if (sshResult.success) {
       return true

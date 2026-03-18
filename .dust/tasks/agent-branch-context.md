@@ -4,7 +4,7 @@ Add branch context to agent prompts when working on a non-default branch. This h
 
 ## Background
 
-When the bucket server specifies a target branch (see [Clone with target branch](clone-with-target-branch.md)), agents should know which branch they're working on. Without this context, an agent might be confused if it sees references to "main" in documentation while actually working on a "staging" branch.
+When the bucket server specifies a target branch, agents should know which branch they're working on. Without this context, an agent might be confused if it sees references to "main" in documentation while actually working on a "staging" branch.
 
 ## Implementation
 
@@ -35,7 +35,7 @@ Imperative shell (orchestration):
 
 ## Blocked By
 
-- [Clone with target branch](clone-with-target-branch.md)
+(none)
 
 ## Principles
 

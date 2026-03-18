@@ -66,6 +66,7 @@ export interface Repository {
   url: string
   id: number
   agentProvider?: string
+  branch?: string
 }
 
 export interface RepositoryState {
@@ -215,6 +216,17 @@ export function createDefaultRepositoryDependencies(
 /* v8 ignore stop */
 
 /**
+ * Determine if a repository needs to be re-cloned due to branch change.
+ * Pure function - compares branch fields between existing and incoming repositories.
+ */
+export function shouldRecloneForBranchChange(
+  existing: Repository,
+  incoming: Repository
+): boolean {
+  return existing.branch !== incoming.branch
+}
+
+/**
  * Parse repository from message data.
  * Supports both simple names and git URLs.
  */
@@ -244,6 +256,10 @@ export function parseRepository(data: unknown): Repository | null {
         agentProvider:
           typeof repositoryData.agentProvider === 'string'
             ? repositoryData.agentProvider
+            : undefined,
+        branch:
+          typeof repositoryData.branch === 'string'
+            ? repositoryData.branch
             : undefined,
       }
     }
@@ -389,6 +405,12 @@ export async function handleRepositoryList(
   for (const [name, repo] of incomingRepos) {
     const existing = manager.repositories.get(name)
     if (!existing) {
+      await addRepository(repo, manager, repoDeps, context)
+    } else if (shouldRecloneForBranchChange(existing.repository, repo)) {
+      const from = existing.repository.branch ?? '(default)'
+      const to = repo.branch ?? '(default)'
+      log(`${name}: branch changed from ${from} to ${to}, re-cloning`)
+      await removeRepositoryFromManager(name, manager, repoDeps, context)
       await addRepository(repo, manager, repoDeps, context)
     } else if (existing.repository.agentProvider !== repo.agentProvider) {
       const from = existing.repository.agentProvider ?? '(unset)'

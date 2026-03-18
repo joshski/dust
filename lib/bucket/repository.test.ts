@@ -35,6 +35,7 @@ import {
   removeRepository,
   removeRepositoryFromManager,
   runRepositoryLoop,
+  shouldRecloneForBranchChange,
   startRepositoryLoop,
 } from './repository'
 
@@ -160,6 +161,7 @@ describe('parseRepository', () => {
       gitSshUrl: undefined,
       url: 'https://example.com/my-repo',
       id: 123,
+      branch: undefined,
     })
   })
 
@@ -177,6 +179,25 @@ describe('parseRepository', () => {
       gitSshUrl: 'git@github.com:user/repo.git',
       url: 'https://example.com/my-repo',
       id: 123,
+      branch: undefined,
+    })
+  })
+
+  test('parses object with branch', () => {
+    const repo = parseRepository({
+      name: 'my-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+      url: 'https://example.com/my-repo',
+      id: 123,
+      branch: 'develop',
+    })
+    expect(repo).toEqual({
+      name: 'my-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+      gitSshUrl: undefined,
+      url: 'https://example.com/my-repo',
+      id: 123,
+      branch: 'develop',
     })
   })
 
@@ -219,9 +240,11 @@ describe('parseRepository', () => {
     expect(repo).toEqual({
       name: 'my-repo',
       gitUrl: 'https://github.com/user/repo.git',
+      gitSshUrl: undefined,
       url: 'https://example.com/my-repo',
       id: 123,
       agentProvider: 'codex',
+      branch: undefined,
     })
   })
 
@@ -241,6 +264,94 @@ describe('parseRepository', () => {
         id: 'not-a-number',
       })
     ).toBeNull()
+  })
+})
+
+describe('shouldRecloneForBranchChange', () => {
+  test('returns false when both branches are undefined', () => {
+    const existing: Repository = {
+      name: 'repo',
+      gitUrl: 'url',
+      url: 'https://example.com',
+      id: 1,
+    }
+    const incoming: Repository = {
+      name: 'repo',
+      gitUrl: 'url',
+      url: 'https://example.com',
+      id: 1,
+    }
+    expect(shouldRecloneForBranchChange(existing, incoming)).toBe(false)
+  })
+
+  test('returns false when branches are the same', () => {
+    const existing: Repository = {
+      name: 'repo',
+      gitUrl: 'url',
+      url: 'https://example.com',
+      id: 1,
+      branch: 'develop',
+    }
+    const incoming: Repository = {
+      name: 'repo',
+      gitUrl: 'url',
+      url: 'https://example.com',
+      id: 1,
+      branch: 'develop',
+    }
+    expect(shouldRecloneForBranchChange(existing, incoming)).toBe(false)
+  })
+
+  test('returns true when branch changes from undefined to defined', () => {
+    const existing: Repository = {
+      name: 'repo',
+      gitUrl: 'url',
+      url: 'https://example.com',
+      id: 1,
+    }
+    const incoming: Repository = {
+      name: 'repo',
+      gitUrl: 'url',
+      url: 'https://example.com',
+      id: 1,
+      branch: 'develop',
+    }
+    expect(shouldRecloneForBranchChange(existing, incoming)).toBe(true)
+  })
+
+  test('returns true when branch changes from defined to undefined', () => {
+    const existing: Repository = {
+      name: 'repo',
+      gitUrl: 'url',
+      url: 'https://example.com',
+      id: 1,
+      branch: 'develop',
+    }
+    const incoming: Repository = {
+      name: 'repo',
+      gitUrl: 'url',
+      url: 'https://example.com',
+      id: 1,
+    }
+    expect(shouldRecloneForBranchChange(existing, incoming)).toBe(true)
+  })
+
+  test('returns true when branch changes to different value', () => {
+    const existing: Repository = {
+      name: 'repo',
+      gitUrl: 'url',
+      url: 'https://example.com',
+      id: 1,
+      branch: 'develop',
+    }
+    const incoming: Repository = {
+      name: 'repo',
+      gitUrl: 'url',
+      url: 'https://example.com',
+      id: 1,
+      branch: 'staging',
+    }
+    expect(shouldRecloneForBranchChange(existing, incoming)).toBe(true)
   })
 })
 
@@ -450,6 +561,80 @@ describe('cloneRepository', () => {
     expect(context.stderrLines.join('\n')).toContain(
       'Failed to clone test-repo: authentication failed'
     )
+  })
+
+  test('passes branch flag to git clone when branch is specified', async () => {
+    const { spawn, calls, processes } = createMockSpawn()
+    const context = createContextEmulator()
+    const repo: Repository = {
+      name: 'test-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+      url: 'https://example.com/test-repo',
+      id: 7,
+      branch: 'develop',
+    }
+
+    const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
+
+    const proc = processes.get(
+      'git clone --branch develop https://github.com/user/repo.git /tmp/test-repo'
+    )
+    proc?.emit('close', 0)
+
+    const result = await promise
+    expect(result).toBe(true)
+    expect(calls[0].command).toBe('git')
+    expect(calls[0].spawnArguments).toEqual([
+      'clone',
+      '--branch',
+      'develop',
+      'https://github.com/user/repo.git',
+      '/tmp/test-repo',
+    ])
+  })
+
+  test('passes branch flag to SSH fallback when branch is specified', async () => {
+    const { spawn, calls, processes } = createMockSpawn()
+    const context = createContextEmulator()
+    const repo: Repository = {
+      name: 'test-repo',
+      gitUrl: 'https://github.com/user/repo.git',
+      gitSshUrl: 'git@github.com:user/repo.git',
+      url: 'https://example.com/test-repo',
+      id: 8,
+      branch: 'feature/test',
+    }
+
+    const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
+
+    // Fail the HTTPS clone
+    const httpsProc = processes.get(
+      'git clone --branch feature/test https://github.com/user/repo.git /tmp/test-repo'
+    )
+    const httpsStderr = (httpsProc as EventEmitter & { stderr: EventEmitter })
+      .stderr
+    httpsStderr?.emit('data', 'authentication failed')
+    httpsProc?.emit('close', 128)
+
+    // Wait for SSH clone to be spawned
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    // Succeed the SSH clone
+    const sshProc = processes.get(
+      'git clone --branch feature/test git@github.com:user/repo.git /tmp/test-repo'
+    )
+    sshProc?.emit('close', 0)
+
+    const result = await promise
+    expect(result).toBe(true)
+    expect(calls.length).toBe(2)
+    expect(calls[1].spawnArguments).toEqual([
+      'clone',
+      '--branch',
+      'feature/test',
+      'git@github.com:user/repo.git',
+      '/tmp/test-repo',
+    ])
   })
 })
 
@@ -1547,6 +1732,169 @@ describe('handleRepositoryList', () => {
 
     expect(manager.repositories.size).toBe(0)
     expect(wakeUpCalled).toBe(true)
+  })
+
+  test('re-clones repository when branch changes', async () => {
+    const context = createContextEmulator()
+    const manager = createMockManager()
+    const { spawn: manualSpawn, processes } = createMockSpawn()
+    const { spawn: autoSpawn } = createAutoResolvingSpawn()
+
+    const combinedSpawn = ((
+      command: string,
+      spawnArguments: string[],
+      options?: unknown
+    ) => {
+      if (command === 'git' && spawnArguments[0] === 'clone') {
+        return manualSpawn(command, spawnArguments, options as never)
+      }
+      return autoSpawn(command, spawnArguments, options as never)
+    }) as RepositoryDependencies['spawn']
+
+    // Pre-populate with a repo on the default branch
+    manager.repositories.set('user/repo', {
+      repository: {
+        name: 'user/repo',
+        gitUrl: 'https://github.com/user/repo.git',
+        url: 'https://example.com/user/repo',
+        id: 1,
+        branch: undefined,
+      },
+      path: '/tmp/user/repo',
+      logBuffer: createLogBuffer(),
+      lifecycle: { type: 'idle' },
+      agentStatus: 'idle',
+    } as RepositoryState)
+
+    const repoDeps = createRepositoryDependencies({
+      spawn: combinedSpawn,
+      sleep: async () => {
+        for (const repoState of manager.repositories.values()) {
+          repoState.lifecycle = { type: 'stopping' }
+        }
+      },
+    })
+
+    // Send a repo list with same repo but different branch
+    const handlePromise = handleRepositoryList(
+      [
+        {
+          name: 'user/repo',
+          gitUrl: 'https://github.com/user/repo.git',
+          url: 'https://example.com/user/repo',
+          id: 1,
+          branch: 'develop',
+        },
+      ],
+      manager,
+      repoDeps,
+      context
+    )
+
+    // Wait for rm to be spawned (removal of existing repo)
+    await new Promise(resolve => setTimeout(resolve, 0))
+    const rmProc = processes.get('rm -rf /tmp/user/repo')
+    rmProc?.emit('close', 0)
+
+    // Wait for clone to be spawned with new branch
+    await new Promise(resolve => setTimeout(resolve, 0))
+    const cloneProc = processes.get(
+      'git clone --branch develop https://github.com/user/repo.git /tmp/user/repo'
+    )
+    cloneProc?.emit('close', 0)
+
+    // Wake the loop
+    for (const repoState of manager.repositories.values()) {
+      repoState.wakeUp?.()
+    }
+
+    await handlePromise
+
+    expect(manager.repositories.size).toBe(1)
+    expect(manager.repositories.get('user/repo')?.repository.branch).toBe(
+      'develop'
+    )
+  })
+
+  test('re-clones repository when branch changes to default', async () => {
+    const context = createContextEmulator()
+    const manager = createMockManager()
+    const { spawn: manualSpawn, processes } = createMockSpawn()
+    const { spawn: autoSpawn } = createAutoResolvingSpawn()
+
+    const combinedSpawn = ((
+      command: string,
+      spawnArguments: string[],
+      options?: unknown
+    ) => {
+      if (command === 'git' && spawnArguments[0] === 'clone') {
+        return manualSpawn(command, spawnArguments, options as never)
+      }
+      return autoSpawn(command, spawnArguments, options as never)
+    }) as RepositoryDependencies['spawn']
+
+    // Pre-populate with a repo on a specific branch
+    manager.repositories.set('user/repo', {
+      repository: {
+        name: 'user/repo',
+        gitUrl: 'https://github.com/user/repo.git',
+        url: 'https://example.com/user/repo',
+        id: 1,
+        branch: 'develop',
+      },
+      path: '/tmp/user/repo',
+      logBuffer: createLogBuffer(),
+      lifecycle: { type: 'idle' },
+      agentStatus: 'idle',
+    } as RepositoryState)
+
+    const repoDeps = createRepositoryDependencies({
+      spawn: combinedSpawn,
+      sleep: async () => {
+        for (const repoState of manager.repositories.values()) {
+          repoState.lifecycle = { type: 'stopping' }
+        }
+      },
+    })
+
+    // Send a repo list with same repo but no branch (default)
+    const handlePromise = handleRepositoryList(
+      [
+        {
+          name: 'user/repo',
+          gitUrl: 'https://github.com/user/repo.git',
+          url: 'https://example.com/user/repo',
+          id: 1,
+        },
+      ],
+      manager,
+      repoDeps,
+      context
+    )
+
+    // Wait for rm to be spawned (removal of existing repo)
+    await new Promise(resolve => setTimeout(resolve, 0))
+    const rmProc = processes.get('rm -rf /tmp/user/repo')
+    rmProc?.emit('close', 0)
+
+    // Wait for clone to be spawned without branch
+    await new Promise(resolve => setTimeout(resolve, 0))
+    const cloneProc = processes.get(
+      'git clone https://github.com/user/repo.git /tmp/user/repo'
+    )
+    cloneProc?.emit('close', 0)
+
+    // Wake the loop
+    for (const repoState of manager.repositories.values()) {
+      repoState.wakeUp?.()
+    }
+
+    await handlePromise
+
+    expect(manager.repositories.size).toBe(1)
+    expect(
+      manager.repositories.get('user/repo')?.repository.branch
+    ).toBeUndefined()
   })
 })
 

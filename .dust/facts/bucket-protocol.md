@@ -61,6 +61,7 @@ interface RepositoryListItem {
   id: number            // Server-side repository ID
   hasTask: boolean      // True if a task is waiting
   agentProvider?: string // Agent to use: 'claude' (default) or 'codex'
+  branch?: string       // Target branch for clone (default: repository default branch)
 }
 ```
 
