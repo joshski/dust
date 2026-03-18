@@ -95,3 +95,41 @@ Run `git remote get-url origin` and omit `gitRemote` when unavailable. Simple an
 #### Option: Include multiple remotes
 
 Collect all configured remotes and send an array so the server can match any known URL. More flexible but adds complexity.
+
+### Should the client have a handshake timeout?
+
+#### Option: Add a timeout
+
+Fail the connection after N seconds if `connection-ready` isn't received. The client logs an error and shuts down (or reconnects with backoff). The current implementation waits indefinitely for agent capability discovery, so adding an explicit timeout would surface this class of failure faster.
+
+#### Option: No timeout
+
+Trust the server to respond promptly. If it doesn't, the WebSocket will eventually fail with a network timeout or close event. Keeps the client simpler and relies on underlying transport timeouts.
+
+### How should version rejection interact with WebSocket close codes?
+
+#### Option: Use a message then close
+
+Server sends `connection-rejected` message with reason, then closes the WebSocket normally. Client processes the message before shutdown, giving it a chance to display the reason clearly.
+
+#### Option: Close with a custom code
+
+Use a new close code (e.g., `4001`) for version rejection. Simpler wire protocol but less descriptive — the reason would need to come from the close reason string (max 123 bytes).
+
+#### Option: Keep the connection open
+
+Server sends `connection-rejected` but leaves the WebSocket open. Client reads the reason, logs it, and initiates its own close. Allows for potential back-and-forth (e.g., "upgrade available at X").
+
+### How should older clients interoperate with newer servers?
+
+#### Option: Server supports both message types
+
+Server accepts either `agent-capabilities` or `connection-init`. For `agent-capabilities`, it responds as it does today (separate `tool-definitions` and `repository-list`). For `connection-init`, it responds with `connection-ready`. Allows gradual rollout without coordination.
+
+#### Option: Require simultaneous upgrade
+
+Deploy the server change only after all clients are updated. Simpler protocol but requires coordinated rollout and risks breaking clients that haven't updated.
+
+#### Option: Protocol version negotiation
+
+Client sends a protocol version in an initial message. Server responds based on the version. Adds complexity now but makes future protocol changes easier to roll out incrementally.
