@@ -47,6 +47,20 @@ interface ConnectionReadyMessage {
 }
 ```
 
+### Version rejection: `connection-rejected`
+
+If the server rejects the client's version, it responds with:
+
+```typescript
+interface ConnectionRejectedMessage {
+  type: 'connection-rejected'
+  reason: string
+  minimumVersion?: string
+}
+```
+
+On receiving `connection-rejected`, the client should log the reason and shut down cleanly — no reconnection attempts. This applies to both `dust bucket` and `dust loop` processes.
+
 ### Dynamic updates
 
 `tool-definitions` and `repository-list` remain valid standalone messages that the server can push at any time after the handshake to update tools or repositories mid-session. The handshake just guarantees both are present on initial connect.
