@@ -1,6 +1,6 @@
 # Tool Usage Help on Missing Arguments
 
-When an agent calls a non-family tool with no arguments, the CLI should return a formatted help message showing the tool's parameter schema — similar to how tool families already show help when invoked without a sub-tool.
+When a tool is called with no arguments and has required parameters, show a help message with the parameter schema. Tool families already do this; extend it to all tools.
 
 ## Context
 
