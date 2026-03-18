@@ -31,7 +31,7 @@ describe('formatToolsSection', () => {
     expect(result).not.toContain('Parameters:')
   })
 
-  it('formats a tool with required parameters', () => {
+  it('formats a tool with parameters without showing parameter details', () => {
     const tools: ToolDefinition[] = [
       {
         name: 'asset-upload',
@@ -55,12 +55,13 @@ describe('formatToolsSection', () => {
     expect(result).toContain(
       'Upload a file to dustbucket and get a public URL.'
     )
-    expect(result).toContain('Parameters:')
-    expect(result).toContain('- `file` (file, required): The file to upload')
-    expect(result).toContain('Usage: `dust bucket tool asset-upload <file>`')
+    expect(result).toContain('Usage: `dust bucket tool asset-upload`')
+    // Parameter details should NOT be in the prompt
+    expect(result).not.toContain('Parameters:')
+    expect(result).not.toContain('(file, required)')
   })
 
-  it('formats a tool with optional parameters', () => {
+  it('formats a tool with multiple parameters without showing details', () => {
     const tools: ToolDefinition[] = [
       {
         name: 'config',
@@ -86,13 +87,9 @@ describe('formatToolsSection', () => {
 
     const result = formatToolsSection(tools)
 
-    expect(result).toContain(
-      '- `key` (string, required): The configuration key'
-    )
-    expect(result).toContain(
-      '- `value` (string, optional): The value to set (omit to get current value)'
-    )
-    expect(result).toContain('Usage: `dust bucket tool config <key> <value>`')
+    expect(result).toContain('Usage: `dust bucket tool config`')
+    expect(result).not.toContain('Parameters:')
+    expect(result).not.toContain('(string, required)')
   })
 
   it('formats multiple tools', () => {
@@ -125,10 +122,10 @@ describe('formatToolsSection', () => {
     expect(result).toContain('### ping')
     expect(result).toContain('### upload')
     expect(result).toContain('Usage: `dust bucket tool ping`')
-    expect(result).toContain('Usage: `dust bucket tool upload <file>`')
+    expect(result).toContain('Usage: `dust bucket tool upload`')
   })
 
-  it('formats all parameter types correctly', () => {
+  it('omits parameter details from tool prompt', () => {
     const tools: ToolDefinition[] = [
       {
         name: 'test-tool',
@@ -166,10 +163,11 @@ describe('formatToolsSection', () => {
 
     const result = formatToolsSection(tools)
 
-    expect(result).toContain('- `str` (string, required): A string')
-    expect(result).toContain('- `num` (number, required): A number')
-    expect(result).toContain('- `flag` (boolean, optional): A boolean')
-    expect(result).toContain('- `data` (file, optional): A file')
+    expect(result).toContain('### test-tool')
+    expect(result).toContain('Test all parameter types')
+    expect(result).toContain('Usage: `dust bucket tool test-tool`')
+    expect(result).not.toContain('Parameters:')
+    expect(result).not.toContain('(string, required)')
   })
 
   it('formats tool family as summary without sub-tool details', () => {
@@ -298,9 +296,9 @@ describe('formatToolsSection', () => {
     )
     expect(result).not.toContain('### list')
 
-    // Regular tool with parameters
+    // Regular tool with parameters (no parameter details in prompt)
     expect(result).toContain('### upload')
-    expect(result).toContain('Usage: `dust bucket tool upload <file>`')
+    expect(result).toContain('Usage: `dust bucket tool upload`')
   })
 })
 

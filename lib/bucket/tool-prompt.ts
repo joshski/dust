@@ -116,6 +116,8 @@ function formatRevealedToolFamily(tool: ToolDefinition): string {
 
 /**
  * Format a single tool definition for the tools section.
+ * Shows only name, description, and usage hint — the agent discovers
+ * parameter schemas by running the tool without arguments.
  */
 function formatTool(
   tool: ToolDefinition,
@@ -134,19 +136,7 @@ function formatTool(
   lines.push(`### ${tool.name}`)
   lines.push(tool.description)
   lines.push('')
-
-  if (tool.parameters.length > 0) {
-    lines.push('Parameters:')
-    for (const param of tool.parameters) {
-      lines.push(formatParameter(param))
-    }
-    lines.push('')
-  }
-
-  // Build usage example with parameter placeholders
-  const paramPlaceholders = tool.parameters.map(p => `<${p.name}>`).join(' ')
-  const usageArgs = paramPlaceholders ? ` ${paramPlaceholders}` : ''
-  lines.push(`Usage: \`dust bucket tool ${tool.name}${usageArgs}\``)
+  lines.push(`Usage: \`dust bucket tool ${tool.name}\``)
 
   return lines.join('\n')
 }
