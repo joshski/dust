@@ -614,36 +614,25 @@ function feedbackLoopSpeed(): string {
 
     ### 2. Measure Test Suite Timing
 
-    Depending on the test framework:
-
-    - **Vitest**: Run \`npx vitest run --reporter=verbose\` to see per-test timing
-    - **Jest**: Run \`jest --verbose\` or \`jest --json\` for timing data
-    - **Bun test**: Run \`bun test --verbose\` and parse output
-    - **Other frameworks**: Use the framework's timing/verbose output option
-
-    Identify the slowest individual tests by duration.
+    1. Identify the test framework used in this project (examine build config, test config files, or CI configuration)
+    2. Run the test suite with verbose/timing output enabled (most frameworks support this)
+    3. Extract per-test duration data from the output
+    4. Identify the slowest individual tests by duration
 
     ### 3. Measure Type Checking Duration
 
-    \`\`\`bash
-    time npx tsc --noEmit
-    \`\`\`
+    1. Identify the type checking tool used (examine build config or CI configuration)
+    2. Run the type checker and capture execution time using \`time\` or similar
 
     ### 4. Measure Linting Duration
 
-    \`\`\`bash
-    time npx eslint .
-    # or
-    time npx oxlint .
-    \`\`\`
+    1. Identify the linting tools configured for this project
+    2. Run the linter and capture execution time using \`time\` or similar
 
     ### 5. Measure Build Time (if applicable)
 
-    \`\`\`bash
-    time npm run build
-    # or
-    time bun run build
-    \`\`\`
+    1. Identify the build command for this project (examine package.json scripts, Makefile, or CI configuration)
+    2. Run the build and capture execution time using \`time\` or similar
 
     ### 6. Calculate Time Distribution
 
@@ -832,9 +821,9 @@ function securityReview(): string {
     ### 1. Dependency Vulnerability Scanning
 
     Check for one of:
-    - \`npm audit\` / \`yarn audit\` / \`bun audit\` in CI
-    - Dependabot or Renovate configured for security updates
-    - Snyk integration
+    - Package manager audit commands in CI (most package managers include vulnerability scanning)
+    - Dependabot, Renovate, or similar configured for security updates
+    - Snyk, Trivy, or similar security scanning integration
 
     ### 2. Secret Detection
 
@@ -847,15 +836,15 @@ function securityReview(): string {
 
     Check for one of:
     - \`semgrep\` with security rules configured
-    - \`eslint-plugin-security\` for JavaScript/TypeScript
-    - Language-specific security linters
+    - Language-specific security linters (most ecosystems have them)
+    - IDE or CI security scanning integrations
 
     ### 4. Supply Chain Security
 
     Check for one of:
-    - \`socket.dev\` configured for npm packages
+    - Supply chain security tools configured for the project's package manager
     - Package lockfile integrity checks in CI
-    - Dependency review workflows
+    - Dependency review workflows or trusted registry configurations
 
     ### 5. Lightweight Pattern Scan (Supplementary)
 
@@ -1113,11 +1102,11 @@ function slowTests(): string {
 
     ## Analysis Steps
 
-    1. Run the test suite with timing output: \`npm test -- --reporter=verbose\` or equivalent
+    1. Identify the test framework and run the test suite with verbose/timing output enabled
     2. Identify tests taking longer than the threshold (100ms+ for unit, 1s+ for integration)
-    3. Search for \`setTimeout\`, \`sleep\`, \`delay\`, and similar timing patterns in test files
-    4. Look for real I/O: \`fetch\`, \`axios\`, database clients, file system operations without mocks
-    5. Review \`beforeEach\`/\`beforeAll\` blocks for expensive operations
+    3. Search for delay patterns in test files (sleep, timeout, wait functions)
+    4. Look for real I/O: HTTP clients, database clients, file system operations without mocks
+    5. Review test setup blocks for expensive operations
     6. Check test configuration for parallelization settings
 
     ## Output
@@ -1754,10 +1743,10 @@ function testPyramid(): string {
 
     Include execution time per tier, not just test count. A pyramid with 100 unit tests taking 10 seconds each and 10 e2e tests taking 1 second each has problems the count alone wouldn't reveal.
 
-    Guidance on obtaining timing:
-    - For vitest: \`npx vitest run --reporter=json\` provides per-test duration
-    - For jest: \`jest --json\` provides timing data
-    - For bun test: parse verbose output
+    To obtain timing:
+    1. Identify the test framework used in this project
+    2. Run the test suite with JSON or verbose output (most frameworks support timing data)
+    3. Extract per-test duration from the output
 
     ## Analysis Steps
 
