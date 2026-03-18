@@ -89,7 +89,12 @@ export type { IdeaInProgress }
 
 export type ArtifactType = 'ideas' | 'tasks' | 'principles' | 'facts'
 
-const ARTIFACT_TYPES: ArtifactType[] = ['ideas', 'tasks', 'principles', 'facts']
+export const ARTIFACT_TYPES: ArtifactType[] = [
+  'facts',
+  'ideas',
+  'principles',
+  'tasks',
+]
 
 export const DUST_PATH_PREFIX = '.dust/'
 

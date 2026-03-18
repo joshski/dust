@@ -2,10 +2,11 @@
  * Directory structure validation for .dust
  */
 
+import { ARTIFACT_TYPES } from '../../artifacts/index'
 import type { ReadableFileSystem } from '../../filesystem/types'
 import type { Violation } from './types'
 
-const EXPECTED_DIRECTORIES = ['principles', 'ideas', 'tasks', 'facts', 'config']
+const EXPECTED_DIRECTORIES = [...ARTIFACT_TYPES, 'config']
 const EXPECTED_ROOT_FILES = ['repository.md']
 const EXPECTED_CONFIG_FILES = ['settings.json']
 const EXPECTED_CONFIG_DIRECTORIES = ['audits', 'hints', 'agents']

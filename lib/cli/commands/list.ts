@@ -3,6 +3,7 @@
  */
 
 import { basename } from 'node:path'
+import { ARTIFACT_TYPES } from '../../artifacts/index'
 import { parseArtifact } from '../../artifacts/parsed-artifact'
 import { findAllWorkflowTasks } from '../../artifacts/workflow-tasks'
 import {
@@ -42,8 +43,7 @@ function workflowTypeToStatus(
   }
 }
 
-const VALID_TYPES = ['tasks', 'ideas', 'principles', 'facts'] as const
-type ListType = (typeof VALID_TYPES)[number]
+type ListType = (typeof ARTIFACT_TYPES)[number]
 
 const SECTION_HEADERS: Record<ListType, string> = {
   tasks: '📋 Tasks',
@@ -194,10 +194,10 @@ function renderHierarchy(
 
 function parseTypesToList(commandArguments: string[]): ListType[] {
   if (commandArguments.length === 0) {
-    return [...VALID_TYPES]
+    return [...ARTIFACT_TYPES]
   }
   return commandArguments.filter(a =>
-    VALID_TYPES.includes(a as ListType)
+    ARTIFACT_TYPES.includes(a as ListType)
   ) as ListType[]
 }
 
@@ -343,7 +343,7 @@ export async function list(
 
   if (commandArguments.length > 0 && typesToList.length === 0) {
     context.stderr(`Invalid type: ${commandArguments[0]}`)
-    context.stderr(`Valid types: ${VALID_TYPES.join(', ')}`)
+    context.stderr(`Valid types: ${ARTIFACT_TYPES.join(', ')}`)
     return { exitCode: 1 }
   }
 

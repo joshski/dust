@@ -8,6 +8,7 @@
  * Both `lintMarkdown()` and `validatePatch()` share this pipeline.
  */
 
+import { ARTIFACT_TYPES, type ArtifactType } from '../artifacts/index'
 import {
   type ParsedArtifact,
   parseArtifact,
@@ -48,18 +49,15 @@ import type {
 interface ValidationContext {
   artifacts: Map<string, ParsedArtifact>
   byType: {
-    ideas: ParsedArtifact[]
-    tasks: ParsedArtifact[]
-    principles: ParsedArtifact[]
     facts: ParsedArtifact[]
+    ideas: ParsedArtifact[]
+    principles: ParsedArtifact[]
+    tasks: ParsedArtifact[]
   }
   rootFiles: ParsedArtifact[] // Root-level markdown files (e.g., repository.md)
   dustPath: string
   fileSystem: ReadableFileSystem
 }
-
-const CONTENT_DIRS = ['principles', 'facts', 'ideas', 'tasks'] as const
-type ContentDir = (typeof CONTENT_DIRS)[number]
 
 /**
  * Phase 1: Parse artifacts from the filesystem.
@@ -73,10 +71,10 @@ export async function parseArtifacts(
 ): Promise<{ context: ValidationContext; violations: Violation[] }> {
   const artifacts = new Map<string, ParsedArtifact>()
   const byType: ValidationContext['byType'] = {
-    ideas: [],
-    tasks: [],
-    principles: [],
     facts: [],
+    ideas: [],
+    principles: [],
+    tasks: [],
   }
   const rootFiles: ParsedArtifact[] = []
   const violations: Violation[] = []
@@ -113,7 +111,7 @@ export async function parseArtifacts(
   }
 
   // Parse content directory files
-  for (const dir of CONTENT_DIRS) {
+  for (const dir of ARTIFACT_TYPES) {
     const dirPath = `${dustPath}/${dir}`
 
     // Validate content directory files (checks for hidden files, subdirs, non-md files)

@@ -2,6 +2,7 @@
  * dust init - Initialize a new Dust repository
  */
 
+import { ARTIFACT_TYPES } from '../../artifacts/index'
 import {
   type CheckConfig,
   type DustSettings,
@@ -13,7 +14,7 @@ import { getColors } from '../colors'
 import { dedent } from '../dedent'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
 
-const DUST_DIRECTORIES = ['principles', 'ideas', 'tasks', 'facts', 'config']
+const DUST_DIRECTORIES = [...ARTIFACT_TYPES, 'config']
 
 /**
  * Generates starter settings based on detected project type.

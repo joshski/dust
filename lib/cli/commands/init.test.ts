@@ -32,10 +32,10 @@ describe('init command', () => {
     expect(result.exitCode).toBe(0)
     expect(fileSystem.createdDirs).toEqual([
       '/project/.dust',
-      '/project/.dust/principles',
-      '/project/.dust/ideas',
-      '/project/.dust/tasks',
       '/project/.dust/facts',
+      '/project/.dust/ideas',
+      '/project/.dust/principles',
+      '/project/.dust/tasks',
       '/project/.dust/config',
     ])
   })

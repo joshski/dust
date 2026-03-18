@@ -5,6 +5,7 @@
  * structured objects with automatic validation.
  */
 
+import { ARTIFACT_TYPES } from '../artifacts/index'
 import type { ReadableFileSystem } from '../filesystem/types'
 import type { Violation } from '../lint/validators/types'
 import { type ArtifactPatch, validatePatch } from '../validation/index'
@@ -51,8 +52,6 @@ export interface BuildArtifactPatchResult {
 interface ValidatePatchOptions {
   cwd?: string
 }
-
-const CONTENT_DIRS = ['principles', 'facts', 'ideas', 'tasks'] as const
 
 interface PrincipleRelationship {
   slug: string
@@ -318,7 +317,7 @@ async function findReferencesToDeletedPaths(
 ): Promise<Map<string, string>> {
   const updates = new Map<string, string>()
 
-  for (const dir of CONTENT_DIRS) {
+  for (const dir of ARTIFACT_TYPES) {
     const dirPath = `${dustPath}/${dir}`
 
     let entries: string[]
