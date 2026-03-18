@@ -72,44 +72,20 @@ The `branch` field should be optional with backward-compatible behavior:
 - Existing dustbucket servers that don't send `branch` continue to work
 - Existing clients that don't recognize `branch` continue to work (they'll use default)
 
-## Open Questions
+## Design Decisions
 
-### Should the agent prompt mention the target branch?
-
-#### Yes, include branch context in the prompt
+### Agent prompt includes branch context
 
 Add text like "You are working on the `staging` branch" to task prompts. This helps the agent understand context and avoid confusion if it reads commit history or branch names.
 
-#### No, let the agent discover via git commands
+### Validate branch exists on clone
 
-The agent can run `git branch` or `git status` to see which branch it's on. This keeps prompts simpler and avoids potential staleness if the branch changes.
+If the branch doesn't exist, fail the clone immediately with a clear error. This prevents confusion later when the agent tries to work on a non-existent branch. The Actionable Errors principle applies: the error message should explain what branch was requested and that it doesn't exist.
 
-### Should the bucket worker validate the branch exists before starting the loop?
+### Branch changes require repository removal and re-add
 
-#### Yes, validate on clone and fail fast
+If the server changes the target branch for a repository, the worker removes the repository and re-adds it (triggering a fresh clone). This is the safest approach — no local state carries over. The `handleRepositoryList` function in `lib/bucket/repository.ts` already handles repository removal and re-add; branch changes should follow the same pattern.
 
-If the branch doesn't exist, fail the clone immediately with a clear error. This prevents confusion later when the agent tries to work on a non-existent branch.
+### Branch management is out of scope
 
-#### No, let the server handle branch creation
-
-The dustbucket server might intend for the agent to create the branch if it doesn't exist. Failing fast would block this workflow.
-
-### How should branch changes be handled?
-
-#### Require repository removal and re-add
-
-If the server changes the target branch for a repository, the worker removes the repository and re-adds it (triggering a fresh clone). This is the safest approach — no local state carries over.
-
-#### Switch branches in-place with git checkout
-
-When the branch changes, run `git checkout <new-branch>` in the existing clone. Faster but risks dirty state or uncommitted changes causing checkout failures.
-
-### Should feature branches merge back automatically?
-
-#### No, branch management is out of scope
-
-The bucket worker operates on whichever branch the server specifies. Merging is a separate concern handled by the server, CI, or human process.
-
-#### Yes, offer an optional merge-to-main workflow
-
-After completing all tasks on a branch, the worker could merge to the default branch and push. This closes the loop on feature branch workflows but adds complexity.
+The bucket worker operates on whichever branch the server specifies. Merging is a separate concern handled by the server, CI, or human process. This aligns with the principle of keeping components focused and simple.
