@@ -56,6 +56,7 @@ describe('bucket-state', () => {
             {
               name: 'test-repo',
               gitUrl: 'git@github.com:user/test-repo.git',
+              gitSshUrl: 'git@github.com:user/test-repo.git',
               url: 'https://github.com/user/test-repo',
               id: 123,
               hasTask: false,
@@ -120,31 +121,6 @@ describe('bucket-state', () => {
         expect(logMessages).toContain('    url=https://github.com/user/my-repo')
         expect(logMessages).toContain('    hasTask=true')
         expect(logMessages).toContain('    agentProvider=codex')
-      })
-
-      it('logs (none) for missing gitSshUrl', () => {
-        const state: MessageHandlerState = { repositoryNames: [] }
-        const message: RepositoryListMessage = {
-          type: 'repository-list',
-          repositories: [
-            {
-              name: 'https-only',
-              gitUrl: 'https://github.com/user/https-only.git',
-              url: 'https://github.com/user/https-only',
-              id: 789,
-              hasTask: false,
-            },
-          ],
-        }
-
-        const result = handleServerMessage(state, message)
-
-        const logEffects = result.effects.filter(e => e.type === 'log')
-        const logMessages = logEffects.map(e =>
-          e.type === 'log' ? e.message : ''
-        )
-
-        expect(logMessages).toContain('    gitSshUrl=(none)')
       })
 
       it('logs (empty) for empty repository list', () => {

@@ -191,7 +191,7 @@ export function handleServerMessage(
           })
           effects.push({
             type: 'log',
-            message: `    gitSshUrl=${r.gitSshUrl ?? '(none)'}`,
+            message: `    gitSshUrl=${r.gitSshUrl}`,
             stream: 'stdout',
           })
           effects.push({

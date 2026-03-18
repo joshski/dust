@@ -62,7 +62,7 @@ const log = createLogger('dust:bucket:repository')
 export interface Repository {
   name: string
   gitUrl: string
-  gitSshUrl?: string
+  gitSshUrl: string
   url: string
   id: number
   agentProvider?: string
@@ -241,16 +241,14 @@ export function parseRepository(data: unknown): Repository | null {
     if (
       typeof repositoryData.name === 'string' &&
       typeof repositoryData.gitUrl === 'string' &&
+      typeof repositoryData.gitSshUrl === 'string' &&
       typeof repositoryData.url === 'string' &&
       typeof repositoryData.id === 'number'
     ) {
       return {
         name: repositoryData.name,
         gitUrl: repositoryData.gitUrl,
-        gitSshUrl:
-          typeof repositoryData.gitSshUrl === 'string'
-            ? repositoryData.gitSshUrl
-            : undefined,
+        gitSshUrl: repositoryData.gitSshUrl,
         url: repositoryData.url,
         id: repositoryData.id,
         agentProvider:

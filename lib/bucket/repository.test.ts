@@ -152,23 +152,6 @@ describe('parseRepository', () => {
     const repo = parseRepository({
       name: 'my-repo',
       gitUrl: 'https://github.com/user/repo.git',
-      url: 'https://example.com/my-repo',
-      id: 123,
-    })
-    expect(repo).toEqual({
-      name: 'my-repo',
-      gitUrl: 'https://github.com/user/repo.git',
-      gitSshUrl: undefined,
-      url: 'https://example.com/my-repo',
-      id: 123,
-      branch: undefined,
-    })
-  })
-
-  test('parses object with gitSshUrl', () => {
-    const repo = parseRepository({
-      name: 'my-repo',
-      gitUrl: 'https://github.com/user/repo.git',
       gitSshUrl: 'git@github.com:user/repo.git',
       url: 'https://example.com/my-repo',
       id: 123,
@@ -187,6 +170,7 @@ describe('parseRepository', () => {
     const repo = parseRepository({
       name: 'my-repo',
       gitUrl: 'https://github.com/user/repo.git',
+      gitSshUrl: 'git@github.com:user/repo.git',
       url: 'https://example.com/my-repo',
       id: 123,
       branch: 'develop',
@@ -194,7 +178,7 @@ describe('parseRepository', () => {
     expect(repo).toEqual({
       name: 'my-repo',
       gitUrl: 'https://github.com/user/repo.git',
-      gitSshUrl: undefined,
+      gitSshUrl: 'git@github.com:user/repo.git',
       url: 'https://example.com/my-repo',
       id: 123,
       branch: 'develop',
@@ -211,11 +195,23 @@ describe('parseRepository', () => {
     expect(parseRepository({ name: 123, gitUrl: 456 })).toBeNull()
   })
 
+  test('returns null when gitSshUrl is missing', () => {
+    expect(
+      parseRepository({
+        name: 'my-repo',
+        gitUrl: 'https://github.com/user/repo.git',
+        url: 'https://example.com/my-repo',
+        id: 123,
+      })
+    ).toBeNull()
+  })
+
   test('returns null when url is missing or invalid', () => {
     expect(
       parseRepository({
         name: 'my-repo',
         gitUrl: 'https://github.com/user/repo.git',
+        gitSshUrl: 'git@github.com:user/repo.git',
         id: 123,
       })
     ).toBeNull()
@@ -223,6 +219,7 @@ describe('parseRepository', () => {
       parseRepository({
         name: 'my-repo',
         gitUrl: 'https://github.com/user/repo.git',
+        gitSshUrl: 'git@github.com:user/repo.git',
         id: 123,
         url: 123,
       })
@@ -233,6 +230,7 @@ describe('parseRepository', () => {
     const repo = parseRepository({
       name: 'my-repo',
       gitUrl: 'https://github.com/user/repo.git',
+      gitSshUrl: 'git@github.com:user/repo.git',
       url: 'https://example.com/my-repo',
       id: 123,
       agentProvider: 'codex',
@@ -240,7 +238,7 @@ describe('parseRepository', () => {
     expect(repo).toEqual({
       name: 'my-repo',
       gitUrl: 'https://github.com/user/repo.git',
-      gitSshUrl: undefined,
+      gitSshUrl: 'git@github.com:user/repo.git',
       url: 'https://example.com/my-repo',
       id: 123,
       agentProvider: 'codex',
@@ -253,6 +251,7 @@ describe('parseRepository', () => {
       parseRepository({
         name: 'my-repo',
         gitUrl: 'https://github.com/user/repo.git',
+        gitSshUrl: 'git@github.com:user/repo.git',
         url: 'https://example.com/my-repo',
       })
     ).toBeNull()
@@ -260,6 +259,7 @@ describe('parseRepository', () => {
       parseRepository({
         name: 'my-repo',
         gitUrl: 'https://github.com/user/repo.git',
+        gitSshUrl: 'git@github.com:user/repo.git',
         url: 'https://example.com/my-repo',
         id: 'not-a-number',
       })
@@ -272,12 +272,14 @@ describe('shouldRecloneForBranchChange', () => {
     const existing: Repository = {
       name: 'repo',
       gitUrl: 'url',
+      gitSshUrl: 'ssh-url',
       url: 'https://example.com',
       id: 1,
     }
     const incoming: Repository = {
       name: 'repo',
       gitUrl: 'url',
+      gitSshUrl: 'ssh-url',
       url: 'https://example.com',
       id: 1,
     }
@@ -288,6 +290,7 @@ describe('shouldRecloneForBranchChange', () => {
     const existing: Repository = {
       name: 'repo',
       gitUrl: 'url',
+      gitSshUrl: 'ssh-url',
       url: 'https://example.com',
       id: 1,
       branch: 'develop',
@@ -295,6 +298,7 @@ describe('shouldRecloneForBranchChange', () => {
     const incoming: Repository = {
       name: 'repo',
       gitUrl: 'url',
+      gitSshUrl: 'ssh-url',
       url: 'https://example.com',
       id: 1,
       branch: 'develop',
@@ -306,12 +310,14 @@ describe('shouldRecloneForBranchChange', () => {
     const existing: Repository = {
       name: 'repo',
       gitUrl: 'url',
+      gitSshUrl: 'ssh-url',
       url: 'https://example.com',
       id: 1,
     }
     const incoming: Repository = {
       name: 'repo',
       gitUrl: 'url',
+      gitSshUrl: 'ssh-url',
       url: 'https://example.com',
       id: 1,
       branch: 'develop',
@@ -323,6 +329,7 @@ describe('shouldRecloneForBranchChange', () => {
     const existing: Repository = {
       name: 'repo',
       gitUrl: 'url',
+      gitSshUrl: 'ssh-url',
       url: 'https://example.com',
       id: 1,
       branch: 'develop',
@@ -330,6 +337,7 @@ describe('shouldRecloneForBranchChange', () => {
     const incoming: Repository = {
       name: 'repo',
       gitUrl: 'url',
+      gitSshUrl: 'ssh-url',
       url: 'https://example.com',
       id: 1,
     }
@@ -340,6 +348,7 @@ describe('shouldRecloneForBranchChange', () => {
     const existing: Repository = {
       name: 'repo',
       gitUrl: 'url',
+      gitSshUrl: 'ssh-url',
       url: 'https://example.com',
       id: 1,
       branch: 'develop',
@@ -347,6 +356,7 @@ describe('shouldRecloneForBranchChange', () => {
     const incoming: Repository = {
       name: 'repo',
       gitUrl: 'url',
+      gitSshUrl: 'ssh-url',
       url: 'https://example.com',
       id: 1,
       branch: 'staging',
@@ -379,6 +389,7 @@ describe('cloneRepository', () => {
     const repo: Repository = {
       name: 'test-repo',
       gitUrl: 'https://github.com/user/repo.git',
+      gitSshUrl: 'git@github.com:user/repo.git',
       url: 'https://example.com/test-repo',
       id: 1,
     }
@@ -406,21 +417,34 @@ describe('cloneRepository', () => {
     const repo: Repository = {
       name: 'test-repo',
       gitUrl: 'invalid-url',
+      gitSshUrl: 'invalid-ssh-url',
       url: 'https://example.com/test-repo',
       id: 2,
     }
 
     const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
 
-    const proc = processes.get('git clone invalid-url /tmp/test-repo')
-    const stderr = (proc as EventEmitter & { stderr: EventEmitter }).stderr
-    stderr?.emit('data', 'fatal: not a git repository')
-    proc?.emit('close', 128)
+    // HTTPS clone fails
+    const httpsProc = processes.get('git clone invalid-url /tmp/test-repo')
+    const httpsStderr = (httpsProc as EventEmitter & { stderr: EventEmitter })
+      .stderr
+    httpsStderr?.emit('data', 'fatal: not a git repository')
+    httpsProc?.emit('close', 128)
+
+    // Wait for SSH fallback attempt
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    // SSH clone also fails
+    const sshProc = processes.get('git clone invalid-ssh-url /tmp/test-repo')
+    const sshStderr = (sshProc as EventEmitter & { stderr: EventEmitter })
+      .stderr
+    sshStderr?.emit('data', 'SSH authentication failed')
+    sshProc?.emit('close', 128)
 
     const result = await promise
     expect(result).toBe(false)
     expect(context.stderrLines.join('\n')).toContain(
-      'Failed to clone test-repo'
+      'Failed to clone test-repo via SSH'
     )
   })
 
@@ -430,18 +454,27 @@ describe('cloneRepository', () => {
     const repo: Repository = {
       name: 'test-repo',
       gitUrl: 'url',
+      gitSshUrl: 'ssh-url',
       url: 'https://example.com/test-repo',
       id: 3,
     }
 
     const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
 
-    const proc = processes.get('git clone url /tmp/test-repo')
-    proc?.emit('error', new Error('spawn failed'))
+    // HTTPS clone fails with spawn error
+    const httpsProc = processes.get('git clone url /tmp/test-repo')
+    httpsProc?.emit('error', new Error('spawn failed'))
+
+    // Wait for SSH fallback attempt
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    // SSH clone also fails
+    const sshProc = processes.get('git clone ssh-url /tmp/test-repo')
+    sshProc?.emit('error', new Error('SSH spawn failed'))
 
     const result = await promise
     expect(result).toBe(false)
-    expect(context.stderrLines.join('\n')).toContain('spawn failed')
+    expect(context.stderrLines.join('\n')).toContain('SSH spawn failed')
   })
 
   test('falls back to SSH when HTTPS clone fails', async () => {
@@ -534,41 +567,13 @@ describe('cloneRepository', () => {
     )
   })
 
-  test('does not attempt SSH fallback when gitSshUrl is not provided', async () => {
-    const { spawn, calls, processes } = createMockSpawn()
-    const context = createContextEmulator()
-    const repo: Repository = {
-      name: 'test-repo',
-      gitUrl: 'https://github.com/user/repo.git',
-      url: 'https://example.com/test-repo',
-      id: 6,
-    }
-
-    const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
-
-    // Fail the HTTPS clone
-    const httpsProc = processes.get(
-      'git clone https://github.com/user/repo.git /tmp/test-repo'
-    )
-    const httpsStderr = (httpsProc as EventEmitter & { stderr: EventEmitter })
-      .stderr
-    httpsStderr?.emit('data', 'authentication failed')
-    httpsProc?.emit('close', 128)
-
-    const result = await promise
-    expect(result).toBe(false)
-    expect(calls.length).toBe(1)
-    expect(context.stderrLines.join('\n')).toContain(
-      'Failed to clone test-repo: authentication failed'
-    )
-  })
-
   test('passes branch flag to git clone when branch is specified', async () => {
     const { spawn, calls, processes } = createMockSpawn()
     const context = createContextEmulator()
     const repo: Repository = {
       name: 'test-repo',
       gitUrl: 'https://github.com/user/repo.git',
+      gitSshUrl: 'git@github.com:user/repo.git',
       url: 'https://example.com/test-repo',
       id: 7,
       branch: 'develop',
@@ -693,6 +698,7 @@ describe('runRepositoryLoop', () => {
       repository: {
         name: 'repo',
         gitUrl: 'repo',
+        gitSshUrl: 'ssh-repo',
         url: 'https://example.com/repo',
         id: 1,
       },
@@ -723,6 +729,7 @@ describe('runRepositoryLoop', () => {
       repository: {
         name: 'repo',
         gitUrl: 'repo',
+        gitSshUrl: 'ssh-repo',
         url: 'https://example.com/repo',
         id: 1,
       },
@@ -771,6 +778,7 @@ describe('runRepositoryLoop', () => {
       repository: {
         name: 'repo',
         gitUrl: 'repo',
+        gitSshUrl: 'git@example.com:repo.git',
         url: 'https://example.com/repo',
         id: 1,
       },
@@ -821,6 +829,7 @@ describe('runRepositoryLoop', () => {
       repository: {
         name: 'repo',
         gitUrl: 'repo',
+        gitSshUrl: 'ssh-repo',
         url: 'https://example.com/repo',
         id: 1,
       },
@@ -876,6 +885,7 @@ describe('runRepositoryLoop', () => {
       repository: {
         name: 'repo',
         gitUrl: 'repo',
+        gitSshUrl: 'ssh-repo',
         url: 'https://example.com/repo',
         id: 1,
       },
@@ -942,6 +952,7 @@ describe('runRepositoryLoop', () => {
       repository: {
         name: 'repo',
         gitUrl: 'repo',
+        gitSshUrl: 'ssh-repo',
         url: 'https://example.com/repo',
         id: 1,
       },
@@ -1015,6 +1026,7 @@ describe('runRepositoryLoop', () => {
       repository: {
         name: 'repo',
         gitUrl: 'repo',
+        gitSshUrl: 'ssh-repo',
         url: 'https://example.com/repo',
         id: 1,
       },
@@ -1125,6 +1137,7 @@ describe('runRepositoryLoop', () => {
       repository: {
         name: 'repo',
         gitUrl: 'repo',
+        gitSshUrl: 'ssh-repo',
         url: 'https://example.com/repo',
         id: 1,
       },
@@ -1179,6 +1192,7 @@ describe('runRepositoryLoop', () => {
       repository: {
         name: 'repo',
         gitUrl: 'repo',
+        gitSshUrl: 'ssh-repo',
         url: 'https://example.com/repo',
         id: 1,
       },
@@ -1224,6 +1238,7 @@ describe('startRepositoryLoop', () => {
       repository: {
         name: 'repo',
         gitUrl: 'repo',
+        gitSshUrl: 'ssh-repo',
         url: 'https://example.com/repo',
         id: 1,
       },
@@ -1266,6 +1281,7 @@ describe('startRepositoryLoop', () => {
       repository: {
         name: 'repo',
         gitUrl: 'repo',
+        gitSshUrl: 'git@example.com:repo.git',
         url: 'https://example.com/repo',
         id: 1,
       },
@@ -1293,6 +1309,7 @@ describe('startRepositoryLoop', () => {
       repository: {
         name: 'repo',
         gitUrl: 'repo',
+        gitSshUrl: 'ssh-repo',
         url: 'https://example.com/repo',
         id: 1,
       },
@@ -1351,6 +1368,7 @@ describe('startRepositoryLoop', () => {
       repository: {
         name: 'crash-repo',
         gitUrl: 'crash-repo',
+        gitSshUrl: 'ssh-crash-repo',
         url: 'https://example.com/crash-repo',
         id: 1,
       },
@@ -1397,6 +1415,7 @@ describe('startRepositoryLoop', () => {
       repository: {
         name: 'string-crash-repo',
         gitUrl: 'string-crash-repo',
+        gitSshUrl: 'ssh-string-crash-repo',
         url: 'https://example.com/string-crash-repo',
         id: 1,
       },
@@ -1459,6 +1478,7 @@ describe('handleRepositoryList', () => {
       repository: {
         name: 'user/repo',
         gitUrl: 'https://github.com/user/repo.git',
+        gitSshUrl: 'git@github.com:user/repo.git',
         url: 'https://example.com/user/repo',
         id: 1,
       },
@@ -1473,6 +1493,7 @@ describe('handleRepositoryList', () => {
         {
           name: 'user/repo',
           gitUrl: 'https://github.com/user/repo.git',
+          gitSshUrl: 'git@github.com:user/repo.git',
           url: 'https://example.com/user/repo',
           id: 1,
           agentProvider: 'codex',
@@ -1493,6 +1514,7 @@ describe('handleRepositoryList', () => {
         {
           name: 'user/repo',
           gitUrl: 'https://github.com/user/repo.git',
+          gitSshUrl: 'git@github.com:user/repo.git',
           url: 'https://example.com/user/repo',
           id: 1,
           agentProvider: 'codex',
@@ -1519,6 +1541,7 @@ describe('handleRepositoryList', () => {
       repository: {
         name: 'user/repo',
         gitUrl: 'https://github.com/user/repo.git',
+        gitSshUrl: 'git@github.com:user/repo.git',
         url: 'https://example.com/user/repo',
         id: 1,
         agentProvider: 'codex',
@@ -1534,6 +1557,7 @@ describe('handleRepositoryList', () => {
         {
           name: 'user/repo',
           gitUrl: 'https://github.com/user/repo.git',
+          gitSshUrl: 'git@github.com:user/repo.git',
           url: 'https://example.com/user/repo',
           id: 1,
         },
@@ -1559,6 +1583,7 @@ describe('handleRepositoryList', () => {
       repository: {
         name: 'user/repo',
         gitUrl: 'https://github.com/user/repo.git',
+        gitSshUrl: 'git@github.com:user/repo.git',
         url: 'https://example.com/user/repo',
         id: 1,
         agentProvider: 'claude',
@@ -1574,6 +1599,7 @@ describe('handleRepositoryList', () => {
         {
           name: 'user/repo',
           gitUrl: 'https://github.com/user/repo.git',
+          gitSshUrl: 'git@github.com:user/repo.git',
           url: 'https://example.com/user/repo',
           id: 1,
           agentProvider: 'codex',
@@ -1626,6 +1652,7 @@ describe('handleRepositoryList', () => {
         {
           name: 'repo1',
           gitUrl: 'https://github.com/user/repo1.git',
+          gitSshUrl: 'git@github.com:user/repo1.git',
           url: 'https://example.com/repo1',
           id: 1,
         },
@@ -1664,6 +1691,7 @@ describe('handleRepositoryList', () => {
       repository: {
         name: 'old-repo',
         gitUrl: 'old-repo',
+        gitSshUrl: 'ssh-old-repo',
         url: 'https://example.com/old-repo',
         id: 99,
       },
@@ -1704,6 +1732,7 @@ describe('handleRepositoryList', () => {
       repository: {
         name: 'idle-repo',
         gitUrl: 'idle-repo',
+        gitSshUrl: 'ssh-idle-repo',
         url: 'https://example.com/idle-repo',
         id: 99,
       },
@@ -1756,6 +1785,7 @@ describe('handleRepositoryList', () => {
       repository: {
         name: 'user/repo',
         gitUrl: 'https://github.com/user/repo.git',
+        gitSshUrl: 'git@github.com:user/repo.git',
         url: 'https://example.com/user/repo',
         id: 1,
         branch: undefined,
@@ -1781,6 +1811,7 @@ describe('handleRepositoryList', () => {
         {
           name: 'user/repo',
           gitUrl: 'https://github.com/user/repo.git',
+          gitSshUrl: 'git@github.com:user/repo.git',
           url: 'https://example.com/user/repo',
           id: 1,
           branch: 'develop',
@@ -1838,6 +1869,7 @@ describe('handleRepositoryList', () => {
       repository: {
         name: 'user/repo',
         gitUrl: 'https://github.com/user/repo.git',
+        gitSshUrl: 'git@github.com:user/repo.git',
         url: 'https://example.com/user/repo',
         id: 1,
         branch: 'develop',
@@ -1863,6 +1895,7 @@ describe('handleRepositoryList', () => {
         {
           name: 'user/repo',
           gitUrl: 'https://github.com/user/repo.git',
+          gitSshUrl: 'git@github.com:user/repo.git',
           url: 'https://example.com/user/repo',
           id: 1,
         },
@@ -1907,6 +1940,7 @@ describe('addRepository', () => {
       repository: {
         name: 'repo',
         gitUrl: 'repo',
+        gitSshUrl: 'ssh-repo',
         url: 'https://example.com/repo',
         id: 1,
       },
@@ -1926,7 +1960,13 @@ describe('addRepository', () => {
     })
 
     await addRepository(
-      { name: 'repo', gitUrl: 'repo', url: 'https://example.com/repo', id: 1 },
+      {
+        name: 'repo',
+        gitUrl: 'repo',
+        gitSshUrl: 'git@example.com:repo.git',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
       manager,
       repoDeps,
       context
@@ -1980,6 +2020,7 @@ describe('addRepository', () => {
       {
         name: 'stale-repo',
         gitUrl: 'stale-repo',
+        gitSshUrl: 'git@example.com:stale-repo.git',
         url: 'https://example.com/stale-repo',
         id: 1,
       },
@@ -2013,6 +2054,7 @@ describe('addRepository', () => {
       {
         name: 'fail-repo',
         gitUrl: 'bad-url',
+        gitSshUrl: 'git@example.com:fail-repo.git',
         url: 'https://example.com/fail-repo',
         id: 2,
       },
@@ -2023,10 +2065,24 @@ describe('addRepository', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    const cloneProc = processes.get('git clone bad-url /tmp/fail-repo')
-    const stderr = (cloneProc as EventEmitter & { stderr: EventEmitter }).stderr
-    stderr?.emit('data', 'clone error')
-    cloneProc?.emit('close', 128)
+    // HTTPS clone fails
+    const httpsProc = processes.get('git clone bad-url /tmp/fail-repo')
+    const httpsStderr = (httpsProc as EventEmitter & { stderr: EventEmitter })
+      .stderr
+    httpsStderr?.emit('data', 'clone error')
+    httpsProc?.emit('close', 128)
+
+    // Wait for SSH fallback attempt
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    // SSH clone also fails
+    const sshProc = processes.get(
+      'git clone git@example.com:fail-repo.git /tmp/fail-repo'
+    )
+    const sshStderr = (sshProc as EventEmitter & { stderr: EventEmitter })
+      .stderr
+    sshStderr?.emit('data', 'SSH clone error')
+    sshProc?.emit('close', 128)
 
     await addPromise
 
@@ -2066,6 +2122,7 @@ describe('removeRepositoryFromManager', () => {
       repository: {
         name: 'running-repo',
         gitUrl: 'running-repo',
+        gitSshUrl: 'ssh-running-repo',
         url: 'https://example.com/running-repo',
         id: 1,
       },
@@ -2119,6 +2176,7 @@ describe('removeRepositoryFromManager', () => {
       repository: {
         name: 'idle-repo',
         gitUrl: 'idle-repo',
+        gitSshUrl: 'ssh-idle-repo',
         url: 'https://example.com/idle-repo',
         id: 1,
       },

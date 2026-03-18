@@ -137,6 +137,9 @@ function parseRepositoryItem(r: unknown): RepositoryListItem | null {
   if (typeof repo.name !== 'string' || typeof repo.gitUrl !== 'string') {
     return null
   }
+  if (typeof repo.gitSshUrl !== 'string') {
+    return null
+  }
   if (
     typeof repo.id !== 'number' ||
     typeof repo.url !== 'string' ||
@@ -148,11 +151,9 @@ function parseRepositoryItem(r: unknown): RepositoryListItem | null {
     id: repo.id,
     name: repo.name,
     gitUrl: repo.gitUrl,
+    gitSshUrl: repo.gitSshUrl,
     url: repo.url,
     hasTask: repo.hasTask,
-  }
-  if (typeof repo.gitSshUrl === 'string') {
-    item.gitSshUrl = repo.gitSshUrl
   }
   if (typeof repo.agentProvider === 'string') {
     item.agentProvider = repo.agentProvider

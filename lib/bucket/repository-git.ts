@@ -61,7 +61,7 @@ export async function cloneRepository(
   repository: {
     name: string
     gitUrl: string
-    gitSshUrl?: string
+    gitSshUrl: string
     branch?: string
   },
   targetPath: string,
@@ -79,26 +79,22 @@ export async function cloneRepository(
     return true
   }
 
-  if (repository.gitSshUrl) {
-    context.stderr(
-      `HTTPS clone failed for ${repository.name}, trying SSH: ${httpsResult.stderr}`
-    )
-    const sshResult = await cloneWithUrl(
-      repository.gitSshUrl,
-      targetPath,
-      spawn,
-      repository.branch
-    )
-    if (sshResult.success) {
-      return true
-    }
-    context.stderr(
-      `Failed to clone ${repository.name} via SSH: ${sshResult.stderr}`
-    )
-    return false
+  // HTTPS clone failed, try SSH fallback
+  context.stderr(
+    `HTTPS clone failed for ${repository.name}, trying SSH: ${httpsResult.stderr}`
+  )
+  const sshResult = await cloneWithUrl(
+    repository.gitSshUrl,
+    targetPath,
+    spawn,
+    repository.branch
+  )
+  if (sshResult.success) {
+    return true
   }
-
-  context.stderr(`Failed to clone ${repository.name}: ${httpsResult.stderr}`)
+  context.stderr(
+    `Failed to clone ${repository.name} via SSH: ${sshResult.stderr}`
+  )
   return false
 }
 

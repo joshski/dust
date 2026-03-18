@@ -153,6 +153,7 @@ describe('bucket worker RPC integration', () => {
               id: 1,
               name: 'test-repo',
               gitUrl: `file://${testRepoDir}`,
+              gitSshUrl: `file://${testRepoDir}`,
               url: 'http://localhost/test-repo',
               hasTask: true,
             },

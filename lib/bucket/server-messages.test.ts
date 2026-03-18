@@ -10,6 +10,7 @@ describe('parseServerMessage', () => {
           {
             name: 'test-repo',
             gitUrl: 'git@github.com:user/test-repo.git',
+            gitSshUrl: 'git@github.com:user/test-repo.git',
             url: 'https://github.com/user/test-repo',
             id: 123,
             hasTask: true,
@@ -23,6 +24,7 @@ describe('parseServerMessage', () => {
           {
             name: 'test-repo',
             gitUrl: 'git@github.com:user/test-repo.git',
+            gitSshUrl: 'git@github.com:user/test-repo.git',
             url: 'https://github.com/user/test-repo',
             id: 123,
             hasTask: true,
@@ -38,6 +40,7 @@ describe('parseServerMessage', () => {
           {
             name: 'minimal-repo',
             gitUrl: 'git@github.com:user/minimal.git',
+            gitSshUrl: 'git@github.com:user/minimal.git',
             url: 'https://example.com/minimal',
             hasTask: false,
           },
@@ -53,6 +56,7 @@ describe('parseServerMessage', () => {
           {
             name: 'minimal-repo',
             gitUrl: 'git@github.com:user/minimal.git',
+            gitSshUrl: 'git@github.com:user/minimal.git',
             id: 701,
             hasTask: false,
           },
@@ -68,6 +72,7 @@ describe('parseServerMessage', () => {
           {
             name: 'minimal-repo',
             gitUrl: 'git@github.com:user/minimal.git',
+            gitSshUrl: 'git@github.com:user/minimal.git',
             id: 701,
             url: 'https://example.com/minimal',
           },
@@ -118,7 +123,7 @@ describe('parseServerMessage', () => {
       })
     })
 
-    it('omits gitSshUrl when absent', () => {
+    it('returns null when gitSshUrl is missing', () => {
       const data = {
         type: 'repository-list',
         repositories: [
@@ -131,11 +136,7 @@ describe('parseServerMessage', () => {
           },
         ],
       }
-      const result = parseServerMessage(data)
-      // Verify the key is not present (not just undefined)
-      const repo = (result as { repositories: { gitSshUrl?: string }[] })
-        .repositories[0]
-      expect('gitSshUrl' in repo).toBe(false)
+      expect(parseServerMessage(data)).toBeNull()
     })
 
     it('parses agentProvider when present', () => {
@@ -145,6 +146,7 @@ describe('parseServerMessage', () => {
           {
             name: 'codex-repo',
             gitUrl: 'git@github.com:user/codex-repo.git',
+            gitSshUrl: 'git@github.com:user/codex-repo.git',
             url: 'https://github.com/user/codex-repo',
             id: 456,
             hasTask: false,
@@ -159,6 +161,7 @@ describe('parseServerMessage', () => {
           {
             name: 'codex-repo',
             gitUrl: 'git@github.com:user/codex-repo.git',
+            gitSshUrl: 'git@github.com:user/codex-repo.git',
             url: 'https://github.com/user/codex-repo',
             id: 456,
             hasTask: false,
@@ -175,6 +178,7 @@ describe('parseServerMessage', () => {
           {
             name: 'claude-repo',
             gitUrl: 'git@github.com:user/claude-repo.git',
+            gitSshUrl: 'git@github.com:user/claude-repo.git',
             url: 'https://github.com/user/claude-repo',
             id: 789,
             hasTask: true,
@@ -188,6 +192,7 @@ describe('parseServerMessage', () => {
           {
             name: 'claude-repo',
             gitUrl: 'git@github.com:user/claude-repo.git',
+            gitSshUrl: 'git@github.com:user/claude-repo.git',
             url: 'https://github.com/user/claude-repo',
             id: 789,
             hasTask: true,

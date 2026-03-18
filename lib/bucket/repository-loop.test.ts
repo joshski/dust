@@ -211,6 +211,7 @@ describe('createWakeUpHandler', () => {
       repository: {
         name: 'test',
         gitUrl: 'test',
+        gitSshUrl: 'ssh-test',
         url: 'https://example.com/test',
         id: 1,
       },
@@ -400,6 +401,7 @@ describe('createAgentEventHandler', () => {
       repository: {
         name: 'test',
         gitUrl: 'test',
+        gitSshUrl: 'ssh-test',
         url: 'https://example.com/test',
         id: 1,
       },
@@ -524,6 +526,7 @@ describe('setupFallbackTimeout', () => {
       repository: {
         name: 'test',
         gitUrl: 'test',
+        gitSshUrl: 'ssh-test',
         url: 'https://example.com/test',
         id: 1,
       },
@@ -570,6 +573,7 @@ describe('runRepositoryLoop', () => {
       repository: {
         name: 'test-repo',
         gitUrl: 'git@example.com:test/repo.git',
+        gitSshUrl: 'git@example.com:test/repo.git',
         url: 'https://example.com/test/repo',
         id: 1,
         agentProvider,
