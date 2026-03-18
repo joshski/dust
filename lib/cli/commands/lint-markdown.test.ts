@@ -2924,6 +2924,98 @@ describe('validateIdeaTransitionTitle', () => {
     )
     expect(violation).toBeNull()
   })
+
+  test('returns null for capture-style expedite task with Idea Description section', () => {
+    const content = `# Expedite Idea: New Feature
+
+Research this idea briefly.
+
+## Idea Description
+
+Add a new feature that does something useful.
+
+## Blocked By
+
+(none)
+`
+    const fileSystem = createFileSystemEmulator()
+    const artifact = parseArtifact(
+      '/project/.dust/tasks/expedite-idea-new-feature.md',
+      content
+    )
+    const violation = validateIdeaTransitionTitle(
+      artifact,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violation).toBeNull()
+  })
+
+  test('returns null for transition-style expedite task when idea file exists', () => {
+    const content = `# Expedite Idea: My Great Idea
+
+Research this idea briefly.
+
+## Expedites Idea
+
+- [My Great Idea](../ideas/my-great-idea.md)
+
+## Blocked By
+
+(none)
+`
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-great-idea.md': '# My Great Idea\n\nAn idea.' },
+        },
+      },
+    })
+    const artifact = parseArtifact(
+      '/project/.dust/tasks/expedite-idea-my-great-idea.md',
+      content
+    )
+    const violation = validateIdeaTransitionTitle(
+      artifact,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violation).toBeNull()
+  })
+
+  test('returns violation for transition-style expedite task when idea file does not exist', () => {
+    const content = `# Expedite Idea: Nonexistent Idea
+
+Research this idea briefly.
+
+## Expedites Idea
+
+- [Nonexistent Idea](../ideas/nonexistent-idea.md)
+
+## Blocked By
+
+(none)
+`
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+        },
+      },
+    })
+    const artifact = parseArtifact(
+      '/project/.dust/tasks/expedite-idea-nonexistent-idea.md',
+      content
+    )
+    const violation = validateIdeaTransitionTitle(
+      artifact,
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violation).not.toBeNull()
+    expect(violation?.message).toContain('Nonexistent Idea')
+    expect(violation?.message).toContain('nonexistent-idea.md')
+  })
 })
 
 describe('IDEA_TRANSITION_PREFIXES', () => {

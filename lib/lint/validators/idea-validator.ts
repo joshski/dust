@@ -175,6 +175,17 @@ export function validateIdeaTransitionTitle(
 
   for (const prefix of IDEA_TRANSITION_PREFIXES) {
     if (title.startsWith(prefix)) {
+      // Capture-style expedite tasks have "## Idea Description" instead of referencing
+      // an existing idea file. Skip the file existence check for these.
+      if (prefix === 'Expedite Idea: ') {
+        const hasIdeaDescriptionSection = artifact.sections.some(
+          s => s.heading === 'Idea Description' && s.level === 2
+        )
+        if (hasIdeaDescriptionSection) {
+          return null
+        }
+      }
+
       const ideaTitle = title.slice(prefix.length)
       const ideaFilename = titleToFilename(ideaTitle)
       if (!fileSystem.exists(`${ideasPath}/${ideaFilename}`)) {
