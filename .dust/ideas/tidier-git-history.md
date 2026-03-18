@@ -13,7 +13,6 @@ The [Traceable Decisions](../principles/traceable-decisions.md) principle emphas
 Some users want clean commit history with only "real" code changes. They see task deletions as process artifacts that don't belong in the permanent record. Other users value the traceability that comes from seeing the full development story.
 
 This is related to but distinct from:
-- [Decouple Loop from Git](decouple-loop-from-git.md) — abstracting VCS dependencies
 - [History Tools](history-tools.md) — traversing history to retrieve deleted tasks
 - [Mention dust in commit messages](mention-dust-in-commit-messages.md) — identifying dust-aware commits
 
