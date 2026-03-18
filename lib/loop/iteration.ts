@@ -23,6 +23,17 @@ import { createPostEvent } from './wire-events'
 
 const log = createLogger('dust:loop:iteration')
 
+export const DUST_QUICK_REFERENCE = `## Dust Quick Reference
+
+Dust stores project context in \`.dust/\` as markdown artifacts. Use these commands to explore:
+
+- \`dust ideas\` — list ideas for future work
+- \`dust principles\` — show guiding values and design constraints
+- \`dust facts\` — show current state documentation
+- \`dust help\` — see all available commands
+
+Use dust commands instead of manually searching \`.dust/\` directories.`
+
 function getEnvironmentContext(cwd: string): {
   machineName: string
   cwd: string
@@ -455,7 +466,7 @@ Please resolve this issue. Common approaches:
 Make sure the repository is in a clean state and synced with remote before finishing.`
 }
 
-function buildTaskPrompt(
+export function buildTaskPrompt(
   taskPath: string,
   taskContent: string,
   instructions: string,
@@ -467,6 +478,8 @@ function buildTaskPrompt(
 ----------
 ${taskContent}
 ----------
+
+${DUST_QUICK_REFERENCE}
 
 ## How to implement the task
 

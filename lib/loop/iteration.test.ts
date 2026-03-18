@@ -12,7 +12,9 @@ import type { CommandDependencies } from '../cli/types'
 import type { LoopEmitFn } from './events'
 import type { LoopEvent } from './events'
 import {
+  buildTaskPrompt,
   createDefaultDependencies,
+  DUST_QUICK_REFERENCE,
   findAvailableTasks,
   type LoopDependencies,
   runOneIteration,
@@ -1233,6 +1235,98 @@ Usage: \`dust bucket tool asset-upload <file>\``
     expect(result).toBe('ran_check_fix')
     expect(context.stderrLines.join('\n')).toContain(
       'string error from fix agent'
+    )
+  })
+})
+
+describe('buildTaskPrompt', () => {
+  test('includes DUST_QUICK_REFERENCE in the prompt', () => {
+    const prompt = buildTaskPrompt(
+      '.dust/tasks/task.md',
+      '# Task\n\nDo something.',
+      'Implementation instructions here.',
+      ''
+    )
+
+    expect(prompt).toContain('## Dust Quick Reference')
+    expect(prompt).toContain('dust ideas')
+    expect(prompt).toContain('dust principles')
+    expect(prompt).toContain('dust facts')
+    expect(prompt).toContain('dust help')
+    expect(prompt).toContain(
+      'Use dust commands instead of manually searching `.dust/` directories'
+    )
+  })
+
+  test('places guide between task content and implementation instructions', () => {
+    const prompt = buildTaskPrompt(
+      '.dust/tasks/task.md',
+      '# Task\n\nDo something.',
+      'Implementation instructions here.',
+      ''
+    )
+
+    const taskContentEnd = prompt.indexOf(
+      '----------\n\n## Dust Quick Reference'
+    )
+    const guideStart = prompt.indexOf('## Dust Quick Reference')
+    const implStart = prompt.indexOf('## How to implement the task')
+
+    expect(taskContentEnd).toBeGreaterThan(-1)
+    expect(guideStart).toBeGreaterThan(-1)
+    expect(implStart).toBeGreaterThan(-1)
+    expect(guideStart).toBeLessThan(implStart)
+  })
+
+  test('includes tools section after implementation instructions', () => {
+    const toolsSection = `## Available Tools
+
+### asset-upload
+Upload a file.`
+
+    const prompt = buildTaskPrompt(
+      '.dust/tasks/task.md',
+      '# Task',
+      'Instructions.',
+      toolsSection
+    )
+
+    const implStart = prompt.indexOf('## How to implement the task')
+    const toolsStart = prompt.indexOf('## Available Tools')
+
+    expect(toolsStart).toBeGreaterThan(implStart)
+  })
+
+  test('does not add tools section when empty', () => {
+    const prompt = buildTaskPrompt(
+      '.dust/tasks/task.md',
+      '# Task',
+      'Instructions.',
+      ''
+    )
+
+    expect(prompt).not.toContain('## Available Tools')
+    expect(prompt.endsWith('\n\n')).toBe(false)
+  })
+})
+
+describe('DUST_QUICK_REFERENCE', () => {
+  test('contains key dust commands', () => {
+    expect(DUST_QUICK_REFERENCE).toContain('dust ideas')
+    expect(DUST_QUICK_REFERENCE).toContain('dust principles')
+    expect(DUST_QUICK_REFERENCE).toContain('dust facts')
+    expect(DUST_QUICK_REFERENCE).toContain('dust help')
+  })
+
+  test('includes negative guidance about manual searching', () => {
+    expect(DUST_QUICK_REFERENCE).toContain(
+      'Use dust commands instead of manually searching `.dust/` directories'
+    )
+  })
+
+  test('explains what dust is', () => {
+    expect(DUST_QUICK_REFERENCE).toContain(
+      'Dust stores project context in `.dust/` as markdown artifacts'
     )
   })
 })
