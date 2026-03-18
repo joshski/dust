@@ -26,7 +26,6 @@ Currently, there is no easy way to identify whether a commit was made in a dust-
 ### Related ideas
 
 - [Commit Log Observations](commit-log-observations.md) — Extracting patterns from commit messages
-- [Catch mistakes in commit history](catch-mistakes-in-commit-history.md) — Detecting suspicious changes in git history
 - [History Tools](history-tools.md) — Traversing commit history to retrieve deleted tasks
 
 ## Possible approaches

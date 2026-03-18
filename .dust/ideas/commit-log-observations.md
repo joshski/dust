@@ -10,10 +10,8 @@ Git commit logs are a durable record of what agents discovered and decided. A sc
 
 This idea focuses on the *read side* of commit message analysis:
 
-- [Executive Decision Logging](executive-decision-logging.md) — the write side: encouraging agents to log decisions in commits
 - [Mention dust in commit messages](mention-dust-in-commit-messages.md) — identifying which commits came from dust sessions
 - [History Tools](history-tools.md) — traversing commit history to retrieve deleted tasks
-- [Catch mistakes in commit history](catch-mistakes-in-commit-history.md) — detecting suspicious changes
 
 Together these form a feedback loop:
 1. Agents log observations and decisions in commits
