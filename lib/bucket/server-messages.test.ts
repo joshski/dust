@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { parseServerMessage } from './server-messages'
+import {
+  buildConnectionInitPayload,
+  parseServerMessage,
+} from './server-messages'
 
 describe('parseServerMessage', () => {
   describe('repository-list messages', () => {
@@ -869,6 +872,148 @@ describe('parseServerMessage', () => {
     })
   })
 
+  describe('connection-ready messages', () => {
+    it('parses a valid connection-ready message', () => {
+      const data = {
+        type: 'connection-ready',
+        tools: [
+          {
+            name: 'upload',
+            description: 'Upload a file',
+            endpoint: '/api/upload',
+            method: 'POST',
+            parameters: [],
+          },
+        ],
+        repositories: [
+          {
+            name: 'repo1',
+            gitUrl: 'git@github.com:user/repo1.git',
+            gitSshUrl: 'git@github.com:user/repo1.git',
+            url: 'https://github.com/user/repo1',
+            id: 1,
+            hasTask: true,
+          },
+        ],
+      }
+      const result = parseServerMessage(data)
+      expect(result).toEqual({
+        type: 'connection-ready',
+        tools: [
+          {
+            name: 'upload',
+            description: 'Upload a file',
+            endpoint: '/api/upload',
+            method: 'POST',
+            parameters: [],
+          },
+        ],
+        repositories: [
+          {
+            name: 'repo1',
+            gitUrl: 'git@github.com:user/repo1.git',
+            gitSshUrl: 'git@github.com:user/repo1.git',
+            url: 'https://github.com/user/repo1',
+            id: 1,
+            hasTask: true,
+          },
+        ],
+      })
+    })
+
+    it('parses connection-ready with empty tools and repositories', () => {
+      const data = {
+        type: 'connection-ready',
+        tools: [],
+        repositories: [],
+      }
+      const result = parseServerMessage(data)
+      expect(result).toEqual({
+        type: 'connection-ready',
+        tools: [],
+        repositories: [],
+      })
+    })
+
+    it('returns null for connection-ready with missing tools', () => {
+      const data = {
+        type: 'connection-ready',
+        repositories: [],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for connection-ready with missing repositories', () => {
+      const data = {
+        type: 'connection-ready',
+        tools: [],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for connection-ready with invalid tool', () => {
+      const data = {
+        type: 'connection-ready',
+        tools: [{ name: 'bad' }],
+        repositories: [],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for connection-ready with invalid repository', () => {
+      const data = {
+        type: 'connection-ready',
+        tools: [],
+        repositories: [{ name: 'bad' }],
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+  })
+
+  describe('connection-rejected messages', () => {
+    it('parses a valid connection-rejected message', () => {
+      const data = {
+        type: 'connection-rejected',
+        reason: 'Version too old',
+      }
+      const result = parseServerMessage(data)
+      expect(result).toEqual({
+        type: 'connection-rejected',
+        reason: 'Version too old',
+      })
+    })
+
+    it('parses connection-rejected with minimumVersion', () => {
+      const data = {
+        type: 'connection-rejected',
+        reason: 'Upgrade required',
+        minimumVersion: '1.0.0',
+      }
+      const result = parseServerMessage(data)
+      expect(result).toEqual({
+        type: 'connection-rejected',
+        reason: 'Upgrade required',
+        minimumVersion: '1.0.0',
+      })
+    })
+
+    it('returns null for connection-rejected with missing reason', () => {
+      const data = {
+        type: 'connection-rejected',
+        minimumVersion: '1.0.0',
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+
+    it('returns null for connection-rejected with non-string reason', () => {
+      const data = {
+        type: 'connection-rejected',
+        reason: 123,
+      }
+      expect(parseServerMessage(data)).toBeNull()
+    })
+  })
+
   describe('invalid messages', () => {
     it('returns null for null', () => {
       expect(parseServerMessage(null)).toBeNull()
@@ -904,5 +1049,49 @@ describe('parseServerMessage', () => {
       }
       expect(parseServerMessage(data)).toBeNull()
     })
+  })
+})
+
+describe('buildConnectionInitPayload', () => {
+  it('builds a connection-init message with all fields', () => {
+    const result = buildConnectionInitPayload(
+      '0.1.0',
+      'darwin 23.0.0',
+      'git@github.com:user/repo.git',
+      [{ agentType: 'claude', models: ['opus', 'sonnet'] }]
+    )
+    expect(result).toEqual({
+      type: 'connection-init',
+      dustVersion: '0.1.0',
+      platform: 'darwin 23.0.0',
+      gitRemote: 'git@github.com:user/repo.git',
+      agents: [{ agentType: 'claude', models: ['opus', 'sonnet'] }],
+    })
+  })
+
+  it('omits gitRemote when undefined', () => {
+    const result = buildConnectionInitPayload(
+      '0.1.0',
+      'linux 5.0.0',
+      undefined,
+      []
+    )
+    expect(result).toEqual({
+      type: 'connection-init',
+      dustVersion: '0.1.0',
+      platform: 'linux 5.0.0',
+      agents: [],
+    })
+    expect('gitRemote' in result).toBe(false)
+  })
+
+  it('includes empty agents array', () => {
+    const result = buildConnectionInitPayload(
+      '1.0.0',
+      'win32 10.0',
+      undefined,
+      []
+    )
+    expect(result.agents).toEqual([])
   })
 })

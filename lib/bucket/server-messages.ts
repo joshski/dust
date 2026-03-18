@@ -3,6 +3,7 @@
  */
 
 import type { Repository } from './repository'
+import type { AgentCapability } from './agent-capabilities'
 
 export interface RepositoryListMessage {
   type: 'repository-list'
@@ -39,10 +40,46 @@ export interface ToolDefinitionsMessage {
   tools: ToolDefinition[]
 }
 
+// --- Connection Handshake Messages ---
+
+/**
+ * Sent by client on connect to initiate the handshake.
+ * Includes version, platform, git remote, and agent capabilities.
+ */
+export interface ConnectionInitMessage {
+  type: 'connection-init'
+  dustVersion: string
+  platform: string
+  gitRemote?: string
+  agents: AgentCapability[]
+}
+
+/**
+ * Sent by server to confirm connection is ready.
+ * Includes tools and repositories atomically.
+ */
+export interface ConnectionReadyMessage {
+  type: 'connection-ready'
+  tools: ToolDefinition[]
+  repositories: RepositoryListItem[]
+}
+
+/**
+ * Sent by server to reject connection.
+ * Client should log the reason and shut down without reconnecting.
+ */
+export interface ConnectionRejectedMessage {
+  type: 'connection-rejected'
+  reason: string
+  minimumVersion?: string
+}
+
 export type ServerMessage =
   | RepositoryListMessage
   | TaskAvailableMessage
   | ToolDefinitionsMessage
+  | ConnectionReadyMessage
+  | ConnectionRejectedMessage
 
 function parseParameter(p: unknown): ToolParameter | null {
   if (typeof p !== 'object' || p === null) {
@@ -204,12 +241,55 @@ function parseToolDefinitions(
   return { type: 'tool-definitions', tools }
 }
 
+function parseConnectionReady(
+  message: Record<string, unknown>
+): ConnectionReadyMessage | null {
+  if (!Array.isArray(message.tools) || !Array.isArray(message.repositories)) {
+    return null
+  }
+  const tools: ToolDefinition[] = []
+  for (const t of message.tools) {
+    const tool = parseTool(t, true)
+    if (tool === null) {
+      return null
+    }
+    tools.push(tool)
+  }
+  const repositories: RepositoryListItem[] = []
+  for (const r of message.repositories) {
+    const item = parseRepositoryItem(r)
+    if (item === null) {
+      return null
+    }
+    repositories.push(item)
+  }
+  return { type: 'connection-ready', tools, repositories }
+}
+
+function parseConnectionRejected(
+  message: Record<string, unknown>
+): ConnectionRejectedMessage | null {
+  if (typeof message.reason !== 'string') {
+    return null
+  }
+  const result: ConnectionRejectedMessage = {
+    type: 'connection-rejected',
+    reason: message.reason,
+  }
+  if (typeof message.minimumVersion === 'string') {
+    result.minimumVersion = message.minimumVersion
+  }
+  return result
+}
+
 type MessageParser = (message: Record<string, unknown>) => ServerMessage | null
 
 const messageParsers: Record<string, MessageParser> = {
   'repository-list': parseRepositoryList,
   'task-available': parseTaskAvailable,
   'tool-definitions': parseToolDefinitions,
+  'connection-ready': parseConnectionReady,
+  'connection-rejected': parseConnectionRejected,
 }
 
 /**
@@ -230,4 +310,28 @@ export function parseServerMessage(data: unknown): ServerMessage | null {
 
   const parser = messageParsers[messageType]
   return parser ? parser(message) : null
+}
+
+// --- Connection Init Builder (Pure Function) ---
+
+/**
+ * Build a ConnectionInitMessage payload.
+ * Pure function - no side effects.
+ */
+export function buildConnectionInitPayload(
+  dustVersion: string,
+  platform: string,
+  gitRemote: string | undefined,
+  agents: AgentCapability[]
+): ConnectionInitMessage {
+  const message: ConnectionInitMessage = {
+    type: 'connection-init',
+    dustVersion,
+    platform,
+    agents,
+  }
+  if (gitRemote !== undefined) {
+    message.gitRemote = gitRemote
+  }
+  return message
 }

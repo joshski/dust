@@ -50,7 +50,7 @@ import {
   type WebSocketLike,
   WS_OPEN,
 } from '../../bucket/events'
-import { type AgentCapabilitiesMessage } from '../../bucket/agent-capabilities'
+import type { ConnectionInitMessage } from '../../bucket/server-messages'
 import {
   appendLogLine,
   createLogBuffer,
@@ -126,7 +126,7 @@ const DEFAULT_DUSTBUCKET_WS_URL = 'wss://dustbucket.com/agent/connect'
 export interface BucketDependencies {
   spawn: typeof nodeSpawn
   createWebSocket: (url: string, token: string) => WebSocketLike
-  discoverAgentCapabilities: () => Promise<AgentCapabilitiesMessage>
+  buildConnectionInit: () => Promise<ConnectionInitMessage>
   setupKeypress: (onKey: (key: string) => void) => () => void
   setupSignals: (onSignal: () => void) => () => void
   setupResize: (onResize: (width: number, height: number) => void) => () => void
@@ -519,14 +519,14 @@ export function connectWebSocket(
   useTUI: boolean,
   connectedWs?: WebSocketLike,
   onToolExecutionResult?: (message: ToolExecutionResultMessage) => void,
-  forwardToolExecution?: RepositoryDependencies['forwardToolExecution']
+  forwardToolExecution?: RepositoryDependencies['forwardToolExecution'],
+  onConnectionRejected?: (reason: string) => void
 ): void {
   if (state.shuttingDown) return
 
   const wsUrl = getWebSocketUrl(bucketDependencies.bucket)
-  const pendingServerMessages: Array<{ data: string }> = []
-  let waitingForAgentCapabilities = false
-  let readyToProcessServerMessages = false
+  let waitingForConnectionReady = false
+  let connectionReady = false
 
   const processIncomingServerMessage = (event: { data: string }): void => {
     let rawData: unknown
@@ -541,6 +541,7 @@ export function connectWebSocket(
         bucketDependencies,
         fileSystem,
         forwardToolExecution,
+        onConnectionRejected,
       })
       return
     }
@@ -560,7 +561,20 @@ export function connectWebSocket(
         bucketDependencies,
         fileSystem,
         forwardToolExecution,
+        onConnectionRejected,
       })
+      return
+    }
+
+    // Handle connection handshake messages specially
+    if (message.type === 'connection-ready') {
+      connectionReady = true
+      waitingForConnectionReady = false
+    } else if (message.type === 'connection-rejected') {
+      connectionReady = false
+      waitingForConnectionReady = false
+    } else if (!connectionReady) {
+      // Ignore non-handshake messages before connection-ready
       return
     }
 
@@ -577,23 +591,27 @@ export function connectWebSocket(
       bucketDependencies,
       fileSystem,
       forwardToolExecution,
+      onConnectionRejected,
     })
   }
 
-  const sendAgentCapabilities = async (): Promise<void> => {
-    waitingForAgentCapabilities = true
-    let message: AgentCapabilitiesMessage = {
-      type: 'agent-capabilities',
-      agents: [],
-    }
+  const sendConnectionInit = async (): Promise<void> => {
+    waitingForConnectionReady = true
+    let message: ConnectionInitMessage
 
     try {
-      message = await bucketDependencies.discoverAgentCapabilities()
-    } catch (error) /* v8 ignore start -- error path for capability discovery failure */ {
+      message = await bucketDependencies.buildConnectionInit()
+    } catch (error) /* v8 ignore start -- error path for connection init failure */ {
       const messageText = error instanceof Error ? error.message : String(error)
       context.stderr(
-        `Failed to discover agent capabilities: ${messageText}. Continuing with no capabilities.`
+        `Failed to build connection init: ${messageText}. Continuing with empty message.`
       )
+      message = {
+        type: 'connection-init',
+        dustVersion: 'unknown',
+        platform: 'unknown',
+        agents: [],
+      }
     } /* v8 ignore stop */
 
     try {
@@ -601,16 +619,12 @@ export function connectWebSocket(
     } catch (error) /* v8 ignore start -- error path for WebSocket send failure */ {
       const messageText = error instanceof Error ? error.message : String(error)
       context.stderr(
-        `Failed to send agent capabilities: ${messageText}. Continuing without handshake.`
+        `Failed to send connection init: ${messageText}. Continuing without handshake.`
       )
-    } finally /* v8 ignore stop */ {
-      readyToProcessServerMessages = true
-      waitingForAgentCapabilities = false
-      for (const pendingMessage of pendingServerMessages) {
-        processIncomingServerMessage(pendingMessage)
-      }
-      pendingServerMessages.length = 0
-    }
+      // Mark as ready so we can process messages without waiting for server response
+      connectionReady = true
+      waitingForConnectionReady = false
+    } /* v8 ignore stop */
   }
 
   let ws: WebSocketLike
@@ -625,7 +639,7 @@ export function connectWebSocket(
       formatBucketEvent({ type: 'bucket.connected' })
     )
     state.reconnectDelay = INITIAL_RECONNECT_DELAY_MS
-    void sendAgentCapabilities()
+    void sendConnectionInit()
   } else {
     logMessage(state, context, useTUI, `Connecting to ${wsUrl}...`)
     ws = bucketDependencies.createWebSocket(wsUrl, token)
@@ -651,7 +665,7 @@ export function connectWebSocket(
         },
         token
       )
-      void sendAgentCapabilities()
+      void sendConnectionInit()
     })
   }
 
@@ -691,10 +705,6 @@ export function connectWebSocket(
   })
 
   ws.addEventListener('message', (event: { data: string }) => {
-    if (waitingForAgentCapabilities && !readyToProcessServerMessages) {
-      pendingServerMessages.push({ data: event.data })
-      return
-    }
     processIncomingServerMessage({ data: event.data })
   })
 }
@@ -709,6 +719,7 @@ interface EffectExecutionDeps {
   bucketDependencies: BucketDependencies
   fileSystem: FileSystem
   forwardToolExecution?: RepositoryDependencies['forwardToolExecution']
+  onConnectionRejected?: (reason: string) => void
 }
 
 /* v8 ignore start -- effect execution logic is tested via connectWebSocket integration tests */
@@ -727,6 +738,7 @@ function executeEffects(
     bucketDependencies,
     fileSystem,
     forwardToolExecution,
+    onConnectionRejected,
   } = dependencies
 
   for (const effect of effects) {
@@ -782,6 +794,33 @@ function executeEffects(
 
       case 'scheduleReconnect':
         // Requires token to be available - this is handled by connectWebSocket wrapper
+        break
+
+      case 'connectionReady': {
+        // Process tools and repositories atomically from connection-ready
+        state.tools = effect.tools
+        syncUIWithRepoList(state, effect.repositories)
+        const repoDeps = toRepositoryDependencies(
+          bucketDependencies,
+          fileSystem,
+          state,
+          forwardToolExecution
+        )
+        const repoContext = createTUIContext(state, context, useTUI)
+        const repos = effect.repositories
+        handleRepositoryListFromRepo(repos, state, repoDeps, repoContext)
+          .then(() =>
+            handleRepositoryListSuccess(state, repos, repoDeps, context, useTUI)
+          )
+          .catch((error: Error) =>
+            handleRepositoryListError(state, context, useTUI, error)
+          )
+        break
+      }
+
+      case 'connectionRejected':
+        // Signal rejection to the caller so they can shut down
+        onConnectionRejected?.(effect.reason)
         break
     }
   }
@@ -1315,7 +1354,14 @@ export async function bucketWorker(
           }
         },
         /* v8 ignore stop */
-        forwardToolExecution
+        forwardToolExecution,
+        /* v8 ignore start -- connection rejection handler only runs during real WebSocket sessions */
+        _reason => {
+          // Shut down cleanly without reconnecting
+          state.shuttingDown = true
+          doShutdown()
+        }
+        /* v8 ignore stop */
       )
 
       if (!useTUI) {

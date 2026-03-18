@@ -12,7 +12,7 @@ export interface AgentCapability {
   models: string[]
 }
 
-export interface AgentCapabilitiesMessage {
+interface AgentCapabilitiesMessage {
   type: 'agent-capabilities'
   agents: AgentCapability[]
 }

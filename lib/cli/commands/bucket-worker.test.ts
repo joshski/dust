@@ -91,6 +91,20 @@ function createAutoConnectWebSocket(): WebSocketLike & EventEmitter {
   return ws
 }
 
+/** Emit a connection-ready message to allow processing of subsequent messages. */
+function emitConnectionReady(
+  ws: EventEmitter,
+  options: { tools?: unknown[]; repositories?: unknown[] } = {}
+): void {
+  ws.emit('message', {
+    data: JSON.stringify({
+      type: 'connection-ready',
+      tools: options.tools ?? [],
+      repositories: options.repositories ?? [],
+    }),
+  })
+}
+
 function createBucketDependencies(
   overrides: Partial<BucketDependencies> = {}
 ): BucketDependencies {
@@ -100,8 +114,10 @@ function createBucketDependencies(
       return proc
     }),
     createWebSocket: () => createAutoConnectWebSocket(),
-    discoverAgentCapabilities: async () => ({
-      type: 'agent-capabilities',
+    buildConnectionInit: async () => ({
+      type: 'connection-init',
+      dustVersion: '0.1.0',
+      platform: 'test',
       agents: [],
     }),
     setupKeypress: () => () => {},
@@ -599,7 +615,7 @@ describe('connectWebSocket', () => {
     expect(context.stdoutLines.join('\n')).toContain('bucket.connected')
   })
 
-  test('sends one agent-capabilities message before processing server traffic', async () => {
+  test('sends connection-init message on connect and waits for connection-ready', async () => {
     const dependencies = createDependencies()
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
@@ -612,19 +628,14 @@ describe('connectWebSocket', () => {
       sentMessages.push(data)
     }
 
-    let resolveDiscovery:
-      | ((value: { type: 'agent-capabilities'; agents: [] }) => void)
-      | undefined
-    const discoveryPromise = new Promise<{
-      type: 'agent-capabilities'
-      agents: []
-    }>(resolve => {
-      resolveDiscovery = resolve
-    })
-
     const bucketDependencies = createBucketDependencies({
       createWebSocket: () => ws,
-      discoverAgentCapabilities: () => discoveryPromise,
+      buildConnectionInit: async () => ({
+        type: 'connection-init',
+        dustVersion: '0.1.0',
+        platform: 'test',
+        agents: [],
+      }),
     })
 
     connectWebSocket(
@@ -638,29 +649,37 @@ describe('connectWebSocket', () => {
 
     ws.readyState = WS_OPEN
     ws.emit('open')
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    // Should have sent connection-init
+    expect(sentMessages).toHaveLength(1)
+    expect(JSON.parse(sentMessages[0])).toEqual({
+      type: 'connection-init',
+      dustVersion: '0.1.0',
+      platform: 'test',
+      agents: [],
+    })
+
+    // Messages before connection-ready should be ignored
     ws.emit('message', {
       data: JSON.stringify({
         type: 'repository-list',
         repositories: [],
       }),
     })
-
     expect(context.stdoutLines.join('\n')).not.toContain(
       'Received repository list'
     )
-    expect(sentMessages).toHaveLength(0)
 
-    resolveDiscovery?.({ type: 'agent-capabilities', agents: [] })
-    await new Promise(resolve => setTimeout(resolve, 0))
-
-    expect(sentMessages).toHaveLength(1)
-    expect(JSON.parse(sentMessages[0])).toEqual({
-      type: 'agent-capabilities',
-      agents: [],
+    // After connection-ready, messages should be processed
+    ws.emit('message', {
+      data: JSON.stringify({
+        type: 'connection-ready',
+        tools: [],
+        repositories: [],
+      }),
     })
-    expect(context.stdoutLines.join('\n')).toContain(
-      'Received repository list (0 repositories):'
-    )
+    expect(context.stdoutLines.join('\n')).toContain('Connection ready')
   })
 
   test('uses pre-connected WebSocket when connectedWs is provided', () => {
@@ -698,7 +717,7 @@ describe('connectWebSocket', () => {
     expect(context.stdoutLines.join('\n')).toContain('Connected to dustbucket')
   })
 
-  test('sends no-capability agent-capabilities handshake on connect', async () => {
+  test('sends connection-init with agents on connect', async () => {
     const dependencies = createDependencies()
     const state = createInitialState()
 
@@ -710,9 +729,12 @@ describe('connectWebSocket', () => {
 
     const bucketDependencies = createBucketDependencies({
       createWebSocket: () => ws,
-      discoverAgentCapabilities: async () => ({
-        type: 'agent-capabilities',
-        agents: [],
+      buildConnectionInit: async () => ({
+        type: 'connection-init',
+        dustVersion: '0.1.0',
+        platform: 'darwin 23.0.0',
+        gitRemote: 'git@github.com:user/repo.git',
+        agents: [{ agentType: 'claude', models: ['opus', 'sonnet', 'haiku'] }],
       }),
     })
 
@@ -730,27 +752,25 @@ describe('connectWebSocket', () => {
     await new Promise(resolve => setTimeout(resolve, 0))
 
     expect(JSON.parse(sentMessages[0])).toEqual({
-      type: 'agent-capabilities',
-      agents: [],
+      type: 'connection-init',
+      dustVersion: '0.1.0',
+      platform: 'darwin 23.0.0',
+      gitRemote: 'git@github.com:user/repo.git',
+      agents: [{ agentType: 'claude', models: ['opus', 'sonnet', 'haiku'] }],
     })
   })
 
-  test('sends partial-capability agent-capabilities handshake on connect', async () => {
+  test('handles connection-rejected by calling rejection callback', async () => {
     const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
     const state = createInitialState()
+    let rejectionReason: string | undefined
 
     const ws = createMockWebSocket()
-    const sentMessages: string[] = []
-    ws.send = (data: string) => {
-      sentMessages.push(data)
-    }
-
     const bucketDependencies = createBucketDependencies({
       createWebSocket: () => ws,
-      discoverAgentCapabilities: async () => ({
-        type: 'agent-capabilities',
-        agents: [{ agentType: 'codex', models: [] }],
-      }),
     })
 
     connectWebSocket(
@@ -759,17 +779,34 @@ describe('connectWebSocket', () => {
       bucketDependencies,
       dependencies.context,
       dependencies.fileSystem,
-      false
+      false,
+      undefined,
+      undefined,
+      undefined,
+      reason => {
+        rejectionReason = reason
+      }
     )
 
     ws.readyState = WS_OPEN
     ws.emit('open')
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    expect(JSON.parse(sentMessages[0])).toEqual({
-      type: 'agent-capabilities',
-      agents: [{ agentType: 'codex', models: [] }],
+    ws.emit('message', {
+      data: JSON.stringify({
+        type: 'connection-rejected',
+        reason: 'Version too old',
+        minimumVersion: '1.0.0',
+      }),
     })
+
+    expect(context.stderrLines.join('\n')).toContain(
+      'Connection rejected: Version too old'
+    )
+    expect(context.stderrLines.join('\n')).toContain(
+      'Minimum version required: 1.0.0'
+    )
+    expect(rejectionReason).toBe('Version too old')
   })
 
   test('uses "none" as reason when close event has empty reason', () => {
@@ -983,7 +1020,7 @@ describe('connectWebSocket', () => {
     expect(context.stderrLines.join('\n')).toContain('Connection refused')
   })
 
-  test('handles repository-list messages', () => {
+  test('handles repository-list messages after connection-ready', () => {
     const dependencies = createDependencies()
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
@@ -1004,6 +1041,10 @@ describe('connectWebSocket', () => {
       false
     )
 
+    // First, complete the handshake
+    emitConnectionReady(ws)
+
+    // Now repository-list should be processed
     ws.emit('message', {
       data: JSON.stringify({
         type: 'repository-list',
@@ -1046,7 +1087,7 @@ describe('connectWebSocket', () => {
     expect(output).toContain('gitUrl=git@example.com:repo-c.git')
   })
 
-  test('eagerly adds repository tabs to UI on repository-list message', () => {
+  test('eagerly adds repository tabs to UI on connection-ready message', () => {
     const dependencies = createDependencies()
     const state = createInitialState()
 
@@ -1064,28 +1105,26 @@ describe('connectWebSocket', () => {
       false
     )
 
-    ws.emit('message', {
-      data: JSON.stringify({
-        type: 'repository-list',
-        repositories: [
-          {
-            name: 'repo1',
-            id: 1,
-            gitUrl: 'git@example.com:user/repo1.git',
-            gitSshUrl: 'git@example.com:user/repo1.git',
-            url: 'https://example.com/repo1',
-            hasTask: false,
-          },
-          {
-            name: 'repo2',
-            id: 2,
-            gitUrl: 'git@example.com:user/repo2.git',
-            gitSshUrl: 'git@example.com:user/repo2.git',
-            url: 'https://example.com/repo2',
-            hasTask: false,
-          },
-        ],
-      }),
+    // connection-ready includes repositories which should be synced to UI
+    emitConnectionReady(ws, {
+      repositories: [
+        {
+          name: 'repo1',
+          id: 1,
+          gitUrl: 'git@example.com:user/repo1.git',
+          gitSshUrl: 'git@example.com:user/repo1.git',
+          url: 'https://example.com/repo1',
+          hasTask: false,
+        },
+        {
+          name: 'repo2',
+          id: 2,
+          gitUrl: 'git@example.com:user/repo2.git',
+          gitSshUrl: 'git@example.com:user/repo2.git',
+          url: 'https://example.com/repo2',
+          hasTask: false,
+        },
+      ],
     })
 
     // Tabs should appear immediately (before cloning finishes)
@@ -1113,29 +1152,26 @@ describe('connectWebSocket', () => {
       false
     )
 
-    // First list with repo1 and repo2
-    ws.emit('message', {
-      data: JSON.stringify({
-        type: 'repository-list',
-        repositories: [
-          {
-            name: 'repo1',
-            id: 1,
-            gitUrl: 'git@example.com:user/repo1.git',
-            gitSshUrl: 'git@example.com:user/repo1.git',
-            url: 'https://example.com/repo1',
-            hasTask: false,
-          },
-          {
-            name: 'repo2',
-            id: 2,
-            gitUrl: 'git@example.com:user/repo2.git',
-            gitSshUrl: 'git@example.com:user/repo2.git',
-            url: 'https://example.com/repo2',
-            hasTask: false,
-          },
-        ],
-      }),
+    // First, complete handshake with repo1 and repo2
+    emitConnectionReady(ws, {
+      repositories: [
+        {
+          name: 'repo1',
+          id: 1,
+          gitUrl: 'git@example.com:user/repo1.git',
+          gitSshUrl: 'git@example.com:user/repo1.git',
+          url: 'https://example.com/repo1',
+          hasTask: false,
+        },
+        {
+          name: 'repo2',
+          id: 2,
+          gitUrl: 'git@example.com:user/repo2.git',
+          gitSshUrl: 'git@example.com:user/repo2.git',
+          url: 'https://example.com/repo2',
+          hasTask: false,
+        },
+      ],
     })
 
     expect(state.ui.repositories).toContain('repo1')
@@ -1184,6 +1220,9 @@ describe('connectWebSocket', () => {
       dependencies.fileSystem,
       false
     )
+
+    // First, complete handshake
+    emitConnectionReady(ws)
 
     ws.emit('message', {
       data: JSON.stringify({
@@ -1324,6 +1363,9 @@ describe('connectWebSocket', () => {
       false
     )
 
+    // First, complete handshake
+    emitConnectionReady(ws)
+
     ws.emit('message', {
       data: JSON.stringify({
         type: 'repository-list',
@@ -1365,6 +1407,9 @@ describe('connectWebSocket', () => {
       dependencies.fileSystem,
       false
     )
+
+    // First, complete handshake
+    emitConnectionReady(ws)
 
     // Add a fake repository to state
     let wokenUp = false
@@ -1428,6 +1473,9 @@ describe('connectWebSocket', () => {
       false
     )
 
+    // First, complete handshake
+    emitConnectionReady(ws)
+
     const repoState: RepositoryState = {
       repository: {
         name: 'owner/repo',
@@ -1474,6 +1522,9 @@ describe('connectWebSocket', () => {
       false
     )
 
+    // First, complete handshake
+    emitConnectionReady(ws)
+
     // Should not throw
     ws.emit('message', {
       data: JSON.stringify({
@@ -1483,7 +1534,7 @@ describe('connectWebSocket', () => {
     })
   })
 
-  test('hasTask in repository-list wakes repos after clone', async () => {
+  test('hasTask in connection-ready wakes repos after clone', async () => {
     const dependencies = createDependencies()
     const state = createInitialState()
 
@@ -1521,20 +1572,18 @@ describe('connectWebSocket', () => {
     }
     state.repositories.set('owner/repo', repoState)
 
-    ws.emit('message', {
-      data: JSON.stringify({
-        type: 'repository-list',
-        repositories: [
-          {
-            name: 'owner/repo',
-            id: 1,
-            gitUrl: 'https://github.com/owner/repo.git',
-            gitSshUrl: 'git@github.com:owner/repo.git',
-            url: 'https://example.com/owner/repo',
-            hasTask: true,
-          },
-        ],
-      }),
+    // Connection-ready with hasTask: true should wake the repo
+    emitConnectionReady(ws, {
+      repositories: [
+        {
+          name: 'owner/repo',
+          id: 1,
+          gitUrl: 'https://github.com/owner/repo.git',
+          gitSshUrl: 'git@github.com:owner/repo.git',
+          url: 'https://example.com/owner/repo',
+          hasTask: true,
+        },
+      ],
     })
 
     // Wait for the async handleRepositoryList to complete

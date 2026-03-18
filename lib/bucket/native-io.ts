@@ -10,16 +10,23 @@ import { spawn as nodeSpawn } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { accessSync, statSync } from 'node:fs'
 import { chmod, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
-import { homedir } from 'node:os'
+import { homedir, platform, release } from 'node:os'
 import { readEnvConfig } from '../env-config'
 import { createLocalServer, openBrowser } from './auth-server'
-import { discoverAgentCapabilities } from './agent-capabilities'
+import {
+  discoverAgentCapabilities,
+  type AgentCapability,
+} from './agent-capabilities'
 import type { WebSocketLike } from './events'
 import { getReposDir } from './paths'
 import {
   createAuthFileSystem,
   type BucketDependencies,
 } from '../cli/commands/bucket-worker'
+import {
+  buildConnectionInitPayload,
+  type ConnectionInitMessage,
+} from './server-messages'
 
 /* v8 ignore start */
 function adaptWebSocket(ws: WebSocket): WebSocketLike {
@@ -128,6 +135,83 @@ function defaultWriteStdout(data: string): void {
   process.stdout.write(data)
 }
 
+/**
+ * Get the dust version from package.json.
+ * Returns 'unknown' if version cannot be determined.
+ */
+function getDustVersion(): string {
+  // Import the version from the build-time embedded package.json
+  // This is available at runtime via dynamic import
+  try {
+    return require('../../package.json').version || 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
+
+/**
+ * Get the platform string in the format "os.platform os.release".
+ */
+function getPlatformString(): string {
+  return `${platform()} ${release()}`
+}
+
+/**
+ * Get the git remote URL for the current directory.
+ * Returns undefined if git remote is not available.
+ */
+async function getGitRemote(
+  spawn: typeof nodeSpawn
+): Promise<string | undefined> {
+  return new Promise(resolve => {
+    try {
+      const proc = spawn('git', ['remote', 'get-url', 'origin'], {
+        stdio: ['ignore', 'pipe', 'ignore'],
+      })
+
+      let stdout = ''
+
+      proc.stdout?.on('data', (data: Buffer) => {
+        stdout += data.toString()
+      })
+
+      proc.on('close', code => {
+        if (code === 0 && stdout.trim()) {
+          resolve(stdout.trim())
+        } else {
+          resolve(undefined)
+        }
+      })
+
+      proc.on('error', () => {
+        resolve(undefined)
+      })
+    } catch {
+      resolve(undefined)
+    }
+  })
+}
+
+/**
+ * Build a ConnectionInitMessage with version, platform, git remote, and agents.
+ * This is the imperative shell that gathers all the information needed.
+ */
+async function defaultBuildConnectionInit(
+  spawn: typeof nodeSpawn
+): Promise<ConnectionInitMessage> {
+  const dustVersion = getDustVersion()
+  const platformStr = getPlatformString()
+
+  const [gitRemote, capabilitiesMessage] = await Promise.all([
+    getGitRemote(spawn),
+    discoverAgentCapabilities({ spawn }),
+  ])
+
+  const agents: AgentCapability[] = capabilitiesMessage.agents
+
+  return buildConnectionInitPayload(dustVersion, platformStr, gitRemote, agents)
+}
+
 export function createDefaultBucketDependencies(): BucketDependencies {
   const envConfig = readEnvConfig(process.env)
   const authFileSystem = createAuthFileSystem({
@@ -145,10 +229,7 @@ export function createDefaultBucketDependencies(): BucketDependencies {
   return {
     spawn: nodeSpawn,
     createWebSocket: defaultCreateWebSocket,
-    discoverAgentCapabilities: () =>
-      discoverAgentCapabilities({
-        spawn: nodeSpawn,
-      }),
+    buildConnectionInit: () => defaultBuildConnectionInit(nodeSpawn),
     setupKeypress: defaultSetupKeypress,
     setupSignals: defaultSetupSignals,
     setupResize: defaultSetupResize,

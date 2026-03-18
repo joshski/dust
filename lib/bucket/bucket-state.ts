@@ -7,6 +7,8 @@
  */
 
 import type {
+  ConnectionReadyMessage,
+  ConnectionRejectedMessage,
   RepositoryListItem,
   ServerMessage,
   ToolDefinition,
@@ -109,6 +111,24 @@ export interface StoreToolDefinitionsEffect {
 }
 
 /**
+ * ConnectionReady effect - instructs the shell to process connection-ready payload atomically.
+ */
+export interface ConnectionReadyEffect {
+  type: 'connectionReady'
+  tools: ToolDefinition[]
+  repositories: RepositoryListItem[]
+}
+
+/**
+ * ConnectionRejected effect - instructs the shell to log rejection and shut down.
+ */
+export interface ConnectionRejectedEffect {
+  type: 'connectionRejected'
+  reason: string
+  minimumVersion?: string
+}
+
+/**
  * All possible effects returned by pure message handlers.
  */
 export type Effect =
@@ -124,6 +144,8 @@ export type Effect =
   | ScrollEffect
   | ScheduleReconnectEffect
   | StoreToolDefinitionsEffect
+  | ConnectionReadyEffect
+  | ConnectionRejectedEffect
 
 /**
  * Plain-object projection of the bucket state needed for message handling.
@@ -261,6 +283,45 @@ export function handleServerMessage(
       effects.push({
         type: 'storeToolDefinitions',
         tools: message.tools,
+      })
+      break
+    }
+
+    case 'connection-ready': {
+      const toolCount = message.tools.length
+      const repoCount = message.repositories.length
+      effects.push({
+        type: 'log',
+        message: `Connection ready (${toolCount} tool${toolCount === 1 ? '' : 's'}, ${repoCount} repositor${repoCount === 1 ? 'y' : 'ies'})`,
+        stream: 'stdout',
+      })
+
+      effects.push({
+        type: 'connectionReady',
+        tools: message.tools,
+        repositories: message.repositories,
+      })
+      break
+    }
+
+    case 'connection-rejected': {
+      effects.push({
+        type: 'log',
+        message: `Connection rejected: ${message.reason}`,
+        stream: 'stderr',
+      })
+      if (message.minimumVersion) {
+        effects.push({
+          type: 'log',
+          message: `Minimum version required: ${message.minimumVersion}`,
+          stream: 'stderr',
+        })
+      }
+
+      effects.push({
+        type: 'connectionRejected',
+        reason: message.reason,
+        minimumVersion: message.minimumVersion,
       })
       break
     }

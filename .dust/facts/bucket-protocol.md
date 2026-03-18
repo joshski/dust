@@ -39,9 +39,73 @@ On disconnect, clients reconnect with exponential backoff starting at 1 second, 
 
 Exception: Close code `4000` indicates the server replaced this connection with a newer one from the same user. Clients should not reconnect in this case.
 
+## Connection Handshake
+
+The connection uses a request/response handshake protocol:
+
+1. Client connects and sends `connection-init` immediately
+2. Server responds with `connection-ready` (success) or `connection-rejected` (failure)
+3. Client waits for the handshake response before processing any other server messages
+4. On `connection-ready`, client processes tools and repositories atomically
+5. On `connection-rejected`, client logs the reason and shuts down without reconnecting
+
+### connection-init (client → server)
+
+Sent by the client immediately after WebSocket connection opens.
+
+```typescript
+interface ConnectionInitMessage {
+  type: 'connection-init'
+  dustVersion: string      // Dust CLI version (e.g., "0.1.98")
+  platform: string         // OS info: "${os.platform()} ${os.release()}"
+  gitRemote?: string       // Git remote URL (omitted if unavailable)
+  agents: AgentCapability[]
+}
+
+interface AgentCapability {
+  agentType: 'claude' | 'codex'
+  models: string[]
+}
+```
+
+### connection-ready (server → client)
+
+Sent by the server to confirm the connection is ready. Includes tools and repositories atomically.
+
+```typescript
+interface ConnectionReadyMessage {
+  type: 'connection-ready'
+  tools: ToolDefinition[]
+  repositories: RepositoryListItem[]
+}
+```
+
+On receiving this message, clients:
+
+1. Store tool definitions
+2. Sync UI with repositories
+3. Start processing subsequent server messages
+
+### connection-rejected (server → client)
+
+Sent by the server to reject the connection.
+
+```typescript
+interface ConnectionRejectedMessage {
+  type: 'connection-rejected'
+  reason: string           // Human-readable rejection reason
+  minimumVersion?: string  // Minimum required version (if version-related)
+}
+```
+
+On receiving this message, clients:
+
+1. Log the rejection reason
+2. Shut down cleanly without reconnecting
+
 ## Server-to-Client Messages
 
-Messages are JSON objects with a `type` field. Three server-to-client message types and one response message type are defined:
+Messages are JSON objects with a `type` field. Three regular server-to-client message types and one response message type are defined (in addition to the handshake messages above):
 
 ### repository-list
 
@@ -140,28 +204,11 @@ These types and validation functions are exported from `@joshski/dust/types` for
 
 Clients send four categories of messages over the WebSocket:
 
-### agent-capabilities
+### connection-init
 
-Sent exactly once on each successful WebSocket connection, immediately after connect and before the client processes subsequent server traffic. This is fire-and-forget; the client does not wait for an acknowledgment.
+Sent exactly once on each successful WebSocket connection, immediately after connect. The client waits for a `connection-ready` or `connection-rejected` response before processing subsequent server traffic.
 
-```typescript
-interface AgentCapabilitiesMessage {
-  type: 'agent-capabilities'
-  agents: AgentCapability[]
-}
-
-interface AgentCapability {
-  agentType: 'claude' | 'codex'
-  models: string[]
-}
-```
-
-Semantics:
-
-- `agents` lists only locally available agents discovered via lightweight command probes (for example `--version` checks).
-- Claude models use hardcoded aliases.
-- Codex models are discovered live via the Codex CLI.
-- Discovery failures degrade gracefully to fewer entries or empty `models` arrays.
+See [Connection Handshake](#connection-handshake) above for the message format and semantics.
 
 ### Agent session events
 
@@ -214,12 +261,11 @@ These types and validation functions are exported from `@joshski/dust/types` for
 ### Connection Lifecycle
 
 1. Accept WebSocket connections with valid Bearer tokens
-2. Expect one client `agent-capabilities` message immediately after connection
-3. Send `repository-list` immediately after connection
-4. Send `tool-definitions` after connection (if tools are available)
-5. Send `repository-list` when the user's repositories change
-6. Send `task-available` when a new task is created for a repository
-7. Close with code `4000` when replacing a connection from the same user
+2. Receive `connection-init` from client immediately after connection
+3. Respond with `connection-ready` (including tools and repositories) or `connection-rejected`
+4. Send `repository-list` when the user's repositories change
+5. Send `task-available` when a new task is created for a repository
+6. Close with code `4000` when replacing a connection from the same user
 
 ### Task Signaling
 

@@ -16,6 +16,8 @@ import {
   type MessageHandlerState,
 } from './bucket-state'
 import type {
+  ConnectionReadyMessage,
+  ConnectionRejectedMessage,
   RepositoryListMessage,
   TaskAvailableMessage,
   ToolDefinitionsMessage,
@@ -367,6 +369,212 @@ describe('bucket-state', () => {
         expect(debugLogEffect).toEqual({
           type: 'debugLog',
           message: 'ws message: tool-definitions',
+        })
+      })
+    })
+
+    describe('connection-ready messages', () => {
+      it('returns connectionReady effect with tools and repositories', () => {
+        const state: MessageHandlerState = { repositoryNames: [] }
+        const message: ConnectionReadyMessage = {
+          type: 'connection-ready',
+          tools: [
+            {
+              name: 'ping',
+              description: 'Ping',
+              endpoint: '/ping',
+              method: 'GET',
+              parameters: [],
+            },
+          ],
+          repositories: [
+            {
+              name: 'test-repo',
+              gitUrl: 'git@github.com:user/test-repo.git',
+              gitSshUrl: 'git@github.com:user/test-repo.git',
+              url: 'https://github.com/user/test-repo',
+              id: 123,
+              hasTask: false,
+            },
+          ],
+        }
+
+        const result = handleServerMessage(state, message)
+
+        const connectionReadyEffect = result.effects.find(
+          e => e.type === 'connectionReady'
+        )
+        expect(connectionReadyEffect).toEqual({
+          type: 'connectionReady',
+          tools: message.tools,
+          repositories: message.repositories,
+        })
+      })
+
+      it('logs with singular forms for 1 tool and 1 repository', () => {
+        const state: MessageHandlerState = { repositoryNames: [] }
+        const message: ConnectionReadyMessage = {
+          type: 'connection-ready',
+          tools: [
+            {
+              name: 'ping',
+              description: 'Ping',
+              endpoint: '/ping',
+              method: 'GET',
+              parameters: [],
+            },
+          ],
+          repositories: [
+            {
+              name: 'test-repo',
+              gitUrl: 'git@github.com:user/test-repo.git',
+              gitSshUrl: 'git@github.com:user/test-repo.git',
+              url: 'https://github.com/user/test-repo',
+              id: 123,
+              hasTask: false,
+            },
+          ],
+        }
+
+        const result = handleServerMessage(state, message)
+
+        const logEffects = result.effects.filter(e => e.type === 'log')
+        const logMessages = logEffects.map(e =>
+          e.type === 'log' ? e.message : ''
+        )
+
+        expect(logMessages).toContain('Connection ready (1 tool, 1 repository)')
+      })
+
+      it('logs with plural forms for multiple tools and repositories', () => {
+        const state: MessageHandlerState = { repositoryNames: [] }
+        const message: ConnectionReadyMessage = {
+          type: 'connection-ready',
+          tools: [
+            {
+              name: 'ping',
+              description: 'Ping',
+              endpoint: '/ping',
+              method: 'GET',
+              parameters: [],
+            },
+            {
+              name: 'upload',
+              description: 'Upload',
+              endpoint: '/upload',
+              method: 'POST',
+              parameters: [],
+            },
+          ],
+          repositories: [
+            {
+              name: 'repo1',
+              gitUrl: 'git@github.com:user/repo1.git',
+              gitSshUrl: 'git@github.com:user/repo1.git',
+              url: 'https://github.com/user/repo1',
+              id: 1,
+              hasTask: false,
+            },
+            {
+              name: 'repo2',
+              gitUrl: 'git@github.com:user/repo2.git',
+              gitSshUrl: 'git@github.com:user/repo2.git',
+              url: 'https://github.com/user/repo2',
+              id: 2,
+              hasTask: true,
+            },
+          ],
+        }
+
+        const result = handleServerMessage(state, message)
+
+        const logEffects = result.effects.filter(e => e.type === 'log')
+        const logMessages = logEffects.map(e =>
+          e.type === 'log' ? e.message : ''
+        )
+
+        expect(logMessages).toContain(
+          'Connection ready (2 tools, 2 repositories)'
+        )
+      })
+    })
+
+    describe('connection-rejected messages', () => {
+      it('returns connectionRejected effect', () => {
+        const state: MessageHandlerState = { repositoryNames: [] }
+        const message: ConnectionRejectedMessage = {
+          type: 'connection-rejected',
+          reason: 'Invalid token',
+        }
+
+        const result = handleServerMessage(state, message)
+
+        const connectionRejectedEffect = result.effects.find(
+          e => e.type === 'connectionRejected'
+        )
+        expect(connectionRejectedEffect).toEqual({
+          type: 'connectionRejected',
+          reason: 'Invalid token',
+          minimumVersion: undefined,
+        })
+      })
+
+      it('logs rejection reason to stderr', () => {
+        const state: MessageHandlerState = { repositoryNames: [] }
+        const message: ConnectionRejectedMessage = {
+          type: 'connection-rejected',
+          reason: 'Invalid token',
+        }
+
+        const result = handleServerMessage(state, message)
+
+        const logEffects = result.effects.filter(
+          e => e.type === 'log' && e.stream === 'stderr'
+        )
+        const logMessages = logEffects.map(e =>
+          e.type === 'log' ? e.message : ''
+        )
+
+        expect(logMessages).toContain('Connection rejected: Invalid token')
+      })
+
+      it('logs minimum version when provided', () => {
+        const state: MessageHandlerState = { repositoryNames: [] }
+        const message: ConnectionRejectedMessage = {
+          type: 'connection-rejected',
+          reason: 'Client version too old',
+          minimumVersion: '1.2.0',
+        }
+
+        const result = handleServerMessage(state, message)
+
+        const logEffects = result.effects.filter(
+          e => e.type === 'log' && e.stream === 'stderr'
+        )
+        const logMessages = logEffects.map(e =>
+          e.type === 'log' ? e.message : ''
+        )
+
+        expect(logMessages).toContain('Minimum version required: 1.2.0')
+      })
+
+      it('includes minimumVersion in effect when provided', () => {
+        const state: MessageHandlerState = { repositoryNames: [] }
+        const message: ConnectionRejectedMessage = {
+          type: 'connection-rejected',
+          reason: 'Client version too old',
+          minimumVersion: '1.2.0',
+        }
+
+        const result = handleServerMessage(state, message)
+
+        const connectionRejectedEffect = result.effects.find(
+          e => e.type === 'connectionRejected'
+        )
+        expect(connectionRejectedEffect).toEqual({
+          type: 'connectionRejected',
+          reason: 'Client version too old',
+          minimumVersion: '1.2.0',
         })
       })
     })
