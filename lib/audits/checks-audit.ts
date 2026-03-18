@@ -1,30 +1,23 @@
 /**
- * Checks Audit - Pure functions for detecting tech stacks and suggesting checks.
+ * Checks Audit - Pure functions for detecting configured checks and suggesting improvements.
  *
  * This module provides the functional core for the checks-audit stock audit.
- * It detects the project's technology ecosystem, identifies configured checks,
- * parses CI configuration files, and suggests missing check categories.
+ * It identifies configured checks, parses CI configuration files, and suggests
+ * missing check categories.
+ *
+ * Tech stack detection is imported from lib/tech-stack/.
  */
 
 import { dedent } from '../cli/dedent'
 import type { CheckConfig, DustSettings } from '../cli/types'
+import type { Ecosystem, TechStackDetection } from '../tech-stack'
+import { detectTechStack } from '../tech-stack'
+
+// Re-export for backwards compatibility
+export { detectTechStack }
+export type { Ecosystem, TechStackDetection }
 
 // --- Types ---
-
-export type Ecosystem =
-  | 'javascript'
-  | 'python'
-  | 'go'
-  | 'rust'
-  | 'ruby'
-  | 'php'
-  | 'elixir'
-
-export interface TechStackDetection {
-  ecosystem: Ecosystem
-  indicators: string[]
-  packageManager?: string
-}
 
 interface CheckCategory {
   category: string
@@ -51,44 +44,6 @@ export interface CheckSuggestion {
 export interface CIFileContent {
   path: string
   content: string
-}
-
-// --- Detection Indicators ---
-
-const ECOSYSTEM_INDICATORS: Record<Ecosystem, string[]> = {
-  javascript: [
-    'package.json',
-    'bun.lock',
-    'bun.lockb',
-    'pnpm-lock.yaml',
-    'package-lock.json',
-    'yarn.lock',
-    'tsconfig.json',
-  ],
-  python: [
-    'pyproject.toml',
-    'requirements.txt',
-    'poetry.lock',
-    'Pipfile.lock',
-    'setup.py',
-    'setup.cfg',
-  ],
-  go: ['go.mod', 'go.sum'],
-  rust: ['Cargo.toml', 'Cargo.lock'],
-  ruby: ['Gemfile', 'Gemfile.lock'],
-  php: ['composer.json', 'composer.lock'],
-  elixir: ['mix.exs', 'mix.lock'],
-}
-
-const PACKAGE_MANAGER_FILES: Record<
-  string,
-  { ecosystem: Ecosystem; manager: string }
-> = {
-  'bun.lock': { ecosystem: 'javascript', manager: 'bun' },
-  'bun.lockb': { ecosystem: 'javascript', manager: 'bun' },
-  'pnpm-lock.yaml': { ecosystem: 'javascript', manager: 'pnpm' },
-  'package-lock.json': { ecosystem: 'javascript', manager: 'npm' },
-  'yarn.lock': { ecosystem: 'javascript', manager: 'yarn' },
 }
 
 // --- Check Category Definitions ---
@@ -457,48 +412,6 @@ const CI_CHECK_PATTERNS: Record<string, string[]> = {
 // --- Pure Functions ---
 
 /**
- * Detects tech stacks based on project files.
- */
-export function detectTechStack(projectFiles: string[]): TechStackDetection[] {
-  const fileSet = new Set(projectFiles)
-  const detections: TechStackDetection[] = []
-  const ecosystemsFound = new Map<Ecosystem, string[]>()
-
-  // Detect ecosystems based on indicators
-  for (const [ecosystem, indicators] of Object.entries(
-    ECOSYSTEM_INDICATORS
-  ) as [Ecosystem, string[]][]) {
-    const foundIndicators = indicators.filter(indicator =>
-      fileSet.has(indicator)
-    )
-    if (foundIndicators.length > 0) {
-      ecosystemsFound.set(ecosystem, foundIndicators)
-    }
-  }
-
-  // Build detection results with package manager info
-  for (const [ecosystem, indicators] of ecosystemsFound) {
-    const detection: TechStackDetection = {
-      ecosystem,
-      indicators,
-    }
-
-    // Add package manager if detected
-    for (const file of projectFiles) {
-      const managerInfo = PACKAGE_MANAGER_FILES[file]
-      if (managerInfo && managerInfo.ecosystem === ecosystem) {
-        detection.packageManager = managerInfo.manager
-        break
-      }
-    }
-
-    detections.push(detection)
-  }
-
-  return detections.toSorted((a, b) => a.ecosystem.localeCompare(b.ecosystem))
-}
-
-/**
  * Extracts check categories from existing dust settings.
  */
 export function detectConfiguredChecks(settings: DustSettings): Set<string> {
@@ -818,66 +731,54 @@ function capitalizeFirst(text: string): string {
 
 /**
  * Returns the checks-audit stock audit template.
+ *
+ * This template is tech-stack agnostic. Agents should discover appropriate
+ * checks by examining the project structure rather than receiving
+ * ecosystem-specific tool prescriptions.
  */
 export function checksAuditTemplate(): string {
   return dedent`
     # Checks Audit
 
-    Analyze the project's technology ecosystem and suggest appropriate checks for \`.dust/config/settings.json\`.
+    Analyze the project structure and suggest appropriate checks for \`.dust/config/settings.json\`.
 
     ## Scope
 
-    This audit examines the project structure to identify:
+    This audit examines the project to identify gaps in check coverage:
 
-    1. **Tech stack detection** - Identify languages, frameworks, and tools based on config files
+    1. **Project structure analysis** - Examine config files to understand the technology ecosystem
     2. **Existing checks review** - Read \`.dust/config/settings.json\` to understand current coverage
     3. **CI configuration analysis** - Parse CI configs to find checks that run in CI but not locally
     4. **Gap identification** - Compare configured checks against what's appropriate for the detected stack
 
-    ## Check Categories to Evaluate
+    ## Check Categories
 
-    For each detected ecosystem, consider these categories:
+    Consider these general categories when evaluating the project:
 
-    ### JavaScript/TypeScript
-    - Linting (ESLint, oxlint, Biome)
-    - Formatting (Prettier, oxfmt, Biome)
-    - Type checking (tsc)
-    - Build verification
-    - Unit tests (Vitest, Jest)
-    - Unused code detection (Knip)
+    - **Linting** - Static analysis for code quality and style
+    - **Formatting** - Code formatting verification
+    - **Type checking** - Static type verification (for typed languages)
+    - **Build verification** - Ensuring the project builds successfully
+    - **Unit tests** - Running the test suite
+    - **Unused code detection** - Finding dead code, unused exports, or dependencies
 
-    ### Python
-    - Linting (Ruff, Pylint, Flake8)
-    - Formatting (Ruff, Black)
-    - Type checking (mypy, pyright)
-    - Unit tests (pytest)
-
-    ### Go
-    - Linting (golangci-lint)
-    - Formatting (gofmt)
-    - Build verification
-    - Unit tests
-    - Vetting (go vet)
-
-    ### Rust
-    - Linting (Clippy)
-    - Formatting (rustfmt)
-    - Build verification
-    - Unit tests
+    Discover the appropriate tools for each category by examining the project's config files,
+    package manifests, and CI configuration. The right tools depend on the project's ecosystem.
 
     ## Analysis Steps
 
-    1. List all config files in the repository root to detect tech stack
-    2. Read \`.dust/config/settings.json\` to identify configured checks
-    3. Search for CI configuration files and parse them for check commands
-    4. For each missing check category, create an idea file proposing it
-    5. If CI has checks not in dust config, note the discrepancy
+    1. List config files in the repository root to understand the tech stack
+    2. Examine package manifests and tool configs to identify available check commands
+    3. Read \`.dust/config/settings.json\` to identify configured checks
+    4. Search for CI configuration files and parse them for check commands
+    5. For each missing check category, create an idea file proposing it
+    6. If CI has checks not in dust config, note the discrepancy
 
     ## Output
 
     Create separate idea files for each missing check category. Each idea should include:
     - The detected stack indicators
-    - The suggested check command
+    - The suggested check command (discovered from project config)
     - Alternative tool options
     - Configuration snippet for settings.json
 
@@ -885,8 +786,7 @@ export function checksAuditTemplate(): string {
 
     ## Principles
 
-    - [Batteries Included](../principles/batteries-included.md) - Dust should provide everything required for an agent to be productive
-    - [Easy Adoption](../principles/easy-adoption.md) - Help users configure checks without deep research into each tool
+    - [Agent Autonomy](../principles/agent-autonomy.md) - Agents discover appropriate tools rather than following prescriptions
     - [Stop the Line](../principles/stop-the-line.md) - Comprehensive checks catch problems at source
     - [Lint Everything](../principles/lint-everything.md) - Static analysis should cover as much as possible
     - [Comprehensive Test Coverage](../principles/comprehensive-test-coverage.md) - Tests are critical for agent confidence
@@ -897,7 +797,7 @@ export function checksAuditTemplate(): string {
 
     ## Definition of Done
 
-    - [ ] Identified all tech stack indicators in the project
+    - [ ] Analyzed project structure to identify tech stack
     - [ ] Reviewed existing checks in settings.json
     - [ ] Parsed CI configuration files for check commands
     - [ ] Created ideas for each missing check category

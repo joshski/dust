@@ -1053,19 +1053,27 @@ describe('checksAuditTemplate', () => {
     expect(template).toContain('## Definition of Done')
   })
 
-  test('includes check categories to evaluate', () => {
+  test('includes tech-stack agnostic check categories', () => {
     const template = checksAuditTemplate()
 
-    expect(template).toContain('JavaScript/TypeScript')
-    expect(template).toContain('Python')
-    expect(template).toContain('Go')
-    expect(template).toContain('Rust')
+    // Should include general categories, not ecosystem-specific tools
+    expect(template).toContain('Linting')
+    expect(template).toContain('Formatting')
+    expect(template).toContain('Type checking')
+    expect(template).toContain('Build verification')
+    expect(template).toContain('Unit tests')
+    // Should NOT include ecosystem-specific tool names
+    expect(template).not.toContain('ESLint')
+    expect(template).not.toContain('Prettier')
+    expect(template).not.toContain('Vitest')
+    expect(template).not.toContain('Ruff')
+    expect(template).not.toContain('golangci-lint')
   })
 
   test('includes relevant principles', () => {
     const template = checksAuditTemplate()
 
-    expect(template).toContain('Batteries Included')
+    expect(template).toContain('Agent Autonomy')
     expect(template).toContain('Stop the Line')
     expect(template).toContain('Lint Everything')
   })
@@ -1076,5 +1084,13 @@ describe('checksAuditTemplate', () => {
     expect(template).toContain('## Analysis Steps')
     expect(template).toContain('settings.json')
     expect(template).toContain('CI configuration')
+  })
+
+  test('instructs agents to discover appropriate checks', () => {
+    const template = checksAuditTemplate()
+
+    expect(template).toContain('discover')
+    expect(template).toContain('examine')
+    expect(template).toContain('project structure')
   })
 })
