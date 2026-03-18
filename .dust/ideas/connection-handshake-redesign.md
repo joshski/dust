@@ -31,9 +31,14 @@ Replaces `agent-capabilities`. Includes everything the server needs from the cli
 interface ConnectionInitMessage {
   type: 'connection-init'
   dustVersion: string
+  platform: string
+  gitRemote?: string
   agents: AgentCapability[]
 }
 ```
+
+- `platform` follows the existing loop context format (`${os.platform()} ${os.release()}`)
+- `gitRemote` comes from `git remote get-url origin` when available; omit if not in a git repo or no origin exists
 
 ### Server response: `connection-ready`
 
@@ -67,26 +72,26 @@ On receiving `connection-rejected`, the client should log the reason and shut do
 
 ## Supersedes
 
-This idea supersedes `send-platform-and-git-remote-on-bucket-connection.md` — the `connection-init` message provides a natural place for platform metadata if needed later.
+This idea absorbs `send-platform-and-git-remote-on-bucket-connection.md` — the `connection-init` message now includes platform and git remote metadata.
 
-## Open Questions
+## Resolved Questions
 
 ### Should the client buffer or reject messages before `connection-ready`?
 
-#### Option: Buffer all messages until `connection-ready` arrives
-
-Similar to today's buffering during capability discovery. Safe but adds complexity.
-
-#### Option: Reject/ignore messages before `connection-ready`
-
-Simpler — the client just waits for `connection-ready` before doing anything. Any `task-available` messages arriving before `connection-ready` would be covered by `hasTask` in the repository list.
+**Decision:** Reject/ignore messages before `connection-ready`. The client waits for `connection-ready` before doing anything. Any `task-available` messages arriving before `connection-ready` are covered by `hasTask` in the repository list.
 
 ### Should `connection-init` include platform metadata?
 
-#### Option: Include platform and git remote now
+**Decision:** Include platform and git remote now, absorbing the `send-platform-and-git-remote-on-bucket-connection` idea into this handshake.
 
-Absorb the `send-platform-and-git-remote-on-bucket-connection` idea into this handshake.
+## Open Questions
 
-#### Option: Keep it minimal for now
+### Should git remote detection include multiple remotes?
 
-Only include `dustVersion` and `agents`. Add platform metadata later if needed.
+#### Option: Use only `origin`
+
+Run `git remote get-url origin` and omit `gitRemote` when unavailable. Simple and covers the common case.
+
+#### Option: Include multiple remotes
+
+Collect all configured remotes and send an array so the server can match any known URL. More flexible but adds complexity.
