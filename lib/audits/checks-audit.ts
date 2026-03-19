@@ -790,11 +790,11 @@ export function checksAuditTemplate(): string {
 
     ## Definition of Done
 
-    - [ ] Analyzed project structure to identify tech stack
-    - [ ] Reviewed existing checks in settings.json
-    - [ ] Parsed CI configuration files for check commands
-    - [ ] Created ideas for each missing check category
-    - [ ] For multi-ecosystem projects, created separate ideas per ecosystem
-    - [ ] Each idea includes suggested command and alternatives
+    - Analyzed project structure to identify tech stack
+    - Reviewed existing checks in settings.json
+    - Parsed CI configuration files for check commands
+    - Created ideas for each missing check category
+    - For multi-ecosystem projects, created separate ideas per ecosystem
+    - Each idea includes suggested command and alternatives
   `
 }

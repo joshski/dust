@@ -336,14 +336,14 @@ function agentInstructionQuality(): string {
 
     ## Definition of Done
 
-    - [ ] Located all agent instruction files in the repository
-    - [ ] Reviewed for contradictory instructions across files
-    - [ ] Checked all file/code references for staleness
-    - [ ] Identified gaps where context is missing
-    - [ ] Flagged verbose sections that waste context window space
-    - [ ] Found instructions that could be replaced by linter rules
-    - [ ] Documented each issue with location, type, impact, and suggestion
-    - [ ] Created ideas for substantial instruction improvements
+    - Located all agent instruction files in the repository
+    - Reviewed for contradictory instructions across files
+    - Checked all file/code references for staleness
+    - Identified gaps where context is missing
+    - Flagged verbose sections that waste context window space
+    - Found instructions that could be replaced by linter rules
+    - Documented each issue with location, type, impact, and suggestion
+    - Created ideas for substantial instruction improvements
   `
 }
 
@@ -485,13 +485,13 @@ function documentationDrift(): string {
 
     ## Definition of Done
 
-    - [ ] Reviewed JSDoc descriptions for accuracy against function behavior
-    - [ ] Checked parameter documentation for removed or renamed parameters
-    - [ ] Verified return type documentation matches actual return types
-    - [ ] Tested README code examples for correctness (imports, function signatures)
-    - [ ] Reviewed inline comments for outdated descriptions
-    - [ ] Documented each drift finding with location, claim, reality, and suggested fix
-    - [ ] Created ideas for any substantial documentation updates needed
+    - Reviewed JSDoc descriptions for accuracy against function behavior
+    - Checked parameter documentation for removed or renamed parameters
+    - Verified return type documentation matches actual return types
+    - Tested README code examples for correctness (imports, function signatures)
+    - Reviewed inline comments for outdated descriptions
+    - Documented each drift finding with location, claim, reality, and suggested fix
+    - Created ideas for any substantial documentation updates needed
   `
 }
 
@@ -647,14 +647,14 @@ function feedbackLoopSpeed(): string {
 
     ## Definition of Done
 
-    - [ ] Measured total \`dust check\` execution time
-    - [ ] Measured time for each individual check (lint, typecheck, tests, build, etc.)
-    - [ ] Identified test suite total execution time
-    - [ ] Identified slowest individual tests (top 5)
-    - [ ] Calculated percentage of total time for each check
-    - [ ] Flagged dominant checks (>30% of total time)
-    - [ ] Documented findings in summary table format
-    - [ ] Created ideas for any feedback loop speed improvements identified
+    - Measured total \`dust check\` execution time
+    - Measured time for each individual check (lint, typecheck, tests, build, etc.)
+    - Identified test suite total execution time
+    - Identified slowest individual tests (top 5)
+    - Calculated percentage of total time for each check
+    - Flagged dominant checks (>30% of total time)
+    - Documented findings in summary table format
+    - Created ideas for any feedback loop speed improvements identified
   `
 }
 
@@ -800,13 +800,13 @@ function securityReview(): string {
 
     ## Definition of Done
 
-    - [ ] Checked CI configuration for dependency vulnerability scanning
-    - [ ] Checked for secret detection tooling (CI, pre-commit, or platform-native)
-    - [ ] Checked for security-focused static analysis
-    - [ ] Checked for supply chain security measures
-    - [ ] Ran lightweight pattern scan for obvious issues (documented as supplementary)
-    - [ ] Created ideas for any missing security tooling categories
-    - [ ] Each idea specifies which tool to add and where to configure it
+    - Checked CI configuration for dependency vulnerability scanning
+    - Checked for secret detection tooling (CI, pre-commit, or platform-native)
+    - Checked for security-focused static analysis
+    - Checked for supply chain security measures
+    - Ran lightweight pattern scan for obvious issues (documented as supplementary)
+    - Created ideas for any missing security tooling categories
+    - Each idea specifies which tool to add and where to configure it
   `
 }
 
@@ -1909,14 +1909,14 @@ function dependencyHealth(): string {
 
     ## Definition of Done
 
-    - [ ] Checked package release dates for all dependencies
-    - [ ] Identified packages with no releases in 2+ years
-    - [ ] Ran \`npm outdated\` to find major version drift
-    - [ ] Flagged packages more than 2 major versions behind
-    - [ ] Checked deprecation status of all dependencies
-    - [ ] Searched for packages with known better-maintained alternatives
-    - [ ] Documented each concern with package name, version, type, and suggested action
-    - [ ] Created ideas for any dependency health improvements needed
+    - Checked package release dates for all dependencies
+    - Identified packages with no releases in 2+ years
+    - Ran \`npm outdated\` to find major version drift
+    - Flagged packages more than 2 major versions behind
+    - Checked deprecation status of all dependencies
+    - Searched for packages with known better-maintained alternatives
+    - Documented each concern with package name, version, type, and suggested action
+    - Created ideas for any dependency health improvements needed
   `
 }
 
@@ -2068,13 +2068,13 @@ function ciDevelopmentParity(): string {
 
     ## Definition of Done
 
-    - [ ] Read \`.dust/config/settings.json\` and extracted check categories
-    - [ ] Parsed CI configuration files for check commands
-    - [ ] Followed indirect references (npm run scripts, shell scripts) one level deep
-    - [ ] Identified local-only checks (in dust but not CI)
-    - [ ] Identified CI-only checks (in CI but not dust)
-    - [ ] Created idea files for each gap with suggested fix
-    - [ ] Each idea links to relevant principles
+    - Read \`.dust/config/settings.json\` and extracted check categories
+    - Parsed CI configuration files for check commands
+    - Followed indirect references (npm run scripts, shell scripts) one level deep
+    - Identified local-only checks (in dust but not CI)
+    - Identified CI-only checks (in CI but not dust)
+    - Created idea files for each gap with suggested fix
+    - Each idea links to relevant principles
   `
 }
 
@@ -2217,14 +2217,14 @@ function commitMessageQuality(): string {
 
     ## Definition of Done
 
-    - [ ] Reviewed last 50 commits for quality issues
-    - [ ] Identified commits with generic/non-descriptive messages
-    - [ ] Identified commits missing "why" context
-    - [ ] Identified breaking changes without impact documentation
-    - [ ] Identified commits bundling unrelated changes
-    - [ ] Identified commits missing links to issues/tasks
-    - [ ] Created idea files for patterns found
-    - [ ] Each idea includes concrete suggestions for improvement
+    - Reviewed last 50 commits for quality issues
+    - Identified commits with generic/non-descriptive messages
+    - Identified commits missing "why" context
+    - Identified breaking changes without impact documentation
+    - Identified commits bundling unrelated changes
+    - Identified commits missing links to issues/tasks
+    - Created idea files for patterns found
+    - Each idea includes concrete suggestions for improvement
   `
 }
 
@@ -2306,8 +2306,8 @@ function suggestAudits(): string {
 
     ## Definition of Done
 
-    - [ ] Run \`bin/dust audit security-review\`
-    - [ ] Address any findings
+    - Run \`bin/dust audit security-review\`
+    - Address any findings
     \`\`\`
 
     ## Blocked By
@@ -2316,11 +2316,11 @@ function suggestAudits(): string {
 
     ## Definition of Done
 
-    - [ ] Determined commit range (since last suggest-audits run or last 20 commits)
-    - [ ] Analyzed commits for changed files and commit messages
-    - [ ] Identified relevant audits based on change patterns
-    - [ ] Created task files for each suggested audit with rationale
-    - [ ] Each task explains why the audit is valuable given recent changes
+    - Determined commit range (since last suggest-audits run or last 20 commits)
+    - Analyzed commits for changed files and commit messages
+    - Identified relevant audits based on change patterns
+    - Created task files for each suggested audit with rationale
+    - Each task explains why the audit is valuable given recent changes
   `
 
   return content
