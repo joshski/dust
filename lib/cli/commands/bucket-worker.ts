@@ -107,6 +107,170 @@ export { createDefaultBucketDependencies }
 
 const log = createLogger('dust:cli:commands:bucket')
 
+/**
+ * Result of converting positional arguments to named arguments.
+ * Either contains the converted arguments or an error.
+ */
+type ArgumentConversionResult =
+  | { success: true; namedArgs: Record<string, unknown> }
+  | { success: false; error: string }
+
+/**
+ * Convert positional string[] arguments to named Record using tool definitions.
+ * For file-type parameters, uses the provided file reader to load and base64-encode content.
+ *
+ * This is a pure function (when fileReader is a pure function).
+ */
+export async function convertPositionalArgsToNamed(
+  toolDef: ToolDefinition | undefined,
+  positionalArgs: string[],
+  repoPath: string | undefined,
+  fileReader: (path: string) => Promise<Buffer>
+): Promise<ArgumentConversionResult> {
+  const namedArgs: Record<string, unknown> = {}
+
+  if (toolDef) {
+    for (
+      let i = 0;
+      i < toolDef.parameters.length && i < positionalArgs.length;
+      i++
+    ) {
+      const param = toolDef.parameters[i]
+      const value = positionalArgs[i]
+      if (param.type === 'file' && typeof value === 'string') {
+        const filePath = repoPath ? resolve(repoPath, value) : value
+        try {
+          const data = await fileReader(filePath)
+          namedArgs[param.name] = {
+            filename: basename(value),
+            data: data.toString('base64'),
+          }
+        } catch {
+          return {
+            success: false,
+            error: `Unable to read file: ${value}`,
+          }
+        }
+      } else {
+        namedArgs[param.name] = value
+      }
+    }
+  } else {
+    // Fallback: pass positional args as-is if tool definition not found
+    for (let i = 0; i < positionalArgs.length; i++) {
+      namedArgs[`arg${i}`] = positionalArgs[i]
+    }
+  }
+
+  return { success: true, namedArgs }
+}
+
+/**
+ * Dependencies required for forwarding tool execution requests.
+ */
+export interface ForwardToolExecutionDeps {
+  getWebSocket: () => WebSocketLike | null
+  getTools: () => ToolDefinition[]
+  findRepoPath: (repositoryId: number) => string | undefined
+  readFile: (path: string) => Promise<Buffer>
+  generateRequestId: () => string
+  setTimeout: (
+    callback: () => void,
+    ms: number
+  ) => ReturnType<typeof setTimeout>
+  clearTimeout: (id: ReturnType<typeof setTimeout>) => void
+  pendingExecutions: Map<
+    string,
+    {
+      resolve: (result: ToolExecutionResult) => void
+      reject: (error: Error) => void
+      timeoutId: ReturnType<typeof setTimeout>
+    }
+  >
+  timeoutMs?: number
+}
+
+/**
+ * Forward a tool execution request over WebSocket.
+ * Returns the result when the server responds, or an error on timeout/failure.
+ *
+ * This function is testable by injecting a WebSocket stub via dependencies.
+ */
+export async function forwardToolExecutionWithDeps(
+  request: import('../../bucket/command-events-proxy').ToolExecutionRequest,
+  toolExecutionDeps: ForwardToolExecutionDeps
+): Promise<ToolExecutionResult> {
+  const ws = toolExecutionDeps.getWebSocket()
+  if (!ws || ws.readyState !== WS_OPEN) {
+    log(
+      `tool execution rejected: ${request.toolName} (WebSocket not connected)`
+    )
+    return {
+      status: 'error',
+      error: 'Bucket session is not connected',
+    }
+  }
+
+  const requestId = toolExecutionDeps.generateRequestId()
+  const repoPath = toolExecutionDeps.findRepoPath(Number(request.repositoryId))
+  const toolDef = toolExecutionDeps
+    .getTools()
+    .find(t => t.name === request.toolName)
+
+  const conversionResult = await convertPositionalArgsToNamed(
+    toolDef,
+    request.arguments,
+    repoPath,
+    toolExecutionDeps.readFile
+  )
+
+  if (!conversionResult.success) {
+    return {
+      status: 'error',
+      error: conversionResult.error,
+    }
+  }
+
+  const message: ToolExecutionRequestMessage = {
+    type: 'tool-execution-request',
+    requestId,
+    tool: request.toolName,
+    repositoryId: Number(request.repositoryId),
+    arguments: conversionResult.namedArgs,
+  }
+
+  log(`forwarding tool execution: ${request.toolName} requestId=${requestId}`)
+
+  const timeoutMs = toolExecutionDeps.timeoutMs ?? 30000
+
+  return new Promise<ToolExecutionResult>((onSuccess, onError) => {
+    const timeoutId = toolExecutionDeps.setTimeout(() => {
+      toolExecutionDeps.pendingExecutions.delete(requestId)
+      log(
+        `tool execution timed out: ${request.toolName} requestId=${requestId}`
+      )
+      onError(new Error('Timed out waiting for tool execution result'))
+    }, timeoutMs)
+
+    toolExecutionDeps.pendingExecutions.set(requestId, {
+      resolve: onSuccess,
+      reject: onError,
+      timeoutId,
+    })
+
+    try {
+      ws.send(JSON.stringify(message))
+    } catch (error) {
+      toolExecutionDeps.clearTimeout(timeoutId)
+      toolExecutionDeps.pendingExecutions.delete(requestId)
+      const messageText = error instanceof Error ? error.message : String(error)
+      onError(
+        new Error(`Failed to send tool execution request: ${messageText}`)
+      )
+    }
+  })
+}
+
 /* v8 ignore start */
 function findRepoPathByRepositoryId(
   repositories: Map<string, import('../../bucket/repository').RepositoryState>,
@@ -1174,104 +1338,24 @@ export async function bucketWorker(
     state.ui.connectedHost = wsUrl
   }
 
-  /* v8 ignore start -- internal functions only called during real tool execution flows */
   let tuiHandle: TUIHandle | undefined
   let cleanupKeypress: (() => void) | undefined
   let cleanupSignals: (() => void) | undefined
 
-  const forwardToolExecution = async (
+  /* v8 ignore start -- thin wrapper only called during real tool execution flows */
+  const forwardToolExecution = (
     request: import('../../bucket/command-events-proxy').ToolExecutionRequest
   ): Promise<ToolExecutionResult> => {
-    const ws = state.ws
-    if (!ws || ws.readyState !== WS_OPEN) {
-      log(
-        `tool execution rejected: ${request.toolName} (WebSocket not connected)`
-      )
-      return {
-        status: 'error',
-        error: 'Bucket session is not connected',
-      }
-    }
-
-    const requestId = crypto.randomUUID()
-
-    // Find the repo's local path for resolving relative file paths
-    const repoPath = findRepoPathByRepositoryId(
-      state.repositories,
-      Number(request.repositoryId)
-    )
-
-    // Convert positional string[] arguments to named Record using tool definitions
-    const toolDef = state.tools.find(t => t.name === request.toolName)
-    const namedArgs: Record<string, unknown> = {}
-    if (toolDef) {
-      for (
-        let i = 0;
-        i < toolDef.parameters.length && i < request.arguments.length;
-        i++
-      ) {
-        const param = toolDef.parameters[i]
-        const value = request.arguments[i]
-        if (param.type === 'file' && typeof value === 'string') {
-          const filePath = repoPath ? resolve(repoPath, value) : value
-          try {
-            const data = await readFile(filePath)
-            namedArgs[param.name] = {
-              filename: basename(value),
-              data: data.toString('base64'),
-            }
-          } catch {
-            return {
-              status: 'error',
-              error: `Unable to read file: ${value}`,
-            }
-          }
-        } else {
-          namedArgs[param.name] = value
-        }
-      }
-    } else {
-      // Fallback: pass positional args as-is if tool definition not found
-      for (let i = 0; i < request.arguments.length; i++) {
-        namedArgs[`arg${i}`] = request.arguments[i]
-      }
-    }
-
-    const message: ToolExecutionRequestMessage = {
-      type: 'tool-execution-request',
-      requestId,
-      tool: request.toolName,
-      repositoryId: Number(request.repositoryId),
-      arguments: namedArgs,
-    }
-
-    log(`forwarding tool execution: ${request.toolName} requestId=${requestId}`)
-    return new Promise<ToolExecutionResult>((onSuccess, onError) => {
-      const timeoutId = setTimeout(() => {
-        pendingToolExecutions.delete(requestId)
-        log(
-          `tool execution timed out: ${request.toolName} requestId=${requestId}`
-        )
-        onError(new Error('Timed out waiting for tool execution result'))
-      }, 30000)
-
-      pendingToolExecutions.set(requestId, {
-        resolve: onSuccess,
-        reject: onError,
-        timeoutId,
-      })
-
-      try {
-        ws.send(JSON.stringify(message))
-      } catch (error) {
-        clearTimeout(timeoutId)
-        pendingToolExecutions.delete(requestId)
-        const messageText =
-          error instanceof Error ? error.message : String(error)
-        onError(
-          new Error(`Failed to send tool execution request: ${messageText}`)
-        )
-      }
+    return forwardToolExecutionWithDeps(request, {
+      getWebSocket: () => state.ws,
+      getTools: () => state.tools,
+      findRepoPath: repositoryId =>
+        findRepoPathByRepositoryId(state.repositories, repositoryId),
+      readFile,
+      generateRequestId: () => crypto.randomUUID(),
+      setTimeout,
+      clearTimeout,
+      pendingExecutions: pendingToolExecutions,
     })
   }
   /* v8 ignore stop */

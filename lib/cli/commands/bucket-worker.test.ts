@@ -27,13 +27,16 @@ import type { CommandDependencies } from '../types'
 import {
   type AuthFileSystemDependencies,
   type BucketDependencies,
+  type ForwardToolExecutionDeps,
   bucketWorker,
   connectWebSocket,
+  convertPositionalArgsToNamed,
   createAuthFileSystem,
   createDefaultBucketDependencies,
   createInitialState,
   createKeypressHandler,
   createTUIContext,
+  forwardToolExecutionWithDeps,
   getWebSocketUrl,
   handleRepositoryListError,
   handleRepositoryListSuccess,
@@ -2733,5 +2736,595 @@ describe('handleRepositoryListError', () => {
     const errorLine = lines.find(l => l.stream === 'stderr')
     expect(errorLine?.text).toContain('Failed to handle repository list')
     expect(errorLine?.text).toContain('Clone failed')
+  })
+})
+
+describe('convertPositionalArgsToNamed', () => {
+  test('converts positional args to named args using tool definition', async () => {
+    const toolDef = {
+      name: 'test-tool',
+      description: 'A test tool',
+      endpoint: '/tools/test',
+      method: 'POST' as const,
+      parameters: [
+        {
+          name: 'name',
+          type: 'string' as const,
+          required: true,
+          description: 'Name',
+        },
+        {
+          name: 'count',
+          type: 'number' as const,
+          required: false,
+          description: 'Count',
+        },
+      ],
+    }
+
+    const result = await convertPositionalArgsToNamed(
+      toolDef,
+      ['hello', '42'],
+      undefined,
+      async () => Buffer.from('')
+    )
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.namedArgs).toEqual({ name: 'hello', count: '42' })
+    }
+  })
+
+  test('uses fallback arg names when tool definition not found', async () => {
+    const result = await convertPositionalArgsToNamed(
+      undefined,
+      ['foo', 'bar', 'baz'],
+      undefined,
+      async () => Buffer.from('')
+    )
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.namedArgs).toEqual({
+        arg0: 'foo',
+        arg1: 'bar',
+        arg2: 'baz',
+      })
+    }
+  })
+
+  test('handles fewer arguments than parameters', async () => {
+    const toolDef = {
+      name: 'test-tool',
+      description: 'A test tool',
+      endpoint: '/tools/test',
+      method: 'POST' as const,
+      parameters: [
+        {
+          name: 'first',
+          type: 'string' as const,
+          required: true,
+          description: '',
+        },
+        {
+          name: 'second',
+          type: 'string' as const,
+          required: false,
+          description: '',
+        },
+        {
+          name: 'third',
+          type: 'string' as const,
+          required: false,
+          description: '',
+        },
+      ],
+    }
+
+    const result = await convertPositionalArgsToNamed(
+      toolDef,
+      ['only-one'],
+      undefined,
+      async () => Buffer.from('')
+    )
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.namedArgs).toEqual({ first: 'only-one' })
+    }
+  })
+
+  test('handles more arguments than parameters', async () => {
+    const toolDef = {
+      name: 'test-tool',
+      description: 'A test tool',
+      endpoint: '/tools/test',
+      method: 'POST' as const,
+      parameters: [
+        {
+          name: 'only',
+          type: 'string' as const,
+          required: true,
+          description: '',
+        },
+      ],
+    }
+
+    const result = await convertPositionalArgsToNamed(
+      toolDef,
+      ['first', 'second', 'third'],
+      undefined,
+      async () => Buffer.from('')
+    )
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.namedArgs).toEqual({ only: 'first' })
+    }
+  })
+
+  test('encodes file parameters as base64', async () => {
+    const toolDef = {
+      name: 'upload-tool',
+      description: 'Uploads a file',
+      endpoint: '/tools/upload',
+      method: 'POST' as const,
+      parameters: [
+        {
+          name: 'file',
+          type: 'file' as const,
+          required: true,
+          description: 'File to upload',
+        },
+      ],
+    }
+
+    const fileContent = 'Hello, World!'
+    const result = await convertPositionalArgsToNamed(
+      toolDef,
+      ['test.txt'],
+      undefined,
+      async () => Buffer.from(fileContent)
+    )
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.namedArgs.file).toEqual({
+        filename: 'test.txt',
+        data: Buffer.from(fileContent).toString('base64'),
+      })
+    }
+  })
+
+  test('resolves file paths relative to repo path', async () => {
+    const toolDef = {
+      name: 'upload-tool',
+      description: 'Uploads a file',
+      endpoint: '/tools/upload',
+      method: 'POST' as const,
+      parameters: [
+        {
+          name: 'file',
+          type: 'file' as const,
+          required: true,
+          description: 'File to upload',
+        },
+      ],
+    }
+
+    let capturedPath: string | undefined
+    const result = await convertPositionalArgsToNamed(
+      toolDef,
+      ['relative/path.txt'],
+      '/repo/root',
+      async (path: string) => {
+        capturedPath = path
+        return Buffer.from('content')
+      }
+    )
+
+    expect(result.success).toBe(true)
+    expect(capturedPath).toBe('/repo/root/relative/path.txt')
+  })
+
+  test('returns error when file read fails', async () => {
+    const toolDef = {
+      name: 'upload-tool',
+      description: 'Uploads a file',
+      endpoint: '/tools/upload',
+      method: 'POST' as const,
+      parameters: [
+        {
+          name: 'file',
+          type: 'file' as const,
+          required: true,
+          description: 'File to upload',
+        },
+      ],
+    }
+
+    const result = await convertPositionalArgsToNamed(
+      toolDef,
+      ['missing.txt'],
+      undefined,
+      async () => {
+        throw new Error('ENOENT: no such file')
+      }
+    )
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toBe('Unable to read file: missing.txt')
+    }
+  })
+
+  test('handles mixed parameter types', async () => {
+    const toolDef = {
+      name: 'mixed-tool',
+      description: 'Has mixed params',
+      endpoint: '/tools/mixed',
+      method: 'POST' as const,
+      parameters: [
+        {
+          name: 'text',
+          type: 'string' as const,
+          required: true,
+          description: '',
+        },
+        {
+          name: 'file',
+          type: 'file' as const,
+          required: true,
+          description: '',
+        },
+        {
+          name: 'flag',
+          type: 'boolean' as const,
+          required: false,
+          description: '',
+        },
+      ],
+    }
+
+    const result = await convertPositionalArgsToNamed(
+      toolDef,
+      ['hello', 'doc.pdf', 'true'],
+      undefined,
+      async () => Buffer.from('PDF content')
+    )
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.namedArgs.text).toBe('hello')
+      expect(result.namedArgs.file).toEqual({
+        filename: 'doc.pdf',
+        data: Buffer.from('PDF content').toString('base64'),
+      })
+      expect(result.namedArgs.flag).toBe('true')
+    }
+  })
+})
+
+// Helper to create a fake timeout ID without double-casting
+function createFakeTimeoutId(_id: number): ReturnType<typeof setTimeout> {
+  // Use a real setTimeout and immediately clear it to get a valid type
+  const realId = globalThis.setTimeout(() => {}, 0)
+  globalThis.clearTimeout(realId)
+  return realId
+}
+
+describe('forwardToolExecutionWithDeps', () => {
+  type PendingExecutionMap = Map<
+    string,
+    {
+      resolve: (
+        result: import('../../bucket/command-events-proxy').ToolExecutionResult
+      ) => void
+      reject: (error: Error) => void
+      timeoutId: ReturnType<typeof setTimeout>
+    }
+  >
+
+  function createMockWsStub(): WebSocketLike & { sentMessages: string[] } {
+    const sentMessages: string[] = []
+    return {
+      readyState: WS_OPEN,
+      send: (data: string) => {
+        sentMessages.push(data)
+      },
+      close: () => {},
+      addEventListener: () => {},
+      sentMessages,
+    }
+  }
+
+  function createToolExecutionDeps(
+    overrides: Partial<ForwardToolExecutionDeps> = {}
+  ): ForwardToolExecutionDeps {
+    const pendingExecutions: PendingExecutionMap = new Map()
+    return {
+      getWebSocket: () => createMockWsStub(),
+      getTools: () => [],
+      findRepoPath: () => undefined,
+      readFile: async () => Buffer.from(''),
+      generateRequestId: () => 'test-request-id',
+      setTimeout: globalThis.setTimeout,
+      clearTimeout: globalThis.clearTimeout,
+      pendingExecutions,
+      ...overrides,
+    }
+  }
+
+  test('returns error when WebSocket is not connected', async () => {
+    const toolExecutionDeps = createToolExecutionDeps({
+      getWebSocket: () => null,
+    })
+
+    const result = await forwardToolExecutionWithDeps(
+      { toolName: 'test-tool', arguments: [], repositoryId: '1' },
+      toolExecutionDeps
+    )
+
+    expect(result).toEqual({
+      status: 'error',
+      error: 'Bucket session is not connected',
+    })
+  })
+
+  test('returns error when WebSocket is not in OPEN state', async () => {
+    const ws = createMockWsStub()
+    ws.readyState = WS_CLOSED
+    const toolExecutionDeps = createToolExecutionDeps({
+      getWebSocket: () => ws,
+    })
+
+    const result = await forwardToolExecutionWithDeps(
+      { toolName: 'test-tool', arguments: [], repositoryId: '1' },
+      toolExecutionDeps
+    )
+
+    expect(result).toEqual({
+      status: 'error',
+      error: 'Bucket session is not connected',
+    })
+  })
+
+  test('sends tool execution request message over WebSocket', async () => {
+    const ws = createMockWsStub()
+    const pendingExecutions: PendingExecutionMap = new Map()
+    const toolExecutionDeps = createToolExecutionDeps({
+      getWebSocket: () => ws,
+      generateRequestId: () => 'req-123',
+      getTools: () => [
+        {
+          name: 'my-tool',
+          description: '',
+          endpoint: '/tools/my-tool',
+          method: 'POST',
+          parameters: [
+            { name: 'input', type: 'string', required: true, description: '' },
+          ],
+        },
+      ],
+      pendingExecutions,
+    })
+
+    // Start the forwarding but don't await - we need to resolve it manually
+    const promise = forwardToolExecutionWithDeps(
+      { toolName: 'my-tool', arguments: ['value'], repositoryId: '42' },
+      toolExecutionDeps
+    )
+
+    // Wait a tick to allow the promise chain to set up the pending execution
+    await new Promise(resolve => globalThis.setTimeout(resolve, 0))
+
+    // Simulate server response
+    const pending = pendingExecutions.get('req-123')
+    expect(pending).toBeDefined()
+    pending?.resolve({ status: 'success', output: 'done' })
+
+    const result = await promise
+
+    expect(result).toEqual({ status: 'success', output: 'done' })
+    expect(ws.sentMessages).toHaveLength(1)
+    const sentMessage = JSON.parse(ws.sentMessages[0])
+    expect(sentMessage).toEqual({
+      type: 'tool-execution-request',
+      requestId: 'req-123',
+      tool: 'my-tool',
+      repositoryId: 42,
+      arguments: { input: 'value' },
+    })
+  })
+
+  test('times out and rejects when no response received', async () => {
+    let timeoutCallback: (() => void) | undefined
+    let timeoutDelay: number | undefined
+    const pendingExecutions: PendingExecutionMap = new Map()
+    const toolExecutionDeps = createToolExecutionDeps({
+      setTimeout: (callback, ms) => {
+        timeoutCallback = callback
+        timeoutDelay = ms
+        return createFakeTimeoutId(999)
+      },
+      clearTimeout: () => {},
+      timeoutMs: 100,
+      pendingExecutions,
+    })
+
+    const promise = forwardToolExecutionWithDeps(
+      { toolName: 'slow-tool', arguments: [], repositoryId: '1' },
+      toolExecutionDeps
+    )
+
+    // Wait a tick to allow the promise chain to set up the pending execution
+    await new Promise(resolve => globalThis.setTimeout(resolve, 0))
+
+    expect(timeoutDelay).toBe(100)
+    expect(timeoutCallback).toBeDefined()
+
+    // Trigger timeout
+    timeoutCallback?.()
+
+    await expect(promise).rejects.toThrow(
+      'Timed out waiting for tool execution result'
+    )
+    expect(pendingExecutions.size).toBe(0)
+  })
+
+  test('clears timeout and removes pending execution on send failure with Error', async () => {
+    let clearedTimeoutId: ReturnType<typeof setTimeout> | undefined
+    const ws = createMockWsStub()
+    ws.send = () => {
+      throw new Error('WebSocket send failed')
+    }
+    const timeoutId = createFakeTimeoutId(888)
+    const toolExecutionDeps = createToolExecutionDeps({
+      getWebSocket: () => ws,
+      setTimeout: () => timeoutId,
+      clearTimeout: id => {
+        clearedTimeoutId = id
+      },
+    })
+
+    const promise = forwardToolExecutionWithDeps(
+      { toolName: 'test-tool', arguments: [], repositoryId: '1' },
+      toolExecutionDeps
+    )
+
+    await expect(promise).rejects.toThrow(
+      'Failed to send tool execution request: WebSocket send failed'
+    )
+    expect(clearedTimeoutId).toBe(timeoutId)
+    expect(toolExecutionDeps.pendingExecutions.size).toBe(0)
+  })
+
+  test('handles non-Error throws from WebSocket send', async () => {
+    const ws = createMockWsStub()
+    ws.send = () => {
+      // eslint-disable-next-line no-throw-literal
+      throw 'string error'
+    }
+    const toolExecutionDeps = createToolExecutionDeps({
+      getWebSocket: () => ws,
+      setTimeout: () => createFakeTimeoutId(123),
+      clearTimeout: () => {},
+    })
+
+    const promise = forwardToolExecutionWithDeps(
+      { toolName: 'test-tool', arguments: [], repositoryId: '1' },
+      toolExecutionDeps
+    )
+
+    await expect(promise).rejects.toThrow(
+      'Failed to send tool execution request: string error'
+    )
+  })
+
+  test('returns file read error when file parameter fails to load', async () => {
+    const toolExecutionDeps = createToolExecutionDeps({
+      getTools: () => [
+        {
+          name: 'file-tool',
+          description: '',
+          endpoint: '/tools/file',
+          method: 'POST',
+          parameters: [
+            { name: 'upload', type: 'file', required: true, description: '' },
+          ],
+        },
+      ],
+      readFile: async () => {
+        throw new Error('File not found')
+      },
+    })
+
+    const result = await forwardToolExecutionWithDeps(
+      { toolName: 'file-tool', arguments: ['missing.txt'], repositoryId: '1' },
+      toolExecutionDeps
+    )
+
+    expect(result).toEqual({
+      status: 'error',
+      error: 'Unable to read file: missing.txt',
+    })
+  })
+
+  test('resolves file paths relative to repo path from findRepoPath', async () => {
+    let capturedPath: string | undefined
+    const ws = createMockWsStub()
+    const pendingExecutions: PendingExecutionMap = new Map()
+    const toolExecutionDeps = createToolExecutionDeps({
+      getWebSocket: () => ws,
+      getTools: () => [
+        {
+          name: 'file-tool',
+          description: '',
+          endpoint: '/tools/file',
+          method: 'POST',
+          parameters: [
+            { name: 'upload', type: 'file', required: true, description: '' },
+          ],
+        },
+      ],
+      findRepoPath: () => '/my/repo',
+      readFile: async path => {
+        capturedPath = path
+        return Buffer.from('data')
+      },
+      pendingExecutions,
+    })
+
+    const promise = forwardToolExecutionWithDeps(
+      {
+        toolName: 'file-tool',
+        arguments: ['subdir/file.txt'],
+        repositoryId: '1',
+      },
+      toolExecutionDeps
+    )
+
+    // Wait a tick to allow the promise chain to set up the pending execution
+    await new Promise(resolve => globalThis.setTimeout(resolve, 0))
+
+    // Resolve the pending execution
+    const pending = pendingExecutions.get('test-request-id')
+    expect(pending).toBeDefined()
+    pending?.resolve({ status: 'success', output: 'ok' })
+
+    await promise
+
+    expect(capturedPath).toBe('/my/repo/subdir/file.txt')
+  })
+
+  test('uses fallback arg names when tool not in getTools', async () => {
+    const ws = createMockWsStub()
+    const pendingExecutions: PendingExecutionMap = new Map()
+    const toolExecutionDeps = createToolExecutionDeps({
+      getWebSocket: () => ws,
+      getTools: () => [], // Empty - tool not found
+      pendingExecutions,
+    })
+
+    const promise = forwardToolExecutionWithDeps(
+      {
+        toolName: 'unknown-tool',
+        arguments: ['a', 'b', 'c'],
+        repositoryId: '1',
+      },
+      toolExecutionDeps
+    )
+
+    // Wait a tick to allow the promise chain to set up the pending execution
+    await new Promise(resolve => globalThis.setTimeout(resolve, 0))
+
+    const pending = pendingExecutions.get('test-request-id')
+    expect(pending).toBeDefined()
+    pending?.resolve({ status: 'success', output: 'ok' })
+
+    await promise
+
+    const sentMessage = JSON.parse(ws.sentMessages[0])
+    expect(sentMessage.arguments).toEqual({ arg0: 'a', arg1: 'b', arg2: 'c' })
   })
 })
