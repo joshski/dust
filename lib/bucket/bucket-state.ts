@@ -233,6 +233,13 @@ export function handleServerMessage(
               stream: 'stdout',
             })
           }
+          if (r.branch) {
+            effects.push({
+              type: 'log',
+              message: `    branch=${r.branch}`,
+              stream: 'stdout',
+            })
+          }
         }
       }
 

@@ -195,6 +195,9 @@ function parseRepositoryItem(r: unknown): RepositoryListItem | null {
   if (typeof repo.agentProvider === 'string') {
     item.agentProvider = repo.agentProvider
   }
+  if (typeof repo.branch === 'string') {
+    item.branch = repo.branch
+  }
   return item
 }
 

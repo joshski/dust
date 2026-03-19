@@ -208,6 +208,59 @@ describe('parseServerMessage', () => {
       expect('agentProvider' in repo).toBe(false)
     })
 
+    it('parses branch when present', () => {
+      const data = {
+        type: 'repository-list',
+        repositories: [
+          {
+            name: 'branched-repo',
+            gitUrl: 'git@github.com:user/branched-repo.git',
+            gitSshUrl: 'git@github.com:user/branched-repo.git',
+            url: 'https://github.com/user/branched-repo',
+            id: 321,
+            hasTask: true,
+            branch: 'feature-x',
+          },
+        ],
+      }
+      const result = parseServerMessage(data)
+      expect(result).toEqual({
+        type: 'repository-list',
+        repositories: [
+          {
+            name: 'branched-repo',
+            gitUrl: 'git@github.com:user/branched-repo.git',
+            gitSshUrl: 'git@github.com:user/branched-repo.git',
+            url: 'https://github.com/user/branched-repo',
+            id: 321,
+            hasTask: true,
+            branch: 'feature-x',
+          },
+        ],
+      })
+    })
+
+    it('omits branch when absent', () => {
+      const data = {
+        type: 'repository-list',
+        repositories: [
+          {
+            name: 'no-branch-repo',
+            gitUrl: 'git@github.com:user/no-branch-repo.git',
+            gitSshUrl: 'git@github.com:user/no-branch-repo.git',
+            url: 'https://github.com/user/no-branch-repo',
+            id: 654,
+            hasTask: false,
+          },
+        ],
+      }
+      const result = parseServerMessage(data)
+      expect(result).not.toBeNull()
+      const repo = (result as { repositories: { branch?: string }[] })
+        .repositories[0]
+      expect('branch' in repo).toBe(false)
+    })
+
     it('returns null for repository-list with missing repositories array', () => {
       const data = {
         type: 'repository-list',
