@@ -1,6 +1,6 @@
 {
   "name": "@joshski/dust",
-  "version": "0.1.99",
+  "version": "0.1.100",
   "description": "Flow state for AI coding agents",
   "type": "module",
   "bin": {
