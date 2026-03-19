@@ -6,8 +6,10 @@ import {
   buildUpstreamErrorResponse,
   type ClaudeApiProxyDependencies,
   filterResponseHeaders,
+  handleProxyRequest,
   isTokenExpired,
   mergeAnthropicBetaHeader,
+  type ProxyRequest,
   readOAuthToken,
 } from './claude-api-proxy'
 
@@ -335,5 +337,176 @@ describe('buildUpstreamErrorResponse', () => {
   test('handles null error', () => {
     const result = buildUpstreamErrorResponse(null)
     expect(result.body).toBe('Upstream request failed: Unknown error')
+  })
+})
+
+function createTestRequest(
+  overrides: Partial<ProxyRequest> = {}
+): ProxyRequest {
+  return {
+    method: 'POST',
+    pathname: '/v1/messages',
+    search: '',
+    headers: {
+      'content-type': 'application/json',
+    },
+    body: new TextEncoder().encode('{"model":"claude-3"}'),
+    ...overrides,
+  }
+}
+
+function createDependenciesWithToken(
+  token: string,
+  fetchImpl: typeof fetch
+): ClaudeApiProxyDependencies {
+  return {
+    homedir: () => '/home/user',
+    readFileSync: () =>
+      JSON.stringify({
+        claudeAiOauth: { accessToken: token },
+      }),
+    fetch: fetchImpl,
+  }
+}
+
+function createDependenciesWithoutToken(
+  fetchImpl: typeof fetch
+): ClaudeApiProxyDependencies {
+  return {
+    homedir: () => '/home/user',
+    readFileSync: () => {
+      throw new Error('ENOENT')
+    },
+    fetch: fetchImpl,
+  }
+}
+
+describe('handleProxyRequest', () => {
+  test('returns 401 error response when no token is available', async () => {
+    stubEnv('CLAUDE_CODE_OAUTH_TOKEN', undefined)
+    const fetchStub = createFetchStub(async () => {
+      throw new Error('should not be called')
+    })
+    const dependencies = createDependenciesWithoutToken(fetchStub)
+    const request = createTestRequest()
+
+    const response = await handleProxyRequest(request, dependencies)
+
+    expect(response.kind).toBe('error')
+    if (response.kind === 'error') {
+      expect(response.status).toBe(401)
+      expect(response.contentType).toBe('text/plain')
+      expect(response.body).toBe('Could not obtain OAuth token')
+    }
+    restoreEnv()
+  })
+
+  test('forwards request to upstream and returns success response', async () => {
+    stubEnv('CLAUDE_CODE_OAUTH_TOKEN', undefined)
+    const fetchStub = createFetchStub(async (url, options) => {
+      expect(url).toBe('https://api.anthropic.com/v1/messages')
+      expect(options?.method).toBe('POST')
+      expect(options?.headers).toMatchObject({
+        authorization: 'Bearer test-token',
+        'content-type': 'application/json',
+      })
+      return new Response('{"content":"hello"}', {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    })
+    const dependencies = createDependenciesWithToken('test-token', fetchStub)
+    const request = createTestRequest()
+
+    const response = await handleProxyRequest(request, dependencies)
+
+    expect(response.kind).toBe('success')
+    if (response.kind === 'success') {
+      expect(response.status).toBe(200)
+      expect(response.headers['content-type']).toBe('application/json')
+    }
+    restoreEnv()
+  })
+
+  test('returns 502 error response when upstream fetch fails', async () => {
+    stubEnv('CLAUDE_CODE_OAUTH_TOKEN', undefined)
+    const fetchStub = createFetchStub(async () => {
+      throw new Error('Connection refused')
+    })
+    const dependencies = createDependenciesWithToken('test-token', fetchStub)
+    const request = createTestRequest()
+
+    const response = await handleProxyRequest(request, dependencies)
+
+    expect(response.kind).toBe('error')
+    if (response.kind === 'error') {
+      expect(response.status).toBe(502)
+      expect(response.contentType).toBe('text/plain')
+      expect(response.body).toBe('Upstream request failed: Connection refused')
+    }
+    restoreEnv()
+  })
+
+  test('returns 502 error response with generic message for non-Error throws', async () => {
+    stubEnv('CLAUDE_CODE_OAUTH_TOKEN', undefined)
+    const fetchStub = createFetchStub(async () => {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error
+      throw 'string error'
+    })
+    const dependencies = createDependenciesWithToken('test-token', fetchStub)
+    const request = createTestRequest()
+
+    const response = await handleProxyRequest(request, dependencies)
+
+    expect(response.kind).toBe('error')
+    if (response.kind === 'error') {
+      expect(response.status).toBe(502)
+      expect(response.body).toBe('Upstream request failed: Unknown error')
+    }
+    restoreEnv()
+  })
+
+  test('filters response headers from upstream', async () => {
+    stubEnv('CLAUDE_CODE_OAUTH_TOKEN', undefined)
+    const fetchStub = createFetchStub(async () => {
+      return new Response('ok', {
+        status: 200,
+        headers: {
+          'content-type': 'text/plain',
+          'x-request-id': 'abc123',
+          'transfer-encoding': 'chunked',
+        },
+      })
+    })
+    const dependencies = createDependenciesWithToken('test-token', fetchStub)
+    const request = createTestRequest()
+
+    const response = await handleProxyRequest(request, dependencies)
+
+    expect(response.kind).toBe('success')
+    if (response.kind === 'success') {
+      expect(response.headers['content-type']).toBe('text/plain')
+      expect(response.headers['x-request-id']).toBe('abc123')
+      expect(response.headers['transfer-encoding']).toBeUndefined()
+    }
+    restoreEnv()
+  })
+
+  test('includes query string in upstream URL', async () => {
+    stubEnv('CLAUDE_CODE_OAUTH_TOKEN', undefined)
+    let capturedUrl: string | undefined
+    const fetchStub = createFetchStub(async url => {
+      capturedUrl = url as string
+      return new Response('ok', { status: 200 })
+    })
+    const dependencies = createDependenciesWithToken('test-token', fetchStub)
+    const request = createTestRequest({ search: '?stream=true' })
+
+    await handleProxyRequest(request, dependencies)
+
+    expect(capturedUrl).toBe(
+      'https://api.anthropic.com/v1/messages?stream=true'
+    )
+    restoreEnv()
   })
 })

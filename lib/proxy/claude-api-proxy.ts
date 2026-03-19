@@ -137,6 +137,34 @@ export interface ClaudeApiProxyServer {
   stop: () => void
 }
 
+/**
+ * Represents an incoming proxy request in a platform-agnostic way.
+ */
+export interface ProxyRequest {
+  method: string
+  pathname: string
+  search: string
+  headers: Record<string, string | string[] | undefined>
+  body: BodyInit | null | undefined
+}
+
+/**
+ * Represents a proxy response in a platform-agnostic way.
+ */
+export type ProxyResponse =
+  | {
+      kind: 'success'
+      status: number
+      headers: Record<string, string>
+      body: ReadableStream<Uint8Array> | null
+    }
+  | {
+      kind: 'error'
+      status: number
+      contentType: string
+      body: string
+    }
+
 const HEADERS_TO_FORWARD = [
   'content-type',
   'anthropic-version',
@@ -258,17 +286,68 @@ export function buildUpstreamErrorResponse(error: unknown): ErrorResponse {
   }
 }
 
-/* v8 ignore start - HTTP response helper, tested via system tests */
-function sendErrorResponse(
-  nodeResponse: import('node:http').ServerResponse,
-  errorResponse: ErrorResponse
-): void {
-  nodeResponse.writeHead(errorResponse.statusCode, {
-    'Content-Type': errorResponse.contentType,
-  })
-  nodeResponse.end(errorResponse.body)
+/**
+ * Handle a proxy request and return a platform-agnostic response.
+ * This is the pure core of the proxy logic, separated from HTTP plumbing.
+ */
+export async function handleProxyRequest(
+  request: ProxyRequest,
+  dependencies: ClaudeApiProxyDependencies
+): Promise<ProxyResponse> {
+  log(`${request.method} ${request.pathname}${request.search}`)
+
+  const token = readOAuthToken(dependencies)
+  if (!token) {
+    const errorResponse = buildNoTokenResponse()
+    return {
+      kind: 'error',
+      status: errorResponse.statusCode,
+      contentType: errorResponse.contentType,
+      body: errorResponse.body,
+    }
+  }
+
+  const proxyRequestConfig = buildProxyRequest(
+    request.pathname,
+    request.search,
+    token,
+    request.headers
+  )
+
+  log(`forwarding ${request.method} to ${proxyRequestConfig.url}`)
+
+  try {
+    const upstreamResponse = await dependencies.fetch(proxyRequestConfig.url, {
+      method: request.method,
+      headers: proxyRequestConfig.headers,
+      body: request.body,
+    })
+
+    const responseHeaders = filterResponseHeaders(upstreamResponse.headers)
+
+    log(`upstream responded: ${upstreamResponse.status}`)
+
+    return {
+      kind: 'success',
+      status: upstreamResponse.status,
+      headers: responseHeaders,
+      body: upstreamResponse.body,
+    }
+  } catch (error) {
+    log(
+      `upstream request failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+    )
+    const errorResponse = buildUpstreamErrorResponse(error)
+    return {
+      kind: 'error',
+      status: errorResponse.statusCode,
+      contentType: errorResponse.contentType,
+      body: errorResponse.body,
+    }
+  }
 }
 
+/* v8 ignore start - Node.js HTTP adaptation, tested via system tests */
 async function streamResponseBody(
   body: ReadableStream<Uint8Array>,
   nodeResponse: import('node:http').ServerResponse
@@ -284,6 +363,39 @@ async function streamResponseBody(
     reader.releaseLock()
   }
 }
+
+async function writeProxyResponse(
+  proxyResponse: ProxyResponse,
+  nodeResponse: import('node:http').ServerResponse
+): Promise<void> {
+  if (proxyResponse.kind === 'error') {
+    nodeResponse.writeHead(proxyResponse.status, {
+      'Content-Type': proxyResponse.contentType,
+    })
+    nodeResponse.end(proxyResponse.body)
+  } else {
+    nodeResponse.writeHead(proxyResponse.status, proxyResponse.headers)
+    if (proxyResponse.body) {
+      await streamResponseBody(proxyResponse.body, nodeResponse)
+    }
+    nodeResponse.end()
+  }
+}
+
+async function readNodeRequestBody(
+  nodeRequest: import('node:http').IncomingMessage
+): Promise<ArrayBuffer | undefined> {
+  const chunks: Buffer[] = []
+  for await (const chunk of nodeRequest) {
+    chunks.push(chunk as Buffer)
+  }
+  if (chunks.length === 0) return undefined
+  const combined = Buffer.concat(chunks)
+  return combined.buffer.slice(
+    combined.byteOffset,
+    combined.byteOffset + combined.byteLength
+  )
+}
 /* v8 ignore stop */
 
 /**
@@ -296,7 +408,7 @@ export async function createClaudeApiProxyServer(
 ): Promise<ClaudeApiProxyServer> {
   let resolvedPort = 0
 
-  /* v8 ignore start - HTTP server wiring, tested via system tests */
+  /* v8 ignore start - Node.js HTTP adaptation, tested via system tests */
   const server = httpCreateServer(async (nodeRequest, nodeResponse) => {
     const method = nodeRequest.method ?? 'GET'
     const url = new URL(
@@ -304,56 +416,18 @@ export async function createClaudeApiProxyServer(
       `http://localhost:${resolvedPort}`
     )
 
-    log(`${method} ${url.pathname}${url.search}`)
+    const body = await readNodeRequestBody(nodeRequest)
 
-    // Read the OAuth token
-    const token = readOAuthToken(dependencies)
-    if (!token) {
-      sendErrorResponse(nodeResponse, buildNoTokenResponse())
-      return
+    const proxyRequest: ProxyRequest = {
+      method,
+      pathname: url.pathname,
+      search: url.search,
+      headers: nodeRequest.headers,
+      body,
     }
 
-    // Build proxy request configuration
-    const proxyRequest = buildProxyRequest(
-      url.pathname,
-      url.search,
-      token,
-      nodeRequest.headers
-    )
-
-    // Read request body if present
-    const chunks: Buffer[] = []
-    for await (const chunk of nodeRequest) {
-      chunks.push(chunk as Buffer)
-    }
-    const body = chunks.length > 0 ? Buffer.concat(chunks) : undefined
-
-    log(`forwarding ${method} to ${proxyRequest.url}`)
-
-    try {
-      const upstreamResponse = await dependencies.fetch(proxyRequest.url, {
-        method,
-        headers: proxyRequest.headers,
-        body,
-      })
-
-      const responseHeaders = filterResponseHeaders(upstreamResponse.headers)
-
-      log(`upstream responded: ${upstreamResponse.status}`)
-      nodeResponse.writeHead(upstreamResponse.status, responseHeaders)
-
-      // Stream the response body
-      if (upstreamResponse.body) {
-        await streamResponseBody(upstreamResponse.body, nodeResponse)
-      }
-
-      nodeResponse.end()
-    } catch (error) {
-      log(
-        `upstream request failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
-      sendErrorResponse(nodeResponse, buildUpstreamErrorResponse(error))
-    }
+    const proxyResponse = await handleProxyRequest(proxyRequest, dependencies)
+    await writeProxyResponse(proxyResponse, nodeResponse)
   })
 
   await new Promise<void>(resolve => {
