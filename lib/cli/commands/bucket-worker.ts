@@ -519,12 +519,8 @@ export function syncUIWithRepoList(
       }
       addRepoToUI(state.ui, repo.name, buffer, repo.url)
     } else {
-      /* v8 ignore start -- tested by 'updates URL when repo already exists' */
-      if (repo.url) {
-        // Update URL if repository already exists but URL changed
-        state.ui.repositoryUrls.set(repo.name, repo.url)
-      }
-      /* v8 ignore stop */
+      // Update URL if repository already exists but URL changed
+      state.ui.repositoryUrls.set(repo.name, repo.url)
     }
   }
 
@@ -584,15 +580,16 @@ export function handleRepositoryListSuccess(
   useTUI: boolean
 ): void {
   syncTUI(state)
-  for (const repoData of repos) {
-    if (repoData.hasTask) {
-      const repoState = state.repositories.get(repoData.name)
-      /* v8 ignore start -- defensive guard: repoState should always exist after syncTUI */
-      if (repoState) {
-        signalTaskAvailable(repoState, state, repoDeps, context, useTUI)
-      }
-      /* v8 ignore stop */
-    }
+  // Filter to repos that have tasks AND exist in state (type-safe narrowing)
+  const reposWithTasks = repos
+    .filter(r => r.hasTask)
+    .map(r => ({ data: r, state: state.repositories.get(r.name) }))
+    .filter(
+      (r): r is { data: RepositoryListItem; state: RepositoryState } =>
+        r.state !== undefined
+    )
+  for (const { state: repoState } of reposWithTasks) {
+    signalTaskAvailable(repoState, state, repoDeps, context, useTUI)
   }
 }
 
@@ -1061,26 +1058,27 @@ export async function shutdown(
     state.ws = null
   }
 
-  // Stop all repository loops
-  const loopPromises: Promise<void>[] = []
+  // Stop all repository loops - filter to running repos for type-safe access
+  const runningRepos = Array.from(state.repositories.values()).filter(
+    (
+      r
+    ): r is RepositoryState & {
+      lifecycle: {
+        type: 'running'
+        loopPromise: Promise<void>
+        cancel: () => void
+      }
+    } => r.lifecycle.type === 'running'
+  )
+  for (const repoState of runningRepos) {
+    repoState.lifecycle.cancel()
+  }
+  // Wake up all repos (running or not) so they can exit cleanly
   for (const repoState of state.repositories.values()) {
-    /* v8 ignore start - defensive guard for non-running repos */
-    if (repoState.lifecycle.type === 'running') {
-      loopPromises.push(repoState.lifecycle.loopPromise)
-      repoState.lifecycle.cancel()
-    }
-    /* v8 ignore stop */
     repoState.wakeUp?.()
   }
-
-  const results = await Promise.allSettled(loopPromises)
-  for (const result of results) {
-    /* v8 ignore start -- error path for rejected loop promises */
-    if (result.status === 'rejected') {
-      context.stderr(`Repository loop failed: ${result.reason}`)
-    }
-    /* v8 ignore stop */
-  }
+  // Wait for all running loops (loops handle errors internally and don't reject)
+  await Promise.all(runningRepos.map(r => r.lifecycle.loopPromise))
 
   // Clean up all repository directories
   for (const repoState of state.repositories.values()) {
