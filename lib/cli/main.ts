@@ -25,6 +25,7 @@ import { list } from './commands/list'
 import { loopClaude } from './commands/loop-claude'
 import { loopCodex } from './commands/loop-codex'
 import { migrate } from './commands/migrate'
+import { newFact } from './commands/new-fact'
 import { newIdea } from './commands/new-idea'
 import { newPrinciple } from './commands/new-principle'
 import { newTask } from './commands/new-task'
@@ -67,6 +68,7 @@ const commandRegistry = {
   'new task': newTask,
   'new principle': newPrinciple,
   'new idea': newIdea,
+  'new fact': newFact,
   'implement task': implementTask,
   'pick task': pickTask,
   'loop claude': loopClaude,
