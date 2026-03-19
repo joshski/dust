@@ -91,6 +91,10 @@ import {
   type ToolExecutionRequestMessage,
   type ToolExecutionResultMessage,
 } from '../../bucket/tool-execution-protocol'
+import {
+  executeKeypressEffects,
+  type UIEffectTarget,
+} from '../../bucket/keypress-effect-executor'
 import { run as claudeRun } from '../../claude/run'
 import type {
   AuthConfig,
@@ -1152,60 +1156,26 @@ function createKeypressHandlerState(ui: TerminalUIState): KeypressHandlerState {
     repositoryUrls,
   }
 }
+/* v8 ignore stop */
 
+/* v8 ignore start -- thin adapter delegates to already-tested terminal-ui functions */
 /**
- * Execute keypress effects on UI state.
- * This is the imperative shell that interprets pure handler results.
+ * Create a UIEffectTarget adapter for TerminalUIState.
+ * This bridges the concrete UI state to the abstract interface for keypress effect execution.
  */
-function executeKeypressEffects(
-  ui: TerminalUIState,
-  effects: Effect[],
-  onQuit: () => void,
-  options?: KeypressHandlerOptions
-): void {
-  for (const effect of effects) {
-    switch (effect.type) {
-      case 'quit':
-        onQuit()
-        break
-      case 'openBrowser':
-        if (options?.openBrowser) {
-          options.openBrowser(effect.url)
-        }
-        break
-      case 'selectNext':
-        selectNext(ui)
-        ui.scrollOffset = 0
-        ui.autoScroll = true
-        break
-      case 'selectPrevious':
-        selectPrevious(ui)
-        ui.scrollOffset = 0
-        ui.autoScroll = true
-        break
-      case 'scroll':
-        switch (effect.direction) {
-          case 'up':
-            scrollUp(ui, 1)
-            break
-          case 'down':
-            scrollDown(ui, 1)
-            break
-          case 'pageUp':
-            scrollUp(ui, getLogAreaHeight(ui))
-            break
-          case 'pageDown':
-            scrollDown(ui, getLogAreaHeight(ui))
-            break
-          case 'top':
-            scrollToTop(ui)
-            break
-          case 'bottom':
-            scrollToBottom(ui)
-            break
-        }
-        break
-    }
+function createUIEffectTarget(ui: TerminalUIState): UIEffectTarget {
+  return {
+    selectNext: () => selectNext(ui),
+    selectPrevious: () => selectPrevious(ui),
+    resetScroll: () => {
+      ui.scrollOffset = 0
+      ui.autoScroll = true
+    },
+    scrollUp: (lines: number) => scrollUp(ui, lines),
+    scrollDown: (lines: number) => scrollDown(ui, lines),
+    scrollToTop: () => scrollToTop(ui),
+    scrollToBottom: () => scrollToBottom(ui),
+    getLogAreaHeight: () => getLogAreaHeight(ui),
   }
 }
 /* v8 ignore stop */
@@ -1225,7 +1195,8 @@ export function createKeypressHandler(
     return (key: string) => {
       const keypressState = createKeypressHandlerState(state.ui)
       const { effects } = handleKeypress(keypressState, key)
-      executeKeypressEffects(state.ui, effects, onQuit, options)
+      const target = createUIEffectTarget(state.ui)
+      executeKeypressEffects(target, effects, onQuit, options)
     }
   }
   return (key: string) => {
