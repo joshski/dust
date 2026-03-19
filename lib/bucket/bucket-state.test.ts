@@ -96,6 +96,7 @@ describe('bucket-state', () => {
               id: 456,
               hasTask: true,
               agentProvider: 'codex',
+              branch: 'feature-x',
             },
           ],
         }
@@ -123,6 +124,7 @@ describe('bucket-state', () => {
         expect(logMessages).toContain('    url=https://github.com/user/my-repo')
         expect(logMessages).toContain('    hasTask=true')
         expect(logMessages).toContain('    agentProvider=codex')
+        expect(logMessages).toContain('    branch=feature-x')
       })
 
       it('logs (empty) for empty repository list', () => {
