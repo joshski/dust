@@ -95,6 +95,10 @@ import {
   executeKeypressEffects,
   type UIEffectTarget,
 } from '../../bucket/keypress-effect-executor'
+import {
+  executeMessageEffects,
+  type MessageEffectDeps,
+} from '../../bucket/message-effect-executor'
 import { run as claudeRun } from '../../claude/run'
 import type {
   AuthConfig,
@@ -887,15 +891,14 @@ interface EffectExecutionDeps {
   onConnectionRejected?: (reason: string) => void
 }
 
-/* v8 ignore start -- effect execution logic is tested via connectWebSocket integration tests */
+/* v8 ignore start -- thin adapter builds deps for already-tested message effect executor */
 /**
- * Execute effects returned by pure message handlers.
- * This is the "imperative shell" that interprets effect descriptions.
+ * Create MessageEffectDeps from EffectExecutionDeps.
+ * This adapter allows the message effect executor to work with the bucket worker's state.
  */
-function executeEffects(
-  effects: Effect[],
+function createMessageEffectDeps(
   dependencies: EffectExecutionDeps
-): void {
+): MessageEffectDeps {
   const {
     state,
     context,
@@ -906,91 +909,100 @@ function executeEffects(
     onConnectionRejected,
   } = dependencies
 
-  for (const effect of effects) {
-    switch (effect.type) {
-      case 'log':
-        logMessage(state, context, useTUI, effect.message, effect.stream)
-        break
+  return {
+    logMessage: (message, stream) =>
+      logMessage(state, context, useTUI, message, stream),
 
-      case 'debugLog':
-        log(effect.message)
-        break
+    debugLog: message => log(message),
 
-      case 'syncUI':
-        syncUIWithRepoList(state, effect.repositories)
-        break
+    syncUIWithRepoList: repositories => syncUIWithRepoList(state, repositories),
 
-      case 'handleRepositoryList': {
-        const repoDeps = toRepositoryDependencies(
-          bucketDependencies,
-          fileSystem,
-          state,
-          forwardToolExecution
+    handleRepositoryList: repositories => {
+      const repoDeps = toRepositoryDependencies(
+        bucketDependencies,
+        fileSystem,
+        state,
+        forwardToolExecution
+      )
+      const repoContext = createTUIContext(state, context, useTUI)
+      handleRepositoryListFromRepo(repositories, state, repoDeps, repoContext)
+        .then(() =>
+          handleRepositoryListSuccess(
+            state,
+            repositories,
+            repoDeps,
+            context,
+            useTUI
+          )
         )
-        const repoContext = createTUIContext(state, context, useTUI)
-        const repos = effect.repositories
-        handleRepositoryListFromRepo(repos, state, repoDeps, repoContext)
-          .then(() =>
-            handleRepositoryListSuccess(state, repos, repoDeps, context, useTUI)
-          )
-          .catch((error: Error) =>
-            handleRepositoryListError(state, context, useTUI, error)
-          )
-        break
-      }
-
-      case 'signalTaskAvailable': {
-        const repoDeps = toRepositoryDependencies(
-          bucketDependencies,
-          fileSystem,
-          state,
-          forwardToolExecution
+        .catch((error: Error) =>
+          handleRepositoryListError(state, context, useTUI, error)
         )
-        const repoState = state.repositories.get(effect.repositoryName)
-        if (repoState) {
-          signalTaskAvailable(repoState, state, repoDeps, context, useTUI)
-        }
-        break
+    },
+
+    signalTaskAvailable: repositoryName => {
+      const repoDeps = toRepositoryDependencies(
+        bucketDependencies,
+        fileSystem,
+        state,
+        forwardToolExecution
+      )
+      const repoState = state.repositories.get(repositoryName)
+      if (repoState) {
+        signalTaskAvailable(repoState, state, repoDeps, context, useTUI)
       }
+    },
 
-      case 'storeToolDefinitions':
-        state.tools = effect.tools
-        break
+    storeToolDefinitions: tools => {
+      state.tools = tools
+    },
 
-      case 'scheduleReconnect':
-        // Requires token to be available - this is handled by connectWebSocket wrapper
-        break
-
-      case 'connectionReady': {
-        // Process tools and repositories atomically from connection-ready
-        state.tools = effect.tools
-        syncUIWithRepoList(state, effect.repositories)
-        const repoDeps = toRepositoryDependencies(
-          bucketDependencies,
-          fileSystem,
-          state,
-          forwardToolExecution
+    handleConnectionReady: (tools, repositories) => {
+      state.tools = tools
+      syncUIWithRepoList(state, repositories)
+      const repoDeps = toRepositoryDependencies(
+        bucketDependencies,
+        fileSystem,
+        state,
+        forwardToolExecution
+      )
+      const repoContext = createTUIContext(state, context, useTUI)
+      handleRepositoryListFromRepo(repositories, state, repoDeps, repoContext)
+        .then(() =>
+          handleRepositoryListSuccess(
+            state,
+            repositories,
+            repoDeps,
+            context,
+            useTUI
+          )
         )
-        const repoContext = createTUIContext(state, context, useTUI)
-        const repos = effect.repositories
-        handleRepositoryListFromRepo(repos, state, repoDeps, repoContext)
-          .then(() =>
-            handleRepositoryListSuccess(state, repos, repoDeps, context, useTUI)
-          )
-          .catch((error: Error) =>
-            handleRepositoryListError(state, context, useTUI, error)
-          )
-        break
-      }
+        .catch((error: Error) =>
+          handleRepositoryListError(state, context, useTUI, error)
+        )
+    },
 
-      case 'connectionRejected':
-        // Signal rejection to the caller so they can shut down
-        onConnectionRejected?.(effect.reason)
-        break
-    }
+    handleConnectionRejected: reason => {
+      onConnectionRejected?.(reason)
+    },
   }
 }
 /* v8 ignore stop */
+
+/**
+ * Execute effects returned by pure message handlers.
+ * This is the "imperative shell" that interprets effect descriptions.
+ * Delegates message effects to the testable executeMessageEffects function.
+ */
+function executeEffects(
+  effects: Effect[],
+  dependencies: EffectExecutionDeps
+): void {
+  /* v8 ignore start -- thin wrapper delegates to already-tested message effect executor */
+  const messageEffectDeps = createMessageEffectDeps(dependencies)
+  /* v8 ignore stop */
+  executeMessageEffects(effects, messageEffectDeps)
+}
 
 /**
  * Execute lifecycle effects, including scheduleReconnect which needs access to
