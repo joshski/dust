@@ -1,6 +1,6 @@
 # Built-in principles
 
-Make dust's own principles active by default for downstream users, so agents immediately work according to dust's opinionated approach to implementation.
+Make dust's principles active by default for downstream users as inherited "core principles".
 
 ## Context
 
@@ -118,13 +118,20 @@ const principle = await readCorePrinciple('atomic-commits');
 
 ### Which principles should be marked Internal?
 
-Needs a pass through all existing principles to decide which are universal vs dust-specific. Candidates for Internal:
+#### Option: Mark only obviously dust-specific principles
 
-- Self-contained repository (dust-specific)
-- Development traceability (may be dust-specific)
+A pass through all existing principles, marking only those that clearly apply to dust's own development. Candidates: self-contained-repository, development-traceability. Most principles are likely universal.
 
-Most principles are likely universal.
+#### Option: Default to Internal, explicitly mark Universal
+
+Safer but more work upfront — every principle must be reviewed and explicitly opted in.
 
 ### Should excluded principles be hidden or shown as excluded?
 
-If a user has excluded `atomic-commits`, should `dust principles` hide it entirely, or show it greyed out / marked as excluded? Showing it makes the exclusion discoverable; hiding it keeps the output clean.
+#### Option: Hide excluded principles entirely
+
+Keeps `dust principles` output clean. Users who excluded a principle don't need to see it.
+
+#### Option: Show excluded principles as greyed out / marked
+
+Makes exclusions discoverable. Users can see what they've opted out of without checking config.
