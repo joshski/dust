@@ -27,6 +27,13 @@ import { createServer as httpCreateServer } from 'node:http'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { createLogger } from '../logging'
+import {
+  type HelperTokenState,
+  createHelperTokenState,
+  isCurrentTokenValid,
+  isHelperTokenValid,
+  rotateHelperToken,
+} from './helper-token'
 
 const log = createLogger('dust:proxy:claude-api')
 
@@ -275,6 +282,83 @@ export function buildNoTokenResponse(): ErrorResponse {
 }
 
 /**
+ * Build a 401 response for when the helper token is invalid or expired.
+ */
+export function buildInvalidHelperTokenResponse(): ErrorResponse {
+  return {
+    statusCode: 401,
+    contentType: 'text/plain',
+    body: 'Invalid or expired helper token',
+  }
+}
+
+/**
+ * Extract the helper token from incoming request headers.
+ * Checks both Authorization header (Bearer token) and x-api-key header.
+ */
+export function extractHelperToken(
+  headers: Record<string, string | string[] | undefined>
+): string | null {
+  // Check Authorization header first
+  const authHeader = headers['authorization']
+  if (typeof authHeader === 'string') {
+    const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i)
+    if (bearerMatch) {
+      return bearerMatch[1]
+    }
+  }
+
+  // Fall back to x-api-key header
+  const apiKey = headers['x-api-key']
+  if (typeof apiKey === 'string') {
+    return apiKey
+  }
+
+  return null
+}
+
+/**
+ * Validate the incoming helper token against the issued token.
+ */
+export function validateHelperToken(
+  incomingToken: string | null,
+  state: HelperTokenState,
+  now: number = Date.now()
+): boolean {
+  if (!incomingToken || !state.current) {
+    return false
+  }
+  return isHelperTokenValid(incomingToken, state.current, now)
+}
+
+/**
+ * Get the current helper token, rotating if needed.
+ * Returns the new state and the token string.
+ */
+export function getOrRefreshHelperToken(
+  state: HelperTokenState,
+  now: number = Date.now()
+): { state: HelperTokenState; token: string } {
+  if (!isCurrentTokenValid(state, now)) {
+    const newState = rotateHelperToken(state, now)
+    return { state: newState, token: newState.current!.token }
+  }
+  return { state, token: state.current!.token }
+}
+
+/**
+ * Build a success response containing the helper token.
+ */
+export function buildTokenResponse(token: string): ProxyResponse {
+  return {
+    kind: 'error', // Using 'error' kind for simple text response
+    status: 200,
+    contentType: 'text/plain',
+    body: token,
+  }
+}
+
+/**
  * Build a 502 response for when the upstream request fails.
  */
 export function buildUpstreamErrorResponse(error: unknown): ErrorResponse {
@@ -289,12 +373,32 @@ export function buildUpstreamErrorResponse(error: unknown): ErrorResponse {
 /**
  * Handle a proxy request and return a platform-agnostic response.
  * This is the pure core of the proxy logic, separated from HTTP plumbing.
+ *
+ * When helperTokenState is provided, incoming requests must include a valid
+ * helper token in the Authorization or x-api-key header.
  */
 export async function handleProxyRequest(
   request: ProxyRequest,
-  dependencies: ClaudeApiProxyDependencies
+  dependencies: ClaudeApiProxyDependencies,
+  helperTokenState?: HelperTokenState,
+  now: number = Date.now()
 ): Promise<ProxyResponse> {
   log(`${request.method} ${request.pathname}${request.search}`)
+
+  // Validate helper token if state is provided
+  if (helperTokenState) {
+    const incomingToken = extractHelperToken(request.headers)
+    if (!validateHelperToken(incomingToken, helperTokenState, now)) {
+      log('invalid or expired helper token')
+      const errorResponse = buildInvalidHelperTokenResponse()
+      return {
+        kind: 'error',
+        status: errorResponse.statusCode,
+        contentType: errorResponse.contentType,
+        body: errorResponse.body,
+      }
+    }
+  }
 
   const token = readOAuthToken(dependencies)
   if (!token) {
@@ -402,11 +506,16 @@ async function readNodeRequestBody(
  * Creates a Claude API proxy server.
  * The server accepts HTTP requests and forwards them to the Anthropic API
  * with the OAuth token injected.
+ *
+ * The server maintains helper token state and provides a `/token` endpoint
+ * that returns the current helper token. All other requests must include
+ * a valid helper token in the Authorization or x-api-key header.
  */
 export async function createClaudeApiProxyServer(
   dependencies: ClaudeApiProxyDependencies = defaultDependencies
 ): Promise<ClaudeApiProxyServer> {
   let resolvedPort = 0
+  let helperTokenState = createHelperTokenState()
 
   /* v8 ignore start - Node.js HTTP adaptation, tested via system tests */
   const server = httpCreateServer(async (nodeRequest, nodeResponse) => {
@@ -415,6 +524,15 @@ export async function createClaudeApiProxyServer(
       nodeRequest.url ?? '/',
       `http://localhost:${resolvedPort}`
     )
+
+    // Handle /token endpoint
+    if (url.pathname === '/token' && method === 'GET') {
+      const result = getOrRefreshHelperToken(helperTokenState)
+      helperTokenState = result.state
+      const response = buildTokenResponse(result.token)
+      await writeProxyResponse(response, nodeResponse)
+      return
+    }
 
     const body = await readNodeRequestBody(nodeRequest)
 
@@ -426,7 +544,11 @@ export async function createClaudeApiProxyServer(
       body,
     }
 
-    const proxyResponse = await handleProxyRequest(proxyRequest, dependencies)
+    const proxyResponse = await handleProxyRequest(
+      proxyRequest,
+      dependencies,
+      helperTokenState
+    )
     await writeProxyResponse(proxyResponse, nodeResponse)
   })
 

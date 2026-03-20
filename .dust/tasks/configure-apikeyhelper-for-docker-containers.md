@@ -31,7 +31,7 @@ The `apiKeyHelper` setting tells Claude Code to execute a command to get its API
 
 ## Blocked By
 
-- [Add Token Endpoint to Claude API Proxy](add-token-endpoint-to-claude-api-proxy.md)
+(none)
 
 ## Definition of Done
 

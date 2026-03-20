@@ -1,17 +1,29 @@
 import { describe, expect, test } from 'vitest'
 import { createFetchStub, restoreEnv, stubEnv } from '../test/test-utilities'
 import {
+  buildInvalidHelperTokenResponse,
   buildNoTokenResponse,
   buildProxyRequest,
+  buildTokenResponse,
   buildUpstreamErrorResponse,
   type ClaudeApiProxyDependencies,
+  extractHelperToken,
   filterResponseHeaders,
+  getOrRefreshHelperToken,
   handleProxyRequest,
   isTokenExpired,
   mergeAnthropicBetaHeader,
   type ProxyRequest,
   readOAuthToken,
+  validateHelperToken,
 } from './claude-api-proxy'
+import {
+  createHelperTokenState,
+  generateHelperToken,
+  type HelperTokenState,
+  HELPER_TOKEN_TTL_MS,
+  rotateHelperToken,
+} from './helper-token'
 
 function createMockFetch(): typeof fetch {
   return createFetchStub(async () => {
@@ -507,6 +519,289 @@ describe('handleProxyRequest', () => {
     expect(capturedUrl).toBe(
       'https://api.anthropic.com/v1/messages?stream=true'
     )
+    restoreEnv()
+  })
+})
+
+describe('buildInvalidHelperTokenResponse', () => {
+  test('returns 401 status code', () => {
+    const result = buildInvalidHelperTokenResponse()
+    expect(result.statusCode).toBe(401)
+  })
+
+  test('returns text/plain content type', () => {
+    const result = buildInvalidHelperTokenResponse()
+    expect(result.contentType).toBe('text/plain')
+  })
+
+  test('returns appropriate error message', () => {
+    const result = buildInvalidHelperTokenResponse()
+    expect(result.body).toBe('Invalid or expired helper token')
+  })
+})
+
+describe('extractHelperToken', () => {
+  test('extracts token from Bearer authorization header', () => {
+    const headers = { authorization: 'Bearer sk-ant-api03-abc123' }
+    expect(extractHelperToken(headers)).toBe('sk-ant-api03-abc123')
+  })
+
+  test('extracts token from x-api-key header', () => {
+    const headers = { 'x-api-key': 'sk-ant-api03-xyz789' }
+    expect(extractHelperToken(headers)).toBe('sk-ant-api03-xyz789')
+  })
+
+  test('prefers authorization header over x-api-key', () => {
+    const headers = {
+      authorization: 'Bearer auth-token',
+      'x-api-key': 'api-key-token',
+    }
+    expect(extractHelperToken(headers)).toBe('auth-token')
+  })
+
+  test('returns null when no token headers present', () => {
+    const headers = { 'content-type': 'application/json' }
+    expect(extractHelperToken(headers)).toBeNull()
+  })
+
+  test('returns null for array authorization header', () => {
+    const headers = { authorization: ['Bearer token1', 'Bearer token2'] }
+    expect(extractHelperToken(headers)).toBeNull()
+  })
+
+  test('returns null for non-Bearer authorization header', () => {
+    const headers = { authorization: 'Basic abc123' }
+    expect(extractHelperToken(headers)).toBeNull()
+  })
+
+  test('handles case-insensitive Bearer prefix', () => {
+    const headers = { authorization: 'bearer sk-ant-api03-abc123' }
+    expect(extractHelperToken(headers)).toBe('sk-ant-api03-abc123')
+  })
+})
+
+describe('validateHelperToken', () => {
+  test('returns true for valid token within TTL', () => {
+    const now = Date.now()
+    const state = rotateHelperToken(createHelperTokenState(), now)
+    expect(validateHelperToken(state.current!.token, state, now)).toBe(true)
+  })
+
+  test('returns false for mismatched token', () => {
+    const now = Date.now()
+    const state = rotateHelperToken(createHelperTokenState(), now)
+    expect(validateHelperToken('wrong-token', state, now)).toBe(false)
+  })
+
+  test('returns false for null incoming token', () => {
+    const now = Date.now()
+    const state = rotateHelperToken(createHelperTokenState(), now)
+    expect(validateHelperToken(null, state, now)).toBe(false)
+  })
+
+  test('returns false when state has no current token', () => {
+    const state = createHelperTokenState()
+    expect(validateHelperToken('any-token', state)).toBe(false)
+  })
+
+  test('returns false for expired token', () => {
+    const issuedAt = Date.now()
+    const state = rotateHelperToken(createHelperTokenState(), issuedAt)
+    const expiredTime = issuedAt + HELPER_TOKEN_TTL_MS + 1
+    expect(validateHelperToken(state.current!.token, state, expiredTime)).toBe(
+      false
+    )
+  })
+})
+
+describe('getOrRefreshHelperToken', () => {
+  test('generates new token when state has no current token', () => {
+    const state = createHelperTokenState()
+    const result = getOrRefreshHelperToken(state)
+    expect(result.token).toMatch(/^sk-ant-api03-/)
+    expect(result.state.current).not.toBeNull()
+  })
+
+  test('returns existing token when still valid', () => {
+    const now = Date.now()
+    const initialState = rotateHelperToken(createHelperTokenState(), now)
+    const initialToken = initialState.current!.token
+
+    const result = getOrRefreshHelperToken(initialState, now + 1000)
+    expect(result.token).toBe(initialToken)
+  })
+
+  test('rotates token when expired', () => {
+    const issuedAt = Date.now()
+    const initialState = rotateHelperToken(createHelperTokenState(), issuedAt)
+    const initialToken = initialState.current!.token
+
+    const expiredTime = issuedAt + HELPER_TOKEN_TTL_MS + 1
+    const result = getOrRefreshHelperToken(initialState, expiredTime)
+
+    expect(result.token).not.toBe(initialToken)
+    expect(result.token).toMatch(/^sk-ant-api03-/)
+  })
+})
+
+describe('buildTokenResponse', () => {
+  test('returns 200 status', () => {
+    const response = buildTokenResponse('test-token')
+    expect(response.status).toBe(200)
+  })
+
+  test('returns text/plain content type', () => {
+    const response = buildTokenResponse('test-token')
+    if (response.kind === 'error') {
+      expect(response.contentType).toBe('text/plain')
+    }
+  })
+
+  test('returns token in body', () => {
+    const response = buildTokenResponse('sk-ant-api03-abc123')
+    if (response.kind === 'error') {
+      expect(response.body).toBe('sk-ant-api03-abc123')
+    }
+  })
+})
+
+describe('handleProxyRequest with helper token validation', () => {
+  test('accepts request with valid helper token', async () => {
+    stubEnv('CLAUDE_CODE_OAUTH_TOKEN', undefined)
+    const now = Date.now()
+    const state = rotateHelperToken(createHelperTokenState(), now)
+    const fetchStub = createFetchStub(async () => {
+      return new Response('{"ok":true}', { status: 200 })
+    })
+    const dependencies = createDependenciesWithToken('oauth-token', fetchStub)
+    const request = createTestRequest({
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${state.current!.token}`,
+      },
+    })
+
+    const response = await handleProxyRequest(request, dependencies, state, now)
+
+    expect(response.kind).toBe('success')
+    if (response.kind === 'success') {
+      expect(response.status).toBe(200)
+    }
+    restoreEnv()
+  })
+
+  test('accepts request with valid helper token in x-api-key', async () => {
+    stubEnv('CLAUDE_CODE_OAUTH_TOKEN', undefined)
+    const now = Date.now()
+    const state = rotateHelperToken(createHelperTokenState(), now)
+    const fetchStub = createFetchStub(async () => {
+      return new Response('{"ok":true}', { status: 200 })
+    })
+    const dependencies = createDependenciesWithToken('oauth-token', fetchStub)
+    const request = createTestRequest({
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': state.current!.token,
+      },
+    })
+
+    const response = await handleProxyRequest(request, dependencies, state, now)
+
+    expect(response.kind).toBe('success')
+    restoreEnv()
+  })
+
+  test('rejects request with invalid helper token', async () => {
+    stubEnv('CLAUDE_CODE_OAUTH_TOKEN', undefined)
+    const now = Date.now()
+    const state = rotateHelperToken(createHelperTokenState(), now)
+    const fetchStub = createFetchStub(async () => {
+      throw new Error('should not be called')
+    })
+    const dependencies = createDependenciesWithToken('oauth-token', fetchStub)
+    const request = createTestRequest({
+      headers: {
+        'content-type': 'application/json',
+        authorization: 'Bearer invalid-token',
+      },
+    })
+
+    const response = await handleProxyRequest(request, dependencies, state, now)
+
+    expect(response.kind).toBe('error')
+    if (response.kind === 'error') {
+      expect(response.status).toBe(401)
+      expect(response.body).toBe('Invalid or expired helper token')
+    }
+    restoreEnv()
+  })
+
+  test('rejects request with expired helper token', async () => {
+    stubEnv('CLAUDE_CODE_OAUTH_TOKEN', undefined)
+    const issuedAt = Date.now()
+    const state = rotateHelperToken(createHelperTokenState(), issuedAt)
+    const expiredTime = issuedAt + HELPER_TOKEN_TTL_MS + 1
+    const fetchStub = createFetchStub(async () => {
+      throw new Error('should not be called')
+    })
+    const dependencies = createDependenciesWithToken('oauth-token', fetchStub)
+    const request = createTestRequest({
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${state.current!.token}`,
+      },
+    })
+
+    const response = await handleProxyRequest(
+      request,
+      dependencies,
+      state,
+      expiredTime
+    )
+
+    expect(response.kind).toBe('error')
+    if (response.kind === 'error') {
+      expect(response.status).toBe(401)
+      expect(response.body).toBe('Invalid or expired helper token')
+    }
+    restoreEnv()
+  })
+
+  test('rejects request with no helper token when validation enabled', async () => {
+    stubEnv('CLAUDE_CODE_OAUTH_TOKEN', undefined)
+    const now = Date.now()
+    const state = rotateHelperToken(createHelperTokenState(), now)
+    const fetchStub = createFetchStub(async () => {
+      throw new Error('should not be called')
+    })
+    const dependencies = createDependenciesWithToken('oauth-token', fetchStub)
+    const request = createTestRequest({
+      headers: {
+        'content-type': 'application/json',
+      },
+    })
+
+    const response = await handleProxyRequest(request, dependencies, state, now)
+
+    expect(response.kind).toBe('error')
+    if (response.kind === 'error') {
+      expect(response.status).toBe(401)
+      expect(response.body).toBe('Invalid or expired helper token')
+    }
+    restoreEnv()
+  })
+
+  test('skips validation when no helper token state provided', async () => {
+    stubEnv('CLAUDE_CODE_OAUTH_TOKEN', undefined)
+    const fetchStub = createFetchStub(async () => {
+      return new Response('{"ok":true}', { status: 200 })
+    })
+    const dependencies = createDependenciesWithToken('oauth-token', fetchStub)
+    const request = createTestRequest()
+
+    const response = await handleProxyRequest(request, dependencies)
+
+    expect(response.kind).toBe('success')
     restoreEnv()
   })
 })
