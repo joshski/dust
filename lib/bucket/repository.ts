@@ -227,6 +227,58 @@ export function shouldRecloneForBranchChange(
 }
 
 /**
+ * An action to reconcile repository state.
+ */
+type ReconciliationAction =
+  | { type: 'add'; repository: Repository }
+  | { type: 'remove'; name: string }
+  | { type: 'reclone'; name: string; repository: Repository; reason: string }
+  | { type: 'updateProvider'; name: string; newProvider: string | undefined }
+
+/**
+ * Compute reconciliation actions needed to sync existing repositories with incoming list.
+ * Pure function - compares maps and returns actions without side effects.
+ */
+export function computeRepositoryReconciliation(
+  existing: Map<string, Repository>,
+  incoming: Map<string, Repository>
+): ReconciliationAction[] {
+  const actions: ReconciliationAction[] = []
+
+  // Handle additions, re-clones, and provider updates
+  for (const [name, repo] of incoming) {
+    const existingRepo = existing.get(name)
+    if (!existingRepo) {
+      actions.push({ type: 'add', repository: repo })
+    } else if (shouldRecloneForBranchChange(existingRepo, repo)) {
+      const from = existingRepo.branch ?? '(default)'
+      const to = repo.branch ?? '(default)'
+      actions.push({
+        type: 'reclone',
+        name,
+        repository: repo,
+        reason: `branch changed from ${from} to ${to}`,
+      })
+    } else if (existingRepo.agentProvider !== repo.agentProvider) {
+      actions.push({
+        type: 'updateProvider',
+        name,
+        newProvider: repo.agentProvider,
+      })
+    }
+  }
+
+  // Handle removals
+  for (const name of existing.keys()) {
+    if (!incoming.has(name)) {
+      actions.push({ type: 'remove', name })
+    }
+  }
+
+  return actions
+}
+
+/**
  * Parse repository from message data.
  * Supports both simple names and git URLs.
  */
@@ -382,6 +434,20 @@ export async function removeRepositoryFromManager(
 }
 
 /**
+ * Parse a list of unknown data into a Map of repositories.
+ */
+export function parseRepositoryList(data: unknown[]): Map<string, Repository> {
+  const repos = new Map<string, Repository>()
+  for (const item of data) {
+    const repo = parseRepository(item)
+    if (repo) {
+      repos.set(repo.name, repo)
+    }
+  }
+  return repos
+}
+
+/**
  * Handle a repository-list message from the server.
  */
 export async function handleRepositoryList(
@@ -390,38 +456,51 @@ export async function handleRepositoryList(
   repoDeps: RepositoryDependencies,
   context: CommandDependencies['context']
 ): Promise<void> {
-  const incomingRepos = new Map<string, Repository>()
+  const incoming = parseRepositoryList(repositories)
 
-  for (const data of repositories) {
-    const repo = parseRepository(data)
-    if (repo) {
-      incomingRepos.set(repo.name, repo)
-    }
+  // Extract existing repositories from manager state
+  const existing = new Map<string, Repository>()
+  for (const [name, state] of manager.repositories) {
+    existing.set(name, state.repository)
   }
 
-  // Add new repositories or update existing ones
-  for (const [name, repo] of incomingRepos) {
-    const existing = manager.repositories.get(name)
-    if (!existing) {
-      await addRepository(repo, manager, repoDeps, context)
-    } else if (shouldRecloneForBranchChange(existing.repository, repo)) {
-      const from = existing.repository.branch ?? '(default)'
-      const to = repo.branch ?? '(default)'
-      log(`${name}: branch changed from ${from} to ${to}, re-cloning`)
-      await removeRepositoryFromManager(name, manager, repoDeps, context)
-      await addRepository(repo, manager, repoDeps, context)
-    } else if (existing.repository.agentProvider !== repo.agentProvider) {
-      const from = existing.repository.agentProvider ?? '(unset)'
-      const to = repo.agentProvider ?? '(unset)'
-      log(`${name}: agentProvider changed from ${from} to ${to}`)
-      existing.repository.agentProvider = repo.agentProvider
-    }
-  }
+  // Compute actions and apply them
+  const actions = computeRepositoryReconciliation(existing, incoming)
 
-  // Remove repositories that are no longer in the list
-  for (const name of manager.repositories.keys()) {
-    if (!incomingRepos.has(name)) {
-      await removeRepositoryFromManager(name, manager, repoDeps, context)
+  for (const action of actions) {
+    switch (action.type) {
+      case 'add':
+        await addRepository(action.repository, manager, repoDeps, context)
+        break
+      case 'remove':
+        await removeRepositoryFromManager(
+          action.name,
+          manager,
+          repoDeps,
+          context
+        )
+        break
+      case 'reclone':
+        log(`${action.name}: ${action.reason}, re-cloning`)
+        await removeRepositoryFromManager(
+          action.name,
+          manager,
+          repoDeps,
+          context
+        )
+        await addRepository(action.repository, manager, repoDeps, context)
+        break
+      case 'updateProvider': {
+        const repoState = manager.repositories.get(action.name)
+        /* v8 ignore start - defensive check, updateProvider only created for existing repos */
+        if (!repoState) break
+        /* v8 ignore stop */
+        const from = repoState.repository.agentProvider ?? '(unset)'
+        const to = action.newProvider ?? '(unset)'
+        log(`${action.name}: agentProvider changed from ${from} to ${to}`)
+        repoState.repository.agentProvider = action.newProvider
+        break
+      }
     }
   }
 }

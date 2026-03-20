@@ -24,10 +24,12 @@ Do something
 import {
   addRepository,
   cloneRepository,
+  computeRepositoryReconciliation,
   createDefaultRepositoryDependencies,
   getRepoPath,
   handleRepositoryList,
   parseRepository,
+  parseRepositoryList,
   type Repository,
   type RepositoryDependencies,
   type RepositoryManager,
@@ -107,7 +109,7 @@ function createMockRun(): RepositoryDependencies['run'] {
   return async () => {}
 }
 
-function createRepositoryDependencies(
+function createTestRepositoryDependencies(
   overrides: Partial<RepositoryDependencies> = {}
 ): RepositoryDependencies {
   const fileSystem = createFileSystemEmulator()
@@ -132,6 +134,20 @@ function createMockManager(): RepositoryManager {
     emit: () => {},
     sendEvent: () => {},
     sessionId: 'test-session-id',
+  }
+}
+
+function createTestRepo(
+  name: string,
+  overrides: Partial<Repository> = {}
+): Repository {
+  return {
+    name,
+    gitUrl: `https://github.com/user/${name}.git`,
+    gitSshUrl: `git@github.com:user/${name}.git`,
+    url: `https://example.com/${name}`,
+    id: 1,
+    ...overrides,
   }
 }
 
@@ -362,6 +378,217 @@ describe('shouldRecloneForBranchChange', () => {
       branch: 'staging',
     }
     expect(shouldRecloneForBranchChange(existing, incoming)).toBe(true)
+  })
+})
+
+describe('parseRepositoryList', () => {
+  test('parses array of valid repository objects', () => {
+    const result = parseRepositoryList([
+      {
+        name: 'repo1',
+        gitUrl: 'https://github.com/user/repo1.git',
+        gitSshUrl: 'git@github.com:user/repo1.git',
+        url: 'https://example.com/repo1',
+        id: 1,
+      },
+      {
+        name: 'repo2',
+        gitUrl: 'https://github.com/user/repo2.git',
+        gitSshUrl: 'git@github.com:user/repo2.git',
+        url: 'https://example.com/repo2',
+        id: 2,
+      },
+    ])
+    expect(result.size).toBe(2)
+    expect(result.get('repo1')?.gitUrl).toBe(
+      'https://github.com/user/repo1.git'
+    )
+    expect(result.get('repo2')?.gitUrl).toBe(
+      'https://github.com/user/repo2.git'
+    )
+  })
+
+  test('filters out invalid entries', () => {
+    const result = parseRepositoryList([
+      { invalid: 'data' },
+      null,
+      {
+        name: 'valid',
+        gitUrl: 'url',
+        gitSshUrl: 'ssh-url',
+        url: 'https://example.com',
+        id: 1,
+      },
+      123,
+    ])
+    expect(result.size).toBe(1)
+    expect(result.has('valid')).toBe(true)
+  })
+
+  test('returns empty map for empty array', () => {
+    const result = parseRepositoryList([])
+    expect(result.size).toBe(0)
+  })
+})
+
+describe('computeRepositoryReconciliation', () => {
+  test('returns add action for new repository', () => {
+    const existing = new Map<string, Repository>()
+    const incoming = new Map<string, Repository>([
+      ['new-repo', createTestRepo('new-repo')],
+    ])
+
+    const actions = computeRepositoryReconciliation(existing, incoming)
+
+    expect(actions).toHaveLength(1)
+    expect(actions[0]).toEqual({
+      type: 'add',
+      repository: createTestRepo('new-repo'),
+    })
+  })
+
+  test('returns remove action for missing repository', () => {
+    const existing = new Map<string, Repository>([
+      ['old-repo', createTestRepo('old-repo')],
+    ])
+    const incoming = new Map<string, Repository>()
+
+    const actions = computeRepositoryReconciliation(existing, incoming)
+
+    expect(actions).toHaveLength(1)
+    expect(actions[0]).toEqual({
+      type: 'remove',
+      name: 'old-repo',
+    })
+  })
+
+  test('returns reclone action when branch changes', () => {
+    const existing = new Map<string, Repository>([
+      ['repo', createTestRepo('repo', { branch: 'main' })],
+    ])
+    const incoming = new Map<string, Repository>([
+      ['repo', createTestRepo('repo', { branch: 'develop' })],
+    ])
+
+    const actions = computeRepositoryReconciliation(existing, incoming)
+
+    expect(actions).toHaveLength(1)
+    expect(actions[0]).toEqual({
+      type: 'reclone',
+      name: 'repo',
+      repository: createTestRepo('repo', { branch: 'develop' }),
+      reason: 'branch changed from main to develop',
+    })
+  })
+
+  test('returns reclone action when branch changes from undefined to defined', () => {
+    const existing = new Map<string, Repository>([
+      ['repo', createTestRepo('repo')],
+    ])
+    const incoming = new Map<string, Repository>([
+      ['repo', createTestRepo('repo', { branch: 'feature' })],
+    ])
+
+    const actions = computeRepositoryReconciliation(existing, incoming)
+
+    expect(actions).toHaveLength(1)
+    expect(actions[0]).toEqual({
+      type: 'reclone',
+      name: 'repo',
+      repository: createTestRepo('repo', { branch: 'feature' }),
+      reason: 'branch changed from (default) to feature',
+    })
+  })
+
+  test('returns updateProvider action when provider changes', () => {
+    const existing = new Map<string, Repository>([
+      ['repo', createTestRepo('repo', { agentProvider: 'claude' })],
+    ])
+    const incoming = new Map<string, Repository>([
+      ['repo', createTestRepo('repo', { agentProvider: 'codex' })],
+    ])
+
+    const actions = computeRepositoryReconciliation(existing, incoming)
+
+    expect(actions).toHaveLength(1)
+    expect(actions[0]).toEqual({
+      type: 'updateProvider',
+      name: 'repo',
+      newProvider: 'codex',
+    })
+  })
+
+  test('returns updateProvider action when provider is removed', () => {
+    const existing = new Map<string, Repository>([
+      ['repo', createTestRepo('repo', { agentProvider: 'claude' })],
+    ])
+    const incoming = new Map<string, Repository>([
+      ['repo', createTestRepo('repo')],
+    ])
+
+    const actions = computeRepositoryReconciliation(existing, incoming)
+
+    expect(actions).toHaveLength(1)
+    expect(actions[0]).toEqual({
+      type: 'updateProvider',
+      name: 'repo',
+      newProvider: undefined,
+    })
+  })
+
+  test('returns no actions when repositories are identical', () => {
+    const repo = createTestRepo('repo', {
+      branch: 'main',
+      agentProvider: 'claude',
+    })
+    const existing = new Map<string, Repository>([['repo', repo]])
+    const incoming = new Map<string, Repository>([['repo', { ...repo }]])
+
+    const actions = computeRepositoryReconciliation(existing, incoming)
+
+    expect(actions).toHaveLength(0)
+  })
+
+  test('handles multiple actions for complex reconciliation', () => {
+    const existing = new Map<string, Repository>([
+      ['keep', createTestRepo('keep')],
+      ['remove-me', createTestRepo('remove-me')],
+      ['reclone-me', createTestRepo('reclone-me', { branch: 'old' })],
+      ['update-me', createTestRepo('update-me', { agentProvider: 'old' })],
+    ])
+    const incoming = new Map<string, Repository>([
+      ['keep', createTestRepo('keep')],
+      ['add-me', createTestRepo('add-me')],
+      ['reclone-me', createTestRepo('reclone-me', { branch: 'new' })],
+      ['update-me', createTestRepo('update-me', { agentProvider: 'new' })],
+    ])
+
+    const actions = computeRepositoryReconciliation(existing, incoming)
+
+    expect(actions).toHaveLength(4)
+
+    const actionTypes = actions.map(
+      a => `${a.type}:${a.type === 'add' ? a.repository.name : a.name}`
+    )
+    expect(actionTypes).toContain('add:add-me')
+    expect(actionTypes).toContain('remove:remove-me')
+    expect(actionTypes).toContain('reclone:reclone-me')
+    expect(actionTypes).toContain('updateProvider:update-me')
+  })
+
+  test('prioritizes reclone over updateProvider when both branch and provider change', () => {
+    const existing = new Map<string, Repository>([
+      ['repo', createTestRepo('repo', { branch: 'old', agentProvider: 'old' })],
+    ])
+    const incoming = new Map<string, Repository>([
+      ['repo', createTestRepo('repo', { branch: 'new', agentProvider: 'new' })],
+    ])
+
+    const actions = computeRepositoryReconciliation(existing, incoming)
+
+    // Should only return reclone since branch takes priority
+    expect(actions).toHaveLength(1)
+    expect(actions[0].type).toBe('reclone')
   })
 })
 
@@ -708,7 +935,7 @@ describe('runRepositoryLoop', () => {
       agentStatus: 'idle' as const,
     }
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn,
       fileSystem,
     })
@@ -744,7 +971,7 @@ describe('runRepositoryLoop', () => {
     }
 
     let sleepCalled = false
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn,
       fileSystem,
       sleep: async () => {
@@ -794,7 +1021,7 @@ describe('runRepositoryLoop', () => {
     }
 
     let sleepCalled = false
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn,
       fileSystem,
       sleep: async () => {
@@ -843,7 +1070,7 @@ describe('runRepositoryLoop', () => {
       agentStatus: 'idle' as const,
     }
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn,
       fileSystem,
       sleep: () => new Promise(() => {}),
@@ -905,7 +1132,7 @@ describe('runRepositoryLoop', () => {
       runStartedResolve = resolve
     })
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn,
       fileSystem,
       run: async (_prompt, options) => {
@@ -967,7 +1194,7 @@ describe('runRepositoryLoop', () => {
     }
 
     const sleepResolvers: Array<() => void> = []
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn,
       fileSystem,
       sleep: () =>
@@ -1043,7 +1270,7 @@ describe('runRepositoryLoop', () => {
     let iterationCount = 0
     const sentEvents: unknown[] = []
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn,
       fileSystem,
       run: async (_prompt, options, dependencies) => {
@@ -1151,7 +1378,7 @@ describe('runRepositoryLoop', () => {
       agentStatus: 'idle' as const,
     }
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn,
       fileSystem,
       run: async () => {
@@ -1208,7 +1435,7 @@ describe('runRepositoryLoop', () => {
 
     let statusDuringRun: string | undefined
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn,
       fileSystem,
       run: async () => {
@@ -1248,7 +1475,7 @@ describe('startRepositoryLoop', () => {
       agentStatus: 'idle',
     }
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn,
       fileSystem,
       sleep: async () => {
@@ -1291,7 +1518,7 @@ describe('startRepositoryLoop', () => {
       agentStatus: 'idle',
     }
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn,
       fileSystem,
     })
@@ -1320,7 +1547,7 @@ describe('startRepositoryLoop', () => {
     }
 
     let sleepResolve: (() => void) | undefined
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn,
       fileSystem,
       sleep: () =>
@@ -1378,7 +1605,7 @@ describe('startRepositoryLoop', () => {
       agentStatus: 'idle',
     }
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       fileSystem: crashingFileSystem,
     })
 
@@ -1425,7 +1652,7 @@ describe('startRepositoryLoop', () => {
       agentStatus: 'idle',
     }
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       fileSystem: crashingFileSystem,
     })
 
@@ -1450,7 +1677,7 @@ describe('handleRepositoryList', () => {
   test('filters out invalid repository entries', async () => {
     const context = createContextEmulator()
     const manager = createMockManager()
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       sleep: () => Promise.resolve(),
     })
 
@@ -1469,7 +1696,7 @@ describe('handleRepositoryList', () => {
   test('updates agentProvider on existing repository', async () => {
     const context = createContextEmulator()
     const manager = createMockManager()
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       sleep: () => Promise.resolve(),
     })
 
@@ -1533,7 +1760,7 @@ describe('handleRepositoryList', () => {
   test('updates agentProvider to undefined when removed', async () => {
     const context = createContextEmulator()
     const manager = createMockManager()
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       sleep: () => Promise.resolve(),
     })
 
@@ -1575,7 +1802,7 @@ describe('handleRepositoryList', () => {
   test('updates agentProvider between named providers', async () => {
     const context = createContextEmulator()
     const manager = createMockManager()
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       sleep: () => Promise.resolve(),
     })
 
@@ -1636,7 +1863,7 @@ describe('handleRepositoryList', () => {
       return autoSpawn(command, spawnArguments, options as never)
     }) as RepositoryDependencies['spawn']
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn: combinedSpawn,
       sleep: async () => {
         // Block until clone is resolved, then stop the loop
@@ -1705,7 +1932,7 @@ describe('handleRepositoryList', () => {
       agentStatus: 'idle' as const,
     })
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn,
       sleep: () => Promise.resolve(),
     })
@@ -1745,7 +1972,7 @@ describe('handleRepositoryList', () => {
       },
     })
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn,
       sleep: () => Promise.resolve(),
     })
@@ -1796,7 +2023,7 @@ describe('handleRepositoryList', () => {
       agentStatus: 'idle',
     } as RepositoryState)
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn: combinedSpawn,
       sleep: async () => {
         for (const repoState of manager.repositories.values()) {
@@ -1880,7 +2107,7 @@ describe('handleRepositoryList', () => {
       agentStatus: 'idle',
     } as RepositoryState)
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn: combinedSpawn,
       sleep: async () => {
         for (const repoState of manager.repositories.values()) {
@@ -1952,7 +2179,7 @@ describe('addRepository', () => {
 
     let cloneCalled = false
     const { spawn } = createMockSpawn()
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn: ((command: string) => {
         if (command === 'git') cloneCalled = true
         return spawn(command, [], {})
@@ -2006,7 +2233,7 @@ describe('addRepository', () => {
       return autoSpawn(command, spawnArguments, options as never)
     }) as RepositoryDependencies['spawn']
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn: combinedSpawn,
       fileSystem,
       sleep: async () => {
@@ -2048,7 +2275,7 @@ describe('addRepository', () => {
     }
 
     const { spawn, processes } = createMockSpawn()
-    const repoDeps = createRepositoryDependencies({ spawn })
+    const repoDeps = createTestRepositoryDependencies({ spawn })
 
     const addPromise = addRepository(
       {
@@ -2102,7 +2329,7 @@ describe('removeRepositoryFromManager', () => {
   test('does nothing for unknown repository', async () => {
     const context = createContextEmulator()
     const manager = createMockManager()
-    const repoDeps = createRepositoryDependencies()
+    const repoDeps = createTestRepositoryDependencies()
 
     await removeRepositoryFromManager('unknown', manager, repoDeps, context)
   })
@@ -2143,7 +2370,7 @@ describe('removeRepositoryFromManager', () => {
     }
     manager.repositories.set('running-repo', repoState)
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn,
       sleep: () => Promise.resolve(),
     })
@@ -2187,7 +2414,7 @@ describe('removeRepositoryFromManager', () => {
     }
     manager.repositories.set('idle-repo', repoState)
 
-    const repoDeps = createRepositoryDependencies({
+    const repoDeps = createTestRepositoryDependencies({
       spawn,
       sleep: () => Promise.resolve(),
     })
