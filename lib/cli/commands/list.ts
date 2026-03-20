@@ -2,13 +2,14 @@
  * dust [type] - List tasks, ideas, principles, or facts (e.g., dust tasks, dust principles)
  */
 
-import { basename } from 'node:path'
+import { basename, resolve } from 'node:path'
 import { ARTIFACT_TYPES } from '../../artifacts/index'
 import {
   getCorePrincipleHierarchy,
   getCorePrinciplesPath,
   readAllCorePrinciples,
   type CorePrincipleNode,
+  type Principle,
 } from '../../core-principles'
 import { isInternalPrinciple } from '../../artifacts/core-principles'
 import { parseArtifact } from '../../artifacts/parsed-artifact'
@@ -406,6 +407,22 @@ interface PrinciplesListContext {
   tree?: boolean
 }
 
+async function loadCorePrinciples(
+  localDirPath: string,
+  excludeSet: Set<string>
+): Promise<Principle[]> {
+  const corePath = getCorePrinciplesPath().replace(/\/$/, '')
+  /* v8 ignore start -- only true when running from the dust repo itself */
+  if (resolve(localDirPath) === resolve(corePath)) {
+    return []
+  }
+  /* v8 ignore stop */
+  const allCorePrinciples = await readAllCorePrinciples()
+  return allCorePrinciples.filter(
+    p => !isInternalPrinciple(p.content) && !excludeSet.has(p.slug)
+  )
+}
+
 async function processPrinciplesList(
   context: PrinciplesListContext
 ): Promise<boolean> {
@@ -413,15 +430,15 @@ async function processPrinciplesList(
   const { excludeCorePrinciples, tree } = context
   const excludeSet = new Set(excludeCorePrinciples ?? [])
 
-  // Get core principles with their content
-  const allCorePrinciples = await readAllCorePrinciples()
-  const corePrinciples = allCorePrinciples.filter(
-    p => !isInternalPrinciple(p.content) && !excludeSet.has(p.slug)
-  )
+  // Get local principles path
+  const localDirPath = `${dustPath}/principles`
+
+  // Load core principles, skipping when local and core point to the same
+  // directory (i.e. when running from the dust repo itself)
+  const corePrinciples = await loadCorePrinciples(localDirPath, excludeSet)
   const hasCorePrinciples = corePrinciples.length > 0
 
   // Get local principles
-  const localDirPath = `${dustPath}/principles`
   const localDirExists = fileSystem.exists(localDirPath)
   const localFiles = localDirExists
     ? await fileSystem.readdir(localDirPath)
