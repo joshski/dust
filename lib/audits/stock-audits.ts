@@ -16,7 +16,7 @@ interface StockAudit {
 }
 
 const ideasHint =
-  'Review existing ideas in `./.dust/ideas/` to understand what has been proposed or considered historically, then create new idea files in `./.dust/ideas/` for any issues you identify, avoiding duplication.'
+  'Review existing ideas in `./.dust/ideas/` to understand what has been proposed or considered historically, then create new idea files in `./.dust/ideas/` for any issues you identify, avoiding duplication. Do not modify source code - create ideas instead.'
 
 function dataAccessReview(): string {
   return dedent`
@@ -68,6 +68,7 @@ function dataAccessReview(): string {
     - Checked for sequential operations that could be batched
     - Verified connection/resource cleanup is handled properly
     - Proposed ideas for any data access improvements identified
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -116,6 +117,7 @@ function coverageExclusions(): string {
     - Labeled justification quality for visibility
     - Identified exclusions that could be removed through decoupling
     - Proposed ideas for refactoring where feasible
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -147,6 +149,7 @@ function componentReuse(): string {
     - Evaluated each case for whether extraction would be beneficial
     - Considered whether similar code serves different purposes that may evolve independently
     - Proposed ideas only for extractions where duplication is truly about the same concept
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -179,6 +182,7 @@ function agentDeveloperExperience(): string {
     - Measured feedback loop speed (time from change to check result)
     - Confirmed debugging tools and structured logging are in place
     - Proposed ideas for any improvements identified
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -344,6 +348,7 @@ function agentInstructionQuality(): string {
     - Found instructions that could be replaced by linter rules
     - Documented each issue with location, type, impact, and suggestion
     - Created ideas for substantial instruction improvements
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -378,6 +383,7 @@ function deadCode(): string {
     - Created list of code safe to remove
     - Verified removal won't break dynamic imports or reflection
     - Proposed ideas for any dead code worth removing
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -492,6 +498,7 @@ function documentationDrift(): string {
     - Reviewed inline comments for outdated descriptions
     - Documented each drift finding with location, claim, reality, and suggested fix
     - Created ideas for any substantial documentation updates needed
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -528,6 +535,7 @@ function factsVerification(): string {
     - Listed missing facts that would help agents
     - Updated or removed stale facts
     - Proposed ideas for any facts improvements needed
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -655,6 +663,7 @@ function feedbackLoopSpeed(): string {
     - Flagged dominant checks (>30% of total time)
     - Documented findings in summary table format
     - Created ideas for any feedback loop speed improvements identified
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -689,6 +698,7 @@ function ideasFromPrinciples(): string {
     - Analyzed codebase for alignment with each principle
     - Listed gaps between current state and principle intent
     - Proposed new ideas for unmet or underserved principles
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -742,6 +752,7 @@ function commitReview(): string {
     - Noted areas where changes could be generalized
     - Provided specific suggestions for each opportunity
     - Created ideas for any substantial work identified
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -807,6 +818,7 @@ function securityReview(): string {
     - Ran lightweight pattern scan for obvious issues (documented as supplementary)
     - Created ideas for any missing security tooling categories
     - Each idea specifies which tool to add and where to configure it
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -842,6 +854,7 @@ function staleIdeas(): string {
     - Reviewed each stale idea for current relevance
     - Promoted actionable ideas to tasks
     - Deleted ideas that are no longer relevant
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -891,6 +904,7 @@ function errorHandling(): string {
     - Reviewed error messages for actionability
     - Compared error handling consistency across similar operations
     - Proposed ideas for any error handling improvements identified
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -942,6 +956,7 @@ function globalState(): string {
     - Checked for scattered process.env access
     - Documented impact of each global state instance on testing
     - Proposed ideas for refactoring global state to explicit dependencies
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -992,6 +1007,7 @@ function repositoryContext(): string {
     - Design philosophy or guiding approach is captured
     - Document is concise enough to fit comfortably in an agent context window
     - A new agent reading only this document could make sensible high-level suggestions
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -1045,6 +1061,7 @@ function slowTests(): string {
     - Reviewed beforeEach/beforeAll for optimization opportunities
     - Checked test parallelization configuration
     - Proposed ideas for optimizing the slowest tests
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -1114,6 +1131,7 @@ function primitiveObsession(): string {
     - Preserved Functional Core, Imperative Shell boundaries in recommendations
     - Avoided speculative introduction of entirely new types
     - Proposed ideas for primitive obsession improvements identified
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -1173,6 +1191,7 @@ function singleResponsibilityViolations(): string {
     - Preserved Functional Core, Imperative Shell boundaries in recommendations
     - Kept recommendations high-confidence only with clear concern boundaries
     - Proposed ideas for substantial responsibility-splitting work identified
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -1238,6 +1257,7 @@ function ubiquitousLanguage(): string {
     - Reviewed factory/constructor naming for \`build*\`, \`create*\`, \`make*\`, \`new*\` consistency
     - Documented any terminology drift or inconsistencies found
     - Proposed ideas for standardizing inconsistent terminology
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -1306,6 +1326,7 @@ function designPatterns(): string {
     - Documented each finding with location, code smell, recommended pattern, trade-offs, and migration complexity
     - Noted tech-stack considerations where Gang of Four patterns may or may not apply
     - Proposed ideas for any design pattern improvements identified
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -1458,6 +1479,7 @@ function testAssertions(): string {
     - Found tests covering multiple unrelated behaviors
     - Documented each finding with location, pattern, impact, and suggestion
     - Proposed ideas for any assertion quality improvements identified
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -1512,6 +1534,7 @@ function algorithms(): string {
     - Checked recursive graph/tree operations for cycle protection
     - Documented each finding with function name, location, complexity, data structures, optimization, and acceptability assessment
     - Proposed ideas for any algorithmic improvements identified
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -1565,6 +1588,7 @@ function loggingAndTraceability(): string {
     - Assessed whether running the application produces understandable output
     - Tested whether logs help diagnose common failure scenarios
     - Proposed ideas for any logging improvements identified
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -1647,6 +1671,7 @@ function testPyramid(): string {
     - Identified miscategorized tests (e.g., unit tests with I/O)
     - Provided specific recommendations to improve pyramid shape
     - Proposed ideas for any substantial test restructuring needed
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -1709,6 +1734,7 @@ function idiomaticStyle(): string {
     - Evaluated code style consistency with rest of codebase
     - Identified anti-patterns or deprecated approaches
     - Proposed ideas for any idiomaticity improvements identified
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -1774,6 +1800,7 @@ function uxAudit(): string {
     - Documented findings with evidence and recommendations
     - Included verification criteria for each issue
     - Created ideas for any UX improvements needed
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -1917,6 +1944,7 @@ function dependencyHealth(): string {
     - Searched for packages with known better-maintained alternatives
     - Documented each concern with package name, version, type, and suggested action
     - Created ideas for any dependency health improvements needed
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -2075,6 +2103,7 @@ function ciDevelopmentParity(): string {
     - Identified CI-only checks (in CI but not dust)
     - Created idea files for each gap with suggested fix
     - Each idea links to relevant principles
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -2225,6 +2254,7 @@ function commitMessageQuality(): string {
     - Identified commits missing links to issues/tasks
     - Created idea files for patterns found
     - Each idea includes concrete suggestions for improvement
+    - No changes to files outside \`.dust/\`
   `
 }
 
@@ -2321,6 +2351,7 @@ function suggestAudits(): string {
     - Identified relevant audits based on change patterns
     - Created task files for each suggested audit with rationale
     - Each task explains why the audit is valuable given recent changes
+    - No changes to files outside \`.dust/\`
   `
 
   return content

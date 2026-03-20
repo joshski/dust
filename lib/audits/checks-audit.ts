@@ -796,5 +796,6 @@ export function checksAuditTemplate(): string {
     - Created ideas for each missing check category
     - For multi-ecosystem projects, created separate ideas per ecosystem
     - Each idea includes suggested command and alternatives
+    - No changes to files outside \`.dust/\`
   `
 }
