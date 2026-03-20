@@ -14,23 +14,35 @@ import { list } from '../commands/list'
 export async function tasks(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
-  return list({ ...dependencies, arguments: ['tasks'] })
+  return list({
+    ...dependencies,
+    arguments: ['tasks', ...dependencies.arguments],
+  })
 }
 
 export async function principles(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
-  return list({ ...dependencies, arguments: ['principles'] })
+  return list({
+    ...dependencies,
+    arguments: ['principles', ...dependencies.arguments],
+  })
 }
 
 export async function ideas(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
-  return list({ ...dependencies, arguments: ['ideas'] })
+  return list({
+    ...dependencies,
+    arguments: ['ideas', ...dependencies.arguments],
+  })
 }
 
 export async function facts(
   dependencies: CommandDependencies
 ): Promise<CommandResult> {
-  return list({ ...dependencies, arguments: ['facts'] })
+  return list({
+    ...dependencies,
+    arguments: ['facts', ...dependencies.arguments],
+  })
 }

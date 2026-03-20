@@ -1270,3 +1270,323 @@ describe('formatPrinciplesSection', () => {
     expect(lines).toEqual(['🎯 Test Principles', '', '* my-principle.md', ''])
   })
 })
+
+describe('list command --tree flag', () => {
+  test('outputs tree structure with connectors when --tree flag is passed', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'parent-principle.md': `# Parent Principle
+
+This is a parent principle.
+
+## Parent Principle
+
+- (none)
+
+## Sub-Principles
+
+- [Child Principle](child-principle.md)
+`,
+            'child-principle.md': `# Child Principle
+
+This is a child principle.
+
+## Parent Principle
+
+- [Parent Principle](parent-principle.md)
+
+## Sub-Principles
+
+- (none)
+`,
+          },
+        },
+      },
+    })
+
+    await list(
+      createDependencies(context, fileSystem, ['principles', '--tree'])
+    )
+
+    const output = context.stdoutLines.join('\n')
+    // Should show tree connectors
+    expect(output).toContain('├──')
+    expect(output).toContain('└──')
+    // Should show Core and Local headers (bold formatting stripped in test)
+    expect(output).toContain('Core')
+    expect(output).toContain('Local')
+  })
+
+  test('defaults to compressed format when --tree flag is not passed', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'my-principle.md': '# My Principle\n\nThis is a principle.',
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['principles']))
+
+    const output = context.stdoutLines.join('\n')
+    // Should show compact format
+    expect(output).toContain('* my-principle.md')
+    expect(output).toContain('  This is a principle.')
+    // Should NOT show tree connectors
+    expect(output).not.toContain('├──')
+    expect(output).not.toContain('└──')
+  })
+
+  test('shows hierarchical tree with nested children', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'grandparent.md': `# Grandparent
+
+Grandparent principle.
+
+## Parent Principle
+
+- (none)
+
+## Sub-Principles
+
+- [Parent](parent.md)
+`,
+            'parent.md': `# Parent
+
+Parent principle.
+
+## Parent Principle
+
+- [Grandparent](grandparent.md)
+
+## Sub-Principles
+
+- [Child](child.md)
+`,
+            'child.md': `# Child
+
+Child principle.
+
+## Parent Principle
+
+- [Parent](parent.md)
+
+## Sub-Principles
+
+- (none)
+`,
+          },
+        },
+      },
+    })
+
+    await list(
+      createDependencies(context, fileSystem, ['principles', '--tree'])
+    )
+
+    const output = context.stdoutLines.join('\n')
+    // Should show tree structure
+    expect(output).toContain('Local')
+    expect(output).toContain('Grandparent')
+    expect(output).toContain('Parent')
+    expect(output).toContain('Child')
+    // Child prefix should show tree continuation
+    expect(output).toContain('│')
+  })
+
+  test('shows multiple root principles with ├── connector', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'first-root.md': `# First Root
+
+First root principle.
+
+## Parent Principle
+
+- (none)
+
+## Sub-Principles
+
+- (none)
+`,
+            'second-root.md': `# Second Root
+
+Second root principle.
+
+## Parent Principle
+
+- (none)
+
+## Sub-Principles
+
+- (none)
+`,
+          },
+        },
+      },
+    })
+
+    await list(
+      createDependencies(context, fileSystem, ['principles', '--tree'])
+    )
+
+    const output = context.stdoutLines.join('\n')
+    // With multiple roots, should have both ├── and └──
+    expect(output).toContain('├──')
+    expect(output).toContain('└──')
+    expect(output).toContain('First Root')
+    expect(output).toContain('Second Root')
+  })
+
+  test('uses slug as title in tree mode when no heading exists', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'no-heading.md': `Content without a title heading.
+
+## Parent Principle
+
+- (none)
+
+## Sub-Principles
+
+- (none)
+`,
+          },
+        },
+      },
+    })
+
+    await list(
+      createDependencies(context, fileSystem, ['principles', '--tree'])
+    )
+
+    const output = context.stdoutLines.join('\n')
+    // Should use slug as fallback title
+    expect(output).toContain('no-heading')
+  })
+
+  test('emits principles-listed event in tree mode', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'my-principle.md':
+              '# My Principle\n\nA principle.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- (none)',
+          },
+        },
+      },
+    })
+
+    await list(
+      createDependencies(context, fileSystem, ['principles', '--tree'])
+    )
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'principles-listed',
+      principles: [
+        {
+          path: '.dust/principles/my-principle.md',
+          title: 'My Principle',
+        },
+      ],
+    })
+  })
+
+  test('emits empty principles-listed event when only core principles in tree mode', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {},
+        },
+      },
+    })
+
+    await list(
+      createDependencies(context, fileSystem, ['principles', '--tree'])
+    )
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'principles-listed',
+      principles: [],
+    })
+  })
+
+  test('handles missing emitEvent in tree mode with local principles', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'local.md':
+              '# Local Principle\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- (none)',
+          },
+        },
+      },
+    })
+
+    const context = {
+      cwd: '/project',
+      stdout: () => {},
+      stderr: () => {},
+      emitEvent: undefined,
+    }
+
+    const result = await list({
+      arguments: ['principles', '--tree'],
+      context,
+      fileSystem,
+      globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
+      settings: { dustCommand: 'dust' },
+    })
+
+    expect(result.exitCode).toBe(0)
+  })
+
+  test('handles missing emitEvent in tree mode with only core principles', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {},
+        },
+      },
+    })
+
+    const context = {
+      cwd: '/project',
+      stdout: () => {},
+      stderr: () => {},
+      emitEvent: undefined,
+    }
+
+    const result = await list({
+      arguments: ['principles', '--tree'],
+      context,
+      fileSystem,
+      globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
+      settings: { dustCommand: 'dust' },
+    })
+
+    expect(result.exitCode).toBe(0)
+  })
+})

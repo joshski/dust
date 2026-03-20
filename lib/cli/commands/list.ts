@@ -2,12 +2,18 @@
  * dust [type] - List tasks, ideas, principles, or facts (e.g., dust tasks, dust principles)
  */
 
+import { basename } from 'node:path'
 import { ARTIFACT_TYPES } from '../../artifacts/index'
 import {
+  getCorePrincipleHierarchy,
   getCorePrinciplesPath,
   readAllCorePrinciples,
+  type CorePrincipleNode,
 } from '../../core-principles'
 import { isInternalPrinciple } from '../../artifacts/core-principles'
+import { parseArtifact } from '../../artifacts/parsed-artifact'
+import { extractPrincipleRelationships } from '../../lint/validators/principle-hierarchy'
+import type { PrincipleRelationships } from '../../lint/validators/types'
 import { findAllWorkflowTasks } from '../../artifacts/workflow-tasks'
 import {
   extractOpeningSentence,
@@ -159,6 +165,117 @@ export function formatPrinciplesSection(
   return lines
 }
 
+/**
+ * Node in the local principle hierarchy tree
+ */
+interface PrincipleNode {
+  filePath: string
+  title: string
+  children: PrincipleNode[]
+}
+
+/**
+ * Build hierarchy tree for local principles
+ */
+async function buildPrincipleHierarchy(
+  principlesPath: string,
+  fileSystem: ReadableFileSystem
+): Promise<PrincipleNode[]> {
+  const files = await fileSystem.readdir(principlesPath)
+  const mdFiles = files.filter(f => f.endsWith('.md'))
+
+  // Build relationships for all principles
+  const relationships: PrincipleRelationships[] = []
+  const titleMap = new Map<string, string>()
+
+  for (const file of mdFiles) {
+    const filePath = `${principlesPath}/${file}`
+    const content = await fileSystem.readFile(filePath)
+    const artifact = parseArtifact(filePath, content)
+    relationships.push(extractPrincipleRelationships(artifact))
+    const title = extractTitle(content) || basename(file, '.md')
+    titleMap.set(filePath, title)
+  }
+
+  // Build a map of filePath -> PrincipleRelationships
+  const relMap = new Map<string, PrincipleRelationships>()
+  for (const rel of relationships) {
+    relMap.set(rel.filePath, rel)
+  }
+
+  // Find root principles (those with no parent or "(none)" parent)
+  const rootPrinciples = relationships.filter(
+    rel => rel.parentPrinciples.length === 0
+  )
+
+  // Recursively build the tree
+  function buildNode(filePath: string): PrincipleNode {
+    const rel = relMap.get(filePath)
+    const children: PrincipleNode[] = []
+
+    /* v8 ignore start -- defensive: rel always exists for valid child paths */
+    if (rel) {
+      /* v8 ignore stop */
+      for (const childPath of rel.subPrinciples) {
+        children.push(buildNode(childPath))
+      }
+    }
+
+    return {
+      filePath,
+      /* v8 ignore next -- defensive: titleMap always has entry for valid paths */
+      title: titleMap.get(filePath) || basename(filePath, '.md'),
+      children,
+    }
+  }
+
+  return rootPrinciples.map(rel => buildNode(rel.filePath))
+}
+
+/**
+ * Render a local principle hierarchy with tree connectors
+ */
+function renderHierarchy(
+  nodes: PrincipleNode[],
+  output: (line: string) => void,
+  prefix = ''
+): void {
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i]
+    const isLastNode = i === nodes.length - 1
+    const connector = isLastNode ? '└── ' : '├── '
+    const childPrefix = isLastNode ? '    ' : '│   '
+
+    output(`${prefix}${connector}${node.title}`)
+
+    if (node.children.length > 0) {
+      renderHierarchy(node.children, output, prefix + childPrefix)
+    }
+  }
+}
+
+/**
+ * Render a core principle hierarchy with tree connectors
+ */
+function renderCorePrincipleHierarchy(
+  nodes: CorePrincipleNode[],
+  output: (line: string) => void,
+  prefix = ''
+): void {
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i]
+    const isLastNode = i === nodes.length - 1
+    const connector = isLastNode ? '└── ' : '├── '
+    const childPrefix = isLastNode ? '    ' : '│   '
+
+    output(`${prefix}${connector}${node.title}`)
+
+    if (node.children.length > 0) {
+      renderCorePrincipleHierarchy(node.children, output, prefix + childPrefix)
+    }
+  }
+}
+
 function parseTypesToList(commandArguments: string[]): ListType[] {
   if (commandArguments.length === 0) {
     return [...ARTIFACT_TYPES]
@@ -281,17 +398,19 @@ async function processListType(context: ListTypeContext): Promise<void> {
 
 interface PrinciplesListContext {
   dustPath: string
+  colors: ReturnType<typeof getColors>
   fileSystem: ReadableFileSystem
   stdout: (line: string) => void
   emitEvent: EventEmitter
   excludeCorePrinciples?: string[]
+  tree?: boolean
 }
 
 async function processPrinciplesList(
   context: PrinciplesListContext
 ): Promise<boolean> {
-  const { dustPath, fileSystem, stdout, emitEvent } = context
-  const { excludeCorePrinciples } = context
+  const { dustPath, colors, fileSystem, stdout, emitEvent } = context
+  const { excludeCorePrinciples, tree } = context
   const excludeSet = new Set(excludeCorePrinciples ?? [])
 
   // Get core principles with their content
@@ -323,58 +442,98 @@ async function processPrinciplesList(
   stdout(TYPE_EXPLANATIONS['principles'])
   stdout('')
 
-  // Render Core section using compact format
-  /* v8 ignore start -- core principles always exist in the package */
-  if (hasCorePrinciples) {
-    /* v8 ignore stop */
-    const corePath = getCorePrinciplesPath()
-    const coreEntries: PrincipleEntry[] = corePrinciples
-      .toSorted((a, b) => a.slug.localeCompare(b.slug))
-      .map(p => ({
-        slug: p.slug,
-        openingSentence: extractOpeningSentence(p.content),
-      }))
-    const coreLines = formatPrinciplesSection(
-      `🎯 Core Principles (${corePath})`,
-      coreEntries
-    )
-    for (const line of coreLines) {
-      stdout(line)
-    }
-  }
-
-  // Render Local section using compact format
-  if (hasLocalPrinciples) {
-    const localEntries: PrincipleEntry[] = []
-    const collectedItems: CollectedItem[] = []
-
-    for (const file of localMdFiles) {
-      const filePath = `${localDirPath}/${file}`
-      const content = await fileSystem.readFile(filePath)
-      const title = extractTitle(content)
-      const openingSentence = extractOpeningSentence(content)
-      const relativePath = `.dust/principles/${file}`
-      const slug = file.replace('.md', '')
-      const displayTitle = title || slug
-
-      localEntries.push({ slug, openingSentence })
-      collectedItems.push({ path: relativePath, title: displayTitle })
+  if (tree) {
+    // Tree mode: render hierarchical structure with connectors
+    /* v8 ignore start -- core principles always exist in the package */
+    if (hasCorePrinciples) {
+      /* v8 ignore stop */
+      const coreHierarchy = await getCorePrincipleHierarchy({
+        excludeCorePrinciples,
+      })
+      stdout(`${colors.bold}Core${colors.reset}`)
+      renderCorePrincipleHierarchy(coreHierarchy, line => stdout(line))
+      stdout('')
     }
 
-    const localLines = formatPrinciplesSection(
-      '🎯 Local Principles (.dust/principles/)',
-      localEntries
-    )
-    for (const line of localLines) {
-      stdout(line)
+    if (hasLocalPrinciples) {
+      const localHierarchy = await buildPrincipleHierarchy(
+        localDirPath,
+        fileSystem
+      )
+      stdout(`${colors.bold}Local${colors.reset}`)
+      renderHierarchy(localHierarchy, line => stdout(line))
+      stdout('')
+
+      // Collect items for event emission
+      const collectedItems: CollectedItem[] = []
+      for (const file of localMdFiles) {
+        const filePath = `${localDirPath}/${file}`
+        const content = await fileSystem.readFile(filePath)
+        const title = extractTitle(content)
+        const relativePath = `.dust/principles/${file}`
+        const slug = file.replace('.md', '')
+        const displayTitle = title || slug
+        collectedItems.push({ path: relativePath, title: displayTitle })
+      }
+
+      if (emitEvent) {
+        emitListEvent(emitEvent, 'principles', collectedItems)
+      }
+    } else if (emitEvent) {
+      emitListEvent(emitEvent, 'principles', [])
+    }
+  } else {
+    // Compact mode (default): render flat list with slugs and opening sentences
+    /* v8 ignore start -- core principles always exist in the package */
+    if (hasCorePrinciples) {
+      /* v8 ignore stop */
+      const corePath = getCorePrinciplesPath()
+      const coreEntries: PrincipleEntry[] = corePrinciples
+        .toSorted((a, b) => a.slug.localeCompare(b.slug))
+        .map(p => ({
+          slug: p.slug,
+          openingSentence: extractOpeningSentence(p.content),
+        }))
+      const coreLines = formatPrinciplesSection(
+        `🎯 Core Principles (${corePath})`,
+        coreEntries
+      )
+      for (const line of coreLines) {
+        stdout(line)
+      }
     }
 
-    if (emitEvent) {
-      emitListEvent(emitEvent, 'principles', collectedItems)
+    if (hasLocalPrinciples) {
+      const localEntries: PrincipleEntry[] = []
+      const collectedItems: CollectedItem[] = []
+
+      for (const file of localMdFiles) {
+        const filePath = `${localDirPath}/${file}`
+        const content = await fileSystem.readFile(filePath)
+        const title = extractTitle(content)
+        const openingSentence = extractOpeningSentence(content)
+        const relativePath = `.dust/principles/${file}`
+        const slug = file.replace('.md', '')
+        const displayTitle = title || slug
+
+        localEntries.push({ slug, openingSentence })
+        collectedItems.push({ path: relativePath, title: displayTitle })
+      }
+
+      const localLines = formatPrinciplesSection(
+        '🎯 Local Principles (.dust/principles/)',
+        localEntries
+      )
+      for (const line of localLines) {
+        stdout(line)
+      }
+
+      if (emitEvent) {
+        emitListEvent(emitEvent, 'principles', collectedItems)
+      }
+    } else if (emitEvent) {
+      emitListEvent(emitEvent, 'principles', [])
     }
-  } else if (emitEvent) {
-    // Emit empty list if no local principles but we still need to emit
-    emitListEvent(emitEvent, 'principles', [])
   }
 
   return true
@@ -398,15 +557,19 @@ export async function list(
     return { exitCode: 1 }
   }
 
-  const typesToList = parseTypesToList(commandArguments)
+  // Parse --tree flag
+  const treeFlag = commandArguments.includes('--tree')
+  const argsWithoutFlags = commandArguments.filter(a => !a.startsWith('--'))
 
-  if (commandArguments.length > 0 && typesToList.length === 0) {
-    context.stderr(`Invalid type: ${commandArguments[0]}`)
+  const typesToList = parseTypesToList(argsWithoutFlags)
+
+  if (argsWithoutFlags.length > 0 && typesToList.length === 0) {
+    context.stderr(`Invalid type: ${argsWithoutFlags[0]}`)
     context.stderr(`Valid types: ${ARTIFACT_TYPES.join(', ')}`)
     return { exitCode: 1 }
   }
 
-  const specificTypeRequested = commandArguments.length > 0
+  const specificTypeRequested = argsWithoutFlags.length > 0
   const showTaskCreationHint =
     specificTypeRequested &&
     typesToList.length === 1 &&
@@ -422,10 +585,12 @@ export async function list(
     if (type === 'principles') {
       const hasContent = await processPrinciplesList({
         dustPath,
+        colors,
         fileSystem,
         stdout: context.stdout,
         emitEvent: context.emitEvent,
         excludeCorePrinciples: settings.excludeCorePrinciples,
+        tree: treeFlag,
       })
 
       /* v8 ignore start -- core principles always exist in the package */

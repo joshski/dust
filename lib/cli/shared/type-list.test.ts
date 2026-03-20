@@ -65,6 +65,32 @@ describe('principles command', () => {
     expect(output).toContain('* principle.md')
     expect(output).not.toContain('📋 Tasks')
   })
+
+  test('passes --tree flag through to list command', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'principle.md':
+              '# My Principle\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- (none)',
+          },
+        },
+      },
+    })
+
+    const result = await principles({
+      ...createDependencies(context, fileSystem),
+      arguments: ['--tree'],
+    })
+
+    expect(result.exitCode).toBe(0)
+    const output = context.stdoutLines.join('\n')
+    // Tree format uses connectors
+    expect(output).toContain('└──')
+    // Should NOT have compact format
+    expect(output).not.toContain('* principle.md')
+  })
 })
 
 describe('ideas command', () => {

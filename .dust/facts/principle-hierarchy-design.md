@@ -14,7 +14,7 @@ The hierarchy has one root principle: **Enable Flow State** (with `## Parent Pri
 
 **Why a tree instead of a DAG:**
 - Simpler to understand and navigate — trees are intuitive
-- Clean display — `bin/dust principles` produces a readable indented tree
+- Clean display — `bin/dust principles --tree` produces a readable indented tree
 - Forces prioritization — picking one parent clarifies primary purpose
 - Aligns with the Small Units principle — keeping structures simple
 
