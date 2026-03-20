@@ -11,6 +11,7 @@ import {
   buildDockerRunArguments,
   defaultDependencies,
   type EventSourceDependencies,
+  generateApiKeyHelperSettings,
   spawnClaudeCode,
 } from './spawn-claude-code'
 
@@ -844,5 +845,92 @@ describe('buildDockerRunArguments', () => {
     expect(
       dockerArguments.find(argument => argument.includes('insteadOf'))
     ).toBeUndefined()
+  })
+
+  test('mounts settings file and passes --settings when settingsFilePath is set', () => {
+    const claudeArgs = ['-p', 'test']
+    const dockerArguments = buildDockerRunArguments(
+      {
+        imageTag: 'dust-agent-test',
+        repoPath: '/home/user/project',
+        homeDir: '/home/user',
+        claudeApiProxyUrl: 'http://host.docker.internal:3002',
+        settingsFilePath: '/tmp/dust-settings.json',
+      },
+      claudeArgs,
+      {}
+    )
+
+    // Should mount the settings file read-only
+    expect(dockerArguments).toContain(
+      '/tmp/dust-settings.json:/home/user/.dust-settings.json:ro'
+    )
+    // Should pass --settings to claude command
+    expect(claudeArgs).toContain('--settings')
+    expect(claudeArgs).toContain('/home/user/.dust-settings.json')
+  })
+
+  test('does not set ANTHROPIC_AUTH_TOKEN when claudeApiProxyUrl is set', () => {
+    const dockerArguments = buildDockerRunArguments(
+      {
+        imageTag: 'dust-agent-test',
+        repoPath: '/home/user/project',
+        homeDir: '/home/user',
+        claudeApiProxyUrl: 'http://host.docker.internal:3002',
+        settingsFilePath: '/tmp/dust-settings.json',
+      },
+      ['-p', 'test'],
+      {}
+    )
+
+    // Should NOT contain ANTHROPIC_AUTH_TOKEN (no more proxy-managed dummy token)
+    const authTokenArg = dockerArguments.find(arg =>
+      arg.includes('ANTHROPIC_AUTH_TOKEN')
+    )
+    expect(authTokenArg).toBeUndefined()
+  })
+})
+
+describe('generateApiKeyHelperSettings', () => {
+  test('generates valid JSON with apiKeyHelper', () => {
+    const settings = generateApiKeyHelperSettings(
+      'http://host.docker.internal:3002'
+    )
+    const parsed = JSON.parse(settings)
+    expect(parsed).toHaveProperty('apiKeyHelper')
+  })
+
+  test('includes curl command to fetch token', () => {
+    const settings = generateApiKeyHelperSettings(
+      'http://host.docker.internal:3002'
+    )
+    const parsed = JSON.parse(settings)
+    expect(parsed.apiKeyHelper).toContain('curl')
+    expect(parsed.apiKeyHelper).toContain(
+      'http://host.docker.internal:3002/token'
+    )
+  })
+
+  test('includes flags for silent, fast-fail, and max-time', () => {
+    const settings = generateApiKeyHelperSettings(
+      'http://host.docker.internal:3002'
+    )
+    const parsed = JSON.parse(settings)
+    expect(parsed.apiKeyHelper).toContain('-fsS')
+    expect(parsed.apiKeyHelper).toContain('--max-time 2')
+  })
+
+  test('strips trailing newline from curl output', () => {
+    const settings = generateApiKeyHelperSettings(
+      'http://host.docker.internal:3002'
+    )
+    const parsed = JSON.parse(settings)
+    expect(parsed.apiKeyHelper).toContain("tr -d '\\n'")
+  })
+
+  test('uses provided proxy URL', () => {
+    const settings = generateApiKeyHelperSettings('http://localhost:9999')
+    const parsed = JSON.parse(settings)
+    expect(parsed.apiKeyHelper).toContain('http://localhost:9999/token')
   })
 })

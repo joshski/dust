@@ -59,6 +59,8 @@ export interface DockerSpawnConfig {
   gitProxyUrl?: string
   /** Claude API proxy URL (e.g., http://host.docker.internal:3002) */
   claudeApiProxyUrl?: string
+  /** Path to settings file on host to mount into container (for apiKeyHelper) */
+  settingsFilePath?: string
 }
 
 export interface SpawnOptions {

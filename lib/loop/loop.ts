@@ -9,9 +9,11 @@
  * 5. Repeat until max iterations reached (default: 10)
  */
 
-import { existsSync } from 'node:fs'
+import { existsSync, writeFileSync, unlinkSync } from 'node:fs'
 import os from 'node:os'
+import { join } from 'node:path'
 import { createHeartbeatThrottler, formatAgentEvent } from '../agent-events'
+import { generateApiKeyHelperSettings } from '../claude/spawn-claude-code'
 import type { DockerSpawnConfig } from '../claude/types'
 import {
   type DockerDependencies,
@@ -107,6 +109,7 @@ export async function runLoop(
 
   let stopGitProxy: (() => void) | undefined
   let stopApiProxy: (() => void) | undefined
+  let settingsFilePath: string | undefined
 
   if ('config' in dockerResult) {
     if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) {
@@ -125,10 +128,23 @@ export async function runLoop(
     const apiProxy = await createClaudeApiProxyServer()
     stopApiProxy = apiProxy.stop
 
+    const claudeApiProxyUrl = `http://host.docker.internal:${apiProxy.port}`
+
+    // Create temp settings file with apiKeyHelper configuration
+    // This enables containers to fetch helper tokens from the proxy
+    settingsFilePath = join(
+      os.tmpdir(),
+      `dust-claude-settings-${sessionId}.json`
+    )
+    const settingsContent = generateApiKeyHelperSettings(claudeApiProxyUrl)
+    writeFileSync(settingsFilePath, settingsContent, 'utf-8')
+    log(`created settings file at ${settingsFilePath}`)
+
     dockerConfig = {
       ...dockerResult.config,
       gitProxyUrl: `http://host.docker.internal:${gitProxy.port}`,
-      claudeApiProxyUrl: `http://host.docker.internal:${apiProxy.port}`,
+      claudeApiProxyUrl,
+      settingsFilePath,
     }
   }
 
@@ -188,9 +204,17 @@ export async function runLoop(
     }
   }
 
-  // Stop proxy servers
+  // Stop proxy servers and clean up temp files
   stopGitProxy?.()
   stopApiProxy?.()
+  if (settingsFilePath) {
+    try {
+      unlinkSync(settingsFilePath)
+      log(`cleaned up settings file ${settingsFilePath}`)
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
 
   log(`loop ended after ${completedIterations} iterations`)
   onLoopEvent({ type: 'loop.ended', maxIterations })

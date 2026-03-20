@@ -15,13 +15,14 @@ The architecture is already validated:
 
 - **Claude API proxy**: `lib/proxy/claude-api-proxy.ts` proxies requests from Docker containers to `api.anthropic.com`, injecting OAuth tokens on the host side.
 - **Git credential proxy**: `lib/proxy/git-credential-proxy.ts` proxies git operations, using host-side `git credential fill` to inject auth.
-- **Docker spawn integration**: `lib/claude/spawn-claude-code.ts` configures Docker containers with `ANTHROPIC_BASE_URL` pointing to the proxy and a dummy `ANTHROPIC_AUTH_TOKEN=proxy-managed`.
+- **Docker spawn with apiKeyHelper**: `lib/claude/spawn-claude-code.ts` configures Docker containers with `ANTHROPIC_BASE_URL` pointing to the proxy and mounts a settings file with `apiKeyHelper` configured to fetch helper tokens from the proxy's `/token` endpoint. No OAuth tokens or dummy auth tokens are passed to containers.
+- **Helper token module**: `lib/proxy/helper-token.ts` provides pure functions for generating and validating short-TTL helper tokens with 60-second expiry.
+- **Token endpoint**: The Claude API proxy exposes `/token` for containers to fetch helper tokens.
 - **No credential mount when proxied**: When `claudeApiProxyUrl` is set, `~/.claude` and `~/.claude.json` are NOT mounted into containers.
 
 ### Not yet implemented
 
 - Explicit Dust config for gateway mode in `.dust/config/settings.json`.
-- Helper token lifecycle (tokens are currently static per session).
 - Upstream allowlists and rate limits.
 - Structured gateway events and audit logging.
 - Unix socket support (currently TCP only).

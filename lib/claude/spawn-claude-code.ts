@@ -9,6 +9,31 @@ import type { DockerSpawnConfig, RawEvent, SpawnOptions } from './types'
 
 const debug = createLogger('dust.claude.spawn-claude-code')
 
+/**
+ * Claude Code settings JSON structure for apiKeyHelper.
+ */
+interface ApiKeyHelperSettings {
+  apiKeyHelper: string
+}
+
+/**
+ * Generate Claude Code settings JSON with apiKeyHelper configured to fetch
+ * tokens from the given proxy URL.
+ *
+ * The helper command uses curl to fetch a short-TTL helper token from the
+ * host-side proxy's /token endpoint. This token is validated by the proxy
+ * when the container makes Claude API requests.
+ *
+ * @param proxyUrl - The Claude API proxy URL (e.g., http://host.docker.internal:3002)
+ * @returns Settings JSON string for Claude Code
+ */
+export function generateApiKeyHelperSettings(proxyUrl: string): string {
+  const settings: ApiKeyHelperSettings = {
+    apiKeyHelper: `curl -fsS --max-time 2 ${proxyUrl}/token | tr -d '\\n'`,
+  }
+  return JSON.stringify(settings, null, 2)
+}
+
 export interface EventSourceDependencies {
   spawn: SpawnForEvents
   createInterface: CreateReadlineForEvents
@@ -74,12 +99,19 @@ export function buildDockerRunArguments(
     )
   }
 
-  // Configure Claude Code to use the API proxy
+  // Configure Claude Code to use the API proxy with apiKeyHelper
   if (docker.claudeApiProxyUrl) {
     dockerArguments.push('-e', `ANTHROPIC_BASE_URL=${docker.claudeApiProxyUrl}`)
-    // Provide a dummy auth token so Claude Code starts without real credentials.
-    // The proxy will strip this and inject the real OAuth token on the host side.
-    dockerArguments.push('-e', 'ANTHROPIC_AUTH_TOKEN=proxy-managed')
+    // Mount settings file with apiKeyHelper and pass --settings flag
+    // The apiKeyHelper fetches a short-TTL helper token from the proxy's /token endpoint
+    if (docker.settingsFilePath) {
+      const containerSettingsPath = '/home/user/.dust-settings.json'
+      dockerArguments.push(
+        '-v',
+        `${docker.settingsFilePath}:${containerSettingsPath}:ro`
+      )
+      claudeArguments.push('--settings', containerSettingsPath)
+    }
   }
 
   // Ensure commits inside Docker containers have a deterministic identity.

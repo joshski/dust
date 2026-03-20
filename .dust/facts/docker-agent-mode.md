@@ -24,7 +24,7 @@ WORKDIR /workspace
 
 Docker containers cannot access the host's keychain. Authentication is handled through proxies on the host:
 
-- **Claude API Proxy**: When `claudeApiProxyUrl` is configured, API calls to Anthropic route through a host-side proxy that injects the OAuth token. The container sees `ANTHROPIC_BASE_URL` pointing to the proxy, and `~/.claude` is not mounted.
+- **Claude API Proxy with apiKeyHelper**: When `claudeApiProxyUrl` is configured, Claude Code is configured to use `apiKeyHelper` to fetch short-TTL helper tokens from the proxy's `/token` endpoint. The container sees `ANTHROPIC_BASE_URL` pointing to the proxy and uses `--settings` with a mounted settings file containing the `apiKeyHelper` command. No OAuth tokens or dummy auth tokens are passed to the container environment.
 - **OPENAI_API_KEY**: Required for Codex agent mode, passed as an environment variable.
 
 Without the API proxy, `CLAUDE_CODE_OAUTH_TOKEN` must be set and `~/.claude` is mounted for token refresh. If neither is available when Docker mode is detected, dust exits early with an error message.
