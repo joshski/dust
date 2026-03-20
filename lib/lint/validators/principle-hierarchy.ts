@@ -6,8 +6,6 @@ import { dirname, resolve } from 'node:path'
 import type { ParsedArtifact } from '../../artifacts/parsed-artifact'
 import type { PrincipleRelationships, Violation } from './types'
 
-export type { PrincipleRelationships }
-
 const REQUIRED_PRINCIPLE_HEADINGS = ['Parent Principle', 'Sub-Principles']
 
 export function validatePrincipleHierarchySections(

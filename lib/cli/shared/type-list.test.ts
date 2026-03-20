@@ -61,7 +61,8 @@ describe('principles command', () => {
     expect(result.exitCode).toBe(0)
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('🎯 Principles')
-    expect(output).toContain('My Principle')
+    // Compact format uses slug with .md extension
+    expect(output).toContain('* principle.md')
     expect(output).not.toContain('📋 Tasks')
   })
 })

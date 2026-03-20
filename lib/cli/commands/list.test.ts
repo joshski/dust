@@ -6,7 +6,7 @@ import {
   type FileSystemEmulator,
 } from '../../test/test-utilities'
 import type { CommandContext, CommandDependencies } from '../types'
-import { list } from './list'
+import { formatPrincipleEntry, formatPrinciplesSection, list } from './list'
 
 function createDependencies(
   context: CommandContext,
@@ -81,7 +81,7 @@ describe('list command', () => {
     expect(output).not.toContain('💡 Ideas')
   })
 
-  test('shows relative path and opening sentence', async () => {
+  test('shows slug and opening sentence in compact format', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -97,16 +97,18 @@ describe('list command', () => {
     await list(createDependencies(context, fileSystem, ['principles']))
 
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('.dust/principles/my-principle.md')
-    expect(output).toContain('This is the opening sentence.')
+    expect(output).toContain('* my-principle.md')
+    expect(output).toContain('  This is the opening sentence.')
   })
 
-  test('shows only file name if no title', async () => {
+  test('shows slug without opening sentence if none found', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
-          principles: { 'my-principle.md': 'No heading here' },
+          principles: {
+            'my-principle.md': '# No Opening Sentence\n\n- List item',
+          },
         },
       },
     })
@@ -114,7 +116,7 @@ describe('list command', () => {
     await list(createDependencies(context, fileSystem, ['principles']))
 
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('my-principle')
+    expect(output).toContain('* my-principle.md')
   })
 
   test('rejects invalid type', async () => {
@@ -170,7 +172,7 @@ describe('list command', () => {
     expect(result.exitCode).toBe(0)
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('🎯 Principles')
-    expect(output).toContain('My Principle')
+    expect(output).toContain('* my-principle.md')
     // Other types should not appear because their directories don't exist
     expect(output).not.toContain('📋 Tasks')
     expect(output).not.toContain('💡 Ideas')
@@ -273,6 +275,42 @@ describe('list command', () => {
     expect(output).toContain('No ideas found.')
   })
 
+  test('handles facts without opening sentences', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          facts: {
+            'my-fact.md': '# My Fact\n\n- List item instead of paragraph',
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['facts']))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('📄 Facts')
+    expect(output).toContain('My Fact')
+  })
+
+  test('shows opening sentence for facts when present', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          facts: { 'my-fact.md': '# My Fact\n\nThis is the opening sentence.' },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['facts']))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('📄 Facts')
+    expect(output).toContain('This is the opening sentence.')
+  })
+
   test('shows type explanation for tasks', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
@@ -360,7 +398,7 @@ describe('list command', () => {
     expect(output).toContain('No tasks found.')
   })
 
-  test('shows principle hierarchy with parent and sub-principles', async () => {
+  test('shows principles in compact format with slugs', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -411,19 +449,20 @@ This is a grandchild principle.
 
     const output = context.stdoutLines.join('\n')
     // Core section for built-in principles
-    expect(output).toContain('Core')
+    expect(output).toContain('🎯 Core Principles')
     // Local section for project principles
-    expect(output).toContain('Local')
-    expect(output).toContain('Parent Principle')
-    expect(output).toContain('Child Principle')
-    expect(output).toContain('Grandchild Principle')
-    // Check tree structure is present (└── for last/only children)
-    expect(output).toContain('└── Parent Principle')
-    expect(output).toContain('└── Child Principle')
-    expect(output).toContain('└── Grandchild Principle')
+    expect(output).toContain('🎯 Local Principles (.dust/principles/)')
+    // Compact format uses slugs with .md extension
+    expect(output).toContain('* parent-principle.md')
+    expect(output).toContain('* child-principle.md')
+    expect(output).toContain('* grandchild-principle.md')
+    // Opening sentences are indented
+    expect(output).toContain('  This is a top-level principle.')
+    expect(output).toContain('  This is a child principle.')
+    expect(output).toContain('  This is a grandchild principle.')
   })
 
-  test('shows multiple root principles in hierarchy', async () => {
+  test('shows multiple principles sorted alphabetically by slug', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -461,14 +500,15 @@ Second root.
     await list(createDependencies(context, fileSystem, ['principles']))
 
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('Root One')
-    expect(output).toContain('Root Two')
-    // With multiple roots, the first one uses ├── and last uses └──
-    expect(output).toContain('├── Root One')
-    expect(output).toContain('└── Root Two')
+    // Compact format uses slugs with .md extension
+    expect(output).toContain('* root-one.md')
+    expect(output).toContain('* root-two.md')
+    // Opening sentences are indented
+    expect(output).toContain('  First root.')
+    expect(output).toContain('  Second root.')
   })
 
-  test('handles sub-principle references to non-existent principles gracefully', async () => {
+  test('shows principles using compact slug format', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -495,13 +535,12 @@ This is a parent principle.
 
     const output = context.stdoutLines.join('\n')
     // Shows Local section for project principles
-    expect(output).toContain('Local')
-    expect(output).toContain('Parent Principle')
-    // The non-existent principle should be shown with its basename
-    expect(output).toContain('non-existent-principle')
+    expect(output).toContain('🎯 Local Principles (.dust/principles/)')
+    expect(output).toContain('* parent-principle.md')
+    expect(output).toContain('  This is a parent principle.')
   })
 
-  test('does not show hierarchy when all principles have parents', async () => {
+  test('shows all principles regardless of hierarchy relationships', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -528,14 +567,15 @@ This principle has a parent that does not exist.
 
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('🎯 Principles')
-    expect(output).toContain('Orphan Principle')
-    // No hierarchy because no root principles exist
-    expect(output).not.toContain('Hierarchy:')
+    expect(output).toContain('* orphan-principle.md')
+    expect(output).toContain(
+      '  This principle has a parent that does not exist.'
+    )
   })
 })
 
 describe('list command Core and Local principles sections', () => {
-  test('shows Core section with built-in principles hierarchy', async () => {
+  test('shows Core section with built-in principles in compact format', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -549,9 +589,9 @@ describe('list command Core and Local principles sections', () => {
 
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('🎯 Principles')
-    expect(output).toContain('Core')
-    // Core principles should include Enable Flow State (the root)
-    expect(output).toContain('Enable Flow State')
+    expect(output).toContain('🎯 Core Principles')
+    // Core principles should include enable-flow-state.md
+    expect(output).toContain('* enable-flow-state.md')
   })
 
   test('shows Local section when local principles exist', async () => {
@@ -580,8 +620,9 @@ A local project principle.
     await list(createDependencies(context, fileSystem, ['principles']))
 
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('Local')
-    expect(output).toContain('My Local Principle')
+    expect(output).toContain('🎯 Local Principles (.dust/principles/)')
+    expect(output).toContain('* my-local-principle.md')
+    expect(output).toContain('  A local project principle.')
   })
 
   test('excludes core principles based on excludeCorePrinciples setting', async () => {
@@ -609,11 +650,11 @@ A local project principle.
     await list(dependencies)
 
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('Core')
+    expect(output).toContain('🎯 Core Principles')
     // Enable Flow State should be excluded
-    expect(output).not.toContain('Enable Flow State')
+    expect(output).not.toContain('* enable-flow-state.md')
     // Other principles should still be present
-    expect(output).toContain('Maintainable Codebase')
+    expect(output).toContain('* maintainable-codebase.md')
   })
 
   test('shows only Core section when no local principles exist', async () => {
@@ -629,8 +670,8 @@ A local project principle.
     await list(createDependencies(context, fileSystem, ['principles']))
 
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('Core')
-    expect(output).not.toContain('Local')
+    expect(output).toContain('🎯 Core Principles')
+    expect(output).not.toContain('🎯 Local Principles')
   })
 
   test('shows both Core and Local sections when both exist', async () => {
@@ -659,12 +700,12 @@ A local principle.
     await list(createDependencies(context, fileSystem, ['principles']))
 
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('Core')
-    expect(output).toContain('Local')
+    expect(output).toContain('🎯 Core Principles')
+    expect(output).toContain('🎯 Local Principles (.dust/principles/)')
     // Core principles
-    expect(output).toContain('Enable Flow State')
+    expect(output).toContain('* enable-flow-state.md')
     // Local principles
-    expect(output).toContain('Local Principle')
+    expect(output).toContain('* local-principle.md')
   })
 
   test('emits principles-listed event with local principles', async () => {
@@ -709,6 +750,27 @@ A local principle.
     expect(context.emittedEvents[0]).toEqual({
       type: 'principles-listed',
       principles: [],
+    })
+  })
+
+  test('uses slug as title for principles without title heading', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'no-title.md': 'Content without a title heading.',
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['principles']))
+
+    // Event should use slug as title fallback
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'principles-listed',
+      principles: [{ path: '.dust/principles/no-title.md', title: 'no-title' }],
     })
   })
 
@@ -1163,5 +1225,48 @@ Expedite this idea.
     })
 
     expect(result.exitCode).toBe(0)
+  })
+})
+
+describe('formatPrincipleEntry', () => {
+  test('formats entry with slug and opening sentence', () => {
+    const lines = formatPrincipleEntry('my-principle', 'This is the opening.')
+    expect(lines).toEqual(['* my-principle.md', '  This is the opening.'])
+  })
+
+  test('formats entry with only slug when no opening sentence', () => {
+    const lines = formatPrincipleEntry('my-principle', null)
+    expect(lines).toEqual(['* my-principle.md'])
+  })
+})
+
+describe('formatPrinciplesSection', () => {
+  test('formats section with header and entries', () => {
+    const entries = [
+      { slug: 'first-principle', openingSentence: 'First opening.' },
+      { slug: 'second-principle', openingSentence: 'Second opening.' },
+    ]
+    const lines = formatPrinciplesSection('🎯 Test Principles', entries)
+    expect(lines).toEqual([
+      '🎯 Test Principles',
+      '',
+      '* first-principle.md',
+      '  First opening.',
+      '',
+      '* second-principle.md',
+      '  Second opening.',
+      '',
+    ])
+  })
+
+  test('returns empty array when no entries', () => {
+    const lines = formatPrinciplesSection('🎯 Test Principles', [])
+    expect(lines).toEqual([])
+  })
+
+  test('handles entries without opening sentences', () => {
+    const entries = [{ slug: 'my-principle', openingSentence: null }]
+    const lines = formatPrinciplesSection('🎯 Test Principles', entries)
+    expect(lines).toEqual(['🎯 Test Principles', '', '* my-principle.md', ''])
   })
 })

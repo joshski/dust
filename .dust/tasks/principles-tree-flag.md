@@ -31,7 +31,7 @@ Add tests in `lib/cli/commands/list.test.ts` that verify:
 
 ## Blocked By
 
-- [Compressed principles listing](compressed-principles-listing.md)
+(none)
 
 ## Definition of Done
 

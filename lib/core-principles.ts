@@ -115,3 +115,13 @@ export async function getCorePrincipleHierarchy(
   const allPrinciples = await readAllCorePrinciples()
   return getCorePrincipleTree(allPrinciples, config)
 }
+
+/**
+ * Returns the path to the core principles directory for display purposes.
+ * Returns a relative path suitable for showing to users.
+ */
+export function getCorePrinciplesPath(): string {
+  const principlesDir = locatePackagePrinciplesDir()
+  // Return the path with trailing slash for clarity
+  return `${principlesDir}/`
+}
