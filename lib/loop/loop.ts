@@ -122,6 +122,7 @@ export async function runLoop(
     // Start proxies for Docker containers — secrets stay on the host
     const gitProxy = await createGitCredentialProxyServer({
       spawn: loopDependencies.spawn,
+      userHome: process.env.DUST_USER_HOME || undefined,
     })
     stopGitProxy = gitProxy.stop
 
@@ -215,7 +216,6 @@ export async function runLoop(
       // Ignore cleanup errors
     }
   }
-
   log(`loop ended after ${completedIterations} iterations`)
   onLoopEvent({ type: 'loop.ended', maxIterations })
   return { exitCode: 0 }

@@ -83,6 +83,7 @@ export function buildDockerRunArguments(
   // Configure git to use the proxy for known hosts when gitProxyUrl is set
   if (docker.gitProxyUrl) {
     dockerArguments.push('-e', `GIT_PROXY_URL=${docker.gitProxyUrl}`)
+
     // Configure git URL rewriting to route through the proxy
     // This makes git clone https://github.com/... use http://<proxy>/github.com/... instead
     dockerArguments.push(

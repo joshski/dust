@@ -26,6 +26,8 @@ const log = createLogger('dust:proxy:git-credential')
 
 export interface GitCredentialProxyDependencies {
   spawn: typeof nodeSpawn
+  /** Real user HOME directory — used when the process HOME has been overridden */
+  userHome?: string
 }
 
 export interface GitCredentials {
@@ -69,9 +71,13 @@ export async function getGitCredentials(
   dependencies: GitCredentialProxyDependencies
 ): Promise<GitCredentials | null> {
   return new Promise(resolve => {
-    const proc = dependencies.spawn('git', ['credential', 'fill'], {
+    const spawnOptions: import('node:child_process').SpawnOptions = {
       stdio: ['pipe', 'pipe', 'pipe'],
-    })
+    }
+    if (dependencies.userHome) {
+      spawnOptions.env = { ...process.env, HOME: dependencies.userHome }
+    }
+    const proc = dependencies.spawn('git', ['credential', 'fill'], spawnOptions)
 
     // Send the credential query
     const input = `protocol=https\nhost=${host}\n\n`
@@ -255,7 +261,7 @@ export async function createGitCredentialProxyServer(
       headers['Content-Type'] = nodeRequest.headers['content-type']
     }
 
-    log(`forwarding to ${upstreamUrl.toString()}`)
+    log(`forwarding ${method} to ${upstreamUrl.toString()}${body ? ` (${body.length} bytes)` : ''}`)
 
     try {
       const upstreamResponse = await fetch(upstreamUrl.toString(), {
@@ -263,6 +269,7 @@ export async function createGitCredentialProxyServer(
         headers,
         body,
       })
+      log(`upstream ${method} ${endpointInfo.endpoint} responded: ${upstreamResponse.status}`)
 
       // Copy upstream response status and headers
       const responseHeaders: Record<string, string> = {}

@@ -5,8 +5,13 @@
  * for a single repository.
  */
 
-import { existsSync as fsExistsSync } from 'node:fs'
+import {
+  existsSync as fsExistsSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs'
 import os from 'node:os'
+import { join } from 'node:path'
 import type { AgentSessionEvent, EventMessage } from '../agent-events'
 import { createHeartbeatThrottler, formatAgentEvent } from '../agent-events'
 import {
@@ -31,6 +36,7 @@ import {
 } from '../codex/run'
 import { defaultDependencies as codexSpawnDefaultDependencies } from '../codex/spawn-codex'
 import { loadSettings } from '../config/settings'
+import { generateApiKeyHelperSettings } from '../claude/spawn-claude-code'
 import { prepareDockerConfig } from '../docker/docker-agent'
 import { createLogger } from '../logging'
 import { createClaudeApiProxyServer } from '../proxy/claude-api-proxy'
@@ -366,17 +372,33 @@ async function setupDockerConfig(
   }
 
   // Start proxies for Docker containers — secrets stay on the host
-  const gitProxy = await createGitCredentialProxyServer({ spawn })
+  // Use DUST_USER_HOME to find the real user's git credentials when HOME is overridden
+  const gitProxy = await createGitCredentialProxyServer({
+    spawn,
+    userHome: process.env.DUST_USER_HOME || undefined,
+  })
   log(`git credential proxy started on port ${gitProxy.port}`)
 
   const apiProxy = await createClaudeApiProxyServer()
   log(`claude api proxy started on port ${apiProxy.port}`)
 
+  const claudeApiProxyUrl = `http://host.docker.internal:${apiProxy.port}`
+
+  // Create temp settings file with apiKeyHelper configuration
+  const settingsFilePath = join(
+    os.tmpdir(),
+    `dust-claude-settings-${repoState.repository.name.replace(/\//g, '-')}.json`
+  )
+  const settingsContent = generateApiKeyHelperSettings(claudeApiProxyUrl)
+  writeFileSync(settingsFilePath, settingsContent, 'utf-8')
+  log(`created settings file at ${settingsFilePath}`)
+
   return {
     config: {
       ...dockerResult.config,
       gitProxyUrl: `http://host.docker.internal:${gitProxy.port}`,
-      claudeApiProxyUrl: `http://host.docker.internal:${apiProxy.port}`,
+      claudeApiProxyUrl,
+      settingsFilePath,
     },
     stopGitProxy: gitProxy.stop,
     stopApiProxy: apiProxy.stop,
@@ -455,7 +477,8 @@ function handleNoTasksResult(
 function cleanupDockerProxies(
   repoName: string,
   stopGitProxy: (() => void) | undefined,
-  stopApiProxy: (() => void) | undefined
+  stopApiProxy: (() => void) | undefined,
+  dockerConfig?: DockerSpawnConfig
 ): void {
   /* v8 ignore start -- Proxy cleanup only runs in Docker mode */
   if (stopGitProxy) {
@@ -465,6 +488,14 @@ function cleanupDockerProxies(
   if (stopApiProxy) {
     stopApiProxy()
     log(`claude api proxy stopped for ${repoName}`)
+  }
+  if (dockerConfig?.settingsFilePath) {
+    try {
+      unlinkSync(dockerConfig.settingsFilePath)
+      log(`cleaned up settings file ${dockerConfig.settingsFilePath}`)
+    } catch {
+      // Ignore cleanup errors
+    }
   }
   /* v8 ignore stop */
 }
@@ -595,7 +626,8 @@ export async function runRepositoryLoop(
   cleanupDockerProxies(
     repoName,
     dockerSetup.stopGitProxy,
-    dockerSetup.stopApiProxy
+    dockerSetup.stopApiProxy,
+    dockerSetup.config
   )
   log(`loop stopped for ${repoName}`)
   appendLogLine(

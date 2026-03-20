@@ -1,4 +1,4 @@
-import { spawn as nodeSpawn } from 'node:child_process'
+import { execSync, spawn as nodeSpawn } from 'node:child_process'
 import os from 'node:os'
 import { run as claudeRun } from '../claude/run'
 import type { DockerSpawnConfig, SpawnOptions } from '../claude/types'
@@ -429,15 +429,57 @@ export async function runOneIteration(
     options.branch
   )
 
-  return executeTask(
-    task,
-    { run, prompt: taskPrompt, spawnOptions, onRawEvent },
-    onAgentEvent,
-    context,
-    agentName,
-    agentType,
-    logger
-  )
+  // In Docker mode, rewrite the git remote URL to route through the proxy.
+  // This must happen after git pull (which runs on the host with the original URL)
+  // and before Claude runs (which runs inside Docker and needs the proxy URL).
+  // We can't rely on git config env vars because Claude Code may override GIT_CONFIG_COUNT.
+  let originalRemoteUrl: string | undefined
+  if (docker?.gitProxyUrl) {
+    try {
+      originalRemoteUrl = execSync('git remote get-url origin', {
+        cwd: context.cwd,
+        encoding: 'utf-8',
+      }).trim()
+      // Rewrite https://github.com/owner/repo.git → http://proxy/github.com/owner/repo.git
+      const proxyUrl = originalRemoteUrl.replace(
+        /^https:\/\/github\.com\//,
+        `${docker.gitProxyUrl}/github.com/`
+      )
+      if (proxyUrl !== originalRemoteUrl) {
+        execSync(`git remote set-url origin "${proxyUrl}"`, {
+          cwd: context.cwd,
+        })
+        log(`set remote URL to proxy: ${proxyUrl}`)
+      }
+    } catch {
+      log('warning: failed to rewrite remote URL for Docker proxy')
+      originalRemoteUrl = undefined
+    }
+  }
+
+  try {
+    return await executeTask(
+      task,
+      { run, prompt: taskPrompt, spawnOptions, onRawEvent },
+      onAgentEvent,
+      context,
+      agentName,
+      agentType,
+      logger
+    )
+  } finally {
+    // Restore the original remote URL so the next iteration's git pull works on the host
+    if (originalRemoteUrl) {
+      try {
+        execSync(`git remote set-url origin "${originalRemoteUrl}"`, {
+          cwd: context.cwd,
+        })
+        log(`restored remote URL: ${originalRemoteUrl}`)
+      } catch {
+        log('warning: failed to restore original remote URL')
+      }
+    }
+  }
 }
 
 function buildCheckFixPrompt(dustCommand: string, checkOutput: string): string {
