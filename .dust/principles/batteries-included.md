@@ -6,6 +6,10 @@ An agent working autonomously should not be blocked because a tool or configurat
 
 This means accepting some breadth of scope — bundling configs, rules, and utilities that target external tools — in exchange for agents that can start producing useful work immediately without manual setup.
 
+## Applicability
+
+Internal
+
 ## Parent Principle
 
 - [Agent Autonomy](agent-autonomy.md)

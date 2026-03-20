@@ -28,7 +28,7 @@ Add `.dust/principles` to the `files` array in `package.json`:
 
 ## Blocked By
 
-- [Mark Internal Principles](mark-internal-principles.md)
+(none)
 
 ## Definition of Done
 

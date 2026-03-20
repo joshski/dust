@@ -6,6 +6,10 @@ When something goes wrong, agents often resort to adding temporary log statement
 
 Dust should encourage projects to adopt structured logging, promote traceability as a first-class concern, and provide tools that surface relevant trace information when agents need it.
 
+## Applicability
+
+Internal
+
 ## Parent Principle
 
 - [Ideal Agent Developer Experience](ideal-agent-developer-experience.md)

@@ -6,6 +6,10 @@ Traditional debugging relies on breakpoints, stepping through code, and interact
 
 Dust should help projects adopt agent-friendly debugging practices: structured error output, diagnostic scripts, snapshot testing for complex state, and tools that turn vague symptoms into specific, actionable information.
 
+## Applicability
+
+Internal
+
 ## Parent Principle
 
 - [Ideal Agent Developer Experience](ideal-agent-developer-experience.md)
