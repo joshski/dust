@@ -19,17 +19,25 @@ State each directory once as a header, then list principles as `slug.md — open
 ```
 🎯 Core Principles (node_modules/@joshski/dust/.dust/principles/)
 
-actionable-errors.md — Error messages should tell you what to do next, not just what went wrong.
-agent-autonomy.md — Dust exists to enable AI agents to produce work autonomously.
-atomic-commits.md — Each commit should tell a complete story.
+* actionable-errors.md
+  Error messages should tell you what to do next, not just what went wrong.
+
+* agent-autonomy.md
+  Dust exists to enable AI agents to produce work autonomously.
+
+* atomic-commits.md
+  Each commit should tell a complete story.
 
 🎯 Local Principles (.dust/principles/)
 
-batteries-included.md — Dust should provide everything required for an agent to be productive.
-agent-agnostic-design.md — Dust should work with multiple agents without favoring one.
+* batteries-included.md
+  Dust should provide everything required for an agent to be productive.
+
+* agent-agnostic-design.md
+  Dust should work with multiple agents without favoring one.
 ```
 
-Including the `.md` extension means agents can construct the full read path by concatenating the header directory with the filename.
+Each entry is a bullet with the filename, followed by the opening sentence indented on the next line. Including the `.md` extension means agents can construct the full read path by concatenating the header directory with the filename.
 
 ### Implementation Approach
 
