@@ -4,7 +4,7 @@ Extend the pre-push hook to detect and block commits from audit tasks that modif
 
 ## Context
 
-Audit tasks are explicitly read-only - they should produce ideas in `.dust/ideas/` but never modify source code. Even with clear messaging (see [Audit Task Read-Only Messaging](audit-task-read-only-messaging.md)), an eager agent might still "fix" issues it finds. A git hook provides a safety net.
+Audit tasks are explicitly read-only - they should produce ideas in `.dust/ideas/` but never modify source code. Even with clear messaging in the audit templates, an eager agent might still "fix" issues it finds. A git hook provides a safety net.
 
 ### Existing Infrastructure
 
