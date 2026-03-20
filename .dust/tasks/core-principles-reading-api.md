@@ -54,7 +54,7 @@ Create thin wrapper that:
 
 ## Blocked By
 
-- [Include Principles in npm Package](include-principles-in-npm-package.md)
+(none)
 
 ## Definition of Done
 

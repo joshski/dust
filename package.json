@@ -51,7 +51,8 @@
     "dist",
     "bin",
     "lib/istanbul/minimal-reporter.cjs",
-    "biome"
+    "biome",
+    ".dust/principles"
   ],
   "repository": {
     "type": "git",
