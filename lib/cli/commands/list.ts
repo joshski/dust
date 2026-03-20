@@ -4,6 +4,10 @@
 
 import { basename } from 'node:path'
 import { ARTIFACT_TYPES } from '../../artifacts/index'
+import {
+  getCorePrincipleHierarchy,
+  type CorePrincipleNode,
+} from '../../core-principles'
 import { parseArtifact } from '../../artifacts/parsed-artifact'
 import { findAllWorkflowTasks } from '../../artifacts/workflow-tasks'
 import {
@@ -192,6 +196,25 @@ function renderHierarchy(
   }
 }
 
+function renderCorePrincipleHierarchy(
+  nodes: CorePrincipleNode[],
+  output: (line: string) => void,
+  prefix = ''
+): void {
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i]
+    const isLastNode = i === nodes.length - 1
+    const connector = isLastNode ? '└── ' : '├── '
+    const childPrefix = isLastNode ? '    ' : '│   '
+
+    output(`${prefix}${connector}${node.title}`)
+
+    if (node.children.length > 0) {
+      renderCorePrincipleHierarchy(node.children, output, prefix + childPrefix)
+    }
+  }
+}
+
 function parseTypesToList(commandArguments: string[]): ListType[] {
   if (commandArguments.length === 0) {
     return [...ARTIFACT_TYPES]
@@ -275,15 +298,6 @@ async function processListType(context: ListTypeContext): Promise<void> {
   const { type, dirPath, mdFiles, colors, fileSystem, workflowTasks } = context
   const { stdout, emitEvent } = context
 
-  if (type === 'principles') {
-    const hierarchy = await buildPrincipleHierarchy(dirPath, fileSystem)
-    if (hierarchy.length > 0) {
-      stdout(`${colors.dim}Hierarchy:${colors.reset}`)
-      renderHierarchy(hierarchy, line => stdout(line))
-      stdout('')
-    }
-  }
-
   const collectedItems: CollectedItem[] = []
 
   for (const file of mdFiles) {
@@ -319,6 +333,107 @@ async function processListType(context: ListTypeContext): Promise<void> {
   if (emitEvent) {
     emitListEvent(emitEvent, type, collectedItems)
   }
+}
+
+interface PrinciplesListContext {
+  dustPath: string
+  colors: ReturnType<typeof getColors>
+  fileSystem: ReadableFileSystem
+  stdout: (line: string) => void
+  emitEvent: EventEmitter
+  excludeCorePrinciples?: string[]
+}
+
+async function processPrinciplesList(
+  context: PrinciplesListContext
+): Promise<boolean> {
+  const { dustPath, colors, fileSystem, stdout, emitEvent } = context
+  const { excludeCorePrinciples } = context
+
+  // Get core principles hierarchy
+  const coreHierarchy = await getCorePrincipleHierarchy({
+    excludeCorePrinciples,
+  })
+  const hasCoreHierarchy = coreHierarchy.length > 0
+
+  // Get local principles
+  const localDirPath = `${dustPath}/principles`
+  const localDirExists = fileSystem.exists(localDirPath)
+  const localFiles = localDirExists
+    ? await fileSystem.readdir(localDirPath)
+    : []
+  const localMdFiles = localFiles.filter(f => f.endsWith('.md')).toSorted()
+  const hasLocalPrinciples = localMdFiles.length > 0
+
+  // Build local hierarchy
+  let localHierarchy: PrincipleNode[] = []
+  if (hasLocalPrinciples) {
+    localHierarchy = await buildPrincipleHierarchy(localDirPath, fileSystem)
+  }
+  const hasLocalHierarchy = localHierarchy.length > 0
+
+  /* v8 ignore start -- core principles always exist in the package */
+  // If both are empty, return false to indicate nothing was rendered
+  if (!hasCoreHierarchy && !hasLocalPrinciples) {
+    return false
+  }
+  /* v8 ignore stop */
+
+  // Output header
+  stdout(SECTION_HEADERS['principles'])
+  stdout('')
+  stdout(TYPE_EXPLANATIONS['principles'])
+  stdout('')
+
+  // Render Core section if there are core principles
+  /* v8 ignore start -- core principles always exist in the package */
+  if (hasCoreHierarchy) {
+    /* v8 ignore stop */
+    stdout(`${colors.bold}Core${colors.reset}`)
+    renderCorePrincipleHierarchy(coreHierarchy, line => stdout(line))
+    stdout('')
+  }
+
+  // Render Local section if there are local principles
+  if (hasLocalPrinciples) {
+    stdout(`${colors.bold}Local${colors.reset}`)
+    if (hasLocalHierarchy) {
+      renderHierarchy(localHierarchy, line => stdout(line))
+      stdout('')
+    }
+
+    // Collect items for event emission
+    const collectedItems: CollectedItem[] = []
+    for (const file of localMdFiles) {
+      const filePath = `${localDirPath}/${file}`
+      const content = await fileSystem.readFile(filePath)
+      const title = extractTitle(content)
+      const openingSentence = extractOpeningSentence(content)
+      const relativePath = `.dust/principles/${file}`
+      const slug = file.replace('.md', '')
+      const displayTitle = title || slug
+
+      collectedItems.push({ path: relativePath, title: displayTitle })
+
+      outputArtifact({
+        title,
+        slug,
+        openingSentence,
+        relativePath,
+        colors,
+        stdout,
+      })
+    }
+
+    if (emitEvent) {
+      emitListEvent(emitEvent, 'principles', collectedItems)
+    }
+  } else if (emitEvent) {
+    // Emit empty list if no local principles but we still need to emit
+    emitListEvent(emitEvent, 'principles', [])
+  }
+
+  return true
 }
 
 export async function list(
@@ -359,6 +474,33 @@ export async function list(
       : null
 
   for (const type of typesToList) {
+    // Handle principles specially with Core and Local sections
+    if (type === 'principles') {
+      const hasContent = await processPrinciplesList({
+        dustPath,
+        colors,
+        fileSystem,
+        stdout: context.stdout,
+        emitEvent: context.emitEvent,
+        excludeCorePrinciples: settings.excludeCorePrinciples,
+      })
+
+      /* v8 ignore start -- core principles always exist in the package */
+      if (!hasContent && specificTypeRequested) {
+        context.stdout(SECTION_HEADERS[type])
+        context.stdout('')
+        context.stdout(TYPE_EXPLANATIONS[type])
+        context.stdout('')
+        context.stdout(`No ${type} found.`)
+        context.stdout('')
+        if (context.emitEvent) {
+          emitListEvent(context.emitEvent, type, [])
+        }
+      }
+      /* v8 ignore stop */
+      continue
+    }
+
     const dirPath = `${dustPath}/${type}`
     const dirExists = fileSystem.exists(dirPath)
     const files = dirExists ? await fileSystem.readdir(dirPath) : []

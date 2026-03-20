@@ -410,7 +410,10 @@ This is a grandchild principle.
     await list(createDependencies(context, fileSystem, ['principles']))
 
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('Hierarchy:')
+    // Core section for built-in principles
+    expect(output).toContain('Core')
+    // Local section for project principles
+    expect(output).toContain('Local')
     expect(output).toContain('Parent Principle')
     expect(output).toContain('Child Principle')
     expect(output).toContain('Grandchild Principle')
@@ -491,7 +494,8 @@ This is a parent principle.
     await list(createDependencies(context, fileSystem, ['principles']))
 
     const output = context.stdoutLines.join('\n')
-    expect(output).toContain('Hierarchy:')
+    // Shows Local section for project principles
+    expect(output).toContain('Local')
     expect(output).toContain('Parent Principle')
     // The non-existent principle should be shown with its basename
     expect(output).toContain('non-existent-principle')
@@ -527,6 +531,243 @@ This principle has a parent that does not exist.
     expect(output).toContain('Orphan Principle')
     // No hierarchy because no root principles exist
     expect(output).not.toContain('Hierarchy:')
+  })
+})
+
+describe('list command Core and Local principles sections', () => {
+  test('shows Core section with built-in principles hierarchy', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {},
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['principles']))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('🎯 Principles')
+    expect(output).toContain('Core')
+    // Core principles should include Enable Flow State (the root)
+    expect(output).toContain('Enable Flow State')
+  })
+
+  test('shows Local section when local principles exist', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'my-local-principle.md': `# My Local Principle
+
+A local project principle.
+
+## Parent Principle
+
+- (none)
+
+## Sub-Principles
+
+- (none)
+`,
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['principles']))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('Local')
+    expect(output).toContain('My Local Principle')
+  })
+
+  test('excludes core principles based on excludeCorePrinciples setting', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {},
+        },
+      },
+    })
+
+    const dependencies = {
+      arguments: ['principles'],
+      context,
+      fileSystem,
+      globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
+      settings: {
+        dustCommand: 'dust',
+        excludeCorePrinciples: ['enable-flow-state'],
+      },
+    }
+
+    await list(dependencies)
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('Core')
+    // Enable Flow State should be excluded
+    expect(output).not.toContain('Enable Flow State')
+    // Other principles should still be present
+    expect(output).toContain('Maintainable Codebase')
+  })
+
+  test('shows only Core section when no local principles exist', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {},
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['principles']))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('Core')
+    expect(output).not.toContain('Local')
+  })
+
+  test('shows both Core and Local sections when both exist', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'local-principle.md': `# Local Principle
+
+A local principle.
+
+## Parent Principle
+
+- (none)
+
+## Sub-Principles
+
+- (none)
+`,
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['principles']))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('Core')
+    expect(output).toContain('Local')
+    // Core principles
+    expect(output).toContain('Enable Flow State')
+    // Local principles
+    expect(output).toContain('Local Principle')
+  })
+
+  test('emits principles-listed event with local principles', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'my-principle.md': '# My Principle\n\nA local principle.',
+          },
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['principles']))
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'principles-listed',
+      principles: [
+        {
+          path: '.dust/principles/my-principle.md',
+          title: 'My Principle',
+        },
+      ],
+    })
+  })
+
+  test('emits empty principles-listed event when only core principles exist', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {},
+        },
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['principles']))
+
+    expect(context.emittedEvents).toHaveLength(1)
+    expect(context.emittedEvents[0]).toEqual({
+      type: 'principles-listed',
+      principles: [],
+    })
+  })
+
+  test('handles missing emitEvent gracefully for local principles', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'local.md': '# Local Principle',
+          },
+        },
+      },
+    })
+
+    const context = {
+      cwd: '/project',
+      stdout: () => {},
+      stderr: () => {},
+      emitEvent: undefined,
+    }
+
+    const result = await list({
+      arguments: ['principles'],
+      context,
+      fileSystem,
+      globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
+      settings: { dustCommand: 'dust' },
+    })
+
+    expect(result.exitCode).toBe(0)
+  })
+
+  test('handles missing emitEvent gracefully for only core principles', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {},
+        },
+      },
+    })
+
+    const context = {
+      cwd: '/project',
+      stdout: () => {},
+      stderr: () => {},
+      emitEvent: undefined,
+    }
+
+    const result = await list({
+      arguments: ['principles'],
+      context,
+      fileSystem,
+      globScanner: fileSystem,
+      runtime: createTestRuntimeConfig(),
+      settings: { dustCommand: 'dust' },
+    })
+
+    expect(result.exitCode).toBe(0)
   })
 })
 
