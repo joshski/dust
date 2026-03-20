@@ -34,7 +34,7 @@ This replaces the current "dummy token" approach with proper helper token valida
 
 ## Blocked By
 
-- [Add Helper Token Module](add-helper-token-module.md)
+(none)
 
 ## Definition of Done
 

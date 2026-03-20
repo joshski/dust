@@ -14,6 +14,7 @@
     "lib/patch/index.ts",
     "lib/proxy/git-credential-proxy.ts",
     "lib/proxy/claude-api-proxy.ts",
+    "lib/proxy/helper-token.ts",
     "scripts/end-to-end/claude-oauth-apikey-helper-poc.ts",
     "scripts/lint/policy-checks.ts",
     "scripts/lint/check-package-json-format.ts",
