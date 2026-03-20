@@ -6,6 +6,19 @@
  */
 
 /**
+ * Structured log entry for JSON output.
+ * Required fields: ts, logger, level, msg
+ * Additional context fields are passed through as-is.
+ */
+export interface LogEntry {
+  ts: string
+  logger: string
+  level: 'info'
+  msg: string
+  [key: string]: unknown
+}
+
+/**
  * Parse a DEBUG expression string into an array of RegExp matchers.
  * Returns an empty array when the input is empty or undefined.
  */
@@ -32,11 +45,35 @@ export function matchesAny(name: string, patterns: RegExp[]): boolean {
 }
 
 /**
- * Format a log line with ISO timestamp and logger name.
+ * Format a log line with ISO timestamp and logger name (text format).
  */
 export function formatLine(name: string, messages: unknown[]): string {
   const text = messages
     .map(a => (typeof a === 'string' ? a : JSON.stringify(a)))
     .join(' ')
   return `${new Date().toISOString()} [${name}] ${text}\n`
+}
+
+/**
+ * Format a log entry as a JSON line (JSON Lines format).
+ */
+export function formatJsonLine(entry: LogEntry): string {
+  return JSON.stringify(entry) + '\n'
+}
+
+/**
+ * Create a LogEntry from logger name, message, and optional context.
+ */
+export function createLogEntry(
+  name: string,
+  message: string,
+  context?: Record<string, unknown>
+): LogEntry {
+  return {
+    ts: new Date().toISOString(),
+    logger: name,
+    level: 'info',
+    msg: message,
+    ...context,
+  }
 }

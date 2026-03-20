@@ -262,7 +262,7 @@ export async function* spawnClaudeCode(
       try {
         yield JSON.parse(line) as RawEvent
       } catch {
-        debug('Skipping malformed JSON line: %s', line.slice(0, 200))
+        debug(`Skipping malformed JSON line: ${line.slice(0, 200)}`)
       }
     }
     await closePromise

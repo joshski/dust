@@ -11,11 +11,13 @@
  * - DEBUG: Pattern for stdout debug logging (comma-separated wildcards)
  * - DUST_LOG_DIR: Override default log directory location
  * - DUST_LOG_FILE: Inherited log file path for child processes
+ * - DUST_LOG_FORMAT: Output format ('json' for JSON Lines, 'text' for human-readable)
  */
 export interface LoggingConfig {
   debug: string | undefined
   logDir: string | undefined
   logFile: string | undefined
+  logFormat: 'json' | 'text' | undefined
 }
 
 /**
@@ -103,6 +105,19 @@ export interface EnvConfig {
 }
 
 /**
+ * Parse DUST_LOG_FORMAT environment variable.
+ * Returns 'json' or 'text' if valid, undefined otherwise.
+ */
+function parseLogFormat(
+  value: string | undefined
+): 'json' | 'text' | undefined {
+  if (value === 'json' || value === 'text') {
+    return value
+  }
+  return undefined
+}
+
+/**
  * Read and validate all environment variables once.
  * This function should be called once at startup in the imperative shell.
  *
@@ -117,6 +132,7 @@ export function readEnvConfig(
       debug: env.DEBUG,
       logDir: env.DUST_LOG_DIR,
       logFile: env.DUST_LOG_FILE,
+      logFormat: parseLogFormat(env.DUST_LOG_FORMAT),
     },
     bucket: {
       host: env.DUST_BUCKET_HOST,

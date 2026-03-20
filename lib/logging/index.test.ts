@@ -14,11 +14,20 @@ function fakeStdout(lines: string[]) {
 }
 
 function noConfig(): LoggingConfig {
-  return { debug: undefined, logDir: undefined, logFile: undefined }
+  return {
+    debug: undefined,
+    logDir: undefined,
+    logFile: undefined,
+    logFormat: undefined,
+  }
 }
 
 function withDebug(debug: string): LoggingConfig {
-  return { debug, logDir: undefined, logFile: undefined }
+  return { debug, logDir: undefined, logFile: undefined, logFormat: undefined }
+}
+
+function withJsonFormat(debug?: string): LoggingConfig {
+  return { debug, logDir: undefined, logFile: undefined, logFormat: 'json' }
 }
 
 describe('createLogger — stdout (DEBUG)', () => {
@@ -127,15 +136,16 @@ describe('createLogger — stdout (DEBUG)', () => {
     expect(lines[1]).toContain('[dust:foo:bar]')
   })
 
-  test('serializes non-string arguments as JSON', () => {
+  test('serializes context object in text format', () => {
     const lines: string[] = []
     const service = createLoggingService({
       config: withDebug('*'),
       stdout: fakeStdout(lines),
     })
     const log = service.createLogger('dust:test')
-    log('data:', { count: 42 })
-    expect(lines[0]).toContain('data: {"count":42}')
+    log('data', { count: 42 })
+    expect(lines[0]).toContain('data')
+    expect(lines[0]).toContain('{"count":42}')
   })
 
   test('writes each call on its own line', () => {
@@ -234,6 +244,7 @@ describe('enableFileLogs', () => {
         debug: undefined,
         logDir: '/custom/logs',
         logFile: undefined,
+        logFormat: undefined,
       },
       setLogFileEnv: path => captured.push(path),
     })
@@ -249,6 +260,7 @@ describe('enableFileLogs', () => {
         debug: undefined,
         logDir: undefined,
         logFile: '/inherited/check.log',
+        logFormat: undefined,
       },
       setLogFileEnv: path => captured.push(path),
     })
@@ -366,5 +378,111 @@ describe('config options', () => {
     service.enableFileLogs('test', fakeSink([]))
     expect(captured).toHaveLength(1)
     expect(captured[0]).toBe('/my/project/log/test.log')
+  })
+})
+
+describe('JSON format (DUST_LOG_FORMAT=json)', () => {
+  test('outputs valid JSON Lines format', () => {
+    const lines: string[] = []
+    const service = createLoggingService({
+      config: withJsonFormat('*'),
+      stdout: fakeStdout(lines),
+    })
+    const log = service.createLogger('dust:test')
+    log('hello world')
+    expect(lines).toHaveLength(1)
+    const parsed = JSON.parse(lines[0])
+    expect(parsed).toMatchObject({
+      logger: 'dust:test',
+      level: 'info',
+      msg: 'hello world',
+    })
+    expect(parsed.ts).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/)
+  })
+
+  test('includes all required fields: ts, logger, level, msg', () => {
+    const lines: string[] = []
+    const service = createLoggingService({
+      config: withJsonFormat('*'),
+      stdout: fakeStdout(lines),
+    })
+    const log = service.createLogger('dust:foo')
+    log('test message')
+    const parsed = JSON.parse(lines[0])
+    expect(parsed).toHaveProperty('ts')
+    expect(parsed).toHaveProperty('logger')
+    expect(parsed).toHaveProperty('level')
+    expect(parsed).toHaveProperty('msg')
+  })
+
+  test('includes optional context fields in JSON output', () => {
+    const lines: string[] = []
+    const service = createLoggingService({
+      config: withJsonFormat('*'),
+      stdout: fakeStdout(lines),
+    })
+    const log = service.createLogger('dust:loop')
+    log('iteration completed', { iteration: 5, duration: 1234 })
+    const parsed = JSON.parse(lines[0])
+    expect(parsed.msg).toBe('iteration completed')
+    expect(parsed.iteration).toBe(5)
+    expect(parsed.duration).toBe(1234)
+  })
+
+  test('text format remains default when DUST_LOG_FORMAT is unset', () => {
+    const lines: string[] = []
+    const service = createLoggingService({
+      config: withDebug('*'),
+      stdout: fakeStdout(lines),
+    })
+    const log = service.createLogger('dust:test')
+    log('hello')
+    expect(lines[0]).toContain('[dust:test]')
+    expect(lines[0]).toContain('hello')
+    // Should not be JSON
+    expect(() => JSON.parse(lines[0])).toThrow()
+  })
+
+  test('DEBUG filtering works identically for JSON format', () => {
+    const lines: string[] = []
+    const service = createLoggingService({
+      config: withJsonFormat('dust:foo'),
+      stdout: fakeStdout(lines),
+    })
+    service.createLogger('dust:foo')('matches')
+    service.createLogger('dust:bar')('no match')
+    expect(lines).toHaveLength(1)
+    const parsed = JSON.parse(lines[0])
+    expect(parsed.logger).toBe('dust:foo')
+  })
+
+  test('JSON format works with file logging', () => {
+    const fileLines: string[] = []
+    const service = createLoggingService({
+      config: withJsonFormat(),
+    })
+    service.enableFileLogs('test', fakeSink(fileLines))
+    const log = service.createLogger('dust:test')
+    log('logged to file', { extra: 'data' })
+    expect(fileLines).toHaveLength(1)
+    const parsed = JSON.parse(fileLines[0])
+    expect(parsed.msg).toBe('logged to file')
+    expect(parsed.extra).toBe('data')
+  })
+
+  test('each JSON log entry is on its own line', () => {
+    const lines: string[] = []
+    const service = createLoggingService({
+      config: withJsonFormat('*'),
+      stdout: fakeStdout(lines),
+    })
+    const log = service.createLogger('dust:test')
+    log('first')
+    log('second')
+    expect(lines).toHaveLength(2)
+    expect(lines[0]).toMatch(/\n$/)
+    expect(lines[1]).toMatch(/\n$/)
+    expect(JSON.parse(lines[0]).msg).toBe('first')
+    expect(JSON.parse(lines[1]).msg).toBe('second')
   })
 })

@@ -48,10 +48,27 @@
 
 import { join } from 'node:path'
 import type { LoggingConfig } from '../env-config'
-import { formatLine, matchesAny, parsePatterns } from './match'
+import {
+  createLogEntry,
+  formatJsonLine,
+  formatLine,
+  type LogEntry,
+  matchesAny,
+  parsePatterns,
+} from './match'
 import { FileSink, type LogSink } from './sink'
 
-export type LogFn = (...messages: unknown[]) => void
+export type { LogEntry }
+
+/**
+ * Optional context object for structured logging.
+ * Fields are passed through to JSON output as-is.
+ */
+export interface LogContext {
+  [key: string]: unknown
+}
+
+export type LogFn = (message: string, context?: LogContext) => void
 
 export interface LoggerOptions {
   /**
@@ -150,9 +167,13 @@ export function createLoggingService(
         perLoggerSink = getOrCreateFileSink(loggerOptions.file)
       }
 
-      return (...messages: unknown[]) => {
+      const useJsonFormat = config.logFormat === 'json'
+
+      return (message: string, context?: LogContext) => {
         init()
-        const line = formatLine(name, messages)
+        const line = useJsonFormat
+          ? formatJsonLine(createLogEntry(name, message, context))
+          : formatLine(name, [message, ...(context ? [context] : [])])
 
         if (perLoggerSink !== undefined) {
           if (perLoggerSink !== null) {
@@ -175,14 +196,22 @@ export function createLoggingService(
   }
 }
 
+/* v8 ignore start -- module-level initialization, tested via createLoggingService */
 /** Default service instance used by the module-level convenience exports. */
 const defaultService = createLoggingService({
   config: {
     debug: process.env.DEBUG,
     logDir: process.env.DUST_LOG_DIR,
     logFile: process.env.DUST_LOG_FILE,
+    logFormat:
+      process.env.DUST_LOG_FORMAT === 'json'
+        ? 'json'
+        : process.env.DUST_LOG_FORMAT === 'text'
+          ? 'text'
+          : undefined,
   },
 })
+/* v8 ignore stop */
 
 /**
  * Activate file logging for this command. See {@link LoggingService.enableFileLogs}.

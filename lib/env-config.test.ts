@@ -7,13 +7,35 @@ describe('readEnvConfig', () => {
       DEBUG: 'dust:*',
       DUST_LOG_DIR: '/custom/logs',
       DUST_LOG_FILE: '/custom/logs/test.log',
+      DUST_LOG_FORMAT: 'json',
     }
     const config = readEnvConfig(env)
     expect(config.logging).toEqual({
       debug: 'dust:*',
       logDir: '/custom/logs',
       logFile: '/custom/logs/test.log',
+      logFormat: 'json',
     })
+  })
+
+  test('parses DUST_LOG_FORMAT=text', () => {
+    const config = readEnvConfig({ DUST_LOG_FORMAT: 'text' })
+    expect(config.logging.logFormat).toBe('text')
+  })
+
+  test('parses DUST_LOG_FORMAT=json', () => {
+    const config = readEnvConfig({ DUST_LOG_FORMAT: 'json' })
+    expect(config.logging.logFormat).toBe('json')
+  })
+
+  test('returns undefined for invalid DUST_LOG_FORMAT', () => {
+    const config = readEnvConfig({ DUST_LOG_FORMAT: 'invalid' })
+    expect(config.logging.logFormat).toBeUndefined()
+  })
+
+  test('returns undefined for unset DUST_LOG_FORMAT', () => {
+    const config = readEnvConfig({})
+    expect(config.logging.logFormat).toBeUndefined()
   })
 
   test('reads bucket config', () => {
