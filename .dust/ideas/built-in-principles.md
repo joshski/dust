@@ -1,6 +1,6 @@
 # Built-in principles
 
-Make dust's own principles available to downstream users as read-only "core principles".
+Make dust's own principles active by default for downstream users, so agents immediately work according to dust's opinionated approach to implementation.
 
 ## Context
 
@@ -11,25 +11,22 @@ Dust ships with a comprehensive set of principles in `.dust/principles/` that gu
 - **Development workflow**: Fast feedback loops, lightweight planning, trunk-based development
 - **Testing**: Comprehensive test coverage, test isolation, stubs over mocks
 
-Currently, dust's principles are not included in the npm package (`package.json:38-43` shows only `dist`, `bin`, and selected library files are published). There is no mechanism for downstream users to import or reference these principles.
+Currently, dust's principles are not included in the npm package (`package.json:38-43` shows only `dist`, `bin`, and selected library files are published). There is no mechanism for downstream users to inherit these principles.
 
 ## Proposed Solution
 
-Expose dust's principles as read-only "core principles" through both CLI and programmatic interfaces. The "core" namespace clearly distinguishes these built-in principles from a user's local `.dust/principles/` directory.
+### Core principles are active by default
 
-### CLI Interface
+When a user installs dust, its principles automatically apply. Agents see them, audits reference them. This is the key design choice: dust is opinionated, and downstream users inherit that opinion without extra setup.
 
-Two new commands following the existing command syntax patterns (verb-then-noun with spaces):
+### Unified listing in `dust principles`
 
-```
-dust core principles        # List all core principles (tree view)
-dust read core principle <name>  # Display a specific core principle
-```
-
-Example output:
+Core and local principles appear together in a single `dust principles` command, shown as separate hierarchies:
 
 ```
-$ dust core principles
+$ dust principles
+
+Core
 Enable Flow State
 ├── Human-AI Collaboration
 │   ├── Ideal Agent Developer Experience
@@ -37,11 +34,60 @@ Enable Flow State
 │   │   ├── ...
 ...
 
-$ dust read core principle atomic-commits
-# Atomic Commits
-
-Commits should be atomic: each commit contains exactly one logical change...
+Local
+Ship Fast
+├── Minimal Reviews
+├── ...
 ```
+
+No separate `dust core principles` command is needed. Users see everything shaping their agents in one place.
+
+### Opt-out via config exclude list
+
+Users who disagree with a core principle can exclude it in their dust configuration:
+
+```json
+{
+  "excludeCorePrinciples": [
+    "atomic-commits",
+    "trunk-based-development"
+  ]
+}
+```
+
+Excluding a parent principle excludes all its children. Excluded principles do not appear in `dust principles` and are not visible to agents or audits.
+
+There is no mechanism for overriding a core principle with a local file. Principles are arranged in a hierarchy that may change across dust versions, making file-based overrides fragile. The choice is binary: accept a core principle or exclude it.
+
+### Applicability section for internal principles
+
+Some of dust's principles are specific to dust's own development (e.g. "self-contained repository") and should not be inherited by downstream users. These are marked with an `## Applicability` section:
+
+```markdown
+# Self-Contained Repository
+
+Where possible, developers and agents should have everything they need...
+
+## Applicability
+
+Internal
+
+## Parent Principle
+
+- [Ideal Agent Developer Experience](ideal-agent-developer-experience.md)
+```
+
+- **Universal** (default, can be omitted) — inherited by downstream users as a core principle
+- **Internal** — only applies to dust's own development, filtered out of the core principles list
+
+When building the core principles list for downstream users, any principle marked `Internal` is skipped.
+
+### Distribution
+
+Include `.dust/principles/` in the npm package by adding it to the `files` array in `package.json`. The principles directory will be bundled with the package, ensuring:
+
+- Principles are always available locally (no network requests)
+- Version-locked to the dust version (consistency)
 
 ### Programmatic Interface
 
@@ -54,109 +100,31 @@ import {
   listCorePrinciples
 } from "@joshski/dust/core-principles";
 
-// Get the full tree structure (names and titles)
 const tree = getCorePrincipleTree();
-// Returns: { slug: 'enable-flow-state', title: 'Enable Flow State', children: [...] }
-
-// List all principle slugs
 const slugs = listCorePrinciples();
-// Returns: ['enable-flow-state', 'human-ai-collaboration', 'atomic-commits', ...]
-
-// Read a specific principle
 const principle = await readCorePrinciple('atomic-commits');
-// Returns: { slug: 'atomic-commits', title: 'Atomic Commits', content: '...', ... }
 ```
-
-### Distribution
-
-Include `.dust/principles/` in the npm package by adding it to the `files` array in `package.json`. The principles directory will be bundled with the package, ensuring:
-
-- Principles are always available locally (no network requests)
-- Version-locked to the dust version (consistency)
-- Supports both CLI and programmatic access
 
 ### Implementation Approach
 
-1. **Add `.dust/principles/` to package.json files array** - ensures principles ship with the package
-2. **Create `lib/artifacts/core-principles.ts`** - new module exposing core principles:
-   - Uses existing `Principle` type and parsing logic from `lib/artifacts/principles.ts`
-   - Builds a `ReadableFileSystem` that reads from the package's `.dust/principles/` directory
-   - Exports `getCorePrincipleTree()`, `listCorePrinciples()`, `readCorePrinciple(slug)`
-3. **Add CLI commands** - register `'core principles'` and `'read core principle'` in the command registry
-4. **Add package.json export** - expose `@joshski/dust/core-principles`
-
-### Benefits
-
-1. **Reduced friction**: Users can browse battle-tested principles immediately
-2. **Community alignment**: Teams using dust share a common vocabulary
-3. **Principle evolution**: As dust's principles are refined, adopters benefit from improvements
-4. **Clear separation**: "core" namespace distinguishes built-in from local principles
-
-### Out of Scope
-
-The following are separate concerns for future ideas:
-
-- **Customization**: Overriding or extending core principles locally
-- **`dust init` integration**: Prompting users to adopt core principles during initialization
-- **Merging**: Combining core and local principles in a unified view
+1. **Add `.dust/principles/` to package.json files array** — ensures principles ship with the package
+2. **Add `## Applicability` section** to dust-specific principles (e.g. self-contained-repository) marking them as `Internal`
+3. **Create `lib/artifacts/core-principles.ts`** — reads from the package's `.dust/principles/` directory, filters out Internal principles, respects config exclude list
+4. **Update `dust principles` command** — show core and local hierarchies together
+5. **Add config schema for `excludeCorePrinciples`** — array of slugs to exclude
+6. **Add package.json export** — expose `@joshski/dust/core-principles`
 
 ## Open Questions
 
-### Should the export return parsed Principle objects or raw content?
+### Which principles should be marked Internal?
 
-#### Option: Return parsed Principle objects
+Needs a pass through all existing principles to decide which are universal vs dust-specific. Candidates for Internal:
 
-Use the existing `Principle` type from `lib/artifacts/principles.ts`:
+- Self-contained repository (dust-specific)
+- Development traceability (may be dust-specific)
 
-```typescript
-interface Principle {
-  slug: string;
-  title: string;
-  content: string;
-  parentPrinciple: string | null;
-  subPrinciples: string[];
-}
-```
+Most principles are likely universal.
 
-Pros: Consistent with existing artifacts API, hierarchy relationships already resolved.
+### Should excluded principles be hidden or shown as excluded?
 
-Cons: Callers may only need the content, parsing adds overhead.
-
-#### Option: Return raw markdown content
-
-Return just the markdown string:
-
-```typescript
-const content = await readCorePrinciple('atomic-commits');
-// Returns: "# Atomic Commits\n\nCommits should be atomic..."
-```
-
-Pros: Simpler, no parsing overhead, callers can parse as needed.
-
-Cons: Inconsistent with artifacts API, callers must parse hierarchy links themselves.
-
-### How should we handle hierarchy links in core principles?
-
-#### Option: Keep relative links as-is
-
-Core principles use relative markdown links in their parent and sub-principle sections to reference other principles. Keep these unchanged.
-
-Pros: No content transformation, preserves original files.
-
-Cons: Links won't work if rendered in isolation or in downstream documentation.
-
-#### Option: Transform links to absolute references
-
-Replace relative links with a canonical format like `core:small-units` or full URLs to the dust repository.
-
-Pros: Links remain meaningful in any context.
-
-Cons: Content transformation adds complexity, URL links could break.
-
-#### Option: Expose alongside local principles
-
-When listing principles, downstream users could opt to see both core and local principles together, with hierarchy links resolved correctly.
-
-Pros: Unified experience, links work naturally.
-
-Cons: Increases scope, conflates core and local namespaces.
+If a user has excluded `atomic-commits`, should `dust principles` hide it entirely, or show it greyed out / marked as excluded? Showing it makes the exclusion discoverable; hiding it keeps the output clean.
