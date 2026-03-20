@@ -45,6 +45,10 @@
     "./patch": {
       "import": "./dist/patch.js",
       "types": "./dist/patch/index.d.ts"
+    },
+    "./core-principles": {
+      "import": "./dist/core-principles.js",
+      "types": "./dist/core-principles.d.ts"
     }
   },
   "files": [

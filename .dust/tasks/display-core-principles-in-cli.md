@@ -43,7 +43,7 @@ If no local principles exist, only show Core section. If core principles are all
 
 ## Blocked By
 
-- [Core Principles Reading API](core-principles-reading-api.md)
+(none)
 
 ## Definition of Done
 

@@ -22,6 +22,7 @@ interface SettingsViolation {
 const KNOWN_SETTINGS_KEYS = new Set([
   'dustCommand',
   'checks',
+  'excludeCorePrinciples',
   'extraDirectories',
   'installCommand',
   'eventsUrl',
@@ -159,6 +160,28 @@ function validateDustEventsUrl(
   return []
 }
 
+function validateExcludeCorePrinciples(
+  settings: Record<string, unknown>
+): SettingsViolation[] {
+  if (!('excludeCorePrinciples' in settings)) {
+    return []
+  }
+
+  if (!Array.isArray(settings.excludeCorePrinciples)) {
+    return [{ message: '"excludeCorePrinciples" must be an array of strings' }]
+  }
+
+  const violations: SettingsViolation[] = []
+  for (let i = 0; i < settings.excludeCorePrinciples.length; i++) {
+    if (typeof settings.excludeCorePrinciples[i] !== 'string') {
+      violations.push({
+        message: `excludeCorePrinciples[${i}] must be a string`,
+      })
+    }
+  }
+  return violations
+}
+
 export function validateSettingsJson(content: string): SettingsViolation[] {
   const violations: SettingsViolation[] = []
 
@@ -191,6 +214,7 @@ export function validateSettingsJson(content: string): SettingsViolation[] {
   }
 
   violations.push(...validateChecksConfig(settings))
+  violations.push(...validateExcludeCorePrinciples(settings))
   violations.push(...validateExtraDirectories(settings))
   violations.push(...validateDustEventsUrl(settings))
 

@@ -1105,4 +1105,40 @@ describe('validateSettingsJson', () => {
   test('returns empty array for empty object', () => {
     expect(validateSettingsJson('{}')).toEqual([])
   })
+
+  test('accepts valid excludeCorePrinciples array', () => {
+    const settings = JSON.stringify({
+      excludeCorePrinciples: ['principle-one', 'principle-two'],
+    })
+    expect(validateSettingsJson(settings)).toEqual([])
+  })
+
+  test('accepts empty excludeCorePrinciples array', () => {
+    const settings = JSON.stringify({
+      excludeCorePrinciples: [],
+    })
+    expect(validateSettingsJson(settings)).toEqual([])
+  })
+
+  test('returns violation when excludeCorePrinciples is not an array', () => {
+    const settings = JSON.stringify({
+      excludeCorePrinciples: 'not an array',
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe(
+      '"excludeCorePrinciples" must be an array of strings'
+    )
+  })
+
+  test('returns violation when excludeCorePrinciples contains non-string', () => {
+    const settings = JSON.stringify({
+      excludeCorePrinciples: ['valid-slug', 123, 'another-slug'],
+    })
+    const violations = validateSettingsJson(settings)
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toBe(
+      'excludeCorePrinciples[1] must be a string'
+    )
+  })
 })

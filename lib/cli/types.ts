@@ -36,6 +36,7 @@ export interface DustSettings {
   installCommand?: string
   checks?: CheckConfig[]
   eventsUrl?: string
+  excludeCorePrinciples?: string[]
   extraDirectories?: string[]
 }
 
