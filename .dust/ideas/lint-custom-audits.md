@@ -1,6 +1,6 @@
 # Lint Custom Audits
 
-Add a stock audit that reviews user-defined audits in `.dust/config/audits/` for quality and correctness.
+Add validation and/or auditing for user-defined audits in `.dust/config/audits/`.
 
 ## Context
 
@@ -12,39 +12,43 @@ Users can override stock audits or create custom audits by placing markdown file
 4. **Duplicate existing stock audits** - Override a stock audit without meaningful customization
 5. **Lack an opening description** - Missing the opening sentence that becomes the audit's description
 
-## Proposed Audit
+## Validation vs. Audit Separation
 
-Add a stock audit named `lint-custom-audits` in `lib/audits/stock-audits.ts`.
+The existing validation pipeline (`lib/validation/validation-pipeline.ts`) already validates structural requirements for tasks (required headings, opening sentences). The same approach should apply to custom audits—structural issues belong in `dust lint`, while semantic/judgment-based issues belong in an audit.
 
-### Behavior
+### Should Be Validated (via `dust lint`)
 
-This is a manual audit (consistent with how other audits work). Users run it when they want to validate their custom audits. It only checks user audits in `.dust/config/audits/`, not stock audits (which are maintained in the codebase with tests).
+These checks are deterministic and don't require judgment:
 
-### Template Scope
+1. **Required sections** - `## Scope`, `## Blocked By`, `## Definition of Done` must be present (similar to `validateTaskHeadings()` in `lib/lint/validators/content-validator.ts:83-96`)
+2. **Opening description** - Must have a clear opening sentence after the H1 heading (already validated by `validateOpeningSentence()`)
+3. **Filename format** - Should follow kebab-case convention
 
-1. **Output guidance** - Verify audits guide agents to create ideas, not tasks. Check for `ideasHint`-style language or equivalent. Finding severity: **Warning** (some audits might legitimately need to create tasks, like `suggest-audits`)
-2. **Required sections** - Check for `## Scope`, `## Blocked By`, `## Definition of Done`
-3. **Opening description** - Verify audits have a clear opening sentence describing their purpose (this becomes the description shown by `dust audits`)
-4. **Stale references** - Check that file/directory references in the audit are valid
-5. **Stock audit relationship** - If overriding a stock audit, document what was customized and why
+### Should Remain as Audit Concerns
 
-### Output Per Finding
+These require context, judgment, or file system exploration:
 
-- Audit file name and location
-- Type of issue (output-guidance, missing-section, stale-reference, unclear-purpose, undocumented-override)
-- Specific problem description
-- Suggested fix
-- Create ideas for any audit quality improvements needed
+1. **Output guidance** - Whether the audit guides agents to create ideas vs. tasks requires semantic understanding
+2. **Stale references** - Checking if mentioned file paths exist requires filesystem exploration and pattern matching
+3. **Stock audit relationship** - Determining if an override is meaningfully customized requires comparing content and understanding intent
 
-### Definition of Done
+## Proposed Changes
 
-- Listed all user audits in `.dust/config/audits/`
-- Verified each audit recommends ideas (not tasks) as output
-- Checked for required sections
-- Verified opening descriptions exist
-- Checked file/directory references for validity
-- Identified stock audit overrides without documented rationale
-- Created ideas for any audit quality improvements needed
+### 1. Extend `dust lint` for Custom Audits
+
+Extend the validation pipeline to validate custom audit files in `.dust/config/audits/`:
+
+- Add audit files to `parseArtifacts()` as a new artifact type or special case
+- Apply existing validators: `validateOpeningSentence()`, `validateOpeningSentenceLength()`
+- Add new validator for audit-specific required sections (`## Scope`, `## Blocked By`, `## Definition of Done`)
+
+### 2. Add `audit-quality` Stock Audit
+
+Create a lighter-weight audit that focuses on semantic concerns:
+
+- **Output guidance** - Check that audit templates guide agents to create ideas, not tasks
+- **Stale references** - Verify file/directory references in the audit are valid
+- **Override rationale** - If overriding a stock audit, check for documented customization rationale
 
 ## Why This Matters
 
@@ -52,9 +56,31 @@ The `ideasHint` constant in `lib/audits/stock-audits.ts:18-19` establishes the p
 
 > "Review existing ideas in `./.dust/ideas/` to understand what has been proposed or considered historically, then create new idea files in `./.dust/ideas/` for any issues you identify, avoiding duplication."
 
-This pattern is used in 29 of 30 stock audits (the exception being `suggest-audits`). User audits that deviate from this pattern could confuse agents or create workflow inconsistencies. A meta-audit provides a systematic way to validate custom audits.
+This pattern is used in 29 of 30 stock audits (the exception being `suggest-audits`). User audits that deviate from this pattern could confuse agents or create workflow inconsistencies.
 
 ## Relationship to Existing Audits
 
 - Similar to `agent-instruction-quality` (reviews instruction files for quality), this reviews audit files
 - Complements `documentation-drift` by focusing specifically on audit template validity
+
+## Open Questions
+
+### Should audit files get a dedicated artifact type?
+
+#### Option: Add as new artifact type
+
+Add `'audits'` to `ARTIFACT_TYPES` in `lib/artifacts/index.ts` and create validators for `.dust/config/audits/*.md`. This treats audits as first-class artifacts alongside ideas, tasks, principles, and facts. Clean separation that reuses existing validation infrastructure. However, audits live in `config/` not at the top level of `.dust/`, making them architecturally different from other artifact types.
+
+#### Option: Handle as special case in lint
+
+Add special-case handling in `lintMarkdown()` that validates `.dust/config/audits/` files without treating them as a core artifact type. This reflects that audits are configuration, not planning artifacts. However, it may duplicate validation logic or require special handling in multiple places.
+
+### Should stale reference checking be automated?
+
+#### Option: Keep as audit concern
+
+Have agents check references during audit execution. This allows for fuzzy matching and understanding of glob patterns. It handles complex patterns (globs, regex, directory references) and can understand context. Downside: only runs when audit is explicitly executed.
+
+#### Option: Add basic validation to `dust lint`
+
+Validate literal file paths mentioned in audit templates, skipping patterns with wildcards or special characters. This catches obvious errors immediately and runs automatically. However, it's limited to literal paths and may miss pattern-based references.
