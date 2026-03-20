@@ -2134,3 +2134,216 @@ describe('buildArtifactPatch with ideas', () => {
     ).toBe(true)
   })
 })
+
+describe('buildArtifactPatch previews', () => {
+  const dustPath = '/project/.dust'
+
+  function makeFs(files: Record<string, string> = {}) {
+    const tree = {
+      project: {
+        '.dust': {
+          principles: {} as Record<string, string>,
+          facts: {} as Record<string, string>,
+          ideas: {} as Record<string, string>,
+          tasks: {} as Record<string, string>,
+        },
+      },
+    }
+    const flatFiles: Record<string, string> = {}
+    for (const [path, content] of Object.entries(files)) {
+      flatFiles[`${dustPath}/${path}`] = content
+    }
+    return createFileSystemEmulator(tree, flatFiles)
+  }
+
+  test('returns previews array with create action for new artifacts', async () => {
+    const fileSystem = makeFs()
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      facts: {
+        'new-fact': { title: 'New Fact', body: 'A new fact being created.' },
+      },
+    })
+
+    expect(result.previews).toHaveLength(1)
+    expect(result.previews[0]).toEqual({
+      type: 'fact',
+      slug: 'new-fact',
+      action: 'create',
+      content: '# New Fact\n\nA new fact being created.\n',
+    })
+  })
+
+  test('returns previews array with update action for existing artifacts', async () => {
+    const fileSystem = makeFs({
+      'facts/existing-fact.md': '# Existing Fact\n\nOld content.',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      facts: {
+        'existing-fact': {
+          title: 'Existing Fact',
+          body: 'Updated content here.',
+        },
+      },
+    })
+
+    expect(result.previews).toHaveLength(1)
+    expect(result.previews[0]).toEqual({
+      type: 'fact',
+      slug: 'existing-fact',
+      action: 'update',
+      content: '# Existing Fact\n\nUpdated content here.\n',
+    })
+  })
+
+  test('returns previews array with delete action for deleted artifacts', async () => {
+    const fileSystem = makeFs({
+      'facts/old-fact.md': '# Old Fact\n\nThis will be deleted.',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      facts: {
+        'old-fact': null,
+      },
+    })
+
+    expect(result.previews).toHaveLength(1)
+    expect(result.previews[0]).toEqual({
+      type: 'fact',
+      slug: 'old-fact',
+      action: 'delete',
+      content: null,
+    })
+  })
+
+  test('returns previews for all artifact types', async () => {
+    const fileSystem = makeFs()
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      facts: {
+        'new-fact': { title: 'New Fact', body: 'A fact.' },
+      },
+      ideas: {
+        'new-idea': { title: 'New Idea', body: 'An idea.' },
+      },
+      principles: {
+        'new-principle': { title: 'New Principle', body: 'A principle.' },
+      },
+      tasks: {
+        'new-task': {
+          title: 'New Task',
+          definitionOfDone: ['Done'],
+        },
+      },
+    })
+
+    expect(result.previews).toHaveLength(4)
+    expect(result.previews.map(p => p.type).toSorted()).toEqual([
+      'fact',
+      'idea',
+      'principle',
+      'task',
+    ])
+    expect(result.previews.every(p => p.action === 'create')).toBe(true)
+  })
+
+  test('handles mixed create, update, and delete in same patch', async () => {
+    const fileSystem = makeFs({
+      'facts/existing-fact.md': '# Existing Fact\n\nOld content.',
+      'facts/deleted-fact.md': '# Deleted Fact\n\nGoing away.',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      facts: {
+        'new-fact': { title: 'New Fact', body: 'A new fact.' },
+        'existing-fact': {
+          title: 'Existing Fact',
+          body: 'Updated content.',
+        },
+        'deleted-fact': null,
+      },
+    })
+
+    expect(result.previews).toHaveLength(3)
+
+    const createPreview = result.previews.find(p => p.slug === 'new-fact')
+    expect(createPreview?.action).toBe('create')
+    expect(createPreview?.content).toBe('# New Fact\n\nA new fact.\n')
+
+    const updatePreview = result.previews.find(p => p.slug === 'existing-fact')
+    expect(updatePreview?.action).toBe('update')
+    expect(updatePreview?.content).toBe('# Existing Fact\n\nUpdated content.\n')
+
+    const deletePreview = result.previews.find(p => p.slug === 'deleted-fact')
+    expect(deletePreview?.action).toBe('delete')
+    expect(deletePreview?.content).toBeNull()
+  })
+
+  test('includes auto-generated updates in previews', async () => {
+    const fileSystem = makeFs({
+      'facts/target-fact.md': '# Target Fact\n\nThis fact is being removed.',
+      'facts/source-fact.md':
+        '# Source Fact\n\nThis references [Target Fact](target-fact.md).',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      facts: {
+        'target-fact': null,
+      },
+    })
+
+    expect(result.previews).toHaveLength(2)
+
+    const deletePreview = result.previews.find(p => p.slug === 'target-fact')
+    expect(deletePreview?.action).toBe('delete')
+
+    const updatePreview = result.previews.find(p => p.slug === 'source-fact')
+    expect(updatePreview?.action).toBe('update')
+    expect(updatePreview?.content).toBe(
+      '# Source Fact\n\nThis references Target Fact.'
+    )
+  })
+
+  test('returns empty previews array for empty input', async () => {
+    const fileSystem = makeFs()
+    const result = await buildArtifactPatch(fileSystem, dustPath, {})
+
+    expect(result.previews).toEqual([])
+  })
+
+  test('skips non-artifact files in previews', async () => {
+    const fileSystem = makeFs({
+      'principles/parent.md':
+        '# Parent\n\nA parent.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- [Child](child.md)\n',
+      'principles/child.md':
+        '# Child\n\nChild body.\n\n## Parent Principle\n\n- [Parent](parent.md)\n\n## Sub-Principles\n\n- (none)\n',
+    })
+    const result = await buildArtifactPatch(fileSystem, dustPath, {
+      principles: {
+        child: null,
+      },
+    })
+
+    // Parent gets auto-updated (reference cleanup), child gets deleted
+    // Both should appear in previews; internal files (if any) are skipped
+    expect(result.previews).toHaveLength(2)
+    const types = result.previews.map(p => p.type)
+    expect(types.every(t => t === 'principle')).toBe(true)
+  })
+
+  test('re-throws non-ENOENT errors when checking file existence', async () => {
+    const fileSystem = makeFs()
+    const permissionError = new Error('EACCES: permission denied')
+    ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+    const originalReadFile = fileSystem.readFile.bind(fileSystem)
+    fileSystem.readFile = async (path: string) => {
+      if (path === `${dustPath}/facts/new-fact.md`) {
+        throw permissionError
+      }
+      return originalReadFile(path)
+    }
+
+    await expect(
+      buildArtifactPatch(fileSystem, dustPath, {
+        facts: {
+          'new-fact': { title: 'New Fact', body: 'A new fact.' },
+        },
+      })
+    ).rejects.toThrow('EACCES: permission denied')
+  })
+})

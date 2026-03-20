@@ -16,7 +16,7 @@ const result = await buildArtifactPatch(fileSystem, dustPath, {
     'my-idea': { title: 'My Idea', body: 'Rough proposal.' },
   },
 })
-// result: { valid: boolean, violations: Violation[], patch: ArtifactPatch }
+// result: { valid: boolean, violations: Violation[], patch: ArtifactPatch, previews: ArtifactPreview[] }
 ```
 
 ## How It Works
@@ -32,8 +32,24 @@ For principles, it also validates bidirectional hierarchy consistency — ensuri
 
 The returned `patch` can be passed directly to `validatePatch` or applied to the filesystem.
 
+## Previews
+
+The result includes a `previews` array that provides a structured view of all artifact changes, making it easy for UIs to render diff-like previews before applying a patch:
+
+```typescript
+interface ArtifactPreview {
+  type: 'fact' | 'idea' | 'principle' | 'task'
+  slug: string
+  action: 'create' | 'update' | 'delete'
+  content: string | null  // null for deletions
+}
+```
+
+The `action` field is determined by checking filesystem existence: if the file exists, it's an `update`; otherwise, it's a `create`. Deletions always have `action: 'delete'` and `content: null`.
+
 ## Key Types
 
 - `ArtifactPatchInput` — `{ facts?, ideas?, principles?, tasks? }` where each field is `Record<string, Input | null>`
-- `BuildArtifactPatchResult` — `{ valid: boolean, violations: Violation[], patch: ArtifactPatch }`
+- `BuildArtifactPatchResult` — `{ valid: boolean, violations: Violation[], patch: ArtifactPatch, previews: ArtifactPreview[] }`
+- `ArtifactPreview` — `{ type, slug, action, content }` for UI diff rendering
 - Input types: `FactInput`, `IdeaInput`, `PrincipleInput`, `TaskInput` (with `StandardTaskInput` and `WorkflowTaskInput` variants)

@@ -43,10 +43,20 @@ export interface ArtifactPatchInput {
   tasks?: Record<string, TaskInput | null>
 }
 
+export type ArtifactType = 'fact' | 'idea' | 'principle' | 'task'
+
+export interface ArtifactPreview {
+  type: ArtifactType
+  slug: string
+  action: 'create' | 'update' | 'delete'
+  content: string | null
+}
+
 export interface BuildArtifactPatchResult {
   valid: boolean
   violations: Violation[]
   patch: ArtifactPatch
+  previews: ArtifactPreview[]
 }
 
 interface ValidatePatchOptions {
@@ -540,6 +550,87 @@ interface PatchAccumulator {
   deletedPaths: Set<string>
 }
 
+/**
+ * Parses artifact type and slug from a file path.
+ * E.g., 'facts/my-fact.md' → { type: 'fact', slug: 'my-fact' }
+ */
+function parseArtifactPath(
+  path: string
+): { type: ArtifactType; slug: string } | null {
+  const match = path.match(/^(facts|ideas|principles|tasks)\/([^/]+)\.md$/)
+  /* v8 ignore start -- defensive guard; all patch files are artifact paths */
+  if (!match) return null
+  /* v8 ignore stop */
+
+  const dirToType: Record<string, ArtifactType> = {
+    facts: 'fact',
+    ideas: 'idea',
+    principles: 'principle',
+    tasks: 'task',
+  }
+
+  return {
+    type: dirToType[match[1]],
+    slug: match[2],
+  }
+}
+
+/**
+ * Builds preview objects from patch files.
+ * For create vs update determination, checks filesystem existence.
+ */
+async function buildPreviews(
+  fileSystem: ReadableFileSystem,
+  dustPath: string,
+  files: Record<string, string | null>
+): Promise<ArtifactPreview[]> {
+  const previews: ArtifactPreview[] = []
+
+  for (const [path, content] of Object.entries(files)) {
+    const parsed = parseArtifactPath(path)
+    /* v8 ignore start -- defensive guard; all patch files are artifact paths */
+    if (!parsed) continue
+    /* v8 ignore stop */
+
+    if (content === null) {
+      previews.push({
+        type: parsed.type,
+        slug: parsed.slug,
+        action: 'delete',
+        content: null,
+      })
+    } else {
+      const exists = await fileExists(fileSystem, `${dustPath}/${path}`)
+      previews.push({
+        type: parsed.type,
+        slug: parsed.slug,
+        action: exists ? 'update' : 'create',
+        content,
+      })
+    }
+  }
+
+  return previews
+}
+
+/**
+ * Checks if a file exists in the filesystem.
+ */
+async function fileExists(
+  fileSystem: ReadableFileSystem,
+  path: string
+): Promise<boolean> {
+  try {
+    await fileSystem.readFile(path)
+    return true
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return false
+    }
+    throw error
+  }
+}
+
 function processFacts(
   facts: Record<string, FactInput | null>,
   accumulator: PatchAccumulator
@@ -752,9 +843,12 @@ export async function buildArtifactPatch(
     options
   )
 
+  const previews = await buildPreviews(fileSystem, dustPath, accumulator.files)
+
   return {
     valid: validationResult.valid && hierarchyViolations.length === 0,
     violations: [...hierarchyViolations, ...validationResult.violations],
     patch,
+    previews,
   }
 }
