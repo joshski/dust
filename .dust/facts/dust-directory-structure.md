@@ -31,5 +31,8 @@ The config directory uses a strict allowlist. Supported entries are:
 - `audits/`
 - `hints/`
 - `agents/`
+- `container/`
 
 Unknown files or subdirectories in `.dust/config/` are lint violations. See [Configuration System](./configuration-system.md) for details.
+
+For Docker-based agent execution, place your Dockerfile at `.dust/config/container/Dockerfile`. See [Docker Agent Mode](./docker-agent-mode.md) for details.

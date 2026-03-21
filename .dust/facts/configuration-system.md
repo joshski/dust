@@ -8,6 +8,7 @@ The `.dust/config/` directory is strictly allowlisted by `dust lint`. Valid entr
 - `audits/`
 - `hints/`
 - `agents/`
+- `container/`
 
 ## Settings
 

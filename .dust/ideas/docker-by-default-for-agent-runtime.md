@@ -2,7 +2,7 @@
 
 Make Docker the default execution mode for Dust agents so end users do not need to supply a custom Dockerfile just to get started.
 
-Today, Docker behavior is still split across provider paths and contract conventions. We should converge on one configuration contract under `.dust/config/`, make provider handling explicit (Claude and Codex), and provide safe fallback behavior.
+The Docker configuration contract is now resolved: `.dust/config/container/Dockerfile` is the canonical path. Remaining work focuses on making Docker the default runtime with provider-aware handling and safe fallback behavior.
 
 ## Why this matters
 
@@ -21,7 +21,7 @@ Today, Docker behavior is still split across provider paths and contract convent
 
 ## What needs to be done
 
-1. Resolve and document the Docker configuration contract (legacy `.dust/Dockerfile` vs `.dust/config/*`).
+1. ~~Resolve and document the Docker configuration contract (legacy `.dust/Dockerfile` vs `.dust/config/*`).~~ Done: The canonical contract is `.dust/config/container/Dockerfile`. The legacy `.dust/Dockerfile` path is detected by `dust lint` and reports an error with migration instructions.
 2. Add provider-aware Docker execution support for both Claude and Codex paths.
 3. Introduce generated default container configuration for common repositories.
 4. Add migration guidance and compatibility behavior for early adopters.
@@ -48,13 +48,3 @@ No repo churn and easiest onboarding, but less transparent.
 #### Materialized generated file checked into repo
 
 More explicit and reviewable, but adds maintenance overhead.
-
-### How much backward compatibility do we keep for `.dust/Dockerfile`?
-
-#### No compatibility (breaking)
-
-Simplifies implementation and messaging if usage is effectively zero.
-
-#### Temporary compatibility shim
-
-Safer rollout, but prolongs dual-path complexity.
