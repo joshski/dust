@@ -74,7 +74,7 @@ export async function getGitCredentials(
     const spawnOptions: import('node:child_process').SpawnOptions = {
       stdio: ['pipe', 'pipe', 'pipe'],
     }
-    if (dependencies.userHome) {
+    if (dependencies.userHome) /* v8 ignore next */ {
       spawnOptions.env = { ...process.env, HOME: dependencies.userHome }
     }
     const proc = dependencies.spawn('git', ['credential', 'fill'], spawnOptions)

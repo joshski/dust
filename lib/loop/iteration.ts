@@ -433,6 +433,7 @@ export async function runOneIteration(
   // This must happen after git pull (which runs on the host with the original URL)
   // and before Claude runs (which runs inside Docker and needs the proxy URL).
   // We can't rely on git config env vars because Claude Code may override GIT_CONFIG_COUNT.
+  /* v8 ignore start -- Docker mode requires real Docker setup */
   let originalRemoteUrl: string | undefined
   if (docker?.gitProxyUrl) {
     try {
@@ -457,6 +458,8 @@ export async function runOneIteration(
     }
   }
 
+  /* v8 ignore stop */
+
   try {
     return await executeTask(
       task,
@@ -469,6 +472,7 @@ export async function runOneIteration(
     )
   } finally {
     // Restore the original remote URL so the next iteration's git pull works on the host
+    /* v8 ignore start -- Docker mode requires real Docker setup */
     if (originalRemoteUrl) {
       try {
         execSync(`git remote set-url origin "${originalRemoteUrl}"`, {
@@ -479,6 +483,7 @@ export async function runOneIteration(
         log('warning: failed to restore original remote URL')
       }
     }
+    /* v8 ignore stop */
   }
 }
 
