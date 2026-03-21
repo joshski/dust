@@ -14,6 +14,7 @@ import {
   parseArtifact,
 } from '../artifacts/parsed-artifact'
 import type { ReadableFileSystem } from '../filesystem/types'
+import { validateAuditHeadings } from '../lint/validators/audit-validator'
 import {
   validateImperativeOpeningSentence,
   validateOpeningSentence,
@@ -55,6 +56,7 @@ interface ValidationContext {
     tasks: ParsedArtifact[]
   }
   rootFiles: ParsedArtifact[] // Root-level markdown files (e.g., repository.md)
+  customAudits: ParsedArtifact[] // Custom audit files in .dust/config/audits/
   dustPath: string
   fileSystem: ReadableFileSystem
 }
@@ -77,6 +79,7 @@ export async function parseArtifacts(
     tasks: [],
   }
   const rootFiles: ParsedArtifact[] = []
+  const customAudits: ParsedArtifact[] = []
   const violations: Violation[] = []
 
   // Parse root-level markdown files in .dust/
@@ -150,11 +153,44 @@ export async function parseArtifacts(
     }
   }
 
+  // Parse custom audit files in .dust/config/audits/
+  const auditsPath = `${dustPath}/config/audits`
+  let auditEntries: string[]
+  try {
+    auditEntries = await fileSystem.readdir(auditsPath)
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      auditEntries = []
+    } else {
+      throw error
+    }
+  }
+
+  for (const entry of auditEntries) {
+    if (!entry.endsWith('.md')) continue
+
+    const filePath = `${auditsPath}/${entry}`
+    let content: string
+    try {
+      content = await fileSystem.readFile(filePath)
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        continue
+      }
+      throw error
+    }
+
+    const artifact = parseArtifact(filePath, content)
+    artifacts.set(filePath, artifact)
+    customAudits.push(artifact)
+  }
+
   return {
     context: {
       artifacts,
       byType,
       rootFiles,
+      customAudits,
       dustPath,
       fileSystem,
     },
@@ -170,7 +206,7 @@ export async function parseArtifacts(
  */
 export function validateArtifacts(context: ValidationContext): Violation[] {
   const violations: Violation[] = []
-  const { byType, rootFiles, dustPath, fileSystem } = context
+  const { byType, rootFiles, customAudits, dustPath, fileSystem } = context
   const ideasPath = `${dustPath}/ideas`
 
   // Validate links in root-level markdown files
@@ -234,6 +270,20 @@ export function validateArtifacts(context: ValidationContext): Violation[] {
   // Cross-file principle validation
   violations.push(...validateBidirectionalLinks(allPrincipleRelationships))
   violations.push(...validateNoCycles(allPrincipleRelationships))
+
+  // Validate custom audit files
+  for (const artifact of customAudits) {
+    const filenameViolation = validateFilename(artifact.filePath)
+    if (filenameViolation) violations.push(filenameViolation)
+
+    const openingSentenceViolation = validateOpeningSentence(artifact)
+    if (openingSentenceViolation) violations.push(openingSentenceViolation)
+
+    const lengthViolation = validateOpeningSentenceLength(artifact)
+    if (lengthViolation) violations.push(lengthViolation)
+
+    violations.push(...validateAuditHeadings(artifact))
+  }
 
   return violations
 }

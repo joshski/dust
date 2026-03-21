@@ -20,6 +20,6 @@ Create an `audit-quality` stock audit that examines files in `.dust/config/audit
 
 This complements structural validation in `dust lint` by catching semantic issues that require context or judgment.
 
-## Related Tasks
+## Context Note
 
-This idea emerged from decomposing the original "Lint Custom Audits" idea, which split structural validation (now [Lint Custom Audit Files](../tasks/lint-custom-audit-files.md)) from semantic validation (this idea).
+This idea emerged from decomposing the original "Lint Custom Audits" idea, which split structural validation (now implemented in `dust lint`) from semantic validation (this idea).
