@@ -1,6 +1,6 @@
-# Document dustbucket migration to dust path APIs
+# Dustbucket migration to dust path APIs
 
-Dustbucket's `src/lib/artifact-paths.ts` (67 lines) duplicates path utilities that dust already provides:
+Dustbucket's `src/lib/artifact-paths.ts` duplicates path utilities that dust already provides.
 
 - `dustPathPrefix()` → use `DUST_PATH_PREFIX` from `@joshski/dust/artifacts`
 - `parseArtifactPath()` → use `parseArtifactPath()` from `@joshski/dust/artifacts`

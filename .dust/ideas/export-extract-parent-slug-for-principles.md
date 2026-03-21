@@ -1,6 +1,6 @@
-# Export extractParentSlug for principles
+# Export extract parent slug for principles
 
-Dustbucket's `dust-file-cache.ts` has an `extractParentSlug(content: string)` function that extracts the parent principle slug from a principle's markdown content. Dust already has equivalent logic internally in `extractSingleLinkFromSection()` (in `lib/artifacts/principles.ts`), but this function is not exported from the `@joshski/dust/artifacts` entry point.
+Dust has internal logic for extracting parent principle slugs but doesn't export it. Dustbucket's `dust-file-cache.ts` has its own `extractParentSlug(content)` function that duplicates this, and dust's `extractSingleLinkFromSection()` in `lib/artifacts/principles.ts` is not exported from `@joshski/dust/artifacts`.
 
 Dustbucket's version also handles the "none (top-level)" case explicitly, which may or may not be needed.
 
