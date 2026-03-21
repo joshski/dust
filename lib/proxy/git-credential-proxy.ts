@@ -261,7 +261,9 @@ export async function createGitCredentialProxyServer(
       headers['Content-Type'] = nodeRequest.headers['content-type']
     }
 
-    log(`forwarding ${method} to ${upstreamUrl.toString()}${body ? ` (${body.length} bytes)` : ''}`)
+    log(
+      `forwarding ${method} to ${upstreamUrl.toString()}${body ? ` (${body.length} bytes)` : ''}`
+    )
 
     try {
       const upstreamResponse = await fetch(upstreamUrl.toString(), {
@@ -269,7 +271,9 @@ export async function createGitCredentialProxyServer(
         headers,
         body,
       })
-      log(`upstream ${method} ${endpointInfo.endpoint} responded: ${upstreamResponse.status}`)
+      log(
+        `upstream ${method} ${endpointInfo.endpoint} responded: ${upstreamResponse.status}`
+      )
 
       // Copy upstream response status and headers
       const responseHeaders: Record<string, string> = {}

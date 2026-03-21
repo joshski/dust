@@ -5,11 +5,7 @@
  * for a single repository.
  */
 
-import {
-  existsSync as fsExistsSync,
-  unlinkSync,
-  writeFileSync,
-} from 'node:fs'
+import { existsSync as fsExistsSync, unlinkSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import { join } from 'node:path'
 import type { AgentSessionEvent, EventMessage } from '../agent-events'
