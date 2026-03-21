@@ -1,6 +1,6 @@
 # Docker opt-in command line switch
 
-Add a `--docker` flag to `dust loop` commands that enables Docker execution without a custom Dockerfile.
+Add a `--docker` flag to `dust bucket worker` and `dust loop` commands that enables Docker execution without a custom Dockerfile.
 
 ## Why this matters
 
@@ -18,46 +18,81 @@ Docker mode only activates when `.dust/config/container/Dockerfile` exists. The 
 2. Check for `.dust/config/container/Dockerfile`
 3. If found, build and use Docker; otherwise run on host
 
+Both `dust loop` (via `runLoop()` in `lib/loop/loop.ts`) and `dust bucket worker` (via `setupDockerConfig()` in `lib/bucket/repository-loop.ts`) use the same `prepareDockerConfig()` function for Docker detection.
+
 ## Proposed behavior
 
 Add a `--docker` flag that:
 
-1. When passed, generates a default Dockerfile in memory (or temp location)
+1. When passed, generates a default Dockerfile in a temp location
 2. Builds and runs the agent in Docker using this generated config
 3. Works even when no `.dust/config/container/Dockerfile` exists
 
-The custom Dockerfile still takes precedence if present.
+If a custom `.dust/config/container/Dockerfile` exists, it takes precedence over the generated default.
+
+## Implementation scope
+
+### Primary: `dust bucket worker`
+
+The task specifies this should be supported "first and foremost" for `dust bucket worker`. This command manages multiple repositories concurrently, so Docker opt-in could apply at two levels:
+
+- **Worker-level**: `dust bucket worker --docker` enables Docker for all repositories
+- **Server-side per-repo**: The dustbucket server could eventually set per-repository Docker preferences
+
+For the initial implementation, worker-level opt-in is simpler and provides immediate value.
+
+### Secondary: `dust loop`
+
+The `dust loop` command operates on a single repository. Adding `--docker` here follows the same pattern but with simpler scope.
 
 ## Implementation notes
 
-- Parse `--docker` flag in `lib/loop/parse-args.ts` alongside `maxIterations`
-- Pass flag through to `runLoop()` via new option
-- Modify `prepareDockerConfig()` to accept a `forceDocker` option
-- Generate default Dockerfile content when force-enabled but no custom config exists
-- The generated Dockerfile should match what will become the default (Bun base, agent CLIs, non-root user)
+### For `dust bucket worker`
+
+1. Parse `--docker` flag in bucket worker entry point (`lib/cli/commands/bucket-worker.ts`)
+2. Pass flag through `RepositoryDependencies` to `setupDockerConfig()` in `lib/bucket/repository-loop.ts`
+3. Extend `prepareDockerConfig()` to accept a `forceDocker` option
+4. Generate default Dockerfile content when force-enabled but no custom config exists
+
+### For `dust loop`
+
+1. Parse `--docker` flag in `lib/loop/parse-args.ts` alongside `maxIterations`
+2. Pass flag through to `runLoop()` via `LoopDependencies` or a new options parameter
+3. Use the same `prepareDockerConfig()` changes from the bucket worker implementation
+
+### Shared: Default Dockerfile generation
+
+Create a `generateDefaultDockerfile()` function in `lib/docker/docker-agent.ts` that produces:
+
+```dockerfile
+FROM oven/bun:1
+RUN apt-get update && apt-get install -y git nodejs npm && rm -rf /var/lib/apt/lists/*
+RUN npm install -g @anthropic-ai/claude-code @openai/codex
+RUN useradd -m -s /bin/bash user
+USER user
+WORKDIR /workspace
+```
+
+This matches the example in `docker-agent-mode.md` and includes both agent CLIs for provider flexibility.
 
 ## Open Questions
 
-### Should `--docker` work without any Dockerfile, or require one to exist?
+### How should `--docker` interact with existing `.dust/config/container/Dockerfile`?
 
-#### Generate ephemeral default
+#### Custom Dockerfile takes precedence (recommended)
 
-The flag triggers Docker with a generated config. Lowest friction for trying Docker.
+When a custom Dockerfile exists and `--docker` is passed, the flag acts as a "force Docker mode" switch. If a custom config exists, use it; otherwise generate a default. This is consistent with the current "custom overrides default" pattern and avoids surprising behavior.
 
-#### Require `.dust/config/container/Dockerfile` to exist
+#### Generated config replaces custom
 
-The flag just enables Docker; user must still provide config. More explicit but higher friction.
+The flag always uses the generated config, ignoring any custom Dockerfile. Simpler to reason about, but potentially confusing if users expect their customizations to apply.
 
-### What should the generated default Dockerfile contain?
+### Should generated Dockerfiles be persisted or ephemeral?
 
-#### Bun-based with Claude and Codex
+#### Ephemeral (temp file, recommended)
 
-Use `oven/bun:1` base with both agent CLIs installed. Covers most dust use cases.
+Generate in `os.tmpdir()`, clean up after use. No repo churn, aligns with "easy adoption" principle. The generated content is deterministic and reproducible.
 
-#### Node-based with Claude and Codex
+#### Persisted to `.dust/config/container/Dockerfile`
 
-Use official Node image. More conservative and widely compatible.
-
-#### Configurable base image
-
-Allow `--docker=node:20` or similar. Maximum flexibility but more complex UX.
+Write the generated file to the canonical location. Makes the config explicit and reviewable, but adds files to the repository. Could optionally prompt user before writing.
