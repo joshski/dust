@@ -9,7 +9,7 @@ import type { Violation } from './types'
 const EXPECTED_DIRECTORIES = [...ARTIFACT_TYPES, 'config']
 const EXPECTED_ROOT_FILES = ['repository.md']
 const EXPECTED_CONFIG_FILES = ['settings.json']
-const EXPECTED_CONFIG_DIRECTORIES = ['audits', 'hints', 'agents']
+const EXPECTED_CONFIG_DIRECTORIES = ['audits', 'agents', 'container', 'hints']
 
 export async function validateContentDirectoryFiles(
   dirPath: string,

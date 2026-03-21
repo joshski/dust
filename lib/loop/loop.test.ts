@@ -753,14 +753,18 @@ describe('runLoop', () => {
     expect(context.stdoutLines.join('\n')).not.toContain('raw_event')
   })
 
-  test('detects Docker mode when .dust/Dockerfile exists', async () => {
+  test('detects Docker mode when .dust/config/container/Dockerfile exists', async () => {
     const originalToken = process.env.CLAUDE_CODE_OAUTH_TOKEN
     process.env.CLAUDE_CODE_OAUTH_TOKEN = 'test-token'
 
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          Dockerfile: 'FROM node:20',
+          config: {
+            container: {
+              Dockerfile: 'FROM node:20',
+            },
+          },
           tasks: {
             'task.md':
               '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
@@ -775,7 +779,8 @@ describe('runLoop', () => {
     const loopDeps = createLoopDeps({
       run: async () => {},
       dockerDeps: {
-        existsSync: (p: string) => p === '/project/.dust/Dockerfile',
+        existsSync: (p: string) =>
+          p === '/project/.dust/config/container/Dockerfile',
         homedir: () => '/home/user',
         spawn: createMockSpawn(0),
       },
@@ -784,7 +789,7 @@ describe('runLoop', () => {
     await runLoop(dependencies, loopDeps)
 
     expect(context.stdoutLines.join('\n')).toContain(
-      'Docker mode: found .dust/Dockerfile'
+      'Docker mode: found .dust/config/container/Dockerfile'
     )
     expect(context.stdoutLines.join('\n')).toContain('Building Docker image')
     expect(context.stdoutLines.join('\n')).toContain(
@@ -802,7 +807,11 @@ describe('runLoop', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          Dockerfile: 'FROM node:20',
+          config: {
+            container: {
+              Dockerfile: 'FROM node:20',
+            },
+          },
           tasks: {
             'task.md':
               '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
@@ -817,7 +826,8 @@ describe('runLoop', () => {
     const loopDeps = createLoopDeps({
       run: async () => {},
       dockerDeps: {
-        existsSync: (p: string) => p === '/project/.dust/Dockerfile',
+        existsSync: (p: string) =>
+          p === '/project/.dust/config/container/Dockerfile',
         homedir: () => '/home/user',
         spawn: createMockSpawn(0),
       },
@@ -836,7 +846,11 @@ describe('runLoop', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          Dockerfile: 'FROM node:20',
+          config: {
+            container: {
+              Dockerfile: 'FROM node:20',
+            },
+          },
         },
       },
     })
@@ -846,7 +860,8 @@ describe('runLoop', () => {
     >
     const loopDeps = createLoopDeps({
       dockerDeps: {
-        existsSync: (p: string) => p === '/project/.dust/Dockerfile',
+        existsSync: (p: string) =>
+          p === '/project/.dust/config/container/Dockerfile',
         homedir: () => '/home/user',
         spawn: createMockSpawn(1), // Docker --version fails
       },
@@ -862,7 +877,11 @@ describe('runLoop', () => {
     const dependencies = createDependencies({
       project: {
         '.dust': {
-          Dockerfile: 'FROM node:20',
+          config: {
+            container: {
+              Dockerfile: 'FROM node:20',
+            },
+          },
         },
       },
     })
@@ -873,7 +892,8 @@ describe('runLoop', () => {
     let dockerCallCount = 0
     const loopDeps = createLoopDeps({
       dockerDeps: {
-        existsSync: (p: string) => p === '/project/.dust/Dockerfile',
+        existsSync: (p: string) =>
+          p === '/project/.dust/config/container/Dockerfile',
         homedir: () => '/home/user',
         spawn: (() => {
           dockerCallCount++

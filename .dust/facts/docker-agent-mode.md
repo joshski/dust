@@ -1,12 +1,10 @@
 # Docker Agent Mode
 
-When a repository contains a `.dust/Dockerfile`, dust automatically builds the image and spawns agent sessions inside Docker containers. This provides the [sandboxing](./autonomous-agents-need-sandboxes.md) recommended for autonomous agents.
-
-Note: `dust lint` rejects `.dust/Dockerfile` because the `.dust/` root directory has a strict allowlist. However, the Docker agent functionality still reads from `.dust/Dockerfile`. This creates a conflict where the feature works but lint fails. See [Support Docker Compose](../ideas/support-docker-compose.md) for the planned migration to `.dust/config/container/`.
+Dust runs agent sessions inside Docker containers when `.dust/config/container/Dockerfile` exists. This provides the [sandboxing](./autonomous-agents-need-sandboxes.md) recommended for autonomous agents.
 
 ## Setup
 
-1. Create `.dust/Dockerfile` in your repository
+1. Create `.dust/config/container/Dockerfile` in your repository
 2. The Dockerfile must create a **non-root user** — Claude Code refuses `--dangerously-skip-permissions` when running as root
 3. Install Claude Code (`npm install -g @anthropic-ai/claude-code`) in the image
 
@@ -31,7 +29,7 @@ Without the API proxy, `CLAUDE_CODE_OAUTH_TOKEN` must be set and `~/.claude` is 
 
 ## How it works
 
-- `hasDockerfile()` checks for `.dust/Dockerfile` in the repo
+- `hasDockerfile()` checks for `.dust/config/container/Dockerfile` in the repo
 - `buildDockerImage()` builds the image with a tag derived from the repo path
 - Agent sessions are spawned with `docker run`, mounting the repo at `/workspace`
 - When using the Claude API proxy, `~/.claude` and `~/.claude.json` are NOT mounted (credentials stay on host)

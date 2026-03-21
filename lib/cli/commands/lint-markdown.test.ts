@@ -2037,6 +2037,9 @@ describe('validateDirectoryStructure', () => {
             agents: {
               'codex.md': '# Codex',
             },
+            container: {
+              Dockerfile: 'FROM node:20',
+            },
           },
         },
       },
@@ -2071,7 +2074,7 @@ describe('validateDirectoryStructure', () => {
       {
         file: '/project/.dust/config/notes.txt',
         message:
-          'Unexpected file "notes.txt" in .dust/config/. Allowed entries: agents/, audits/, hints/, settings.json',
+          'Unexpected file "notes.txt" in .dust/config/. Allowed entries: agents/, audits/, container/, hints/, settings.json',
       },
     ])
   })
@@ -2098,7 +2101,7 @@ describe('validateDirectoryStructure', () => {
       {
         file: '/project/.dust/config/examples',
         message:
-          'Unexpected directory "examples" in .dust/config/. Allowed entries: agents/, audits/, hints/, settings.json',
+          'Unexpected directory "examples" in .dust/config/. Allowed entries: agents/, audits/, container/, hints/, settings.json',
       },
     ])
   })
@@ -2379,7 +2382,7 @@ This is a principle.
       'Unexpected directory "examples" in .dust/config/'
     )
     expect(context.stderrLines.join('\n')).toContain(
-      'Allowed entries: agents/, audits/, hints/, settings.json'
+      'Allowed entries: agents/, audits/, container/, hints/, settings.json'
     )
   })
 

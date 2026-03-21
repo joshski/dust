@@ -1,9 +1,9 @@
 /**
  * Docker-based agent execution for dust loop.
  *
- * When a repository contains a .dust/Dockerfile, the agent runs inside
- * a Docker container instead of directly on the host. This provides
- * isolation and lets each project define its ideal agent environment.
+ * When a repository contains a .dust/config/container/Dockerfile, the agent
+ * runs inside a Docker container instead of directly on the host. This
+ * provides isolation and lets each project define its ideal agent environment.
  */
 
 import type { spawn as nodeSpawn } from 'node:child_process'
@@ -61,13 +61,19 @@ export function generateImageTag(repoPath: string): string {
 type BuildResult = { success: true } | { success: false; error: string }
 
 /**
- * Build a Docker image from the repository's .dust/Dockerfile.
+ * Build a Docker image from the repository's .dust/config/container/Dockerfile.
  */
 export async function buildDockerImage(
   config: DockerConfig,
   dependencies: DockerDependencies
 ): Promise<BuildResult> {
-  const dockerfilePath = path.join(config.repoPath, '.dust', 'Dockerfile')
+  const dockerfilePath = path.join(
+    config.repoPath,
+    '.dust',
+    'config',
+    'container',
+    'Dockerfile'
+  )
 
   log(`building Docker image ${config.imageTag} from ${dockerfilePath}`)
 
@@ -108,13 +114,19 @@ export async function buildDockerImage(
 }
 
 /**
- * Check if a Dockerfile exists at .dust/Dockerfile in the repository.
+ * Check if a Dockerfile exists at .dust/config/container/Dockerfile.
  */
 export function hasDockerfile(
   repoPath: string,
   dependencies: DockerDependencies
 ): boolean {
-  const dockerfilePath = path.join(repoPath, '.dust', 'Dockerfile')
+  const dockerfilePath = path.join(
+    repoPath,
+    '.dust',
+    'config',
+    'container',
+    'Dockerfile'
+  )
   return dependencies.existsSync(dockerfilePath)
 }
 
@@ -138,8 +150,9 @@ type PrepareDockerConfigResult =
 /**
  * Prepare Docker configuration for agent execution.
  *
- * Checks for a .dust/Dockerfile, verifies Docker availability, builds the image,
- * and returns the spawn configuration. Emits events throughout the process.
+ * Checks for a .dust/config/container/Dockerfile, verifies Docker availability,
+ * builds the image, and returns the spawn configuration. Emits events
+ * throughout the process.
  *
  * Returns:
  * - `{ config: DockerSpawnConfig }` on success
@@ -151,10 +164,10 @@ export async function prepareDockerConfig(
   dependencies: DockerDependencies,
   onEvent: (event: DockerPrepareEvent) => void
 ): Promise<PrepareDockerConfigResult> {
-  log(`checking for .dust/Dockerfile in ${repoPath}`)
+  log(`checking for .dust/config/container/Dockerfile in ${repoPath}`)
 
   if (!hasDockerfile(repoPath, dependencies)) {
-    log('no .dust/Dockerfile found, running without Docker')
+    log('no .dust/config/container/Dockerfile found, running without Docker')
     return {}
   }
 
@@ -164,7 +177,7 @@ export async function prepareDockerConfig(
 
   if (!(await isDockerAvailable(dependencies))) {
     const error =
-      'Docker not available. Install Docker or remove .dust/Dockerfile to run without Docker.'
+      'Docker not available. Install Docker or remove .dust/config/container/Dockerfile to run without Docker.'
     return { error }
   }
 

@@ -912,7 +912,8 @@ describe('runRepositoryLoop', () => {
       },
       getReposDir: () => '/tmp/repos',
       dockerDeps: {
-        existsSync: (p: string) => p.includes('.dust/Dockerfile'),
+        existsSync: (p: string) =>
+          p.includes('.dust/config/container/Dockerfile'),
         homedir: () => '/home/test',
       },
       session: createTestSessionConfig(),
@@ -925,7 +926,7 @@ describe('runRepositoryLoop', () => {
     expect(dockerBuildCalled).toBe(true)
     const lines = getLogLines(repoState.logBuffer)
     const dockerDetected = lines.find(l =>
-      l.text.includes('Docker mode: found .dust/Dockerfile')
+      l.text.includes('Docker mode: found .dust/config/container/Dockerfile')
     )
     expect(dockerDetected).toBeDefined()
     const dockerReady = lines.find(l => l.text.includes('ready'))
@@ -980,7 +981,8 @@ describe('runRepositoryLoop', () => {
       sleep: async () => {},
       getReposDir: () => '/tmp/repos',
       dockerDeps: {
-        existsSync: (p: string) => p.includes('.dust/Dockerfile'),
+        existsSync: (p: string) =>
+          p.includes('.dust/config/container/Dockerfile'),
         homedir: () => '/home/test',
       },
       session: createTestSessionConfig(),
@@ -1038,7 +1040,8 @@ describe('runRepositoryLoop', () => {
       },
       getReposDir: () => '/tmp/repos',
       dockerDeps: {
-        existsSync: (p: string) => p.includes('.dust/Dockerfile'),
+        existsSync: (p: string) =>
+          p.includes('.dust/config/container/Dockerfile'),
         homedir: () => '/home/test',
       },
       session: createTestSessionConfig(),
@@ -1107,7 +1110,8 @@ describe('runRepositoryLoop', () => {
       },
       getReposDir: () => '/tmp/repos',
       dockerDeps: {
-        existsSync: (p: string) => p.includes('.dust/Dockerfile'),
+        existsSync: (p: string) =>
+          p.includes('.dust/config/container/Dockerfile'),
         homedir: () => '/home/test',
       },
       session: createTestSessionConfig(),

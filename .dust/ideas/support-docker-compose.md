@@ -4,7 +4,7 @@ Extend the Docker agent mode to support `docker compose` for applications that n
 
 ## Motivation
 
-The current Docker agent mode (`.dust/Dockerfile`) works well for single-container environments. However, many real-world applications require multiple services running together:
+The current Docker agent mode (`.dust/config/container/Dockerfile`) works well for single-container environments. However, many real-world applications require multiple services running together:
 
 - Web application + database + cache (e.g., Node.js + PostgreSQL + Redis)
 - Microservices architectures with multiple interdependent services
@@ -54,7 +54,7 @@ services:
 When determining how to run agents, dust would check in order:
 
 1. `.dust/config/container/docker-compose.yml` - use docker compose mode
-2. `.dust/Dockerfile` - use current single-container Docker mode
+2. `.dust/config/container/Dockerfile` - use single-container Docker mode
 3. Neither present - run directly on host
 
 ## Implementation Considerations

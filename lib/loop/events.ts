@@ -130,7 +130,7 @@ export function formatLoopEvent(event: LoopEvent): string | null {
     case 'loop.ended':
       return `Reached max iterations (${event.maxIterations}). Exiting.`
     case 'loop.docker_detected':
-      return `Docker mode: found .dust/Dockerfile (image: ${event.imageTag})`
+      return `Docker mode: found .dust/config/container/Dockerfile (image: ${event.imageTag})`
     case 'loop.docker_building':
       return `Building Docker image ${event.imageTag}...`
     case 'loop.docker_built':

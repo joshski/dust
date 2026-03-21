@@ -181,23 +181,26 @@ describe('buildDockerImage', () => {
     expect(capturedArguments).toContain('-t')
     expect(capturedArguments).toContain('dust-agent-project')
     expect(capturedArguments).toContain('-f')
-    expect(capturedArguments).toContain('/home/user/project/.dust/Dockerfile')
+    expect(capturedArguments).toContain(
+      '/home/user/project/.dust/config/container/Dockerfile'
+    )
     expect(capturedArguments).toContain('/home/user/project')
   })
 })
 
 describe('hasDockerfile', () => {
-  test('returns true when .dust/Dockerfile exists', () => {
+  test('returns true when .dust/config/container/Dockerfile exists', () => {
     const dependencies: DockerDependencies = {
       spawn: createMockSpawn(0),
       homedir: () => '/home/user',
-      existsSync: (p: string) => p === '/home/user/project/.dust/Dockerfile',
+      existsSync: (p: string) =>
+        p === '/home/user/project/.dust/config/container/Dockerfile',
     }
 
     expect(hasDockerfile('/home/user/project', dependencies)).toBe(true)
   })
 
-  test('returns false when .dust/Dockerfile does not exist', () => {
+  test('returns false when .dust/config/container/Dockerfile does not exist', () => {
     const dependencies: DockerDependencies = {
       spawn: createMockSpawn(0),
       homedir: () => '/home/user',

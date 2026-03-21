@@ -27,7 +27,9 @@ describe('formatLoopEvent', () => {
         type: 'loop.docker_detected',
         imageTag: 'dust-agent-test',
       })
-    ).toBe('Docker mode: found .dust/Dockerfile (image: dust-agent-test)')
+    ).toBe(
+      'Docker mode: found .dust/config/container/Dockerfile (image: dust-agent-test)'
+    )
 
     expect(
       formatLoopEvent({

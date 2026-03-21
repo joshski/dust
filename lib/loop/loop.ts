@@ -139,7 +139,7 @@ export async function runLoop(
   // Install git hooks before starting iterations
   const hooksInstalled = await manageGitHooks(dependencies)
 
-  // Check for Docker mode (.dust/Dockerfile)
+  // Check for Docker mode (.dust/config/container/Dockerfile)
   let dockerConfig: DockerSpawnConfig | undefined
   const dockerDeps = resolveDockerDependencies(loopDependencies)
 
