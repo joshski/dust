@@ -204,6 +204,48 @@ describe('spawnCodex', () => {
     )
   })
 
+  test('maps cwd to /workspace when running codex in docker', async () => {
+    let capturedArguments: string[] = []
+
+    const dependencies: EventSourceDependencies = {
+      spawn: createSpawnStub((_command: string, spawnArguments: string[]) => {
+        capturedArguments = spawnArguments
+        return {
+          stdout: new PassThrough(),
+          killed: false,
+          kill: () => true,
+          on(event: string, listener: EventListener) {
+            if (event === 'close') setTimeout(() => listener(0), 0)
+            return this
+          },
+        }
+      }),
+      createInterface: createReadlineStub([]),
+    }
+
+    for await (const _ of spawnCodex(
+      'my prompt',
+      {
+        cwd: '/host/path/that/does/not/exist/in/container',
+        docker: {
+          imageTag: 'dust-agent-test',
+          repoPath: '/project',
+          homeDir: '/home/user',
+        },
+      },
+      dependencies
+    )) {
+      // consume
+    }
+
+    const cdIndex = capturedArguments.indexOf('--cd')
+    expect(cdIndex).toBeGreaterThanOrEqual(0)
+    expect(capturedArguments[cdIndex + 1]).toBe('/workspace')
+    expect(capturedArguments).not.toContain(
+      '/host/path/that/does/not/exist/in/container'
+    )
+  })
+
   test('includes stderr in error message on non-zero exit', async () => {
     const dependencies = createMockDependencies(
       ['{"type": "event"}'],

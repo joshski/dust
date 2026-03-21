@@ -99,7 +99,7 @@ export async function* spawnCodex(
   const codexArguments = ['exec', prompt, '--json', '--yolo']
 
   if (cwd) {
-    codexArguments.push('--cd', cwd)
+    codexArguments.push('--cd', docker ? '/workspace' : cwd)
   }
 
   const mergedEnv = { ...process.env, ...env }
