@@ -842,6 +842,51 @@ describe('runLoop', () => {
     else process.env.CLAUDE_CODE_OAUTH_TOKEN = originalToken
   })
 
+  test('does not require CLAUDE_CODE_OAUTH_TOKEN for codex in Docker mode', async () => {
+    const originalToken = process.env.CLAUDE_CODE_OAUTH_TOKEN
+    delete process.env.CLAUDE_CODE_OAUTH_TOKEN
+
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          config: {
+            container: {
+              Dockerfile: 'FROM node:20',
+            },
+          },
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+          },
+        },
+      },
+    })
+    dependencies.arguments = ['1']
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const loopDeps = createLoopDeps({
+      run: async () => {},
+      agentType: 'codex',
+      dockerDeps: {
+        existsSync: (p: string) =>
+          p === '/project/.dust/config/container/Dockerfile',
+        homedir: () => '/home/user',
+        spawn: createMockSpawn(0),
+      },
+    })
+
+    const result = await runLoop(dependencies, loopDeps)
+
+    expect(result.exitCode).toBe(0)
+    expect(context.stderrLines.join('\n')).not.toContain(
+      'CLAUDE_CODE_OAUTH_TOKEN'
+    )
+
+    if (originalToken === undefined) delete process.env.CLAUDE_CODE_OAUTH_TOKEN
+    else process.env.CLAUDE_CODE_OAUTH_TOKEN = originalToken
+  })
+
   test('returns error when Docker not available', async () => {
     const dependencies = createDependencies({
       project: {

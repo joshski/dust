@@ -14,3 +14,9 @@ mv .dust/Dockerfile .dust/config/container/Dockerfile
 ```
 
 `dust lint` reports an error if `.dust/Dockerfile` exists, and agent runtime also exits early with the same migration guidance.
+
+## Improvements
+
+### Docker mode supports Codex runtime
+
+Codex now runs inside Docker when `.dust/config/container/Dockerfile` is present, matching Claude's containerized runtime behavior.

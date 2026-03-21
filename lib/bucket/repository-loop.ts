@@ -349,8 +349,10 @@ async function setupDockerConfig(
     }
   }
 
+  const isCodexRepo = repoState.repository.agentProvider === 'codex'
+
   /* v8 ignore start -- Docker mode requires complex setup with real Docker */
-  if (!repoDeps.auth.claudeCodeOauthToken) {
+  if (!isCodexRepo && !repoDeps.auth.claudeCodeOauthToken) {
     log('CLAUDE_CODE_OAUTH_TOKEN is not set, cannot run in Docker mode')
     appendLogLine(
       repoState.logBuffer,
@@ -375,29 +377,35 @@ async function setupDockerConfig(
   })
   log(`git credential proxy started on port ${gitProxy.port}`)
 
-  const apiProxy = await createClaudeApiProxyServer()
-  log(`claude api proxy started on port ${apiProxy.port}`)
+  let stopApiProxy: (() => void) | undefined
+  const config: DockerSpawnConfig = {
+    ...dockerResult.config,
+    gitProxyUrl: `http://host.docker.internal:${gitProxy.port}`,
+  }
 
-  const claudeApiProxyUrl = `http://host.docker.internal:${apiProxy.port}`
+  if (!isCodexRepo) {
+    const apiProxy = await createClaudeApiProxyServer()
+    stopApiProxy = apiProxy.stop
+    log(`claude api proxy started on port ${apiProxy.port}`)
 
-  // Create temp settings file with apiKeyHelper configuration
-  const settingsFilePath = join(
-    os.tmpdir(),
-    `dust-claude-settings-${repoState.repository.name.replace(/\//g, '-')}.json`
-  )
-  const settingsContent = generateApiKeyHelperSettings(claudeApiProxyUrl)
-  writeFileSync(settingsFilePath, settingsContent, 'utf-8')
-  log(`created settings file at ${settingsFilePath}`)
+    const claudeApiProxyUrl = `http://host.docker.internal:${apiProxy.port}`
+
+    // Create temp settings file with apiKeyHelper configuration
+    const settingsFilePath = join(
+      os.tmpdir(),
+      `dust-claude-settings-${repoState.repository.name.replace(/\//g, '-')}.json`
+    )
+    const settingsContent = generateApiKeyHelperSettings(claudeApiProxyUrl)
+    writeFileSync(settingsFilePath, settingsContent, 'utf-8')
+    log(`created settings file at ${settingsFilePath}`)
+    config.claudeApiProxyUrl = claudeApiProxyUrl
+    config.settingsFilePath = settingsFilePath
+  }
 
   return {
-    config: {
-      ...dockerResult.config,
-      gitProxyUrl: `http://host.docker.internal:${gitProxy.port}`,
-      claudeApiProxyUrl,
-      settingsFilePath,
-    },
+    config,
     stopGitProxy: gitProxy.stop,
-    stopApiProxy: apiProxy.stop,
+    stopApiProxy,
     shouldExit: false,
   }
   /* v8 ignore stop */

@@ -8,6 +8,7 @@ import {
   createSpawnStub,
 } from '../test/process-event-source-stubs'
 import {
+  buildDockerRunArguments,
   defaultDependencies,
   type EventSourceDependencies,
   spawnCodex,
@@ -154,6 +155,53 @@ describe('spawnCodex', () => {
     }
 
     expect(capturedArguments).not.toContain('--cd')
+  })
+
+  test('spawns docker when docker config is provided', async () => {
+    let capturedCommand = ''
+    let capturedArguments: string[] = []
+
+    const dependencies: EventSourceDependencies = {
+      spawn: createSpawnStub((command: string, spawnArguments: string[]) => {
+        capturedCommand = command
+        capturedArguments = spawnArguments
+        return {
+          stdout: new PassThrough(),
+          killed: false,
+          kill: () => true,
+          on(event: string, listener: EventListener) {
+            if (event === 'close') setTimeout(() => listener(0), 0)
+            return this
+          },
+        }
+      }),
+      createInterface: createReadlineStub([]),
+    }
+
+    for await (const _ of spawnCodex(
+      'my prompt',
+      {
+        docker: {
+          imageTag: 'dust-agent-test',
+          repoPath: '/project',
+          homeDir: '/home/user',
+          gitProxyUrl: 'http://host.docker.internal:3001',
+        },
+      },
+      dependencies
+    )) {
+      // consume
+    }
+
+    expect(capturedCommand).toBe('docker')
+    expect(capturedArguments).toContain('run')
+    expect(capturedArguments).toContain('dust-agent-test')
+    expect(capturedArguments).toContain('codex')
+    expect(capturedArguments).toContain('exec')
+    expect(capturedArguments).toContain('my prompt')
+    expect(capturedArguments).toContain(
+      'GIT_PROXY_URL=http://host.docker.internal:3001'
+    )
   })
 
   test('includes stderr in error message on non-zero exit', async () => {
@@ -355,5 +403,87 @@ describe('spawnCodex', () => {
     }
 
     expect(killCallCount).toBe(0)
+  })
+})
+
+describe('buildDockerRunArguments', () => {
+  test('passes through OPENAI_API_KEY from process.env when not in env', () => {
+    const originalKey = process.env.OPENAI_API_KEY
+    process.env.OPENAI_API_KEY = 'test-openai-key'
+
+    const dockerArguments = buildDockerRunArguments(
+      {
+        imageTag: 'dust-agent-test',
+        repoPath: '/project',
+        homeDir: '/home/user',
+      },
+      ['exec', 'test prompt', '--json', '--yolo'],
+      {}
+    )
+
+    expect(dockerArguments).toContain('OPENAI_API_KEY=test-openai-key')
+
+    if (originalKey === undefined) delete process.env.OPENAI_API_KEY
+    else process.env.OPENAI_API_KEY = originalKey
+  })
+
+  test('uses explicit OPENAI_API_KEY from env over process.env', () => {
+    const originalKey = process.env.OPENAI_API_KEY
+    process.env.OPENAI_API_KEY = 'from-process-env'
+
+    const dockerArguments = buildDockerRunArguments(
+      {
+        imageTag: 'dust-agent-test',
+        repoPath: '/project',
+        homeDir: '/home/user',
+      },
+      ['exec', 'test prompt', '--json', '--yolo'],
+      { OPENAI_API_KEY: 'from-env-param' }
+    )
+
+    const matches = dockerArguments.filter(argument =>
+      argument.includes('OPENAI_API_KEY')
+    )
+    expect(matches).toEqual(['OPENAI_API_KEY=from-env-param'])
+
+    if (originalKey === undefined) delete process.env.OPENAI_API_KEY
+    else process.env.OPENAI_API_KEY = originalKey
+  })
+
+  test('mounts CODEX_HOME from process.env when set', () => {
+    const originalCodexHome = process.env.CODEX_HOME
+    process.env.CODEX_HOME = '/custom/codex-home'
+
+    const dockerArguments = buildDockerRunArguments(
+      {
+        imageTag: 'dust-agent-test',
+        repoPath: '/project',
+        homeDir: '/home/user',
+      },
+      ['exec', 'test prompt', '--json', '--yolo'],
+      {}
+    )
+
+    expect(dockerArguments).toContain('/custom/codex-home:/home/user/.codex')
+    expect(dockerArguments).toContain('CODEX_HOME=/home/user/.codex')
+
+    if (originalCodexHome === undefined) delete process.env.CODEX_HOME
+    else process.env.CODEX_HOME = originalCodexHome
+  })
+
+  test('uses caller-provided git identity over defaults', () => {
+    const dockerArguments = buildDockerRunArguments(
+      {
+        imageTag: 'dust-agent-test',
+        repoPath: '/project',
+        homeDir: '/home/user',
+      },
+      ['exec', 'test prompt', '--json', '--yolo'],
+      { GIT_AUTHOR_NAME: 'Custom Name' }
+    )
+
+    expect(dockerArguments).toContain('GIT_AUTHOR_NAME=Custom Name')
+    expect(dockerArguments).not.toContain('GIT_AUTHOR_NAME=Dust Agent')
+    expect(dockerArguments).toContain('GIT_COMMITTER_NAME=Dust Agent')
   })
 })

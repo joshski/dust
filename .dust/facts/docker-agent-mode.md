@@ -8,7 +8,9 @@ The legacy path `.dust/Dockerfile` is not supported. `dust lint` reports a migra
 
 1. Create `.dust/config/container/Dockerfile` in your repository
 2. The Dockerfile must create a **non-root user** — Claude Code refuses `--dangerously-skip-permissions` when running as root
-3. Install Claude Code (`npm install -g @anthropic-ai/claude-code`) in the image
+3. Install the agent CLIs you plan to run in Docker:
+   - Claude provider: `npm install -g @anthropic-ai/claude-code`
+   - Codex provider: `npm install -g @openai/codex`
 
 Example:
 ```dockerfile
@@ -27,7 +29,7 @@ Docker containers cannot access the host's keychain. Authentication is handled t
 - **Claude API Proxy with apiKeyHelper**: When `claudeApiProxyUrl` is configured, Claude Code is configured to use `apiKeyHelper` to fetch short-TTL helper tokens from the proxy's `/token` endpoint. The container sees `ANTHROPIC_BASE_URL` pointing to the proxy and uses `--settings` with a mounted settings file containing the `apiKeyHelper` command. No OAuth tokens or dummy auth tokens are passed to the container environment.
 - **OPENAI_API_KEY**: Required for Codex agent mode, passed as an environment variable.
 
-Without the API proxy, `CLAUDE_CODE_OAUTH_TOKEN` must be set and `~/.claude` is mounted for token refresh. If neither is available when Docker mode is detected, dust exits early with an error message.
+Without the API proxy, `CLAUDE_CODE_OAUTH_TOKEN` must be set and `~/.claude` is mounted for token refresh. For Codex in Docker, `OPENAI_API_KEY` is passed through when set, and `CODEX_HOME` is mounted into the container.
 
 ## How it works
 

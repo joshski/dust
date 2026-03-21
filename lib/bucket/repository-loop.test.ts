@@ -999,6 +999,81 @@ describe('runRepositoryLoop', () => {
     expect(tokenError).toBeDefined()
   })
 
+  test('does not require CLAUDE_CODE_OAUTH_TOKEN for codex repos in Docker mode', async () => {
+    stubEnv('CLAUDE_CODE_OAUTH_TOKEN', undefined)
+
+    const repoState = createTestRepoState('codex')
+    let sleepCallCount = 0
+    let dockerBuildCalled = false
+
+    const repoDeps: RepositoryDependencies = {
+      spawn: asTestType<RepositoryDependencies['spawn']>(
+        (cmd: string, spawnArgs: string[]) => {
+          if (cmd === 'docker' && spawnArgs[0] === '--version') {
+            const proc = {
+              on(event: string, listener: (code: number) => void) {
+                if (event === 'close') setTimeout(() => listener(0), 0)
+                return proc
+              },
+              stdout: { on: () => {} },
+              stderr: { on: () => {} },
+            }
+            return proc
+          }
+          if (cmd === 'docker' && spawnArgs[0] === 'build') {
+            dockerBuildCalled = true
+            const proc = {
+              on(event: string, listener: (code: number) => void) {
+                if (event === 'close') setTimeout(() => listener(0), 0)
+                return proc
+              },
+              stdout: { on: () => {} },
+              stderr: { on: () => {} },
+            }
+            return proc
+          }
+          throw new Error('spawn failure')
+        }
+      ),
+      run: async () => {},
+      fileSystem: {
+        exists: () => false,
+        readFile: async () => '',
+        readdir: async () => [],
+        isDirectory: () => false,
+        writeFile: async () => {},
+        mkdir: async () => {},
+        chmod: async () => {},
+        getFileCreationTime: () => 0,
+        rename: async () => {},
+      },
+      sleep: async () => {
+        sleepCallCount++
+        if (sleepCallCount >= 1) {
+          repoState.lifecycle = { type: 'stopping' }
+        }
+      },
+      getReposDir: () => '/tmp/repos',
+      dockerDeps: {
+        existsSync: (p: string) =>
+          p.includes('.dust/config/container/Dockerfile'),
+        homedir: () => '/home/test',
+      },
+      session: createTestSessionConfig(),
+      runtime: createTestRuntimeConfig(),
+      auth: createTestAuthConfig(),
+    }
+
+    await runRepositoryLoop(repoState, repoDeps)
+
+    expect(dockerBuildCalled).toBe(true)
+    const lines = getLogLines(repoState.logBuffer)
+    const tokenError = lines.find(l =>
+      l.text.includes('CLAUDE_CODE_OAUTH_TOKEN')
+    )
+    expect(tokenError).toBeUndefined()
+  })
+
   test('logs warning when Dockerfile found but Docker not available', async () => {
     const repoState = createTestRepoState()
     let sleepCallCount = 0
