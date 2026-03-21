@@ -19,6 +19,13 @@ The Docker configuration contract is now resolved: `.dust/config/container/Docke
 - Make Docker setup provider-aware (Claude and Codex), including auth and proxy behavior
 - Add clear fallback and diagnostics when Docker is unavailable
 
+## Current status (2026-03-21)
+
+- Smallest Codex support step is now covered in end-to-end testing:
+  - Docker E2E run includes both `claude` and `codex` providers in the same workflow.
+  - Docker custom file path coverage is aligned to `.dust/config/container/Dockerfile`.
+- This does not yet make Docker the default runtime; it only reduces rollout risk by validating multi-provider behavior.
+
 ## What needs to be done
 
 1. ~~Resolve and document the Docker configuration contract (legacy `.dust/Dockerfile` vs `.dust/config/*`).~~ Done: The canonical contract is `.dust/config/container/Dockerfile`. The legacy `.dust/Dockerfile` path is detected by `dust lint` and reports an error with migration instructions.
@@ -26,6 +33,7 @@ The Docker configuration contract is now resolved: `.dust/config/container/Docke
 3. Introduce generated default container configuration for common repositories.
 4. Add migration guidance and compatibility behavior for early adopters.
 5. Expand end-to-end coverage to validate Docker-default behavior across providers.
+   Minimal first step is complete (Codex + Claude coverage added); Docker-by-default behavior still needs dedicated coverage.
 
 ## Open Questions
 
