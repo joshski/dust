@@ -2,6 +2,8 @@
 
 Dust runs agent sessions inside Docker containers when `.dust/config/container/Dockerfile` exists. This provides the [sandboxing](./autonomous-agents-need-sandboxes.md) recommended for autonomous agents.
 
+The legacy path `.dust/Dockerfile` is not supported. `dust lint` reports a migration error, and runtime exits early with the same message.
+
 ## Setup
 
 1. Create `.dust/config/container/Dockerfile` in your repository
@@ -30,6 +32,7 @@ Without the API proxy, `CLAUDE_CODE_OAUTH_TOKEN` must be set and `~/.claude` is 
 ## How it works
 
 - `hasDockerfile()` checks for `.dust/config/container/Dockerfile` in the repo
+- `hasLegacyDockerfile()` checks for `.dust/Dockerfile` and fails fast with migration guidance
 - `buildDockerImage()` builds the image with a tag derived from the repo path
 - Agent sessions are spawned with `docker run`, mounting the repo at `/workspace`
 - When using the Claude API proxy, `~/.claude` and `~/.claude.json` are NOT mounted (credentials stay on host)

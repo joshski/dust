@@ -1993,7 +1993,7 @@ describe('validateDirectoryStructure', () => {
       {
         file: '/project/.dust/Dockerfile',
         message:
-          '".dust/Dockerfile" is no longer supported. Move Docker-related configuration under ".dust/config/".',
+          '".dust/Dockerfile" is no longer supported. Move it to ".dust/config/container/Dockerfile".',
       },
     ])
   })
@@ -2352,7 +2352,7 @@ This is a principle.
       '".dust/Dockerfile" is no longer supported'
     )
     expect(context.stderrLines.join('\n')).toContain(
-      'Move Docker-related configuration under ".dust/config/".'
+      'Move it to ".dust/config/container/Dockerfile".'
     )
   })
 

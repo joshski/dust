@@ -28,7 +28,7 @@ The Docker configuration contract is now resolved: `.dust/config/container/Docke
 
 ## What needs to be done
 
-1. ~~Resolve and document the Docker configuration contract (legacy `.dust/Dockerfile` vs `.dust/config/*`).~~ Done: The canonical contract is `.dust/config/container/Dockerfile`. The legacy `.dust/Dockerfile` path is detected by `dust lint` and reports an error with migration instructions.
+1. ~~Resolve and document the Docker configuration contract (legacy `.dust/Dockerfile` vs `.dust/config/*`).~~ Done: The canonical contract is `.dust/config/container/Dockerfile`. The legacy `.dust/Dockerfile` path is rejected by both `dust lint` and runtime with migration instructions.
 2. Add provider-aware Docker execution support for both Claude and Codex paths.
 3. Introduce generated default container configuration for common repositories.
 4. Add migration guidance and compatibility behavior for early adopters.

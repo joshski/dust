@@ -13,4 +13,4 @@ mkdir -p .dust/config/container
 mv .dust/Dockerfile .dust/config/container/Dockerfile
 ```
 
-Running `dust lint` will report an error if `.dust/Dockerfile` exists.
+`dust lint` reports an error if `.dust/Dockerfile` exists, and agent runtime also exits early with the same migration guidance.

@@ -26,6 +26,12 @@ export interface DockerDependencies {
   existsSync: (path: string) => boolean
 }
 
+const CANONICAL_DOCKERFILE_PATH = ['.dust', 'config', 'container', 'Dockerfile']
+const LEGACY_DOCKERFILE_PATH = ['.dust', 'Dockerfile']
+
+const LEGACY_DOCKERFILE_ERROR =
+  'Legacy Docker configuration path ".dust/Dockerfile" is no longer supported. Move it to ".dust/config/container/Dockerfile".'
+
 /**
  * Check if Docker is available on the system.
  */
@@ -120,13 +126,18 @@ export function hasDockerfile(
   repoPath: string,
   dependencies: DockerDependencies
 ): boolean {
-  const dockerfilePath = path.join(
-    repoPath,
-    '.dust',
-    'config',
-    'container',
-    'Dockerfile'
-  )
+  const dockerfilePath = path.join(repoPath, ...CANONICAL_DOCKERFILE_PATH)
+  return dependencies.existsSync(dockerfilePath)
+}
+
+/**
+ * Check if a Dockerfile exists at the legacy .dust/Dockerfile location.
+ */
+export function hasLegacyDockerfile(
+  repoPath: string,
+  dependencies: DockerDependencies
+): boolean {
+  const dockerfilePath = path.join(repoPath, ...LEGACY_DOCKERFILE_PATH)
   return dependencies.existsSync(dockerfilePath)
 }
 
@@ -150,9 +161,10 @@ type PrepareDockerConfigResult =
 /**
  * Prepare Docker configuration for agent execution.
  *
- * Checks for a .dust/config/container/Dockerfile, verifies Docker availability,
- * builds the image, and returns the spawn configuration. Emits events
- * throughout the process.
+ * Rejects legacy .dust/Dockerfile usage, checks for a
+ * .dust/config/container/Dockerfile, verifies Docker availability, builds the
+ * image, and returns the spawn configuration. Emits events throughout the
+ * process.
  *
  * Returns:
  * - `{ config: DockerSpawnConfig }` on success
@@ -164,7 +176,12 @@ export async function prepareDockerConfig(
   dependencies: DockerDependencies,
   onEvent: (event: DockerPrepareEvent) => void
 ): Promise<PrepareDockerConfigResult> {
-  log(`checking for .dust/config/container/Dockerfile in ${repoPath}`)
+  log(`checking for Docker configuration in ${repoPath}`)
+
+  if (hasLegacyDockerfile(repoPath, dependencies)) {
+    onEvent({ type: 'loop.docker_error', error: LEGACY_DOCKERFILE_ERROR })
+    return { error: LEGACY_DOCKERFILE_ERROR }
+  }
 
   if (!hasDockerfile(repoPath, dependencies)) {
     log('no .dust/config/container/Dockerfile found, running without Docker')

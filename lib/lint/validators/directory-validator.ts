@@ -90,7 +90,7 @@ export async function validateDirectoryStructure(
       violations.push({
         file: entryPath,
         message:
-          '".dust/Dockerfile" is no longer supported. Move Docker-related configuration under ".dust/config/".',
+          '".dust/Dockerfile" is no longer supported. Move it to ".dust/config/container/Dockerfile".',
       })
       continue
     }
