@@ -131,7 +131,7 @@ function createBucketDependencies(
     isTTY: false,
     sleep: () => new Promise(() => {}),
     getReposDir: () => '/tmp',
-    createInterval: (callback, ms) => setInterval(callback, ms),
+    createInterval: setInterval,
     clearInterval: id => clearInterval(id as ReturnType<typeof setInterval>),
     auth: createMockAuthDeps(),
     authConfig: createTestAuthConfig(),
@@ -2065,7 +2065,7 @@ describe('bucketWorker', () => {
     const bucketDependencies = createBucketDependencies({
       bucket: createTestBucketConfig({ token: 'token' }),
       isTTY: true,
-      writeStdout: (data: string) => written.push(data),
+      writeStdout: written.push.bind(written),
       getTerminalSize: () => ({ width: 100, height: 30 }),
       setupResize: () => () => {},
       setupKeypress: onKey => {
@@ -2134,7 +2134,7 @@ describe('setupTUI', () => {
 
     const bucketDependencies = createBucketDependencies({
       getTerminalSize: () => ({ width: 120, height: 40 }),
-      writeStdout: (data: string) => written.push(data),
+      writeStdout: written.push.bind(written),
       setupResize: () => () => {},
     })
 
@@ -2154,7 +2154,7 @@ describe('setupTUI', () => {
     const time = createTimeEmulator()
 
     const bucketDependencies = createBucketDependencies({
-      writeStdout: (data: string) => written.push(data),
+      writeStdout: written.push.bind(written),
       setupResize: () => () => {
         resizeCleanedUp = true
       },
@@ -2189,7 +2189,7 @@ describe('setupTUI', () => {
     const time = createTimeEmulator()
 
     const bucketDependencies = createBucketDependencies({
-      writeStdout: (data: string) => written.push(data),
+      writeStdout: written.push.bind(written),
       setupResize: () => () => {},
       createInterval: time.createInterval,
       clearInterval: time.clearInterval,

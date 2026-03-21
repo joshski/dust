@@ -8,7 +8,7 @@
  * Both `lintMarkdown()` and `validatePatch()` share this pipeline.
  */
 
-import { ARTIFACT_TYPES, type ArtifactType } from '../artifacts/index'
+import { ARTIFACT_TYPES } from '../artifacts/index'
 import {
   type ParsedArtifact,
   parseArtifact,

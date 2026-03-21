@@ -7,8 +7,6 @@
  */
 
 import type {
-  ConnectionReadyMessage,
-  ConnectionRejectedMessage,
   RepositoryListItem,
   ServerMessage,
   ToolDefinition,

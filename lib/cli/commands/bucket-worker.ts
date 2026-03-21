@@ -373,10 +373,9 @@ export function createAuthFileSystem(
       dependencies.writeFile(path, content, 'utf8'),
     mkdir: (path: string, options?: { recursive?: boolean }) =>
       dependencies.mkdir(path, options).then(() => {}),
-    readdir: (path: string) => dependencies.readdir(path),
-    chmod: (path: string, mode: number) => dependencies.chmod(path, mode),
-    rename: (oldPath: string, newPath: string) =>
-      dependencies.rename(oldPath, newPath),
+    readdir: dependencies.readdir.bind(dependencies),
+    chmod: dependencies.chmod.bind(dependencies),
+    rename: dependencies.rename.bind(dependencies),
   }
 }
 
@@ -694,7 +693,6 @@ export function connectWebSocket(
   if (state.shuttingDown) return
 
   const wsUrl = getWebSocketUrl(bucketDependencies.bucket)
-  let waitingForConnectionReady = false
   let connectionReady = false
 
   const processIncomingServerMessage = (event: { data: string }): void => {
@@ -738,10 +736,8 @@ export function connectWebSocket(
     // Handle connection handshake messages specially
     if (message.type === 'connection-ready') {
       connectionReady = true
-      waitingForConnectionReady = false
     } else if (message.type === 'connection-rejected') {
       connectionReady = false
-      waitingForConnectionReady = false
     } else if (!connectionReady) {
       // Ignore non-handshake messages before connection-ready
       return
@@ -765,7 +761,6 @@ export function connectWebSocket(
   }
 
   const sendConnectionInit = async (): Promise<void> => {
-    waitingForConnectionReady = true
     let message: ConnectionInitMessage
 
     try {
@@ -792,7 +787,6 @@ export function connectWebSocket(
       )
       // Mark as ready so we can process messages without waiting for server response
       connectionReady = true
-      waitingForConnectionReady = false
     } /* v8 ignore stop */
   }
 
@@ -913,7 +907,7 @@ function createMessageEffectDeps(
     logMessage: (message, stream) =>
       logMessage(state, context, useTUI, message, stream),
 
-    debugLog: message => log(message),
+    debugLog: log,
 
     syncUIWithRepoList: repositories => syncUIWithRepoList(state, repositories),
 

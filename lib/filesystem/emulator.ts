@@ -127,7 +127,7 @@ export function createFileSystemEmulator(
   }
 
   return {
-    exists: (path: string) => paths.has(path),
+    exists: paths.has.bind(paths),
     isDirectory: (path: string) => paths.has(path) && !files.has(path),
     readFile: async (path: string) => {
       if (!files.has(path)) {

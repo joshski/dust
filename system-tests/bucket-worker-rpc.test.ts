@@ -183,7 +183,7 @@ describe('bucket worker RPC integration', () => {
         readFile: (p: string) => readFile(p, 'utf8'),
         writeFile: (p: string, c: string) => writeFile(p, c, 'utf8'),
         mkdir,
-        readdir: (p: string) => readdir(p),
+        readdir,
         chmod,
         rename,
       })
@@ -226,8 +226,8 @@ describe('bucket worker RPC integration', () => {
         arguments: [],
         context: {
           cwd: process.cwd(),
-          stdout: (msg: string) => stdoutLines.push(msg),
-          stderr: (msg: string) => stderrLines.push(msg),
+          stdout: stdoutLines.push.bind(stdoutLines),
+          stderr: stderrLines.push.bind(stderrLines),
         },
         fileSystem,
         globScanner: { scan: async function* () {} },

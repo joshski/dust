@@ -134,8 +134,8 @@ async function runValidationCheck(
   const outputLines: string[] = []
   const bufferedContext: CommandContext = {
     cwd: dependencies.context.cwd,
-    stdout: (msg: string) => outputLines.push(msg),
-    stderr: (msg: string) => outputLines.push(msg),
+    stdout: outputLines.push.bind(outputLines),
+    stderr: outputLines.push.bind(outputLines),
   }
 
   log('running built-in check: dust lint')

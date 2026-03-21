@@ -49,7 +49,7 @@ export interface ClaudeApiProxyDependencies {
 /* v8 ignore start - default dependencies are used at runtime, not in unit tests */
 export const defaultDependencies: ClaudeApiProxyDependencies = {
   homedir,
-  readFileSync: (path, encoding) => readFileSync(path, encoding),
+  readFileSync,
   fetch,
 }
 /* v8 ignore stop */

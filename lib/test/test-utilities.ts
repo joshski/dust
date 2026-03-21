@@ -279,8 +279,8 @@ export function createContextEmulator(cwd = '/project'): ContextEmulator {
     stdoutInline: (msg: string) => {
       stdoutInlineBuffer += msg
     },
-    stderr: (msg: string) => stderrLines.push(msg),
-    emitEvent: (event: CommandEvent) => emittedEvents.push(event),
+    stderr: stderrLines.push.bind(stderrLines),
+    emitEvent: emittedEvents.push.bind(emittedEvents),
     stdoutLines,
     stderrLines,
     emittedEvents,

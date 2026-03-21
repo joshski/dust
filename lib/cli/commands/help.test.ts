@@ -16,8 +16,8 @@ function createMockContext(): CommandContext & {
   const stderrLines: string[] = []
   return {
     cwd: '/project',
-    stdout: (msg: string) => stdoutLines.push(msg),
-    stderr: (msg: string) => stderrLines.push(msg),
+    stdout: stdoutLines.push.bind(stdoutLines),
+    stderr: stderrLines.push.bind(stderrLines),
     stdoutLines,
     stderrLines,
   }

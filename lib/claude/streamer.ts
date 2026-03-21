@@ -83,7 +83,7 @@ export function processEvent(
 
 export function createStdoutSink(): OutputSink {
   return {
-    write: (text: string) => process.stdout.write(text),
-    line: (text: string) => console.log(text),
+    write: process.stdout.write.bind(process.stdout),
+    line: console.log.bind(console),
   }
 }

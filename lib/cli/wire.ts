@@ -90,9 +90,9 @@ export function createFileSystem(primitives: FileSystemPrimitives): FileSystem {
       await primitives.mkdir(path, options)
     },
     getFileCreationTime: path => primitives.statSync(path).birthtimeMs,
-    readdir: path => primitives.readdir(path),
-    chmod: (path, mode) => primitives.chmod(path, mode),
-    rename: (oldPath, newPath) => primitives.rename(oldPath, newPath),
+    readdir: primitives.readdir.bind(primitives),
+    chmod: primitives.chmod.bind(primitives),
+    rename: primitives.rename.bind(primitives),
   }
 }
 

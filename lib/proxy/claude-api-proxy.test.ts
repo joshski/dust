@@ -19,8 +19,6 @@ import {
 } from './claude-api-proxy'
 import {
   createHelperTokenState,
-  generateHelperToken,
-  type HelperTokenState,
   HELPER_TOKEN_TTL_MS,
   rotateHelperToken,
 } from './helper-token'

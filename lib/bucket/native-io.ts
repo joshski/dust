@@ -55,9 +55,9 @@ function adaptWebSocket(ws: WebSocket): WebSocketLike {
   })
 
   return {
-    addEventListener: (type, handler) => emitter.on(type, handler),
-    close: () => ws.close(),
-    send: (data: string) => ws.send(data),
+    addEventListener: emitter.on.bind(emitter),
+    close: ws.close.bind(ws),
+    send: ws.send.bind(ws),
     get readyState() {
       return currentReadyState
     },
@@ -98,7 +98,7 @@ function defaultSetupKeypress(onKey: (key: string) => void): () => void {
 }
 
 function defaultSetupSignals(onSignal: () => void): () => void {
-  const handler = () => onSignal()
+  const handler = onSignal
 
   process.on('SIGINT', handler)
   process.on('SIGTERM', handler)
@@ -238,8 +238,7 @@ export function createDefaultBucketDependencies(): BucketDependencies {
     isTTY: process.stdout.isTTY ?? false,
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
     getReposDir: () => getReposDir(envConfig.session, homedir()),
-    createInterval: (callback: () => void, ms: number) =>
-      setInterval(callback, ms),
+    createInterval: setInterval,
     clearInterval: (id: unknown) =>
       clearInterval(id as ReturnType<typeof setInterval>),
     auth: {

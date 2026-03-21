@@ -28,7 +28,7 @@ describe('parseArtifacts', () => {
       'facts/my-fact.md': '# My Fact\n\nThis is a fact.',
       'ideas/my-idea.md': '# My Idea\n\nThis is an idea.',
     })
-    const { context, violations } = await parseArtifacts(fileSystem, dustPath)
+    const { context } = await parseArtifacts(fileSystem, dustPath)
 
     expect(context.byType.facts).toHaveLength(1)
     expect(context.byType.ideas).toHaveLength(1)

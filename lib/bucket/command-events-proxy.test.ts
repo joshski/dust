@@ -132,7 +132,7 @@ describe('startCommandEventsProxy', () => {
   test('forwards accepted POST /events payloads', async () => {
     const events: CommandEventMessage[] = []
     await createProxy({
-      forwardEvent: event => events.push(event),
+      forwardEvent: events.push.bind(events),
     })
 
     const response = await postJson(
@@ -406,7 +406,7 @@ describe('startCommandEventsProxy', () => {
   test('reveals family via POST /reveal/:family', async () => {
     const revealed: string[] = []
     await createProxy({
-      revealFamily: familyName => revealed.push(familyName),
+      revealFamily: revealed.push.bind(revealed),
     })
 
     const response = await postJson(
@@ -423,7 +423,7 @@ describe('startCommandEventsProxy', () => {
   test('reveals family when executing sub-tool via family/sub-tool path', async () => {
     const revealed: string[] = []
     await createProxy({
-      revealFamily: familyName => revealed.push(familyName),
+      revealFamily: revealed.push.bind(revealed),
       forwardToolExecution: async () => ({
         status: 'success',
         output: 'result',

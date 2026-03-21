@@ -247,8 +247,8 @@ describe('wireEntry', () => {
     const logLines: string[] = []
     const errorLines: string[] = []
     const consolePrimitives: ConsolePrimitives = {
-      log: (msg: string) => logLines.push(msg),
-      error: (msg: string) => errorLines.push(msg),
+      log: logLines.push.bind(logLines),
+      error: errorLines.push.bind(errorLines),
     }
 
     await wireEntry(
@@ -308,7 +308,7 @@ describe('wireEntry', () => {
 
     const logLines: string[] = []
     const consolePrimitives: ConsolePrimitives = {
-      log: (msg: string) => logLines.push(msg),
+      log: logLines.push.bind(logLines),
       error: () => {},
     }
 
@@ -342,7 +342,7 @@ describe('wireEntry', () => {
 
     const logLines: string[] = []
     const consolePrimitives: ConsolePrimitives = {
-      log: (msg: string) => logLines.push(msg),
+      log: logLines.push.bind(logLines),
       error: () => {},
     }
 

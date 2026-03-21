@@ -857,7 +857,7 @@ describe('runOneIteration', () => {
     })
 
     await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent, {
-      onRawEvent: rawEvent => rawEvents.push(rawEvent),
+      onRawEvent: rawEvents.push.bind(rawEvents),
     })
 
     // Verify the raw event was received by the callback

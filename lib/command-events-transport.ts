@@ -23,6 +23,7 @@ interface EventTransportDependencies {
 }
 
 const defaultDependencies: EventTransportDependencies = {
+  // oxlint-disable-next-line dust/no-thin-delegate-wrappers -- late-binding: test monkeypatches globalThis.fetch
   fetch: (input, init) => fetch(input, init),
   onError: message => {
     console.error(message)

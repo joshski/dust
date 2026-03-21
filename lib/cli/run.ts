@@ -4,7 +4,7 @@
  * This is the minimal shell that passes real Node.js APIs to the wiring logic.
  * All testable logic is in wire.ts.
  */
-import { type CommandEventMessage, createEventEmitter } from '../command-events'
+import { createEventEmitter } from '../command-events'
 import { createCommandEventWriter } from '../command-events-transport'
 import { readEnvConfig } from '../env-config'
 import { defaultFileSystemPrimitives, wireEntry } from './wire'
@@ -13,16 +13,10 @@ import { defaultFileSystemPrimitives, wireEntry } from './wire'
 const envConfig = readEnvConfig(process.env)
 
 const writeEvent = createCommandEventWriter(process.env, {
-  fetch: (input, init) => fetch(input, init),
-  onError: message => {
-    console.error(message)
-  },
+  fetch,
+  onError: console.error.bind(console),
 })
-const emitEvent = writeEvent
-  ? createEventEmitter((message: CommandEventMessage) => {
-      writeEvent(message)
-    })
-  : undefined
+const emitEvent = writeEvent ? createEventEmitter(writeEvent) : undefined
 
 await wireEntry(
   defaultFileSystemPrimitives,

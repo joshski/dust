@@ -39,6 +39,57 @@ import { sleepWithProgress, SLEEP_INTERVAL_MS } from './sleep'
 
 const log = createLogger('dust:loop')
 
+interface DockerProxyConfig {
+  dockerConfig: DockerSpawnConfig
+  stopGitProxy: () => void
+  stopApiProxy: () => void
+  settingsFilePath: string
+}
+
+async function setupDockerProxies(
+  dockerResult: { config: DockerSpawnConfig },
+  loopDependencies: LoopDependencies,
+  sessionId: string
+): Promise<DockerProxyConfig> {
+  const gitProxy = await createGitCredentialProxyServer({
+    spawn: loopDependencies.spawn,
+    userHome: process.env.DUST_USER_HOME || undefined,
+  })
+
+  const apiProxy = await createClaudeApiProxyServer()
+  const claudeApiProxyUrl = `http://host.docker.internal:${apiProxy.port}`
+
+  const settingsFilePath = join(
+    os.tmpdir(),
+    `dust-claude-settings-${sessionId}.json`
+  )
+  const settingsContent = generateApiKeyHelperSettings(claudeApiProxyUrl)
+  writeFileSync(settingsFilePath, settingsContent, 'utf-8')
+  log(`created settings file at ${settingsFilePath}`)
+
+  return {
+    dockerConfig: {
+      ...dockerResult.config,
+      gitProxyUrl: `http://host.docker.internal:${gitProxy.port}`,
+      claudeApiProxyUrl,
+      settingsFilePath,
+    },
+    stopGitProxy: gitProxy.stop,
+    stopApiProxy: apiProxy.stop,
+    settingsFilePath,
+  }
+}
+
+function resolveDockerDependencies(
+  loopDependencies: LoopDependencies
+): DockerDependencies {
+  return {
+    spawn: loopDependencies.dockerDeps?.spawn ?? loopDependencies.spawn,
+    homedir: loopDependencies.dockerDeps?.homedir ?? os.homedir,
+    existsSync: loopDependencies.dockerDeps?.existsSync ?? existsSync,
+  }
+}
+
 export async function runLoop(
   dependencies: CommandDependencies,
   loopDependencies: LoopDependencies
@@ -90,11 +141,7 @@ export async function runLoop(
 
   // Check for Docker mode (.dust/Dockerfile)
   let dockerConfig: DockerSpawnConfig | undefined
-  const dockerDeps: DockerDependencies = {
-    spawn: loopDependencies.dockerDeps?.spawn ?? loopDependencies.spawn,
-    homedir: loopDependencies.dockerDeps?.homedir ?? os.homedir,
-    existsSync: loopDependencies.dockerDeps?.existsSync ?? existsSync,
-  }
+  const dockerDeps = resolveDockerDependencies(loopDependencies)
 
   const dockerResult = await prepareDockerConfig(
     context.cwd,
@@ -107,9 +154,7 @@ export async function runLoop(
     return { exitCode: 1 }
   }
 
-  let stopGitProxy: (() => void) | undefined
-  let stopApiProxy: (() => void) | undefined
-  let settingsFilePath: string | undefined
+  let dockerProxies: DockerProxyConfig | undefined
 
   if ('config' in dockerResult) {
     if (!process.env.CLAUDE_CODE_OAUTH_TOKEN) {
@@ -119,34 +164,12 @@ export async function runLoop(
       return { exitCode: 1 }
     }
 
-    // Start proxies for Docker containers — secrets stay on the host
-    const gitProxy = await createGitCredentialProxyServer({
-      spawn: loopDependencies.spawn,
-      userHome: process.env.DUST_USER_HOME || undefined,
-    })
-    stopGitProxy = gitProxy.stop
-
-    const apiProxy = await createClaudeApiProxyServer()
-    stopApiProxy = apiProxy.stop
-
-    const claudeApiProxyUrl = `http://host.docker.internal:${apiProxy.port}`
-
-    // Create temp settings file with apiKeyHelper configuration
-    // This enables containers to fetch helper tokens from the proxy
-    settingsFilePath = join(
-      os.tmpdir(),
-      `dust-claude-settings-${sessionId}.json`
+    dockerProxies = await setupDockerProxies(
+      dockerResult as { config: DockerSpawnConfig },
+      loopDependencies,
+      sessionId
     )
-    const settingsContent = generateApiKeyHelperSettings(claudeApiProxyUrl)
-    writeFileSync(settingsFilePath, settingsContent, 'utf-8')
-    log(`created settings file at ${settingsFilePath}`)
-
-    dockerConfig = {
-      ...dockerResult.config,
-      gitProxyUrl: `http://host.docker.internal:${gitProxy.port}`,
-      claudeApiProxyUrl,
-      settingsFilePath,
-    }
+    dockerConfig = dockerProxies.dockerConfig
   }
 
   log(`starting loop, maxIterations=${maxIterations}, sessionId=${sessionId}`)
@@ -206,12 +229,12 @@ export async function runLoop(
   }
 
   // Stop proxy servers and clean up temp files
-  stopGitProxy?.()
-  stopApiProxy?.()
-  if (settingsFilePath) {
+  dockerProxies?.stopGitProxy()
+  dockerProxies?.stopApiProxy()
+  if (dockerProxies?.settingsFilePath) {
     try {
-      unlinkSync(settingsFilePath)
-      log(`cleaned up settings file ${settingsFilePath}`)
+      unlinkSync(dockerProxies.settingsFilePath)
+      log(`cleaned up settings file ${dockerProxies.settingsFilePath}`)
     } catch {
       // Ignore cleanup errors
     }

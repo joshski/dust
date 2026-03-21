@@ -3,7 +3,7 @@ import type { LoggingConfig } from '../env-config'
 import { createLoggingService } from './index'
 
 function fakeSink(lines: string[]) {
-  return { write: (line: string) => lines.push(line) }
+  return { write: lines.push.bind(lines) }
 }
 
 function fakeStdout(lines: string[]) {
@@ -229,7 +229,7 @@ describe('enableFileLogs', () => {
     const service = createLoggingService({
       config: noConfig(),
       cwd: () => '/project',
-      setLogFileEnv: path => captured.push(path),
+      setLogFileEnv: captured.push.bind(captured),
     })
     service.enableFileLogs('loop', fakeSink([]))
     expect(captured).toHaveLength(1)
@@ -246,7 +246,7 @@ describe('enableFileLogs', () => {
         logFile: undefined,
         logFormat: undefined,
       },
-      setLogFileEnv: path => captured.push(path),
+      setLogFileEnv: captured.push.bind(captured),
     })
     service.enableFileLogs('loop', fakeSink([]))
     expect(captured).toHaveLength(1)
@@ -262,7 +262,7 @@ describe('enableFileLogs', () => {
         logFile: '/inherited/check.log',
         logFormat: undefined,
       },
-      setLogFileEnv: path => captured.push(path),
+      setLogFileEnv: captured.push.bind(captured),
     })
     service.enableFileLogs('loop', fakeSink([]))
     expect(captured).toHaveLength(0)
@@ -373,7 +373,7 @@ describe('config options', () => {
     const service = createLoggingService({
       config: noConfig(),
       cwd: () => '/my/project',
-      setLogFileEnv: path => captured.push(path),
+      setLogFileEnv: captured.push.bind(captured),
     })
     service.enableFileLogs('test', fakeSink([]))
     expect(captured).toHaveLength(1)

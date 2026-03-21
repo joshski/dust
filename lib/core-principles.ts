@@ -41,7 +41,7 @@ function createReadableFileSystem(): ReadableFileSystem {
     /* v8 ignore stop */
     readFile: (path: string) => readFile(path, 'utf-8'),
     /* v8 ignore next -- interface method not used by parsePrinciple */
-    readdir: async (path: string) => readdirSync(path),
+    readdir: async (path: string) => readdirSync(path), // oxlint-disable-line dust/no-thin-delegate-wrappers -- wraps sync in async interface
   }
 }
 

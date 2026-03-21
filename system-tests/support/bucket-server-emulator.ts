@@ -50,7 +50,7 @@ export function createBucketServerEmulator(
 
     const fakeWs: WebSocketLike = {
       readyState: 0,
-      addEventListener: (type, handler) => localEmitter.on(type, handler),
+      addEventListener: localEmitter.on.bind(localEmitter),
       close: () => {
         wsReadyState = 3
         fakeWs.readyState = 3
