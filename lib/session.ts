@@ -4,6 +4,7 @@ export const DUST_UNATTENDED = 'DUST_UNATTENDED'
 export const DUST_SKIP_AGENT = 'DUST_SKIP_AGENT'
 export const DUST_REPOSITORY_ID = 'DUST_REPOSITORY_ID'
 export const DUST_PROXY_PORT = 'DUST_PROXY_PORT'
+export const DUST_TRACE_ID = 'DUST_TRACE_ID'
 
 export function isUnattended(session: SessionConfig): boolean {
   return !!session.unattended
@@ -12,6 +13,7 @@ export function isUnattended(session: SessionConfig): boolean {
 export function buildUnattendedEnv(options: {
   repositoryId?: string
   proxyPort?: number
+  traceId?: string
   session: SessionConfig
 }): Record<string, string> {
   const env: Record<string, string> = {
@@ -25,6 +27,9 @@ export function buildUnattendedEnv(options: {
   }
   if (options.repositoryId) {
     env[DUST_REPOSITORY_ID] = options.repositoryId
+  }
+  if (options.traceId) {
+    env[DUST_TRACE_ID] = options.traceId
   }
   return env
 }

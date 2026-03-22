@@ -40,6 +40,7 @@ export interface EventMessage {
   // At that point we can stop sending `repository` (full name) entirely.
   repoId?: number
   agentSessionId?: string
+  traceId?: string
   event: AgentSessionEvent
 }
 

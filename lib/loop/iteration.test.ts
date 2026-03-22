@@ -536,6 +536,64 @@ describe('runOneIteration', () => {
     expect(capturedEnv?.DUST_REPOSITORY_ID).toBeUndefined()
   })
 
+  test('passes DUST_TRACE_ID env var when traceId is provided', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+          },
+        },
+      },
+    })
+    let capturedEnv: Record<string, string> | undefined
+    const loopDeps = createLoopDeps({
+      run: async (_prompt, options) => {
+        const runOptions = options as {
+          spawnOptions?: { env?: Record<string, string> }
+        }
+        capturedEnv = runOptions?.spawnOptions?.env
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent, {
+      traceId: 'trace-abc-123',
+    })
+
+    expect(capturedEnv).toBeDefined()
+    expect(capturedEnv?.DUST_TRACE_ID).toBe('trace-abc-123')
+  })
+
+  test('does not set DUST_TRACE_ID when traceId is not provided', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+          },
+        },
+      },
+    })
+    let capturedEnv: Record<string, string> | undefined
+    const loopDeps = createLoopDeps({
+      run: async (_prompt, options) => {
+        const runOptions = options as {
+          spawnOptions?: { env?: Record<string, string> }
+        }
+        capturedEnv = runOptions?.spawnOptions?.env
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent, {})
+
+    expect(capturedEnv).toBeDefined()
+    expect(capturedEnv?.DUST_TRACE_ID).toBeUndefined()
+  })
+
   test('handles Claude errors gracefully', async () => {
     const dependencies = createDependencies({
       project: {

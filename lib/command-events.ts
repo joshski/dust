@@ -33,6 +33,7 @@ export type CommandEvent =
 export interface CommandEventMessage {
   sequence: number
   timestamp: string
+  traceId?: string
   event: CommandEvent
 }
 
@@ -41,14 +42,19 @@ export interface CommandEventMessage {
  * Each event is wrapped in a CommandEventMessage envelope with sequence and timestamp.
  */
 export function createEventEmitter(
-  writeEvent: (message: CommandEventMessage) => void
+  writeEvent: (message: CommandEventMessage) => void,
+  traceId?: string
 ): (event: CommandEvent) => void {
   let sequence = 0
   return (event: CommandEvent) => {
-    writeEvent({
+    const message: CommandEventMessage = {
       sequence: sequence++,
       timestamp: new Date().toISOString(),
       event,
-    })
+    }
+    if (traceId) {
+      message.traceId = traceId
+    }
+    writeEvent(message)
   }
 }

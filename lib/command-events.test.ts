@@ -45,4 +45,25 @@ describe('createEventEmitter', () => {
       output: 'Error details',
     })
   })
+
+  test('includes traceId when provided', () => {
+    const messages: CommandEventMessage[] = []
+    const emitEvent = createEventEmitter(
+      msg => messages.push(msg),
+      'abc-123-trace-id'
+    )
+
+    emitEvent({ type: 'check-started', name: 'lint' })
+
+    expect(messages[0].traceId).toBe('abc-123-trace-id')
+  })
+
+  test('omits traceId when not provided', () => {
+    const messages: CommandEventMessage[] = []
+    const emitEvent = createEventEmitter(msg => messages.push(msg))
+
+    emitEvent({ type: 'check-started', name: 'lint' })
+
+    expect(messages[0].traceId).toBeUndefined()
+  })
 })

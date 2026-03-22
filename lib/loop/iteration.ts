@@ -99,6 +99,8 @@ export interface IterationOptions {
   proxyPort?: number
   /** Branch name when working on a non-default branch */
   branch?: string
+  /** Trace ID for correlating events across processes */
+  traceId?: string
 }
 
 export async function findAvailableTasks(
@@ -335,6 +337,7 @@ export async function runOneIteration(
   const baseEnv = buildUnattendedEnv({
     repositoryId,
     proxyPort: options.proxyPort,
+    traceId: options.traceId,
     session: loopDependencies.session,
   })
 

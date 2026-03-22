@@ -207,12 +207,13 @@ export async function runLoop(
 
   while (completedIterations < maxIterations) {
     agentSessionId = crypto.randomUUID()
+    const traceId = agentSessionId // Reuse agentSessionId as trace ID
     const result = await runOneIteration(
       dependencies,
       loopDependencies,
       onLoopEvent,
       onAgentEvent,
-      iterationOptions
+      { ...iterationOptions, traceId }
     )
 
     if (result === 'no_tasks') {

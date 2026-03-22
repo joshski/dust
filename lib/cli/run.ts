@@ -7,6 +7,7 @@
 import { createEventEmitter } from '../command-events'
 import { createCommandEventWriter } from '../command-events-transport'
 import { readEnvConfig } from '../env-config'
+import { DUST_TRACE_ID } from '../session'
 import { defaultFileSystemPrimitives, wireEntry } from './wire'
 
 // Read environment configuration once at startup (imperative shell)
@@ -16,7 +17,10 @@ const writeEvent = createCommandEventWriter(process.env, {
   fetch,
   onError: console.error.bind(console),
 })
-const emitEvent = writeEvent ? createEventEmitter(writeEvent) : undefined
+const traceId = process.env[DUST_TRACE_ID]
+const emitEvent = writeEvent
+  ? createEventEmitter(writeEvent, traceId)
+  : undefined
 
 await wireEntry(
   defaultFileSystemPrimitives,
