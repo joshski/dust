@@ -24,11 +24,11 @@ Both `dust loop` (via `runLoop()` in `lib/loop/loop.ts`) and `dust bucket worker
 
 Add a `--docker` flag that:
 
-1. When passed, generates a default Dockerfile in a temp location
-2. Builds and runs the agent in Docker using this generated config
+1. When passed, uses the bundled default Dockerfile from the dust package
+2. Builds and runs the agent in Docker using this config
 3. Works even when no `.dust/config/container/Dockerfile` exists
 
-If a custom `.dust/config/container/Dockerfile` exists, it takes precedence over the generated default.
+If a custom `.dust/config/container/Dockerfile` exists, it takes precedence over the bundled default.
 
 ## Implementation scope
 
@@ -52,7 +52,7 @@ The `dust loop` command operates on a single repository. Adding `--docker` here 
 1. Parse `--docker` flag in bucket worker entry point (`lib/cli/commands/bucket-worker.ts`)
 2. Pass flag through `RepositoryDependencies` to `setupDockerConfig()` in `lib/bucket/repository-loop.ts`
 3. Extend `prepareDockerConfig()` to accept a `forceDocker` option
-4. Generate default Dockerfile content when force-enabled but no custom config exists
+4. Use the bundled default Dockerfile when force-enabled but no custom config exists
 
 ### For `dust loop`
 
@@ -60,9 +60,22 @@ The `dust loop` command operates on a single repository. Adding `--docker` here 
 2. Pass flag through to `runLoop()` via `LoopDependencies` or a new options parameter
 3. Use the same `prepareDockerConfig()` changes from the bucket worker implementation
 
-### Shared: Default Dockerfile generation
+### Shared: Default Dockerfile bundled in package
 
-Create a `generateDefaultDockerfile()` function in `lib/docker/docker-agent.ts` that produces:
+Instead of generating Dockerfile content at runtime and writing to a temp file, bundle a static `default.Dockerfile` in the dust package. This approach:
+
+- Uses an existing codebase pattern (`import.meta.dirname` to locate bundled files, as in `lib/biome/index.ts` and `lib/claude/vcr.ts`)
+- Avoids temp file management and cleanup
+- Makes the default config inspectable and versionable
+
+**Implementation:**
+
+1. Create `lib/docker/default.Dockerfile` with the standard agent image config
+2. Add `lib/docker/default.Dockerfile` to package.json `files` array (or ensure `dist` includes it)
+3. Locate at runtime via `join(import.meta.dirname, 'default.Dockerfile')`
+4. Pass to `docker build -f` directly (no temp file needed)
+
+**Default Dockerfile contents:**
 
 ```dockerfile
 FROM oven/bun:1
@@ -75,24 +88,12 @@ WORKDIR /workspace
 
 This matches the example in `docker-agent-mode.md` and includes both agent CLIs for provider flexibility.
 
-## Open Questions
+## Resolved Decisions
 
 ### How should `--docker` interact with existing `.dust/config/container/Dockerfile`?
 
-#### Custom Dockerfile takes precedence (recommended)
+**Decision:** Custom Dockerfile takes precedence. When a custom Dockerfile exists and `--docker` is passed, the flag acts as a "force Docker mode" switch that uses the custom config. If no custom config exists, use the bundled default. This is consistent with the current "custom overrides default" pattern.
 
-When a custom Dockerfile exists and `--docker` is passed, the flag acts as a "force Docker mode" switch. If a custom config exists, use it; otherwise generate a default. This is consistent with the current "custom overrides default" pattern and avoids surprising behavior.
+### Should the default Dockerfile be generated at runtime or bundled?
 
-#### Generated config replaces custom
-
-The flag always uses the generated config, ignoring any custom Dockerfile. Simpler to reason about, but potentially confusing if users expect their customizations to apply.
-
-### Should generated Dockerfiles be persisted or ephemeral?
-
-#### Ephemeral (temp file, recommended)
-
-Generate in `os.tmpdir()`, clean up after use. No repo churn, aligns with "easy adoption" principle. The generated content is deterministic and reproducible.
-
-#### Persisted to `.dust/config/container/Dockerfile`
-
-Write the generated file to the canonical location. Makes the config explicit and reviewable, but adds files to the repository. Could optionally prompt user before writing.
+**Decision:** Bundle the default Dockerfile in the dust package (at `lib/docker/default.Dockerfile`). This avoids temp file management and uses an established codebase pattern for locating bundled files via `import.meta.dirname`.
