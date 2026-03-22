@@ -34,19 +34,19 @@ The current behavior is opt-in: Docker mode only activates when `.dust/config/co
 2. Decide on fallback behavior when Docker is unavailable
 3. Add a way to opt out of Docker for users who prefer host execution
 
-## Current status (2026-03-21)
+## Current status (2026-03-22)
 
 - Smallest Codex support step is now covered in end-to-end testing:
   - Docker E2E run includes both `claude` and `codex` providers in the same workflow.
   - Docker custom file path coverage is aligned to `.dust/config/container/Dockerfile`.
+- The `--docker` opt-in switch is now implemented for `dust loop`.
 - This does not yet make Docker the default runtime; it only reduces rollout risk by validating multi-provider behavior.
-- Tasks exist for adding a `--docker` opt-in switch before making Docker the default: see [Add --docker flag to dust loop](../tasks/add-docker-flag-to-dust-loop.md).
 
 ## What needs to be done
 
 1. ~~Resolve and document the Docker configuration contract (legacy `.dust/Dockerfile` vs `.dust/config/*`).~~ Done: The canonical contract is `.dust/config/container/Dockerfile`. The legacy `.dust/Dockerfile` path is rejected by both `dust lint` and runtime with migration instructions.
 2. ~~Add provider-aware Docker execution support for both Claude and Codex paths.~~ Done: Both providers have working Docker execution paths with proper authentication handling.
-3. Add a `--docker` opt-in switch for `dust loop` commands (see [Add --docker flag to dust loop](../tasks/add-docker-flag-to-dust-loop.md)).
+3. ~~Add a `--docker` opt-in switch for `dust loop` commands.~~ Done: `dust loop --docker` uses the bundled default Dockerfile at `lib/docker/default.Dockerfile` when no custom Dockerfile exists.
 4. Introduce generated default container configuration for common repositories.
 5. Add migration guidance and compatibility behavior for early adopters.
 6. Expand end-to-end coverage to validate Docker-default behavior across providers.

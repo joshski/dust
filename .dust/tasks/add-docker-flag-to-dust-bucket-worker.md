@@ -8,7 +8,7 @@ The `dust bucket worker` command manages multiple repositories concurrently. The
 
 ## Implementation
 
-This task builds on the infrastructure from [Add --docker flag to dust loop](add-docker-flag-to-dust-loop.md), reusing the bundled default Dockerfile and extended `prepareDockerConfig()` function.
+This task builds on the existing `--docker` flag infrastructure in `dust loop`, reusing the bundled default Dockerfile at `lib/docker/default.Dockerfile` and the `prepareDockerConfig()` function with `forceDocker` option.
 
 ### Parse --docker flag in bucket worker
 
@@ -46,7 +46,7 @@ const dockerResult = await prepareDockerConfig(
 
 ## Blocked By
 
-- [Add --docker flag to dust loop](add-docker-flag-to-dust-loop.md)
+(none)
 
 ## Definition of Done
 

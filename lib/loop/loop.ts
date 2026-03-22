@@ -34,7 +34,7 @@ import {
 } from './iteration'
 import type { SendAgentEventFn } from './wire-events'
 import { createWireEventSender } from './wire-events'
-import { parseMaxIterations } from './parse-args'
+import { parseLoopArgs } from './parse-args'
 import { sleepWithProgress, SLEEP_INTERVAL_MS } from './sleep'
 
 const log = createLogger('dust:loop')
@@ -112,7 +112,9 @@ export async function runLoop(
     return { exitCode: 1 }
   }
   const { postEvent } = loopDependencies
-  const maxIterations = parseMaxIterations(dependencies.arguments)
+  const { maxIterations, docker: forceDocker } = parseLoopArgs(
+    dependencies.arguments
+  )
 
   const eventsUrl = settings.eventsUrl
   const sessionId = crypto.randomUUID()
@@ -154,7 +156,8 @@ export async function runLoop(
   const dockerResult = await prepareDockerConfig(
     context.cwd,
     dockerDeps,
-    onLoopEvent
+    onLoopEvent,
+    { forceDocker }
   )
 
   if ('error' in dockerResult) {

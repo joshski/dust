@@ -18,6 +18,8 @@ interface DockerConfig {
   repoPath: string
   /** Docker image tag to use (e.g., 'dust-agent-myrepo') */
   imageTag: string
+  /** Optional custom Dockerfile path (defaults to .dust/config/container/Dockerfile) */
+  dockerfilePath?: string
 }
 
 export interface DockerDependencies {
@@ -31,6 +33,14 @@ const LEGACY_DOCKERFILE_PATH = ['.dust', 'Dockerfile']
 
 const LEGACY_DOCKERFILE_ERROR =
   'Legacy Docker configuration path ".dust/Dockerfile" is no longer supported. Move it to ".dust/config/container/Dockerfile".'
+
+/**
+ * Get the path to the bundled default Dockerfile.
+ */
+export function getDefaultDockerfilePath(): string {
+  // import.meta.dirname gives us the directory of this module
+  return path.join(import.meta.dirname, 'default.Dockerfile')
+}
 
 /**
  * Check if Docker is available on the system.
@@ -67,19 +77,16 @@ export function generateImageTag(repoPath: string): string {
 type BuildResult = { success: true } | { success: false; error: string }
 
 /**
- * Build a Docker image from the repository's .dust/config/container/Dockerfile.
+ * Build a Docker image from a Dockerfile.
+ * Uses the provided dockerfilePath or defaults to .dust/config/container/Dockerfile.
  */
 export async function buildDockerImage(
   config: DockerConfig,
   dependencies: DockerDependencies
 ): Promise<BuildResult> {
-  const dockerfilePath = path.join(
-    config.repoPath,
-    '.dust',
-    'config',
-    'container',
-    'Dockerfile'
-  )
+  const dockerfilePath =
+    config.dockerfilePath ??
+    path.join(config.repoPath, '.dust', 'config', 'container', 'Dockerfile')
 
   log(`building Docker image ${config.imageTag} from ${dockerfilePath}`)
 
@@ -158,6 +165,10 @@ type PrepareDockerConfigResult =
   | { error: string }
   | Record<string, never>
 
+interface PrepareDockerOptions {
+  forceDocker?: boolean
+}
+
 /**
  * Prepare Docker configuration for agent execution.
  *
@@ -166,15 +177,19 @@ type PrepareDockerConfigResult =
  * image, and returns the spawn configuration. Emits events throughout the
  * process.
  *
+ * When `forceDocker` is true and no custom Dockerfile exists, uses the bundled
+ * default Dockerfile.
+ *
  * Returns:
  * - `{ config: DockerSpawnConfig }` on success
  * - `{ error: string }` on failure (Docker not available or build failed)
- * - `{}` if no Dockerfile exists
+ * - `{}` if no Dockerfile exists and forceDocker is false
  */
 export async function prepareDockerConfig(
   repoPath: string,
   dependencies: DockerDependencies,
-  onEvent: (event: DockerPrepareEvent) => void
+  onEvent: (event: DockerPrepareEvent) => void,
+  options?: PrepareDockerOptions
 ): Promise<PrepareDockerConfigResult> {
   log(`checking for Docker configuration in ${repoPath}`)
 
@@ -183,24 +198,33 @@ export async function prepareDockerConfig(
     return { error: LEGACY_DOCKERFILE_ERROR }
   }
 
-  if (!hasDockerfile(repoPath, dependencies)) {
+  const hasCustomDockerfile = hasDockerfile(repoPath, dependencies)
+  const forceDocker = options?.forceDocker ?? false
+
+  if (!hasCustomDockerfile && !forceDocker) {
     log('no .dust/config/container/Dockerfile found, running without Docker')
     return {}
   }
+
+  // Use custom Dockerfile if it exists, otherwise use bundled default
+  const dockerfilePath = hasCustomDockerfile
+    ? undefined // buildDockerImage will use the default path
+    : getDefaultDockerfilePath()
 
   const imageTag = generateImageTag(repoPath)
   log(`Dockerfile found, image tag: ${imageTag}`)
   onEvent({ type: 'loop.docker_detected', imageTag })
 
   if (!(await isDockerAvailable(dependencies))) {
-    const error =
-      'Docker not available. Install Docker or remove .dust/config/container/Dockerfile to run without Docker.'
+    const error = hasCustomDockerfile
+      ? 'Docker not available. Install Docker or remove .dust/config/container/Dockerfile to run without Docker.'
+      : 'Docker not available. Install Docker to use --docker flag.'
     return { error }
   }
 
   onEvent({ type: 'loop.docker_building', imageTag })
   const buildResult = await buildDockerImage(
-    { repoPath, imageTag },
+    { repoPath, imageTag, dockerfilePath },
     dependencies
   )
 

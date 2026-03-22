@@ -5,6 +5,7 @@ import {
   buildDockerImage,
   type DockerDependencies,
   generateImageTag,
+  getDefaultDockerfilePath,
   hasDockerfile,
   hasLegacyDockerfile,
   isDockerAvailable,
@@ -251,6 +252,13 @@ describe('hasLegacyDockerfile', () => {
   })
 })
 
+describe('getDefaultDockerfilePath', () => {
+  test('returns path ending with default.Dockerfile', () => {
+    const path = getDefaultDockerfilePath()
+    expect(path).toMatch(/default\.Dockerfile$/)
+  })
+})
+
 describe('prepareDockerConfig', () => {
   test('returns error when legacy .dust/Dockerfile exists', async () => {
     const spawnCalls = { count: 0 }
@@ -280,5 +288,125 @@ describe('prepareDockerConfig', () => {
       },
     ])
     expect(spawnCalls.count).toBe(0)
+  })
+
+  test('returns empty object when no Dockerfile and forceDocker is false', async () => {
+    const events: { type: string }[] = []
+    const dependencies: DockerDependencies = {
+      spawn: createMockSpawn(0),
+      homedir: () => '/home/user',
+      existsSync: () => false,
+    }
+
+    const result = await prepareDockerConfig(
+      '/home/user/project',
+      dependencies,
+      event => events.push(event)
+    )
+
+    expect(result).toEqual({})
+    expect(events).toHaveLength(0)
+  })
+
+  test('uses default Dockerfile when forceDocker is true and no custom Dockerfile', async () => {
+    let capturedDockerfilePath: string | undefined
+    const events: { type: string; imageTag?: string }[] = []
+    const dependencies: DockerDependencies = {
+      spawn: ((cmd: string, spawnArgs: string[]) => {
+        if (cmd === 'docker' && spawnArgs[0] === 'build') {
+          const fIndex = spawnArgs.indexOf('-f')
+          if (fIndex !== -1) {
+            capturedDockerfilePath = spawnArgs[fIndex + 1]
+          }
+        }
+        const proc = new EventEmitter() as EventEmitter & {
+          stdout: EventEmitter | null
+          stderr: EventEmitter
+        }
+        proc.stdout = new EventEmitter()
+        proc.stderr = new EventEmitter()
+        setTimeout(() => proc.emit('close', 0), 0)
+        return asChildProcessStub(proc)
+      }) as DockerDependencies['spawn'],
+      homedir: () => '/home/user',
+      existsSync: () => false,
+    }
+
+    const result = await prepareDockerConfig(
+      '/home/user/project',
+      dependencies,
+      event => events.push(event),
+      { forceDocker: true }
+    )
+
+    expect(result).toHaveProperty('config')
+    expect(capturedDockerfilePath).toMatch(/default\.Dockerfile$/)
+    expect(events).toContainEqual({
+      type: 'loop.docker_detected',
+      imageTag: 'dust-agent-project',
+    })
+    expect(events).toContainEqual({
+      type: 'loop.docker_built',
+      imageTag: 'dust-agent-project',
+    })
+  })
+
+  test('uses custom Dockerfile when it exists even with forceDocker true', async () => {
+    let capturedDockerfilePath: string | undefined
+    const events: { type: string; imageTag?: string }[] = []
+    const dependencies: DockerDependencies = {
+      spawn: ((cmd: string, spawnArgs: string[]) => {
+        if (cmd === 'docker' && spawnArgs[0] === 'build') {
+          const fIndex = spawnArgs.indexOf('-f')
+          if (fIndex !== -1) {
+            capturedDockerfilePath = spawnArgs[fIndex + 1]
+          }
+        }
+        const proc = new EventEmitter() as EventEmitter & {
+          stdout: EventEmitter | null
+          stderr: EventEmitter
+        }
+        proc.stdout = new EventEmitter()
+        proc.stderr = new EventEmitter()
+        setTimeout(() => proc.emit('close', 0), 0)
+        return asChildProcessStub(proc)
+      }) as DockerDependencies['spawn'],
+      homedir: () => '/home/user',
+      existsSync: (p: string) =>
+        p === '/home/user/project/.dust/config/container/Dockerfile',
+    }
+
+    const result = await prepareDockerConfig(
+      '/home/user/project',
+      dependencies,
+      event => events.push(event),
+      { forceDocker: true }
+    )
+
+    expect(result).toHaveProperty('config')
+    // Should use the custom Dockerfile path, not the bundled default
+    expect(capturedDockerfilePath).toBe(
+      '/home/user/project/.dust/config/container/Dockerfile'
+    )
+  })
+
+  test('returns error when Docker not available with forceDocker', async () => {
+    const events: { type: string; imageTag?: string }[] = []
+    const dependencies: DockerDependencies = {
+      spawn: createMockSpawn(1),
+      homedir: () => '/home/user',
+      existsSync: () => false,
+    }
+
+    const result = await prepareDockerConfig(
+      '/home/user/project',
+      dependencies,
+      event => events.push(event),
+      { forceDocker: true }
+    )
+
+    expect(result).toEqual({
+      error: 'Docker not available. Install Docker to use --docker flag.',
+    })
   })
 })

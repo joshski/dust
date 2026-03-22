@@ -44,7 +44,9 @@ Without the API proxy, `CLAUDE_CODE_OAUTH_TOKEN` must be set and `~/.claude` is 
 
 - `hasDockerfile()` checks for `.dust/config/container/Dockerfile` in the repo
 - `hasLegacyDockerfile()` checks for `.dust/Dockerfile` and fails fast with migration guidance
+- `getDefaultDockerfilePath()` returns the path to the bundled default Dockerfile at `lib/docker/default.Dockerfile`
 - `buildDockerImage()` builds the image with a tag derived from the repo path
+- `prepareDockerConfig()` accepts a `forceDocker` option that uses the bundled default when no custom Dockerfile exists
 - Agent sessions are spawned with `docker run`, mounting the repo at `/workspace`
 - When using the Claude API proxy, `~/.claude` and `~/.claude.json` are NOT mounted (credentials stay on host)
 - Both `dust loop` and `dust bucket worker` support Docker mode
