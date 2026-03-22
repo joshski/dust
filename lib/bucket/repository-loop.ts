@@ -323,7 +323,8 @@ async function setupDockerConfig(
   const dockerResult = await prepareDockerConfig(
     repoState.path,
     dockerDeps,
-    onLoopEvent
+    onLoopEvent,
+    { forceDocker: repoDeps.forceDocker }
   )
 
   if ('error' in dockerResult) {

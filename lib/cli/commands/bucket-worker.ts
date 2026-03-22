@@ -320,6 +320,8 @@ export interface BucketDependencies {
   run?: typeof claudeRun
   /** Shell runner for pre-flight commands (install, check). Used for testing. */
   shellRunner?: import('../../cli/process-runner').ShellRunner
+  /** Force Docker mode for all repositories (--docker flag). */
+  forceDocker?: boolean
 }
 
 /**
@@ -453,6 +455,7 @@ function toRepositoryDependencies(
       state.revealedFamilies.add(familyName)
     },
     shellRunner: bucketDeps.shellRunner,
+    forceDocker: bucketDeps.forceDocker,
   }
 }
 
@@ -1252,12 +1255,27 @@ async function resolveToken(
 }
 /* v8 ignore stop */
 
+/**
+ * Parse bucket worker arguments.
+ */
+export function parseBucketWorkerArgs(commandArguments: string[]): {
+  docker: boolean
+} {
+  return {
+    docker: commandArguments.includes('--docker'),
+  }
+}
+
 export async function bucketWorker(
   dependencies: CommandDependencies,
   bucketDeps: BucketDependencies = createDefaultBucketDependencies()
 ): Promise<CommandResult> {
   enableFileLogs('bucket')
   const { context, fileSystem } = dependencies
+
+  // Parse --docker flag from command arguments
+  const { docker: forceDocker } = parseBucketWorkerArgs(dependencies.arguments)
+  bucketDeps.forceDocker = forceDocker
 
   if (isUnattended(bucketDeps.session)) {
     context.stderr(

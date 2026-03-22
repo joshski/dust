@@ -41,6 +41,7 @@ import {
   handleRepositoryListError,
   handleRepositoryListSuccess,
   logMessage,
+  parseBucketWorkerArgs,
   setupTUI,
   shutdown,
   syncAgentStatuses,
@@ -399,6 +400,23 @@ describe('getWebSocketUrl', () => {
       agentConnectUrl: 'ws://localhost:3000/ws',
     })
     expect(getWebSocketUrl(bucketConfig)).toBe('ws://localhost:3000/ws')
+  })
+})
+
+describe('parseBucketWorkerArgs', () => {
+  test('returns docker: false when --docker flag is not present', () => {
+    const result = parseBucketWorkerArgs([])
+    expect(result.docker).toBe(false)
+  })
+
+  test('returns docker: true when --docker flag is present', () => {
+    const result = parseBucketWorkerArgs(['--docker'])
+    expect(result.docker).toBe(true)
+  })
+
+  test('returns docker: true when --docker flag is among other args', () => {
+    const result = parseBucketWorkerArgs(['--other', '--docker', '--flag'])
+    expect(result.docker).toBe(true)
   })
 })
 

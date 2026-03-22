@@ -114,6 +114,8 @@ export interface RepositoryDependencies {
   revealFamily?: (familyName: string) => void
   /** Shell runner for pre-flight commands (install, check) */
   shellRunner?: import('../cli/process-runner').ShellRunner
+  /** Force Docker mode using bundled default Dockerfile */
+  forceDocker?: boolean
 }
 
 /**
