@@ -1547,11 +1547,13 @@ describe('startRepositoryLoop', () => {
     }
 
     let sleepResolve: (() => void) | undefined
+    let sleepCalled = false
     const repoDeps = createTestRepositoryDependencies({
       spawn,
       fileSystem,
       sleep: () =>
         new Promise<void>(resolve => {
+          sleepCalled = true
           sleepResolve = resolve
         }),
     })
@@ -1560,7 +1562,7 @@ describe('startRepositoryLoop', () => {
     expect(repoState.lifecycle.type).toBe('running')
 
     // Wait for loop to reach sleep
-    await new Promise(resolve => setTimeout(resolve, 50))
+    await waitFor(() => expect(sleepCalled).toBe(true))
 
     // Call cancel to transition to stopping
     const runningLifecycle = repoState.lifecycle as {
