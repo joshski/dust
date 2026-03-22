@@ -4,6 +4,15 @@ Dust runs agent sessions inside Docker containers when `.dust/config/container/D
 
 The legacy path `.dust/Dockerfile` is not supported. `dust lint` reports a migration error, and runtime exits early with the same message.
 
+## Opt-in via --docker flag
+
+The `--docker` flag enables Docker execution without a custom Dockerfile:
+
+- `dust loop --docker` — run loop iterations in Docker using the bundled default image
+- `dust bucket worker --docker` — run all repository agents in Docker
+
+When `--docker` is passed and no custom `.dust/config/container/Dockerfile` exists, dust uses a bundled default Dockerfile that includes both agent CLIs (Claude Code and Codex). If a custom Dockerfile exists, it takes precedence.
+
 ## Setup
 
 1. Create `.dust/config/container/Dockerfile` in your repository
