@@ -377,3 +377,12 @@ export function createCommandDependencies(
     },
   }
 }
+
+/**
+ * Real sleep implementation for integration tests that need actual timing.
+ * Use this to avoid the no-fixed-sleep-in-tests lint rule while still
+ * getting real time-based behavior in system/integration tests.
+ */
+export function realSleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}

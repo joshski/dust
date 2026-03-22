@@ -13,9 +13,20 @@ interface CapturedRequest {
   body: string
 }
 
+interface TimeoutDependencies {
+  createTimeout: typeof globalThis.setTimeout
+  clearTimeout: typeof globalThis.clearTimeout
+}
+
+const defaultTimeoutDependencies: TimeoutDependencies = {
+  createTimeout: globalThis.setTimeout,
+  clearTimeout: globalThis.clearTimeout,
+}
+
 async function runShellCommand(
   command: string,
-  timeoutMs: number
+  timeoutMs: number,
+  dependencies: TimeoutDependencies = defaultTimeoutDependencies
 ): Promise<CommandRunResult> {
   return new Promise((resolve, reject) => {
     const child = spawn('bash', ['-c', command], {
@@ -32,16 +43,16 @@ async function runShellCommand(
       stderr += chunk.toString('utf8')
     })
 
-    const timer = setTimeout(() => {
+    const timer = dependencies.createTimeout(() => {
       child.kill('SIGKILL')
     }, timeoutMs)
 
     child.on('close', status => {
-      clearTimeout(timer)
+      dependencies.clearTimeout(timer)
       resolve({ status, stdout, stderr })
     })
     child.on('error', error => {
-      clearTimeout(timer)
+      dependencies.clearTimeout(timer)
       reject(error)
     })
   })

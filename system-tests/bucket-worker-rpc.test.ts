@@ -39,7 +39,7 @@ import {
 } from '../lib/cli/commands/bucket-worker'
 import type { CommandDependencies } from '../lib/cli/types'
 import { createFileSystem, defaultFileSystemPrimitives } from '../lib/cli/wire'
-import { stubEnv, waitFor } from '../lib/test/test-utilities'
+import { realSleep, stubEnv, waitFor } from '../lib/test/test-utilities'
 import { createBucketServerEmulator } from './support/bucket-server-emulator'
 
 const DUST_BIN = join(process.cwd(), 'bin', 'dust')
@@ -204,7 +204,7 @@ describe('bucket worker RPC integration', () => {
         getTerminalSize: () => ({ width: 80, height: 24 }),
         writeStdout: () => {},
         isTTY: false,
-        sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
+        sleep: realSleep,
         getReposDir: () => reposDir,
         auth: {
           createServer: async () => ({

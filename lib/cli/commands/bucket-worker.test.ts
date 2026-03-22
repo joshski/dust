@@ -1616,7 +1616,7 @@ describe('shutdown', () => {
   test('clears reconnect timer', async () => {
     const dependencies = createDependencies()
     const state = createInitialState()
-    state.reconnectTimer = setTimeout(() => {}, 10000)
+    state.reconnectTimer = setTimeout(() => {}, 0)
 
     const bucketDependencies = createBucketDependencies()
 
@@ -1754,7 +1754,7 @@ describe('bucketWorker', () => {
         return createAutoConnectWebSocket()
       },
       setupKeypress: onKey => {
-        setTimeout(() => onKey('q'), 10)
+        setTimeout(() => onKey('q'), 0)
         return () => {}
       },
     })
@@ -1787,7 +1787,7 @@ describe('bucketWorker', () => {
         return createAutoConnectWebSocket()
       },
       setupKeypress: onKey => {
-        setTimeout(() => onKey('q'), 10)
+        setTimeout(() => onKey('q'), 0)
         return () => {}
       },
     })
@@ -1818,7 +1818,7 @@ describe('bucketWorker', () => {
         },
       }),
       setupKeypress: onKey => {
-        setTimeout(() => onKey('q'), 10)
+        setTimeout(() => onKey('q'), 0)
         return () => {}
       },
     })
@@ -1861,7 +1861,7 @@ describe('bucketWorker', () => {
         return createAutoConnectWebSocket()
       },
       setupKeypress: onKey => {
-        setTimeout(() => onKey('q'), 10)
+        setTimeout(() => onKey('q'), 0)
         return () => {}
       },
     })
@@ -1887,7 +1887,7 @@ describe('bucketWorker', () => {
         return createAutoConnectWebSocket()
       },
       setupKeypress: onKey => {
-        setTimeout(() => onKey('q'), 10)
+        setTimeout(() => onKey('q'), 0)
         return () => {}
       },
     })
@@ -1913,7 +1913,7 @@ describe('bucketWorker', () => {
         return createAutoConnectWebSocket()
       },
       setupKeypress: onKey => {
-        setTimeout(() => onKey('q'), 10)
+        setTimeout(() => onKey('q'), 0)
         return () => {}
       },
     })
@@ -1977,7 +1977,7 @@ describe('bucketWorker', () => {
     const bucketDependencies = createBucketDependencies({
       bucket: createTestBucketConfig({ token: 'token' }),
       setupKeypress: onKey => {
-        setTimeout(() => onKey('q'), 10)
+        setTimeout(() => onKey('q'), 0)
         return () => {}
       },
     })
@@ -1994,7 +1994,7 @@ describe('bucketWorker', () => {
     const bucketDependencies = createBucketDependencies({
       bucket: createTestBucketConfig({ token: 'token' }),
       setupKeypress: onKey => {
-        setTimeout(() => onKey('\u0003'), 10)
+        setTimeout(() => onKey('\u0003'), 0)
         return () => {}
       },
     })
@@ -2009,7 +2009,7 @@ describe('bucketWorker', () => {
     const bucketDependencies = createBucketDependencies({
       bucket: createTestBucketConfig({ token: 'token' }),
       setupSignals: onSignal => {
-        setTimeout(() => onSignal(), 10)
+        setTimeout(() => onSignal(), 0)
         return () => {}
       },
     })
@@ -2032,11 +2032,11 @@ describe('bucketWorker', () => {
         setTimeout(() => {
           keyCallCount++
           onKey('x')
-        }, 5)
-        setTimeout(() => {
-          keyCallCount++
-          onKey('q')
-        }, 10)
+          setTimeout(() => {
+            keyCallCount++
+            onKey('q')
+          }, 0)
+        }, 0)
         return () => {}
       },
     })
@@ -2058,7 +2058,7 @@ describe('bucketWorker', () => {
     const bucketDependencies = createBucketDependencies({
       bucket: createTestBucketConfig({ token: 'token' }),
       setupKeypress: onKey => {
-        setTimeout(() => onKey('q'), 10)
+        setTimeout(() => onKey('q'), 0)
         return () => {
           keypressCleanedUp = true
         }
@@ -2087,7 +2087,7 @@ describe('bucketWorker', () => {
       getTerminalSize: () => ({ width: 100, height: 30 }),
       setupResize: () => () => {},
       setupKeypress: onKey => {
-        setTimeout(() => onKey('q'), 10)
+        setTimeout(() => onKey('q'), 0)
         return () => {}
       },
     })
@@ -2111,7 +2111,7 @@ describe('bucketWorker', () => {
         setTimeout(() => {
           proxyPortDuringRun = process.env.DUST_PROXY_PORT
           onKey('q')
-        }, 10)
+        }, 0)
         return () => {}
       },
     })
@@ -2134,7 +2134,7 @@ describe('bucketWorker', () => {
         agentConnectUrl: 'not-a-valid-url',
       }),
       setupKeypress: onKey => {
-        setTimeout(() => onKey('q'), 10)
+        setTimeout(() => onKey('q'), 0)
         return () => {}
       },
     })

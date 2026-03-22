@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { applyMiddleware, type CommandMiddleware } from './middleware'
-import type { CommandDependencies, CommandResult } from './types'
+import type { CommandDependencies } from './types'
 import {
   createContextEmulator,
   createFileSystemEmulator,
