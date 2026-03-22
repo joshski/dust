@@ -11,6 +11,11 @@
 import { loadSettings } from '../config/settings'
 import type { RuntimeConfig } from '../env-config'
 import { DUST_VERSION } from '../version'
+import { applyMiddleware, type CommandMiddleware } from './middleware'
+import {
+  createDefaultTracingOptions,
+  createTracingMiddleware,
+} from './tracing-middleware'
 import { agent } from './commands/agent'
 import { audit } from './commands/audit'
 import { bucketWorker } from './commands/bucket-worker'
@@ -87,6 +92,17 @@ export const COMMANDS = Object.keys(commandRegistry).filter(
 
 // Re-export for backward compatibility
 export { generateHelpText }
+
+// Default middleware stack
+const defaultMiddlewares: CommandMiddleware[] = [
+  createTracingMiddleware(createDefaultTracingOptions()),
+]
+
+// Middleware-wrapped command executor
+const executeWithMiddleware = applyMiddleware(
+  defaultMiddlewares,
+  (command, dependencies) => commandRegistry[command as Command](dependencies)
+)
 
 interface MainOptions {
   commandArguments: string[]
@@ -182,5 +198,5 @@ export async function main(options: MainOptions): Promise<CommandResult> {
     runtime,
   }
 
-  return runCommand(command, dependencies)
+  return executeWithMiddleware(command, dependencies)
 }
