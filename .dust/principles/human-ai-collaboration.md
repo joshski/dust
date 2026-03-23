@@ -8,7 +8,7 @@ Today's AI coding tools keep humans in a tight loop with agents. Dust is designe
 
 ## Parent Principle
 
-- [Enable Flow State](enable-flow-state.md)
+- [Agentic Flow State](agentic-flow-state.md)
 
 ## Sub-Principles
 

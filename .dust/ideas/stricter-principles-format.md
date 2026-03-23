@@ -47,7 +47,7 @@ Add validation that `## Parent Principle` and `## Sub-Principles` (if present) a
 
 #### Keep Parent Principle required (always)
 
-Maintain the current behavior where every principle has a `## Parent Principle` section, even if it's `- (none)` for root principles. Currently, the root principle "Enable Flow State" has:
+Maintain the current behavior where every principle has a `## Parent Principle` section, even if it's `- (none)` for root principles. Currently, the root principle "Agentic Flow State" has:
 
 ```markdown
 ## Parent Principle

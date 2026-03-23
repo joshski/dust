@@ -44,7 +44,7 @@ Agent-specific instructions already support customization through `.dust/config/
 
 ### Relevant Principles
 
-- [Enable Flow State](../principles/enable-flow-state.md): Personality affects whether interactions feel engaging or draining
+- [Agentic Flow State](../principles/agentic-flow-state.md): Personality affects whether interactions feel engaging or draining
 - [Easy Adoption](../principles/easy-adoption.md): Default personality should work for most users without configuration
 - [Unsurprising UX](../principles/unsurprising-ux.md): Whatever personality is active should remain consistent across all messages
 - [Progressive Disclosure](../principles/progressive-disclosure.md): Personality configuration should be optional and discoverable

@@ -590,8 +590,8 @@ describe('list command Core and Local principles sections', () => {
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('🎯 Principles')
     expect(output).toContain('🎯 Core Principles')
-    // Core principles should include enable-flow-state.md
-    expect(output).toContain('* enable-flow-state.md')
+    // Core principles should include agentic-flow-state.md
+    expect(output).toContain('* agentic-flow-state.md')
   })
 
   test('shows Local section when local principles exist', async () => {
@@ -643,7 +643,7 @@ A local project principle.
       runtime: createTestRuntimeConfig(),
       settings: {
         dustCommand: 'dust',
-        excludeCorePrinciples: ['enable-flow-state'],
+        excludeCorePrinciples: ['agentic-flow-state'],
       },
     }
 
@@ -651,8 +651,8 @@ A local project principle.
 
     const output = context.stdoutLines.join('\n')
     expect(output).toContain('🎯 Core Principles')
-    // Enable Flow State should be excluded
-    expect(output).not.toContain('* enable-flow-state.md')
+    // Agentic Flow State should be excluded
+    expect(output).not.toContain('* agentic-flow-state.md')
     // Other principles should still be present
     expect(output).toContain('* maintainable-codebase.md')
   })
@@ -703,7 +703,7 @@ A local principle.
     expect(output).toContain('🎯 Core Principles')
     expect(output).toContain('🎯 Local Principles (.dust/principles/)')
     // Core principles
-    expect(output).toContain('* enable-flow-state.md')
+    expect(output).toContain('* agentic-flow-state.md')
     // Local principles
     expect(output).toContain('* local-principle.md')
   })

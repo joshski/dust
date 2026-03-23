@@ -6,7 +6,7 @@ This principle governs how we develop and maintain dust itself, separate from th
 
 ## Parent Principle
 
-- [Enable Flow State](enable-flow-state.md)
+- [Agentic Flow State](agentic-flow-state.md)
 
 ## Sub-Principles
 
