@@ -405,6 +405,7 @@ async function setupDockerConfig(
   let stopApiProxy: (() => void) | undefined
   const config: DockerSpawnConfig = {
     ...dockerResult.config,
+    runCommand: runtimeResult.runtime?.runCommand,
     gitProxyUrl: `http://host.docker.internal:${gitProxy.port}`,
   }
 

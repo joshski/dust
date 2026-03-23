@@ -191,8 +191,10 @@ export async function runLoop(
       return { exitCode: 1 }
     }
 
+    const typedResult = dockerResult as { config: DockerSpawnConfig }
+    typedResult.config.runCommand = containerRuntime?.runCommand
     dockerProxies = await setupDockerProxies(
-      dockerResult as { config: DockerSpawnConfig },
+      typedResult,
       loopDependencies,
       sessionId,
       !isCodexLoop

@@ -105,7 +105,7 @@ export async function* spawnCodex(
   const mergedEnv = { ...process.env, ...env }
   const proc = docker
     ? dependencies.spawn(
-        'docker',
+        docker.runCommand ?? 'docker',
         buildDockerRunArguments(docker, codexArguments, env ?? {}),
         {
           cwd,

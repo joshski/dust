@@ -49,6 +49,8 @@ export interface OutputSink {
 }
 
 export interface DockerSpawnConfig {
+  /** CLI command for running containers (e.g., 'docker', 'container') */
+  runCommand?: string
   /** Docker image tag to use */
   imageTag: string
   /** Path to the repository (used for volume mounts) */

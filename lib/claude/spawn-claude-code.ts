@@ -202,7 +202,7 @@ export async function* spawnClaudeCode(
   const mergedEnv = { ...process.env, ...env }
   const proc = docker
     ? dependencies.spawn(
-        'docker',
+        docker.runCommand ?? 'docker',
         buildDockerRunArguments(docker, claudeArguments, env ?? {}),
         {
           cwd,

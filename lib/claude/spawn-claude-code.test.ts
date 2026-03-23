@@ -418,6 +418,46 @@ describe('spawnClaudeCode', () => {
     expect(capturedArgs).toContain('test prompt')
   })
 
+  test('uses custom runCommand when provided in docker config', async () => {
+    let capturedCommand: string | undefined
+
+    const dependencies: EventSourceDependencies = {
+      spawn: createSpawnStub((cmd: string) => {
+        capturedCommand = cmd
+        return {
+          stdout: new PassThrough(),
+          stderr: {
+            on() {
+              return this
+            },
+          },
+          on(event: string, listener: EventListener) {
+            if (event === 'close') setTimeout(() => listener(0), 0)
+            return this
+          },
+        }
+      }),
+      createInterface: createReadlineStub([]),
+    }
+
+    for await (const _ of spawnClaudeCode(
+      'test prompt',
+      {
+        docker: {
+          runCommand: 'container',
+          imageTag: 'dust-agent-test',
+          repoPath: '/home/user/project',
+          homeDir: '/home/user',
+        },
+      },
+      dependencies
+    )) {
+      // consume
+    }
+
+    expect(capturedCommand).toBe('container')
+  })
+
   test('does not mount ~/.ssh or ~/.gitconfig in docker container', async () => {
     let capturedArgs: string[] | undefined
 
