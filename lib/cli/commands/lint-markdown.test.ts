@@ -3264,6 +3264,64 @@ Archive this idea.
     expect(violations[0].message).toContain('## Shelves Idea')
   })
 
+  test('returns no violations for capture-style expedite task with Idea Description section', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Expedite Idea: New Feature
+
+Research this idea briefly.
+
+## Idea Description
+
+This is an inline idea description.
+
+## Blocked By
+
+(none)
+`
+    const violations = validateWorkflowTaskBodySection(
+      parseArtifact(
+        '/project/.dust/tasks/expedite-idea-new-feature.md',
+        content
+      ),
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toEqual([])
+  })
+
+  test('returns violation for transition-style expedite task missing Expedites Idea section', () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: { 'my-idea.md': '# My Idea\n\nDescription.' },
+          tasks: {},
+        },
+      },
+    })
+    const content = `# Expedite Idea: My Idea
+
+Research this idea briefly.
+
+## Blocked By
+
+(none)
+`
+    const violations = validateWorkflowTaskBodySection(
+      parseArtifact('/project/.dust/tasks/expedite-idea-my-idea.md', content),
+      '/project/.dust/ideas',
+      fileSystem
+    )
+    expect(violations).toHaveLength(1)
+    expect(violations[0].message).toContain('## Expedites Idea')
+  })
+
   test('section parsing stops at next H1 heading', () => {
     const fileSystem = createFileSystemEmulator({
       project: {

@@ -220,6 +220,17 @@ export function validateWorkflowTaskBodySection(
 
   if (!matchedPrefix) return violations
 
+  // Capture-style expedite tasks have "## Idea Description" instead of referencing
+  // an existing idea file. Skip body section validation for these.
+  if (matchedPrefix === 'Expedite Idea: ') {
+    const hasIdeaDescriptionSection = artifact.sections.some(
+      s => s.heading === 'Idea Description' && s.level === 2
+    )
+    if (hasIdeaDescriptionSection) {
+      return violations
+    }
+  }
+
   const expectedHeading = WORKFLOW_PREFIX_TO_SECTION[matchedPrefix]
   const section = artifact.sections.find(
     s => s.heading === expectedHeading && s.level === 2
