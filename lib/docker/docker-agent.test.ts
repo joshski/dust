@@ -40,8 +40,6 @@ function createMockSpawn(
   }) as DockerDependencies['spawn']
 }
 
-
-
 describe('isDockerAvailable', () => {
   test('returns true when docker --version succeeds', async () => {
     const dependencies: DockerDependencies = {
