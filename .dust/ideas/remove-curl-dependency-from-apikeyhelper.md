@@ -1,5 +1,7 @@
 # Remove curl dependency from apiKeyHelper
 
+Use a JS runtime's built-in `fetch` instead of shelling out to `curl` for API proxy token retrieval.
+
 The `apiKeyHelper` in `lib/claude/spawn-claude-code.ts` uses `curl` to fetch tokens from the API proxy:
 
 ```
