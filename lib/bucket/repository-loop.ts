@@ -33,7 +33,8 @@ import {
 import { defaultDependencies as codexSpawnDefaultDependencies } from '../codex/spawn-codex'
 import { loadSettings } from '../config/settings'
 import { generateApiKeyHelperSettings } from '../claude/spawn-claude-code'
-import { prepareDockerConfig } from '../docker/docker-agent'
+import { prepareContainerConfigWithRuntime } from '../docker/docker-agent'
+import { selectContainerRuntime } from '../container/select-runtime'
 import { createLogger } from '../logging'
 import { createClaudeApiProxyServer } from '../proxy/claude-api-proxy'
 import { createGitCredentialProxyServer } from '../proxy/git-credential-proxy'
@@ -320,11 +321,34 @@ async function setupDockerConfig(
     existsSync: repoDeps.dockerDeps?.existsSync ?? fsExistsSync,
   }
 
-  const dockerResult = await prepareDockerConfig(
+  // Select container runtime based on flags
+  const runtimeResult = selectContainerRuntime({
+    docker: repoDeps.forceDocker ?? false,
+    appleContainer: repoDeps.forceAppleContainer ?? false,
+  })
+
+  /* v8 ignore start -- flags are validated in bucket-worker before reaching here */
+  if (!runtimeResult.success) {
+    log(`Runtime selection error: ${runtimeResult.error}`)
+    appendLogLine(
+      repoState.logBuffer,
+      createLogLine(runtimeResult.error, 'stderr')
+    )
+    return {
+      config: undefined,
+      stopGitProxy: undefined,
+      stopApiProxy: undefined,
+      shouldExit: false,
+    }
+  }
+  /* v8 ignore stop */
+
+  const dockerResult = await prepareContainerConfigWithRuntime(
     repoState.path,
     dockerDeps,
     onLoopEvent,
-    { forceDocker: repoDeps.forceDocker }
+    runtimeResult.runtime,
+    { forceContainer: runtimeResult.forceContainer }
   )
 
   if ('error' in dockerResult) {

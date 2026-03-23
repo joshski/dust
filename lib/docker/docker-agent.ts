@@ -76,7 +76,7 @@ type PrepareContainerConfigResult =
   | Record<string, never>
 
 interface PrepareContainerOptions {
-  forceDocker?: boolean
+  forceContainer?: boolean
 }
 
 /**
@@ -87,13 +87,13 @@ interface PrepareContainerOptions {
  * image, and returns the spawn configuration. Emits events throughout the
  * process.
  *
- * When `forceDocker` is true and no custom Dockerfile exists, uses the bundled
+ * When `forceContainer` is true and no custom Dockerfile exists, uses the bundled
  * default Dockerfile.
  *
  * Returns:
  * - `{ config: ContainerSpawnConfig }` on success
  * - `{ error: string }` on failure (runtime not available or build failed)
- * - `{}` if no Dockerfile exists and forceDocker is false
+ * - `{}` if no Dockerfile exists and forceContainer is false
  */
 async function prepareContainerConfig(
   repoPath: string,
@@ -110,9 +110,9 @@ async function prepareContainerConfig(
   }
 
   const hasCustomDockerfile = hasDockerfile(repoPath, dependencies)
-  const forceDocker = options?.forceDocker ?? false
+  const forceContainer = options?.forceContainer ?? false
 
-  if (!hasCustomDockerfile && !forceDocker) {
+  if (!hasCustomDockerfile && !forceContainer) {
     log('no .dust/config/container/Dockerfile found, running without container')
     return {}
   }
@@ -127,9 +127,12 @@ async function prepareContainerConfig(
   onEvent({ type: 'loop.docker_detected', imageTag })
 
   if (!(await runtime.isAvailable(dependencies))) {
-    const error = hasCustomDockerfile
-      ? 'Docker not available. Install Docker or remove .dust/config/container/Dockerfile to run without Docker.'
-      : 'Docker not available. Install Docker to use --docker flag.'
+    const error =
+      runtime.name === 'apple-container'
+        ? 'Apple Container CLI not found. Install from https://github.com/apple/container or use --docker.'
+        : hasCustomDockerfile
+          ? 'Docker not available. Install Docker or remove .dust/config/container/Dockerfile to run without Docker.'
+          : 'Docker not available. Install Docker to use --docker flag.'
     return { error }
   }
 
@@ -158,6 +161,27 @@ async function prepareContainerConfig(
 }
 
 /**
+ * Prepare container configuration with a specific runtime.
+ *
+ * When runtime is null, defaults to Docker runtime (for Dockerfile detection mode).
+ */
+export async function prepareContainerConfigWithRuntime(
+  repoPath: string,
+  dependencies: ContainerDependencies,
+  onEvent: (event: ContainerPrepareEvent) => void,
+  runtime: ContainerRuntime | null,
+  options?: PrepareContainerOptions
+): Promise<PrepareContainerConfigResult> {
+  return prepareContainerConfig(
+    repoPath,
+    dependencies,
+    onEvent,
+    runtime ?? dockerRuntime,
+    options
+  )
+}
+
+/**
  * Prepare Docker configuration for agent execution.
  *
  * This is a thin wrapper around prepareContainerConfig that uses the Docker
@@ -167,13 +191,15 @@ export async function prepareDockerConfig(
   repoPath: string,
   dependencies: ContainerDependencies,
   onEvent: (event: ContainerPrepareEvent) => void,
-  options?: PrepareContainerOptions
+  options?: { forceDocker?: boolean }
 ): Promise<PrepareContainerConfigResult> {
   return prepareContainerConfig(
     repoPath,
     dependencies,
     onEvent,
     dockerRuntime,
-    options
+    {
+      forceContainer: options?.forceDocker,
+    }
   )
 }

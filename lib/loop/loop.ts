@@ -17,8 +17,9 @@ import { generateApiKeyHelperSettings } from '../claude/spawn-claude-code'
 import type { DockerSpawnConfig } from '../claude/types'
 import {
   type DockerDependencies,
-  prepareDockerConfig,
+  prepareContainerConfigWithRuntime,
 } from '../docker/docker-agent'
+import { selectContainerRuntime } from '../container/select-runtime'
 import { createLogger, enableFileLogs } from '../logging'
 import { createClaudeApiProxyServer } from '../proxy/claude-api-proxy'
 import { createGitCredentialProxyServer } from '../proxy/git-credential-proxy'
@@ -112,9 +113,22 @@ export async function runLoop(
     return { exitCode: 1 }
   }
   const { postEvent } = loopDependencies
-  const { maxIterations, docker: forceDocker } = parseLoopArgs(
-    dependencies.arguments
-  )
+  const parseResult = parseLoopArgs(dependencies.arguments)
+  if (!parseResult.success) {
+    context.stderr(parseResult.error)
+    return { exitCode: 1 }
+  }
+  const { maxIterations, docker, appleContainer } = parseResult.args
+
+  // Select container runtime based on flags
+  const runtimeResult = selectContainerRuntime({ docker, appleContainer })
+  /* v8 ignore start -- parseLoopArgs already validates mutual exclusivity */
+  if (!runtimeResult.success) {
+    context.stderr(runtimeResult.error)
+    return { exitCode: 1 }
+  }
+  /* v8 ignore stop */
+  const { runtime: containerRuntime, forceContainer } = runtimeResult
 
   const eventsUrl = settings.eventsUrl
   const sessionId = crypto.randomUUID()
@@ -153,11 +167,12 @@ export async function runLoop(
   let dockerConfig: DockerSpawnConfig | undefined
   const dockerDeps = resolveDockerDependencies(loopDependencies)
 
-  const dockerResult = await prepareDockerConfig(
+  const dockerResult = await prepareContainerConfigWithRuntime(
     context.cwd,
     dockerDeps,
     onLoopEvent,
-    { forceDocker }
+    containerRuntime,
+    { forceContainer }
   )
 
   if ('error' in dockerResult) {

@@ -322,6 +322,8 @@ export interface BucketDependencies {
   shellRunner?: import('../../cli/process-runner').ShellRunner
   /** Force Docker mode for all repositories (--docker flag). */
   forceDocker?: boolean
+  /** Force Apple Container mode for all repositories (--apple-container flag). */
+  forceAppleContainer?: boolean
 }
 
 /**
@@ -456,6 +458,7 @@ function toRepositoryDependencies(
     },
     shellRunner: bucketDeps.shellRunner,
     forceDocker: bucketDeps.forceDocker,
+    forceAppleContainer: bucketDeps.forceAppleContainer,
   }
 }
 
@@ -1255,15 +1258,28 @@ async function resolveToken(
 }
 /* v8 ignore stop */
 
+type BucketWorkerArgsResult =
+  | { success: true; docker: boolean; appleContainer: boolean }
+  | { success: false; error: string }
+
 /**
  * Parse bucket worker arguments.
  */
-export function parseBucketWorkerArgs(commandArguments: string[]): {
-  docker: boolean
-} {
-  return {
-    docker: commandArguments.includes('--docker'),
+export function parseBucketWorkerArgs(
+  commandArguments: string[]
+): BucketWorkerArgsResult {
+  const docker = commandArguments.includes('--docker')
+  const appleContainer = commandArguments.includes('--apple-container')
+
+  if (docker && appleContainer) {
+    return {
+      success: false,
+      error:
+        'Cannot use both --docker and --apple-container. Choose one container runtime.',
+    }
   }
+
+  return { success: true, docker, appleContainer }
 }
 
 export async function bucketWorker(
@@ -1273,9 +1289,14 @@ export async function bucketWorker(
   enableFileLogs('bucket')
   const { context, fileSystem } = dependencies
 
-  // Parse --docker flag from command arguments
-  const { docker: forceDocker } = parseBucketWorkerArgs(dependencies.arguments)
-  bucketDeps.forceDocker = forceDocker
+  // Parse --docker and --apple-container flags from command arguments
+  const argsResult = parseBucketWorkerArgs(dependencies.arguments)
+  if (!argsResult.success) {
+    context.stderr(argsResult.error)
+    return { exitCode: 1 }
+  }
+  bucketDeps.forceDocker = argsResult.docker
+  bucketDeps.forceAppleContainer = argsResult.appleContainer
 
   if (isUnattended(bucketDeps.session)) {
     context.stderr(

@@ -116,6 +116,8 @@ export interface RepositoryDependencies {
   shellRunner?: import('../cli/process-runner').ShellRunner
   /** Force Docker mode using bundled default Dockerfile */
   forceDocker?: boolean
+  /** Force Apple Container mode using bundled default Dockerfile */
+  forceAppleContainer?: boolean
 }
 
 /**

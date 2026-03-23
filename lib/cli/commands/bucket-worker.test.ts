@@ -406,17 +406,48 @@ describe('getWebSocketUrl', () => {
 describe('parseBucketWorkerArgs', () => {
   test('returns docker: false when --docker flag is not present', () => {
     const result = parseBucketWorkerArgs([])
-    expect(result.docker).toBe(false)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.docker).toBe(false)
+      expect(result.appleContainer).toBe(false)
+    }
   })
 
   test('returns docker: true when --docker flag is present', () => {
     const result = parseBucketWorkerArgs(['--docker'])
-    expect(result.docker).toBe(true)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.docker).toBe(true)
+      expect(result.appleContainer).toBe(false)
+    }
   })
 
   test('returns docker: true when --docker flag is among other args', () => {
     const result = parseBucketWorkerArgs(['--other', '--docker', '--flag'])
-    expect(result.docker).toBe(true)
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.docker).toBe(true)
+      expect(result.appleContainer).toBe(false)
+    }
+  })
+
+  test('returns appleContainer: true when --apple-container flag is present', () => {
+    const result = parseBucketWorkerArgs(['--apple-container'])
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.docker).toBe(false)
+      expect(result.appleContainer).toBe(true)
+    }
+  })
+
+  test('returns error when both --docker and --apple-container are present', () => {
+    const result = parseBucketWorkerArgs(['--docker', '--apple-container'])
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toBe(
+        'Cannot use both --docker and --apple-container. Choose one container runtime.'
+      )
+    }
   })
 })
 
@@ -1736,6 +1767,21 @@ describe('bucketWorker', () => {
     expect(result.exitCode).toBe(1)
     expect(context.stderrLines.join('')).toContain(
       'cannot run inside an unattended session'
+    )
+  })
+
+  test('returns error when both --docker and --apple-container flags are set', async () => {
+    const dependencies = createDependencies()
+    dependencies.arguments = ['--docker', '--apple-container']
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+
+    const result = await bucketWorker(dependencies)
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('')).toContain(
+      'Cannot use both --docker and --apple-container'
     )
   })
 

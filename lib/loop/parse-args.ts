@@ -14,14 +14,33 @@ export function parseMaxIterations(commandArguments: string[]): number {
 interface LoopArgs {
   maxIterations: number
   docker: boolean
+  appleContainer: boolean
 }
 
-export function parseLoopArgs(commandArguments: string[]): LoopArgs {
+type LoopArgsResult =
+  | { success: true; args: LoopArgs }
+  | { success: false; error: string }
+
+export function parseLoopArgs(commandArguments: string[]): LoopArgsResult {
   const docker = commandArguments.includes('--docker')
-  // Filter out the --docker flag before parsing max iterations
+  const appleContainer = commandArguments.includes('--apple-container')
+
+  if (docker && appleContainer) {
+    return {
+      success: false,
+      error:
+        'Cannot use both --docker and --apple-container. Choose one container runtime.',
+    }
+  }
+
+  // Filter out the container flags before parsing max iterations
   const remainingArguments = commandArguments.filter(
-    argument => argument !== '--docker'
+    argument => argument !== '--docker' && argument !== '--apple-container'
   )
   const maxIterations = parseMaxIterations(remainingArguments)
-  return { maxIterations, docker }
+
+  return {
+    success: true,
+    args: { maxIterations, docker, appleContainer },
+  }
 }

@@ -91,6 +91,22 @@ describe('runLoop', () => {
     )
   })
 
+  test('returns error when both --docker and --apple-container flags are set', async () => {
+    const dependencies = createDependencies()
+    dependencies.arguments = ['--docker', '--apple-container']
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const loopDeps = createLoopDeps()
+
+    const result = await runLoop(dependencies, loopDeps)
+
+    expect(result.exitCode).toBe(1)
+    expect(context.stderrLines.join('\n')).toContain(
+      'Cannot use both --docker and --apple-container'
+    )
+  })
+
   test('outputs startup message with max iterations', async () => {
     const dependencies = createDependencies()
     dependencies.arguments = ['3']

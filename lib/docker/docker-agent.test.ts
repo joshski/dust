@@ -10,7 +10,9 @@ import {
   hasLegacyDockerfile,
   isDockerAvailable,
   prepareDockerConfig,
+  prepareContainerConfigWithRuntime,
 } from './docker-agent'
+import { appleContainerRuntime } from '../container/apple-container-runtime'
 
 function createMockSpawn(
   exitCode: number | null = 0,
@@ -407,6 +409,28 @@ describe('prepareDockerConfig', () => {
 
     expect(result).toEqual({
       error: 'Docker not available. Install Docker to use --docker flag.',
+    })
+  })
+
+  test('returns Apple Container error when runtime not available with forceContainer', async () => {
+    const events: { type: string; imageTag?: string }[] = []
+    const dependencies: DockerDependencies = {
+      spawn: createMockSpawn(1),
+      homedir: () => '/home/user',
+      existsSync: () => false,
+    }
+
+    const result = await prepareContainerConfigWithRuntime(
+      '/home/user/project',
+      dependencies,
+      event => events.push(event),
+      appleContainerRuntime,
+      { forceContainer: true }
+    )
+
+    expect(result).toEqual({
+      error:
+        'Apple Container CLI not found. Install from https://github.com/apple/container or use --docker.',
     })
   })
 })
