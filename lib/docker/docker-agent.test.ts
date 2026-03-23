@@ -7,7 +7,6 @@ import {
   generateImageTag,
   getDefaultDockerfilePath,
   hasDockerfile,
-  hasLegacyDockerfile,
   isDockerAvailable,
   prepareDockerConfig,
   prepareContainerConfigWithRuntime,
@@ -41,21 +40,7 @@ function createMockSpawn(
   }) as DockerDependencies['spawn']
 }
 
-function createTrackedSpawn(callCounter: {
-  count: number
-}): DockerDependencies['spawn'] {
-  return ((..._args: unknown[]) => {
-    callCounter.count++
-    const proc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter | null
-      stderr: EventEmitter
-    }
-    proc.stdout = new EventEmitter()
-    proc.stderr = new EventEmitter()
-    setTimeout(() => proc.emit('close', 0), 0)
-    return asChildProcessStub(proc)
-  }) as DockerDependencies['spawn']
-}
+
 
 describe('isDockerAvailable', () => {
   test('returns true when docker --version succeeds', async () => {
@@ -232,28 +217,6 @@ describe('hasDockerfile', () => {
   })
 })
 
-describe('hasLegacyDockerfile', () => {
-  test('returns true when .dust/Dockerfile exists', () => {
-    const dependencies: DockerDependencies = {
-      spawn: createMockSpawn(0),
-      homedir: () => '/home/user',
-      existsSync: (p: string) => p === '/home/user/project/.dust/Dockerfile',
-    }
-
-    expect(hasLegacyDockerfile('/home/user/project', dependencies)).toBe(true)
-  })
-
-  test('returns false when .dust/Dockerfile does not exist', () => {
-    const dependencies: DockerDependencies = {
-      spawn: createMockSpawn(0),
-      homedir: () => '/home/user',
-      existsSync: () => false,
-    }
-
-    expect(hasLegacyDockerfile('/home/user/project', dependencies)).toBe(false)
-  })
-})
-
 describe('getDefaultDockerfilePath', () => {
   test('returns path ending with default.Dockerfile', () => {
     const path = getDefaultDockerfilePath()
@@ -262,36 +225,6 @@ describe('getDefaultDockerfilePath', () => {
 })
 
 describe('prepareDockerConfig', () => {
-  test('returns error when legacy .dust/Dockerfile exists', async () => {
-    const spawnCalls = { count: 0 }
-    const spawn = createTrackedSpawn(spawnCalls)
-    const events: { type: string; error?: string }[] = []
-    const dependencies: DockerDependencies = {
-      spawn,
-      homedir: () => '/home/user',
-      existsSync: (p: string) => p === '/home/user/project/.dust/Dockerfile',
-    }
-
-    const result = await prepareDockerConfig(
-      '/home/user/project',
-      dependencies,
-      event => events.push(event)
-    )
-
-    expect(result).toEqual({
-      error:
-        'Legacy Docker configuration path ".dust/Dockerfile" is no longer supported. Move it to ".dust/config/container/Dockerfile".',
-    })
-    expect(events).toEqual([
-      {
-        type: 'loop.docker_error',
-        error:
-          'Legacy Docker configuration path ".dust/Dockerfile" is no longer supported. Move it to ".dust/config/container/Dockerfile".',
-      },
-    ])
-    expect(spawnCalls.count).toBe(0)
-  })
-
   test('returns empty object when no Dockerfile and forceDocker is false', async () => {
     const events: { type: string }[] = []
     const dependencies: DockerDependencies = {

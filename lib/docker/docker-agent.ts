@@ -9,7 +9,6 @@
  * and provides the high-level prepareDockerConfig orchestration function.
  */
 
-import path from 'node:path'
 import type {
   ContainerDependencies,
   ContainerRuntime,
@@ -42,22 +41,6 @@ export async function buildDockerImage(
   return dockerRuntime.buildImage(config, dependencies)
 }
 
-const LEGACY_DOCKERFILE_PATH = ['.dust', 'Dockerfile']
-
-const LEGACY_DOCKERFILE_ERROR =
-  'Legacy Docker configuration path ".dust/Dockerfile" is no longer supported. Move it to ".dust/config/container/Dockerfile".'
-
-/**
- * Check if a Dockerfile exists at the legacy .dust/Dockerfile location.
- */
-export function hasLegacyDockerfile(
-  repoPath: string,
-  dependencies: ContainerDependencies
-): boolean {
-  const dockerfilePath = path.join(repoPath, ...LEGACY_DOCKERFILE_PATH)
-  return dependencies.existsSync(dockerfilePath)
-}
-
 type ContainerPrepareEvent =
   | { type: 'loop.docker_detected'; imageTag: string }
   | { type: 'loop.docker_building'; imageTag: string }
@@ -82,10 +65,9 @@ interface PrepareContainerOptions {
 /**
  * Prepare container configuration for agent execution.
  *
- * Rejects legacy .dust/Dockerfile usage, checks for a
- * .dust/config/container/Dockerfile, verifies runtime availability, builds the
- * image, and returns the spawn configuration. Emits events throughout the
- * process.
+ * Checks for a .dust/config/container/Dockerfile, verifies runtime
+ * availability, builds the image, and returns the spawn configuration.
+ * Emits events throughout the process.
  *
  * When `forceContainer` is true and no custom Dockerfile exists, uses the bundled
  * default Dockerfile.
@@ -103,11 +85,6 @@ async function prepareContainerConfig(
   options?: PrepareContainerOptions
 ): Promise<PrepareContainerConfigResult> {
   log(`checking for container configuration in ${repoPath}`)
-
-  if (hasLegacyDockerfile(repoPath, dependencies)) {
-    onEvent({ type: 'loop.docker_error', error: LEGACY_DOCKERFILE_ERROR })
-    return { error: LEGACY_DOCKERFILE_ERROR }
-  }
 
   const hasCustomDockerfile = hasDockerfile(repoPath, dependencies)
   const forceContainer = options?.forceContainer ?? false

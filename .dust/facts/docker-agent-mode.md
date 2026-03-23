@@ -2,8 +2,6 @@
 
 Dust runs agent sessions inside Docker containers when `.dust/config/container/Dockerfile` exists. This provides the [sandboxing](./autonomous-agents-need-sandboxes.md) recommended for autonomous agents.
 
-The legacy path `.dust/Dockerfile` is not supported. `dust lint` reports a migration error, and runtime exits early with the same message.
-
 ## Opt-in via --docker flag
 
 The `--docker` flag enables Docker execution without a custom Dockerfile:
@@ -51,7 +49,6 @@ Container runtime support is implemented through an abstraction layer:
 Key functions:
 
 - `hasDockerfile()` checks for `.dust/config/container/Dockerfile` in the repo
-- `hasLegacyDockerfile()` checks for `.dust/Dockerfile` and fails fast with migration guidance
 - `getDefaultDockerfilePath()` returns the path to the bundled default Dockerfile at `lib/docker/default.Dockerfile`
 - `dockerRuntime.buildImage()` builds the image with a tag derived from the repo path
 - `prepareDockerConfig()` accepts a `forceDocker` option that uses the bundled default when no custom Dockerfile exists
