@@ -134,5 +134,6 @@ export const appleContainerRuntime: ContainerRuntime = {
   isAvailable: isAppleContainerAvailable,
   buildImage: buildAppleContainerImage,
   runCommand: 'container',
+  hostAddress: '192.168.64.1',
   buildRunArgs: buildAppleContainerRunArgs,
 }

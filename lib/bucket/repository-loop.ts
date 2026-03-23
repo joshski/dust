@@ -403,10 +403,13 @@ async function setupDockerConfig(
   log(`git credential proxy started on port ${gitProxy.port}`)
 
   let stopApiProxy: (() => void) | undefined
+  const hostAddress =
+    runtimeResult.runtime?.hostAddress ?? 'host.docker.internal'
   const config: DockerSpawnConfig = {
     ...dockerResult.config,
     runCommand: runtimeResult.runtime?.runCommand,
-    gitProxyUrl: `http://host.docker.internal:${gitProxy.port}`,
+    hostAddress,
+    gitProxyUrl: `http://${hostAddress}:${gitProxy.port}`,
   }
 
   if (!isCodexRepo) {
@@ -414,7 +417,7 @@ async function setupDockerConfig(
     stopApiProxy = apiProxy.stop
     log(`claude api proxy started on port ${apiProxy.port}`)
 
-    const claudeApiProxyUrl = `http://host.docker.internal:${apiProxy.port}`
+    const claudeApiProxyUrl = `http://${hostAddress}:${apiProxy.port}`
 
     // Create temp settings file with apiKeyHelper configuration
     const settingsFilePath = join(

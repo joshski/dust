@@ -19,6 +19,7 @@ import {
   type DockerDependencies,
   prepareContainerConfigWithRuntime,
 } from '../docker/docker-agent'
+import type { ContainerRuntime } from '../container/runtime'
 import { selectContainerRuntime } from '../container/select-runtime'
 import { createLogger, enableFileLogs } from '../logging'
 import { createClaudeApiProxyServer } from '../proxy/claude-api-proxy'
@@ -58,9 +59,10 @@ async function setupDockerProxies(
     userHome: process.env.DUST_USER_HOME || undefined,
   })
 
+  const hostAddress = dockerResult.config.hostAddress ?? 'host.docker.internal'
   const dockerConfig: DockerSpawnConfig = {
     ...dockerResult.config,
-    gitProxyUrl: `http://host.docker.internal:${gitProxy.port}`,
+    gitProxyUrl: `http://${hostAddress}:${gitProxy.port}`,
   }
   let stopApiProxy: (() => void) | undefined
   let settingsFilePath: string | undefined
@@ -68,7 +70,7 @@ async function setupDockerProxies(
   if (includeClaudeApiProxy) {
     const apiProxy = await createClaudeApiProxyServer()
     stopApiProxy = apiProxy.stop
-    const claudeApiProxyUrl = `http://host.docker.internal:${apiProxy.port}`
+    const claudeApiProxyUrl = `http://${hostAddress}:${apiProxy.port}`
 
     settingsFilePath = join(
       os.tmpdir(),
@@ -97,6 +99,38 @@ function resolveDockerDependencies(
     homedir: loopDependencies.dockerDeps?.homedir ?? os.homedir,
     existsSync: loopDependencies.dockerDeps?.existsSync ?? existsSync,
   }
+}
+
+type ContainerSetupResult =
+  | { dockerProxies: DockerProxyConfig; dockerConfig: DockerSpawnConfig }
+  | { exitCode: 1 }
+  | undefined
+
+async function setupContainerProxies(
+  dockerResult: Awaited<ReturnType<typeof prepareContainerConfigWithRuntime>>,
+  containerRuntime: ContainerRuntime | null | undefined,
+  loopDependencies: LoopDependencies,
+  sessionId: string
+): Promise<ContainerSetupResult> {
+  if (!('config' in dockerResult)) {
+    return undefined
+  }
+  const isCodexLoop = loopDependencies.agentType === 'codex'
+  if (!isCodexLoop && !process.env.CLAUDE_CODE_OAUTH_TOKEN) {
+    return { exitCode: 1 }
+  }
+  const typedResult = dockerResult as { config: DockerSpawnConfig }
+  Object.assign(typedResult.config, {
+    runCommand: containerRuntime?.runCommand,
+    hostAddress: containerRuntime?.hostAddress,
+  })
+  const dockerProxies = await setupDockerProxies(
+    typedResult,
+    loopDependencies,
+    sessionId,
+    !isCodexLoop
+  )
+  return { dockerProxies, dockerConfig: dockerProxies.dockerConfig }
 }
 
 export async function runLoop(
@@ -180,27 +214,20 @@ export async function runLoop(
     return { exitCode: 1 }
   }
 
-  let dockerProxies: DockerProxyConfig | undefined
-
-  if ('config' in dockerResult) {
-    const isCodexLoop = loopDependencies.agentType === 'codex'
-    if (!isCodexLoop && !process.env.CLAUDE_CODE_OAUTH_TOKEN) {
-      context.stderr(
-        'Docker mode requires CLAUDE_CODE_OAUTH_TOKEN. Run `claude setup-token` and export the token.'
-      )
-      return { exitCode: 1 }
-    }
-
-    const typedResult = dockerResult as { config: DockerSpawnConfig }
-    typedResult.config.runCommand = containerRuntime?.runCommand
-    dockerProxies = await setupDockerProxies(
-      typedResult,
-      loopDependencies,
-      sessionId,
-      !isCodexLoop
+  const containerSetup = await setupContainerProxies(
+    dockerResult,
+    containerRuntime,
+    loopDependencies,
+    sessionId
+  )
+  if (containerSetup && 'exitCode' in containerSetup) {
+    context.stderr(
+      'Docker mode requires CLAUDE_CODE_OAUTH_TOKEN. Run `claude setup-token` and export the token.'
     )
-    dockerConfig = dockerProxies.dockerConfig
+    return { exitCode: 1 }
   }
+  const dockerProxies = containerSetup?.dockerProxies
+  dockerConfig = containerSetup?.dockerConfig
 
   log(`starting loop, maxIterations=${maxIterations}, sessionId=${sessionId}`)
   onLoopEvent({ type: 'loop.warning' })

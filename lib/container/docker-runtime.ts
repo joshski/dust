@@ -159,5 +159,6 @@ export const dockerRuntime: ContainerRuntime = {
   isAvailable: isDockerAvailable,
   buildImage: buildDockerImage,
   runCommand: 'docker',
+  hostAddress: 'host.docker.internal',
   buildRunArgs: buildDockerRunArgs,
 }

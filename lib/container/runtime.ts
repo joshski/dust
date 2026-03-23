@@ -72,6 +72,9 @@ export interface ContainerRuntime {
   /** The CLI command for running containers (e.g., 'docker', 'container') */
   runCommand: string
 
+  /** Hostname or IP the container uses to reach the host (e.g., 'host.docker.internal', '192.168.64.1') */
+  hostAddress: string
+
   /** Map dust's run options to CLI arguments */
   buildRunArgs: (config: RunConfig) => string[]
 }
