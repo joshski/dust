@@ -66,7 +66,7 @@ function selectRuntime(flags: { docker: boolean; appleContainer: boolean }): Con
 
 ## Blocked By
 
-- [Introduce ContainerRuntime Abstraction](introduce-containerruntime-abstraction.md)
+(none)
 
 ## Definition of Done
 

@@ -4,176 +4,86 @@
  * When a repository contains a .dust/config/container/Dockerfile, the agent
  * runs inside a Docker container instead of directly on the host. This
  * provides isolation and lets each project define its ideal agent environment.
+ *
+ * This module re-exports utilities from the container abstraction layer
+ * and provides the high-level prepareDockerConfig orchestration function.
  */
 
-import type { spawn as nodeSpawn } from 'node:child_process'
-import type os from 'node:os'
 import path from 'node:path'
+import type {
+  ContainerDependencies,
+  ContainerRuntime,
+} from '../container/runtime'
+import {
+  dockerRuntime,
+  generateImageTag,
+  getDefaultDockerfilePath,
+  hasDockerfile,
+} from '../container/docker-runtime'
 import { createLogger } from '../logging'
 
 const log = createLogger('dust:docker:agent')
 
-interface DockerConfig {
-  /** Path to the repository */
-  repoPath: string
-  /** Docker image tag to use (e.g., 'dust-agent-myrepo') */
-  imageTag: string
-  /** Optional custom Dockerfile path (defaults to .dust/config/container/Dockerfile) */
-  dockerfilePath?: string
+// Re-export types and utilities for backward compatibility
+export type { ContainerDependencies as DockerDependencies } from '../container/runtime'
+export { generateImageTag, getDefaultDockerfilePath, hasDockerfile }
+
+// Re-export the build functions through the runtime for compatibility
+export async function isDockerAvailable(
+  dependencies: ContainerDependencies
+): Promise<boolean> {
+  return dockerRuntime.isAvailable(dependencies)
 }
 
-export interface DockerDependencies {
-  spawn: typeof nodeSpawn
-  homedir: typeof os.homedir
-  existsSync: (path: string) => boolean
+export async function buildDockerImage(
+  config: { repoPath: string; imageTag: string; dockerfilePath?: string },
+  dependencies: ContainerDependencies
+): Promise<{ success: true } | { success: false; error: string }> {
+  return dockerRuntime.buildImage(config, dependencies)
 }
 
-const CANONICAL_DOCKERFILE_PATH = ['.dust', 'config', 'container', 'Dockerfile']
 const LEGACY_DOCKERFILE_PATH = ['.dust', 'Dockerfile']
 
 const LEGACY_DOCKERFILE_ERROR =
   'Legacy Docker configuration path ".dust/Dockerfile" is no longer supported. Move it to ".dust/config/container/Dockerfile".'
 
 /**
- * Get the path to the bundled default Dockerfile.
- */
-export function getDefaultDockerfilePath(): string {
-  // import.meta.dirname gives us the directory of this module
-  return path.join(import.meta.dirname, 'default.Dockerfile')
-}
-
-/**
- * Check if Docker is available on the system.
- */
-export async function isDockerAvailable(
-  dependencies: DockerDependencies
-): Promise<boolean> {
-  return new Promise(resolve => {
-    const proc = dependencies.spawn('docker', ['--version'], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-    })
-
-    proc.on('close', code => {
-      resolve(code === 0)
-    })
-
-    proc.on('error', () => {
-      resolve(false)
-    })
-  })
-}
-
-/**
- * Generate a deterministic Docker image tag from the repository path.
- * Uses the repository directory name, sanitized for Docker tag requirements.
- */
-export function generateImageTag(repoPath: string): string {
-  const repoName = path.basename(repoPath)
-  // Docker tags must be lowercase and can only contain [a-z0-9._-]
-  const sanitized = repoName.toLowerCase().replace(/[^a-z0-9._-]/g, '-')
-  return `dust-agent-${sanitized}`
-}
-
-type BuildResult = { success: true } | { success: false; error: string }
-
-/**
- * Build a Docker image from a Dockerfile.
- * Uses the provided dockerfilePath or defaults to .dust/config/container/Dockerfile.
- */
-export async function buildDockerImage(
-  config: DockerConfig,
-  dependencies: DockerDependencies
-): Promise<BuildResult> {
-  const dockerfilePath =
-    config.dockerfilePath ??
-    path.join(config.repoPath, '.dust', 'config', 'container', 'Dockerfile')
-
-  log(`building Docker image ${config.imageTag} from ${dockerfilePath}`)
-
-  return new Promise(resolve => {
-    const proc = dependencies.spawn(
-      'docker',
-      ['build', '-t', config.imageTag, '-f', dockerfilePath, config.repoPath],
-      {
-        stdio: ['ignore', 'pipe', 'pipe'],
-      }
-    )
-
-    let stderr = ''
-    proc.stderr?.on('data', (data: Buffer) => {
-      stderr += data.toString()
-    })
-
-    proc.on('close', code => {
-      if (code === 0) {
-        log(`Docker image ${config.imageTag} built successfully`)
-        resolve({ success: true })
-      } else {
-        log(`Docker build failed: ${stderr}`)
-        resolve({
-          success: false,
-          error: `Docker build failed with exit code ${code}: ${stderr.trim()}`,
-        })
-      }
-    })
-
-    proc.on('error', error => {
-      resolve({
-        success: false,
-        error: `Docker build failed: ${error.message}`,
-      })
-    })
-  })
-}
-
-/**
- * Check if a Dockerfile exists at .dust/config/container/Dockerfile.
- */
-export function hasDockerfile(
-  repoPath: string,
-  dependencies: DockerDependencies
-): boolean {
-  const dockerfilePath = path.join(repoPath, ...CANONICAL_DOCKERFILE_PATH)
-  return dependencies.existsSync(dockerfilePath)
-}
-
-/**
  * Check if a Dockerfile exists at the legacy .dust/Dockerfile location.
  */
 export function hasLegacyDockerfile(
   repoPath: string,
-  dependencies: DockerDependencies
+  dependencies: ContainerDependencies
 ): boolean {
   const dockerfilePath = path.join(repoPath, ...LEGACY_DOCKERFILE_PATH)
   return dependencies.existsSync(dockerfilePath)
 }
 
-type DockerPrepareEvent =
+type ContainerPrepareEvent =
   | { type: 'loop.docker_detected'; imageTag: string }
   | { type: 'loop.docker_building'; imageTag: string }
   | { type: 'loop.docker_built'; imageTag: string }
   | { type: 'loop.docker_error'; error: string }
 
-interface DockerSpawnConfig {
+interface ContainerSpawnConfig {
   imageTag: string
   repoPath: string
   homeDir: string
 }
 
-type PrepareDockerConfigResult =
-  | { config: DockerSpawnConfig }
+type PrepareContainerConfigResult =
+  | { config: ContainerSpawnConfig }
   | { error: string }
   | Record<string, never>
 
-interface PrepareDockerOptions {
+interface PrepareContainerOptions {
   forceDocker?: boolean
 }
 
 /**
- * Prepare Docker configuration for agent execution.
+ * Prepare container configuration for agent execution.
  *
  * Rejects legacy .dust/Dockerfile usage, checks for a
- * .dust/config/container/Dockerfile, verifies Docker availability, builds the
+ * .dust/config/container/Dockerfile, verifies runtime availability, builds the
  * image, and returns the spawn configuration. Emits events throughout the
  * process.
  *
@@ -181,17 +91,18 @@ interface PrepareDockerOptions {
  * default Dockerfile.
  *
  * Returns:
- * - `{ config: DockerSpawnConfig }` on success
- * - `{ error: string }` on failure (Docker not available or build failed)
+ * - `{ config: ContainerSpawnConfig }` on success
+ * - `{ error: string }` on failure (runtime not available or build failed)
  * - `{}` if no Dockerfile exists and forceDocker is false
  */
-export async function prepareDockerConfig(
+async function prepareContainerConfig(
   repoPath: string,
-  dependencies: DockerDependencies,
-  onEvent: (event: DockerPrepareEvent) => void,
-  options?: PrepareDockerOptions
-): Promise<PrepareDockerConfigResult> {
-  log(`checking for Docker configuration in ${repoPath}`)
+  dependencies: ContainerDependencies,
+  onEvent: (event: ContainerPrepareEvent) => void,
+  runtime: ContainerRuntime,
+  options?: PrepareContainerOptions
+): Promise<PrepareContainerConfigResult> {
+  log(`checking for container configuration in ${repoPath}`)
 
   if (hasLegacyDockerfile(repoPath, dependencies)) {
     onEvent({ type: 'loop.docker_error', error: LEGACY_DOCKERFILE_ERROR })
@@ -202,20 +113,20 @@ export async function prepareDockerConfig(
   const forceDocker = options?.forceDocker ?? false
 
   if (!hasCustomDockerfile && !forceDocker) {
-    log('no .dust/config/container/Dockerfile found, running without Docker')
+    log('no .dust/config/container/Dockerfile found, running without container')
     return {}
   }
 
   // Use custom Dockerfile if it exists, otherwise use bundled default
   const dockerfilePath = hasCustomDockerfile
-    ? undefined // buildDockerImage will use the default path
+    ? undefined // buildImage will use the default path
     : getDefaultDockerfilePath()
 
   const imageTag = generateImageTag(repoPath)
   log(`Dockerfile found, image tag: ${imageTag}`)
   onEvent({ type: 'loop.docker_detected', imageTag })
 
-  if (!(await isDockerAvailable(dependencies))) {
+  if (!(await runtime.isAvailable(dependencies))) {
     const error = hasCustomDockerfile
       ? 'Docker not available. Install Docker or remove .dust/config/container/Dockerfile to run without Docker.'
       : 'Docker not available. Install Docker to use --docker flag.'
@@ -223,7 +134,7 @@ export async function prepareDockerConfig(
   }
 
   onEvent({ type: 'loop.docker_building', imageTag })
-  const buildResult = await buildDockerImage(
+  const buildResult = await runtime.buildImage(
     { repoPath, imageTag, dockerfilePath },
     dependencies
   )
@@ -236,12 +147,33 @@ export async function prepareDockerConfig(
   onEvent({ type: 'loop.docker_built', imageTag })
 
   const homeDir = dependencies.homedir()
-  const config: DockerSpawnConfig = {
+  const config: ContainerSpawnConfig = {
     imageTag,
     repoPath,
     homeDir,
   }
 
-  log(`Docker config ready: ${JSON.stringify(config)}`)
+  log(`Container config ready: ${JSON.stringify(config)}`)
   return { config }
+}
+
+/**
+ * Prepare Docker configuration for agent execution.
+ *
+ * This is a thin wrapper around prepareContainerConfig that uses the Docker
+ * runtime. Kept for backward compatibility with existing callers.
+ */
+export async function prepareDockerConfig(
+  repoPath: string,
+  dependencies: ContainerDependencies,
+  onEvent: (event: ContainerPrepareEvent) => void,
+  options?: PrepareContainerOptions
+): Promise<PrepareContainerConfigResult> {
+  return prepareContainerConfig(
+    repoPath,
+    dependencies,
+    onEvent,
+    dockerRuntime,
+    options
+  )
 }

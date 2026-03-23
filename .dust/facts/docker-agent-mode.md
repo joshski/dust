@@ -42,10 +42,18 @@ Without the API proxy, `CLAUDE_CODE_OAUTH_TOKEN` must be set and `~/.claude` is 
 
 ## How it works
 
+Container runtime support is implemented through an abstraction layer:
+
+- `lib/container/runtime.ts` defines the `ContainerRuntime` interface for provider-agnostic container operations
+- `lib/container/docker-runtime.ts` implements `ContainerRuntime` for Docker
+- `lib/docker/docker-agent.ts` provides backward-compatible exports and orchestration
+
+Key functions:
+
 - `hasDockerfile()` checks for `.dust/config/container/Dockerfile` in the repo
 - `hasLegacyDockerfile()` checks for `.dust/Dockerfile` and fails fast with migration guidance
 - `getDefaultDockerfilePath()` returns the path to the bundled default Dockerfile at `lib/docker/default.Dockerfile`
-- `buildDockerImage()` builds the image with a tag derived from the repo path
+- `dockerRuntime.buildImage()` builds the image with a tag derived from the repo path
 - `prepareDockerConfig()` accepts a `forceDocker` option that uses the bundled default when no custom Dockerfile exists
 - Agent sessions are spawned with `docker run`, mounting the repo at `/workspace`
 - When using the Claude API proxy, `~/.claude` and `~/.claude.json` are NOT mounted (credentials stay on host)
