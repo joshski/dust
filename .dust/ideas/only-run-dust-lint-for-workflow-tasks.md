@@ -34,6 +34,18 @@ Workflow tasks only modify files within `.dust/` (ideas, tasks, facts, principle
 2. May fail on unrelated code issues, blocking workflow task completion
 3. Slows down the planning/refinement loop unnecessarily
 
+## Current State
+
+All artifact formatting and validation knowledge is already in `@joshski/dust`:
+
+- **Artifact parsing**: `parseArtifact()` in `lib/artifacts/parsed-artifact.ts` knows the structure of all artifacts (title, opening sentence, sections, links)
+- **Validation pipeline**: `parseArtifacts()` and `validateArtifacts()` in `lib/validation/validation-pipeline.ts` run all validators
+- **Validators**: All specific validation rules are in `lib/lint/validators/` (content, filenames, links, principles, ideas, tasks, audits)
+- **Public API**: The `@joshski/dust/validation` export exposes `validatePatch()` which uses the same validation as `dust lint`
+- **Command implementation**: `lintMarkdown()` in `lib/cli/commands/lint-markdown.ts` orchestrates the validation
+
+The artifact formatting knowledge is **not** duplicated in the CLI layer - the CLI commands already delegate to the library layer.
+
 ## Proposed Changes
 
 ### Modify git pre-push hook behavior
