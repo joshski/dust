@@ -148,3 +148,73 @@ Display like "2/3 active" to show how many loops are running. Informative but ta
 #### Expand repository row to show per-loop status
 
 Make the repository row expandable to show details of each loop. Rich information but complicates the TUI implementation.
+
+### How should error handling work when loops interfere?
+
+#### Retry with exponential backoff
+
+When a loop encounters a git push conflict or task claim failure, retry with increasing delays. Simple but may cause cascading delays if conflicts persist.
+
+#### Cancel and requeue the task
+
+On conflict, cancel the current loop iteration and put the task back in the queue. Another loop or a future iteration can pick it up. May lead to starvation if one task repeatedly fails.
+
+#### Fail fast and alert
+
+Stop the loop and emit an error event for human intervention. Conservative but may be too disruptive for recoverable errors.
+
+### Should there be loop priority or fair scheduling?
+
+#### FIFO task claiming
+
+Loops claim tasks in the order they become available. Simple and fair but doesn't account for task importance.
+
+#### Priority-based claiming
+
+Expedite tasks get higher priority than Add/Refine tasks. Requires task metadata and more complex claiming logic.
+
+#### Per-loop task affinity
+
+Once a loop starts working on an idea, it continues with related tasks (e.g., if loop A is refining idea X, it should also decompose X). Reduces context switching but may create imbalances.
+
+### How should resource limits adapt to system load?
+
+#### Static limits
+
+Fixed maximum loops per repository (e.g., 2). Simple but wastes capacity when load is low and may over-commit when load is high.
+
+#### Dynamic scaling based on queue depth
+
+Increase loops when tasks pile up, decrease when queue is empty. More efficient but adds complexity and may cause thrashing.
+
+#### Server-controlled allocation
+
+The dustbucket server monitors global resource usage and tells clients how many loops to run. Centralizes decision-making but requires protocol changes and server-side intelligence.
+
+### How should loop-specific logs and events be structured?
+
+#### Single log buffer with loop ID prefixes
+
+Continue using one `LogBuffer` per repository, prefix each line with `[loop-<id>]`. Simple but makes it harder to filter or isolate loop-specific output.
+
+#### Separate log buffers per loop
+
+Each loop gets its own `LogBuffer`, displayed independently in the TUI. Clean separation but requires significant TUI changes and more memory.
+
+#### Structured events with loop metadata
+
+Tag all events with `loopId` in addition to `agentSessionId`. The TUI and server can filter and aggregate as needed. Flexible but requires event schema changes throughout.
+
+### What testing strategy should validate parallel loop behavior?
+
+#### Unit tests with mocked loops
+
+Test task claiming, state transitions, and conflict scenarios with fake loops. Fast but doesn't catch real concurrency bugs.
+
+#### Integration tests with real git operations
+
+Spawn multiple loops in a test repository and verify they handle conflicts correctly. Slower but more realistic.
+
+#### System tests simulating production workloads
+
+Run parallel loops with real tasks and monitor for deadlocks, race conditions, and data corruption. Most thorough but expensive and potentially flaky.
