@@ -11,11 +11,10 @@ import { join } from 'node:path'
 import type { AgentSessionEvent, EventMessage } from '../agent-events'
 import { createHeartbeatThrottler, formatAgentEvent } from '../agent-events'
 import {
-  type run as claudeRun,
   defaultRunnerDependencies,
   type RunnerDependencies,
 } from '../claude/run'
-import type { DockerSpawnConfig, OutputSink } from '../claude/types'
+import type { BoundRunFn, DockerSpawnConfig, OutputSink } from '../claude/types'
 import { manageGitHooks } from '../cli/shared/agent-shared'
 import {
   formatLoopEvent,
@@ -30,7 +29,10 @@ import {
   defaultRunnerDependencies as codexDefaultRunnerDependencies,
   run as codexRun,
 } from '../codex/run'
-import { defaultDependencies as codexSpawnDefaultDependencies } from '../codex/spawn-codex'
+import {
+  defaultDependencies as codexSpawnDefaultDependencies,
+  spawnCodex as rawSpawnCodex,
+} from '../codex/spawn-codex'
 import { loadSettings } from '../config/settings'
 import { generateApiKeyHelperSettings } from '../claude/spawn-claude-code'
 import { prepareContainerConfigWithRuntime } from '../docker/docker-agent'
@@ -200,7 +202,7 @@ export function createStdoutSinkFactory(
 export function createBufferRun(
   run: RepositoryDependencies['run'],
   bufferSinkDeps: RunnerDependencies
-): typeof claudeRun {
+): BoundRunFn {
   return (prompt, options) => run(prompt, options, bufferSinkDeps)
 }
 
@@ -210,9 +212,8 @@ export function createBufferRun(
 export function createCodexBufferRun(
   run: typeof codexRun,
   codexBufferSinkDeps: CodexRunnerDependencies
-): typeof claudeRun {
-  return ((prompt, options) =>
-    run(prompt, options, codexBufferSinkDeps)) as typeof claudeRun
+): BoundRunFn {
+  return (prompt, options) => run(prompt, options, codexBufferSinkDeps)
 }
 
 /** No-op postEvent for LoopDependencies. */
@@ -465,7 +466,7 @@ function createAgentRun(
   spawn: RepositoryDependencies['spawn'],
   run: RepositoryDependencies['run'],
   createStdoutSink: () => OutputSink
-): typeof claudeRun {
+): BoundRunFn {
   if (isCodex) {
     const codexBufferSinkDeps: CodexRunnerDependencies = {
       ...codexDefaultRunnerDependencies,
@@ -474,11 +475,7 @@ function createAgentRun(
           ...codexSpawnDefaultDependencies,
           spawn,
         }
-        return codexDefaultRunnerDependencies.spawnCodex(
-          prompt,
-          options,
-          spawnDeps
-        )
+        return rawSpawnCodex(prompt, options, spawnDeps)
       },
       createStdoutSink,
     }

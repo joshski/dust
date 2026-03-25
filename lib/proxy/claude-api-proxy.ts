@@ -28,6 +28,7 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { createLogger } from '../logging'
 import {
+  HELPER_TOKEN_TTL_MS,
   type HelperTokenState,
   createHelperTokenState,
   isCurrentTokenValid,
@@ -329,7 +330,12 @@ export function validateHelperToken(
   if (!incomingToken || !state.current) {
     return false
   }
-  return isHelperTokenValid(incomingToken, state.current, now)
+  return isHelperTokenValid(
+    incomingToken,
+    state.current,
+    now,
+    HELPER_TOKEN_TTL_MS
+  )
 }
 
 /**

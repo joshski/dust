@@ -20,15 +20,20 @@ import { agent } from './commands/agent'
 import { audit } from './commands/audit'
 import { bucketWorker } from './commands/bucket-worker'
 import { bucketTool } from './commands/bucket-tool'
-import { check } from './commands/check'
+import { check as checkCommand } from './commands/check'
 import { focus } from './commands/focus'
 import { generateHelpText, help } from './commands/help'
 import { implementTask } from './commands/implement-task'
 import { init } from './commands/init'
 import { lintMarkdown } from './commands/lint-markdown'
 import { list } from './commands/list'
-import { loopClaude } from './commands/loop-claude'
-import { loopCodex } from './commands/loop-codex'
+import { loopClaude as loopClaudeCommand } from './commands/loop-claude'
+import {
+  createCodexDependencies,
+  loopCodex as loopCodexCommand,
+} from './commands/loop-codex'
+import { createDefaultDependencies } from '../loop/iteration'
+import { defaultShellRunner } from './process-runner'
 import { migrate } from './commands/migrate'
 import { newFact } from './commands/new-fact'
 import { newIdea } from './commands/new-idea'
@@ -47,6 +52,16 @@ import type {
   GlobScanner,
 } from './types'
 
+/* istanbul ignore next @preserve -- runtime binding, delegates to tested loopClaude */
+function runLoopClaude(commandDependencies: CommandDependencies) {
+  return loopClaudeCommand(commandDependencies, createDefaultDependencies())
+}
+
+/* istanbul ignore next @preserve -- runtime binding, delegates to tested loopCodex */
+function runLoopCodex(commandDependencies: CommandDependencies) {
+  return loopCodexCommand(commandDependencies, createCodexDependencies())
+}
+
 /**
  * Command registry maps command names to their handler functions.
  * Adding a new command only requires adding an entry here.
@@ -64,7 +79,15 @@ const commandRegistry = {
   ideas,
   facts,
   next,
-  check,
+  /* istanbul ignore next @preserve -- runtime binding, delegates to tested check */
+  check: (commandDependencies: CommandDependencies) =>
+    checkCommand(
+      commandDependencies,
+      defaultShellRunner,
+      Date.now,
+      globalThis.setInterval,
+      globalThis.clearInterval
+    ),
   agent,
   audit,
   'bucket worker': bucketWorker,
@@ -76,8 +99,8 @@ const commandRegistry = {
   'new fact': newFact,
   'implement task': implementTask,
   'pick task': pickTask,
-  'loop claude': loopClaude,
-  'loop codex': loopCodex,
+  'loop claude': runLoopClaude,
+  'loop codex': runLoopCodex,
   'pre push': prePush,
   migrate,
   help,

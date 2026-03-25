@@ -44,7 +44,7 @@ export async function newFact(
 ): Promise<CommandResult> {
   const { context, settings } = dependencies
   const hooksInstalled = await manageGitHooks(dependencies)
-  const vars = templateVariables(settings, hooksInstalled)
+  const vars = templateVariables(settings, hooksInstalled, process.env)
   context.stdout(newFactInstructions(vars))
   return { exitCode: 0 }
 }

@@ -12,7 +12,10 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { spawnClaudeCode as defaultSpawnClaudeCode } from './spawn-claude-code'
+import {
+  defaultDependencies as defaultSpawnDeps,
+  spawnClaudeCode as defaultSpawnClaudeCode,
+} from './spawn-claude-code'
 import { streamEvents as defaultStreamEvents } from './streamer'
 import type { OutputOp, OutputSink, RawEvent, SpawnOptions } from './types'
 
@@ -67,12 +70,17 @@ export function getVcrMode(): VcrMode {
 }
 
 export interface RecorderDependencies {
-  spawnClaudeCode: typeof defaultSpawnClaudeCode
+  spawnClaudeCode: (
+    prompt: string,
+    options: SpawnOptions
+  ) => AsyncGenerator<RawEvent>
   streamEvents: typeof defaultStreamEvents
 }
 
+/* istanbul ignore next @preserve -- runtime binding wrappers, delegates to tested functions */
 export const defaultRecorderDependencies: RecorderDependencies = {
-  spawnClaudeCode: defaultSpawnClaudeCode,
+  spawnClaudeCode: (prompt, options) =>
+    defaultSpawnClaudeCode(prompt, options, defaultSpawnDeps),
   streamEvents: defaultStreamEvents,
 }
 
@@ -83,14 +91,10 @@ export const defaultRecorderDependencies: RecorderDependencies = {
 export async function recordCassette(
   name: string,
   prompt: string,
-  options?: SpawnOptions,
-  description?: string,
-  dependencies?: RecorderDependencies
+  options: SpawnOptions,
+  description: string | undefined,
+  dependencies: RecorderDependencies
 ): Promise<Cassette> {
-  options ??=
-    /* istanbul ignore next @preserve -- default parameter branch */ {}
-  dependencies ??=
-    /* istanbul ignore next @preserve -- default parameter branch */ defaultRecorderDependencies
   const rawEvents: RawEvent[] = []
   const sink = createRecordingSink()
 

@@ -9,7 +9,11 @@
 import { detectAgent } from '../../agents/detection'
 import { readEnvConfig } from '../../env-config'
 import { isUnattended } from '../../session'
-import { defaultGitRunner, type GitRunner } from '../process-runner'
+import {
+  defaultGitRunner,
+  defaultShellRunner,
+  type GitRunner,
+} from '../process-runner'
 import type { CommandDependencies, CommandResult } from '../types'
 import { check } from './check'
 
@@ -247,5 +251,11 @@ export async function prePush(
     }
   }
 
-  return check(dependencies)
+  return check(
+    dependencies,
+    defaultShellRunner,
+    Date.now,
+    globalThis.setInterval,
+    globalThis.clearInterval
+  )
 }

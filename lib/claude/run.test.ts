@@ -1,14 +1,13 @@
 import { describe, expect, test } from 'vitest'
 import { defaultRunnerDependencies, type RunnerDependencies, run } from './run'
-import { spawnClaudeCode } from './spawn-claude-code'
 import { createStdoutSink, streamEvents } from './streamer'
 import type { RawEventCallback } from './types'
 
 const noOpOnRawEvent: RawEventCallback = () => {}
 
 describe('defaultRunnerDependencies', () => {
-  test('uses real implementations', () => {
-    expect(defaultRunnerDependencies.spawnClaudeCode).toBe(spawnClaudeCode)
+  test('has all required functions', () => {
+    expect(typeof defaultRunnerDependencies.spawnClaudeCode).toBe('function')
     expect(defaultRunnerDependencies.createStdoutSink).toBe(createStdoutSink)
     expect(defaultRunnerDependencies.streamEvents).toBe(streamEvents)
   })

@@ -1,37 +1,36 @@
 import { createStdoutSink as defaultCreateStdoutSink } from '../claude/streamer'
-import type { RawEventCallback, SpawnOptions } from '../claude/types'
-import { spawnCodex as defaultSpawnCodex } from './spawn-codex'
+import type { RawEvent, RunOptions, SpawnOptions } from '../claude/types'
+import {
+  defaultDependencies as defaultSpawnDeps,
+  spawnCodex as defaultSpawnCodex,
+} from './spawn-codex'
 import { streamCodexEvents as defaultStreamCodexEvents } from './streamer'
-
-interface RunOptions {
-  spawnOptions?: SpawnOptions
-  onRawEvent?: RawEventCallback
-}
 
 const isRunOptions = (opt: SpawnOptions | RunOptions): opt is RunOptions =>
   'spawnOptions' in opt || 'onRawEvent' in opt
 
 export interface RunnerDependencies {
-  spawnCodex: typeof defaultSpawnCodex
+  spawnCodex: (
+    prompt: string,
+    options: SpawnOptions
+  ) => AsyncGenerator<RawEvent>
   createStdoutSink: typeof defaultCreateStdoutSink
   streamCodexEvents: typeof defaultStreamCodexEvents
 }
 
+/* istanbul ignore next @preserve -- runtime binding wrappers, delegates to tested functions */
 export const defaultRunnerDependencies: RunnerDependencies = {
-  spawnCodex: defaultSpawnCodex,
+  spawnCodex: (prompt, options) =>
+    defaultSpawnCodex(prompt, options, defaultSpawnDeps),
   createStdoutSink: defaultCreateStdoutSink,
   streamCodexEvents: defaultStreamCodexEvents,
 }
 
 export async function run(
   prompt: string,
-  options?: SpawnOptions | RunOptions,
-  dependencies?: RunnerDependencies
+  options: SpawnOptions | RunOptions,
+  dependencies: RunnerDependencies
 ): Promise<void> {
-  options ??=
-    /* istanbul ignore next @preserve -- default parameter branch */ {}
-  dependencies ??=
-    /* istanbul ignore next @preserve -- default parameter branch */ defaultRunnerDependencies
   const spawnOptions = isRunOptions(options)
     ? (options.spawnOptions ?? {})
     : options

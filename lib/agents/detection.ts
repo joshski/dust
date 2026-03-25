@@ -22,9 +22,7 @@ export type AgentType = Agent['type']
  * 3. CODEX_HOME or CODEX_CI → Codex
  * 4. Fallback → unknown Agent
  */
-export function detectAgent(env?: NodeJS.ProcessEnv): Agent {
-  env ??=
-    /* istanbul ignore next @preserve -- default parameter branch */ process.env
+export function detectAgent(env: NodeJS.ProcessEnv): Agent {
   if (env.CLAUDECODE) {
     if (env.CLAUDE_CODE_REMOTE) {
       return { type: 'claude-code-web', name: 'Claude Code Web' }

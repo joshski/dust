@@ -52,54 +52,70 @@ describe('isHelperTokenValid', () => {
     const now = 1700000000000
     const issued = generateHelperToken(now)
     const checkTime = now + 30_000 // 30 seconds later
-    expect(isHelperTokenValid(issued.token, issued, checkTime)).toBe(true)
+    expect(
+      isHelperTokenValid(issued.token, issued, checkTime, HELPER_TOKEN_TTL_MS)
+    ).toBe(true)
   })
 
   test('returns true for matching token at exact issue time', () => {
     const now = 1700000000000
     const issued = generateHelperToken(now)
-    expect(isHelperTokenValid(issued.token, issued, now)).toBe(true)
+    expect(
+      isHelperTokenValid(issued.token, issued, now, HELPER_TOKEN_TTL_MS)
+    ).toBe(true)
   })
 
   test('returns true for matching token just before TTL expires', () => {
     const now = 1700000000000
     const issued = generateHelperToken(now)
     const checkTime = now + HELPER_TOKEN_TTL_MS - 1
-    expect(isHelperTokenValid(issued.token, issued, checkTime)).toBe(true)
+    expect(
+      isHelperTokenValid(issued.token, issued, checkTime, HELPER_TOKEN_TTL_MS)
+    ).toBe(true)
   })
 
   test('returns false for matching token at exactly TTL', () => {
     const now = 1700000000000
     const issued = generateHelperToken(now)
     const checkTime = now + HELPER_TOKEN_TTL_MS
-    expect(isHelperTokenValid(issued.token, issued, checkTime)).toBe(false)
+    expect(
+      isHelperTokenValid(issued.token, issued, checkTime, HELPER_TOKEN_TTL_MS)
+    ).toBe(false)
   })
 
   test('returns false for matching token after TTL expires', () => {
     const now = 1700000000000
     const issued = generateHelperToken(now)
     const checkTime = now + HELPER_TOKEN_TTL_MS + 1000
-    expect(isHelperTokenValid(issued.token, issued, checkTime)).toBe(false)
+    expect(
+      isHelperTokenValid(issued.token, issued, checkTime, HELPER_TOKEN_TTL_MS)
+    ).toBe(false)
   })
 
   test('returns false for wrong token', () => {
     const now = 1700000000000
     const issued = generateHelperToken(now)
-    expect(isHelperTokenValid('wrong-token', issued, now)).toBe(false)
+    expect(
+      isHelperTokenValid('wrong-token', issued, now, HELPER_TOKEN_TTL_MS)
+    ).toBe(false)
   })
 
   test('returns false for token from different generation', () => {
     const now = 1700000000000
     const issued1 = generateHelperToken(now)
     const issued2 = generateHelperToken(now)
-    expect(isHelperTokenValid(issued1.token, issued2, now)).toBe(false)
+    expect(
+      isHelperTokenValid(issued1.token, issued2, now, HELPER_TOKEN_TTL_MS)
+    ).toBe(false)
   })
 
   test('returns false for check time before issue time', () => {
     const now = 1700000000000
     const issued = generateHelperToken(now)
     const checkTime = now - 1000 // 1 second before issue
-    expect(isHelperTokenValid(issued.token, issued, checkTime)).toBe(false)
+    expect(
+      isHelperTokenValid(issued.token, issued, checkTime, HELPER_TOKEN_TTL_MS)
+    ).toBe(false)
   })
 
   test('respects custom TTL parameter', () => {

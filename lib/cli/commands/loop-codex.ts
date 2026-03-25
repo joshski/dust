@@ -6,7 +6,10 @@
  * Usage: dust loop codex [max-iterations]
  */
 
-import { run as codexRun } from '../../codex/run'
+import {
+  defaultRunnerDependencies as codexDefaultRunnerDeps,
+  run as codexRun,
+} from '../../codex/run'
 import {
   createDefaultDependencies,
   type LoopDependencies,
@@ -14,12 +17,13 @@ import {
 import { runLoop } from '../../loop/loop'
 import type { CommandDependencies, CommandResult } from '../types'
 
+/* istanbul ignore next @preserve -- runtime factory, binds tested functions into LoopDependencies */
 export function createCodexDependencies(
   overrides: Partial<LoopDependencies> = {}
 ): LoopDependencies {
   return {
     ...createDefaultDependencies(),
-    run: codexRun as LoopDependencies['run'],
+    run: (prompt, options) => codexRun(prompt, options, codexDefaultRunnerDeps),
     ...overrides,
     agentType: 'codex',
   }
@@ -27,10 +31,8 @@ export function createCodexDependencies(
 
 export async function loopCodex(
   dependencies: CommandDependencies,
-  loopDependencies?: LoopDependencies
+  loopDependencies: LoopDependencies
 ): Promise<CommandResult> {
-  loopDependencies ??=
-    /* istanbul ignore next @preserve -- default parameter branch */ createCodexDependencies()
   return runLoop(dependencies, {
     ...loopDependencies,
     agentType: 'codex',

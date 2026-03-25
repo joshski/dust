@@ -79,10 +79,8 @@ export async function clearToken(
 export async function defaultExchangeCode(
   code: string,
   bucketConfig: BucketConfig,
-  fetchFn?: typeof fetch
+  fetchFn: typeof fetch
 ): Promise<string> {
-  fetchFn ??=
-    /* istanbul ignore next @preserve -- default parameter branch */ fetch
   const host = getDustbucketHost(bucketConfig)
   const response = await fetchFn(`${host}/auth/cli/exchange`, {
     method: 'POST',
@@ -105,7 +103,12 @@ export async function authenticate(
   const exchange =
     authDeps.exchangeCode ??
     ((code: string) =>
-      defaultExchangeCode(code, authDeps.bucketConfig, authDeps.fetch))
+      defaultExchangeCode(
+        code,
+        authDeps.bucketConfig,
+        /* istanbul ignore next @preserve -- runtime binding, uses injected or global fetch */
+        authDeps.fetch ?? fetch
+      ))
 
   return new Promise<string>((resolve, reject) => {
     let timer: ReturnType<typeof setTimeout> | null = null

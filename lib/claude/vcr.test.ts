@@ -1,7 +1,6 @@
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { afterEach, describe, expect, test } from 'vitest'
 import { restoreEnv, stubEnv } from '../test/test-utilities'
-import { spawnClaudeCode } from './spawn-claude-code'
 import { streamEvents } from './streamer'
 import {
   type Cassette,
@@ -168,8 +167,8 @@ describe('getVcrMode', () => {
 })
 
 describe('defaultRecorderDependencies', () => {
-  test('uses real implementations', () => {
-    expect(defaultRecorderDependencies.spawnClaudeCode).toBe(spawnClaudeCode)
+  test('has all required functions', () => {
+    expect(typeof defaultRecorderDependencies.spawnClaudeCode).toBe('function')
     expect(defaultRecorderDependencies.streamEvents).toBe(streamEvents)
   })
 })

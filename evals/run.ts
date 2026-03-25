@@ -4,7 +4,10 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { parseRawEvent } from '../lib/claude/event-parser'
-import { spawnClaudeCode } from '../lib/claude/spawn-claude-code'
+import {
+  defaultDependencies as defaultSpawnDeps,
+  spawnClaudeCode,
+} from '../lib/claude/spawn-claude-code'
 import type { ClaudeEvent, ToolUseEvent } from '../lib/claude/types'
 
 interface EvalConfig {
@@ -57,12 +60,16 @@ async function collectEvents(
 
   const systemPrompt = `You are working in a dust project directory. The dust binary is available at: ${dustBinPath}`
 
-  for await (const rawEvent of spawnClaudeCode(prompt, {
-    cwd: testDir,
-    dangerouslySkipPermissions: true,
-    maxTurns: 5,
-    systemPrompt,
-  })) {
+  for await (const rawEvent of spawnClaudeCode(
+    prompt,
+    {
+      cwd: testDir,
+      dangerouslySkipPermissions: true,
+      maxTurns: 5,
+      systemPrompt,
+    },
+    defaultSpawnDeps
+  )) {
     for (const event of parseRawEvent(rawEvent)) {
       events.push(event)
     }
@@ -98,11 +105,15 @@ Determine if the agent's behavior satisfied the expectation. Respond with a JSON
 Only respond with the JSON object, nothing else.`
 
   const events: ClaudeEvent[] = []
-  for await (const rawEvent of spawnClaudeCode(evaluationPrompt, {
-    model: 'haiku',
-    maxTurns: 1,
-    dangerouslySkipPermissions: true,
-  })) {
+  for await (const rawEvent of spawnClaudeCode(
+    evaluationPrompt,
+    {
+      model: 'haiku',
+      maxTurns: 1,
+      dangerouslySkipPermissions: true,
+    },
+    defaultSpawnDeps
+  )) {
     for (const event of parseRawEvent(rawEvent)) {
       events.push(event)
     }

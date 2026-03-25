@@ -1,7 +1,14 @@
 import { execSync, spawn as nodeSpawn } from 'node:child_process'
 import os from 'node:os'
-import { run as claudeRun } from '../claude/run'
-import type { DockerSpawnConfig, SpawnOptions } from '../claude/types'
+import {
+  defaultRunnerDependencies as claudeDefaultRunnerDeps,
+  run as claudeRun,
+} from '../claude/run'
+import type {
+  BoundRunFn,
+  DockerSpawnConfig,
+  SpawnOptions,
+} from '../claude/types'
 import type { DockerDependencies } from '../docker/docker-agent'
 import { readEnvConfig, type SessionConfig } from '../env-config'
 import { createLogger } from '../logging'
@@ -52,7 +59,7 @@ function getEnvironmentContext(cwd: string): {
 
 export interface LoopDependencies {
   spawn: typeof nodeSpawn
-  run: typeof claudeRun
+  run: BoundRunFn
   sleep: (ms: number) => Promise<void>
   postEvent: PostEventFn
   session: SessionConfig
@@ -64,11 +71,13 @@ export interface LoopDependencies {
   shellRunner?: ShellRunner
 }
 
+/* istanbul ignore next @preserve -- runtime factory, binds tested functions into LoopDependencies */
 export function createDefaultDependencies(): LoopDependencies {
   const envConfig = readEnvConfig(process.env)
   return {
     spawn: nodeSpawn,
-    run: claudeRun,
+    run: (prompt, options) =>
+      claudeRun(prompt, options, claudeDefaultRunnerDeps),
     sleep: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
     postEvent: createPostEvent(fetch),
     session: envConfig.session,
@@ -117,7 +126,7 @@ export async function findAvailableTasks(
 
 /** Parameters for running the agent (extracted for reduced complexity) */
 interface AgentRunParams {
-  run: typeof claudeRun
+  run: BoundRunFn
   prompt: string
   spawnOptions: SpawnOptions
   onRawEvent?: (rawEvent: Record<string, unknown>) => void

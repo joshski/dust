@@ -15,11 +15,26 @@ import type {
   DustSettings,
 } from '../types'
 import {
-  check,
+  check as checkRaw,
   createOrderedFlushState,
   flushCompletedInDisplayOrder,
   truncateOutput,
 } from './check'
+
+/** Test helper that provides default clock/interval dependencies */
+function check(
+  commandDependencies: CommandDependencies,
+  shellRunner: ShellRunner,
+  clock: () => number = Date.now
+) {
+  return checkRaw(
+    commandDependencies,
+    shellRunner,
+    clock,
+    globalThis.setInterval,
+    globalThis.clearInterval
+  )
+}
 
 function createMockBufferedRunner(
   results: Record<

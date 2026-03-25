@@ -75,13 +75,9 @@ export function generateHelperToken(now: number = Date.now()): HelperToken {
 export function isHelperTokenValid(
   token: string,
   issued: HelperToken,
-  now?: number,
-  ttlMs?: number
+  now: number,
+  ttlMs: number
 ): boolean {
-  now ??=
-    /* istanbul ignore next @preserve -- default parameter branch */ Date.now()
-  ttlMs ??=
-    /* istanbul ignore next @preserve -- default parameter branch */ HELPER_TOKEN_TTL_MS
   // Check if token matches
   if (token !== issued.token) {
     return false

@@ -22,14 +22,6 @@ interface EventTransportDependencies {
   onError: (message: string) => void
 }
 
-const defaultDependencies: EventTransportDependencies = {
-  // oxlint-disable-next-line dust/no-thin-delegate-wrappers -- late-binding: test monkeypatches globalThis.fetch
-  fetch: (input, init) => fetch(input, init),
-  onError: message => {
-    console.error(message)
-  },
-}
-
 function parseInteger(value: string | undefined): number | undefined {
   if (!value) return undefined
   const parsed = Number.parseInt(value, 10)
@@ -46,13 +38,9 @@ export function parseProxyPort(value: string | undefined): number | undefined {
  * Creates a message writer for command events.
  */
 export function createCommandEventWriter(
-  env?: Record<string, string | undefined>,
-  dependencies?: EventTransportDependencies
+  env: Record<string, string | undefined>,
+  dependencies: EventTransportDependencies
 ): ((message: CommandEventMessage) => void) | undefined {
-  env ??=
-    /* istanbul ignore next @preserve -- default parameter branch */ process.env
-  dependencies ??=
-    /* istanbul ignore next @preserve -- default parameter branch */ defaultDependencies
   const proxyPort = parseProxyPort(env[DUST_PROXY_PORT])
   if (proxyPort === undefined) {
     return undefined

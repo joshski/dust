@@ -112,7 +112,7 @@ export async function focus(
   }
 
   const hooksInstalled = await manageGitHooks(dependencies)
-  const vars = templateVariables(settings, hooksInstalled)
+  const vars = templateVariables(settings, hooksInstalled, process.env)
 
   // Output confirmation
   context.stdout(`🎯 Focus: ${objective}`)

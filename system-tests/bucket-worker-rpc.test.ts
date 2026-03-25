@@ -30,8 +30,7 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
-import type { run as claudeRun } from '../lib/claude/run'
-import type { SpawnOptions } from '../lib/claude/types'
+import type { BoundRunFn, RunOptions, SpawnOptions } from '../lib/claude/types'
 import {
   type BucketDependencies,
   bucketWorker,
@@ -100,17 +99,16 @@ function createRealFileSystem() {
 function createLlmEmulator(
   onComplete: () => void,
   hasEventsForwarded: () => boolean
-): typeof claudeRun {
+): BoundRunFn {
   let callCount = 0
 
   return async function fakeRun(
     _prompt: string,
-    options?: SpawnOptions | { spawnOptions?: SpawnOptions }
+    options: SpawnOptions | RunOptions
   ): Promise<void> {
     callCount++
 
-    const spawnOpts =
-      options && 'spawnOptions' in options ? options.spawnOptions : options
+    const spawnOpts = 'spawnOptions' in options ? options.spawnOptions : options
     const cwd = spawnOpts?.cwd ?? process.cwd()
 
     // Spawn `dust check` — this emits command events through the proxy

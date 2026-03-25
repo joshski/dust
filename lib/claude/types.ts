@@ -82,3 +82,17 @@ export interface SpawnOptions {
 }
 
 export type RawEventCallback = (event: RawEvent) => void
+
+export interface RunOptions {
+  spawnOptions?: SpawnOptions
+  onRawEvent?: RawEventCallback
+}
+
+/**
+ * A run function with its runner dependencies already bound.
+ * Used in LoopDependencies, AgentRunParams, etc.
+ */
+export type BoundRunFn = (
+  prompt: string,
+  options: SpawnOptions | RunOptions
+) => Promise<void>

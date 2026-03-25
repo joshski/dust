@@ -46,7 +46,7 @@ export async function newPrinciple(
 ): Promise<CommandResult> {
   const { context, settings } = dependencies
   const hooksInstalled = await manageGitHooks(dependencies)
-  const vars = templateVariables(settings, hooksInstalled)
+  const vars = templateVariables(settings, hooksInstalled, process.env)
   context.stdout(newPrincipleInstructions(vars))
   return { exitCode: 0 }
 }

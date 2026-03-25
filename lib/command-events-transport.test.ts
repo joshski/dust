@@ -33,7 +33,13 @@ describe('parseProxyPort', () => {
 
 describe('createCommandEventWriter', () => {
   test('returns undefined when no transport environment is configured', () => {
-    const writer = createCommandEventWriter({})
+    const writer = createCommandEventWriter(
+      {},
+      {
+        fetch: async () => ({ ok: true, status: 200 }),
+        onError: () => {},
+      }
+    )
     expect(writer).toBeUndefined()
   })
 
@@ -143,28 +149,24 @@ describe('createCommandEventWriter', () => {
     ])
   })
 
-  test('uses default dependencies when dependency argument is omitted', async () => {
-    const originalFetch = globalThis.fetch
-    const originalConsoleError = console.error
+  test('reports errors via onError callback', async () => {
     const fetchCalls: string[] = []
     const errorMessages: string[] = []
 
-    try {
-      globalThis.fetch = (async input => {
-        fetchCalls.push(String(input))
-        return { ok: false, status: 500 } as Response
-      }) as typeof fetch
-      console.error = (message?: unknown) => {
-        errorMessages.push(String(message))
+    const writer = createCommandEventWriter(
+      { [DUST_PROXY_PORT]: '4123' },
+      {
+        fetch: async input => {
+          fetchCalls.push(String(input))
+          return { ok: false, status: 500 }
+        },
+        onError: message => {
+          errorMessages.push(message)
+        },
       }
-
-      const writer = createCommandEventWriter({ [DUST_PROXY_PORT]: '4123' })
-      writer?.(testMessage)
-      await waitForAsyncCallbacks()
-    } finally {
-      globalThis.fetch = originalFetch
-      console.error = originalConsoleError
-    }
+    )
+    writer?.(testMessage)
+    await waitForAsyncCallbacks()
 
     expect(fetchCalls).toEqual(['http://127.0.0.1:4123/events'])
     expect(errorMessages[0]).toContain('Event proxy POST failed (500)')

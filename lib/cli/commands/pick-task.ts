@@ -38,7 +38,7 @@ export async function pickTask(
 
   printTaskList(context, result.tasks)
 
-  const vars = templateVariables(settings, false)
+  const vars = templateVariables(settings, false, process.env)
   context.stdout(
     `Pick ONE task, read its file to understand the requirements, then run \`${vars.bin} focus "<task name>"\`.`
   )
