@@ -1,6 +1,6 @@
 # Content-based task type detection
 
-Identify task types based on the presence of specific markdown sections rather than title prefixes.
+Make task type mandatory for all tasks via a `## Task Type` section, replacing title-prefix-based detection.
 
 ## Current State
 
@@ -19,65 +19,58 @@ The section-based approach is already canonical for transition tasks—`findWork
 
 ## Proposed Change
 
-Define a canonical section for each task type and derive the task type from that section alone:
+Every task has a mandatory `## Task Type` section containing one of these values:
 
-| Task Type | Canonical Section |
-|-----------|-------------------|
-| add-idea | `## Idea Description` (without `## Expedites Idea` or `## Refines Idea` etc.) |
-| expedite-idea (capture) | `## Idea Description` |
-| expedite-idea (transition) | `## Expedites Idea` |
-| refine-idea | `## Refines Idea` |
-| decompose-idea | `## Decomposes Idea` |
-| shelve-idea | `## Shelves Idea` |
+| Task Type | Purpose |
+|-----------|---------|
+| `implement` | Implement a change (replaces both "standard tasks" and "expedite-idea") |
+| `add-idea` | Research and create idea files |
+| `refine-idea` | Research and refine an existing idea |
+| `decompose-idea` | Break an idea into implementation tasks |
+| `shelve-idea` | Archive and remove an idea |
 
-This removes title-prefix parsing from type detection logic. Titles become purely descriptive—useful for humans but not parsed for semantics.
+The old `expedite-idea` type is eliminated. Both "expedite" variants (capture and transition) become `implement` — the agent's job is the same in both cases: implement the thing. Standard implementation tasks (previously untyped) also become `implement`.
+
+Task type is derived solely from the `## Task Type` section. Title prefixes become optional convention for human readability — they are not parsed for semantics.
 
 ## Benefits
 
-- **Single source of truth**: Task type lives in the document structure, not duplicated in title
+- **Single source of truth**: Task type lives in a dedicated section, not inferred from title or other sections
 - **Editing flexibility**: Renaming a task title doesn't risk breaking type detection
-- **Cleaner validation**: Validators check sections, not title/section agreement
-- **Simpler parsing**: One code path for type detection instead of prefix + section fallback
+- **No special cases**: Every task has a type, no "no type means standard"
+- **Simpler parsing**: One code path — find `## Task Type`, read the value
+- **Cleaner taxonomy**: Five types instead of six, with no confusing dual-purpose `expedite-idea`
 
 ## Affected Code
 
 - `lib/artifacts/workflow-tasks.ts`:
-  - `findAllWorkflowTasks()` — replace title prefix checks with section detection
-  - `parseCaptureIdeaTask()` — derive `expedite` from presence of `## Expedites Idea` section
+  - `WorkflowTaskType` — replace with a unified `TaskType` covering all five types
+  - `findAllWorkflowTasks()` — detect type from `## Task Type` section instead of title prefixes
+  - `parseCaptureIdeaTask()` — simplify, no longer needs title prefix logic
+  - Remove `IDEA_TRANSITION_PREFIXES`, `CAPTURE_IDEA_PREFIX`, `EXPEDITE_IDEA_PREFIX`
 - `lib/lint/validators/idea-validator.ts`:
-  - `validateIdeaTransitionTitle()` — could be removed or simplified
-  - `validateWorkflowTaskBodySection()` — becomes the primary validation
+  - `validateIdeaTransitionTitle()` — remove or simplify
+  - Add validation that `## Task Type` section exists and contains a valid value
+- Task creation functions (`createRefineIdeaTask`, `decomposeIdea`, etc.) — generate `## Task Type` section
+- `lib/cli/commands/focus.ts` — use `## Task Type` for type detection
+- `lib/cli/commands/new-task.ts` — include `## Task Type` in task template
 
-## Open Questions
+## Resolved Questions
 
 ### How to distinguish Add Idea from Expedite Idea capture tasks?
 
-#### Add a discriminating section
+**Decision:** Eliminate the distinction
 
-Currently both Add Idea and Expedite Idea capture tasks have `## Idea Description`. The title prefix (`Add Idea:` vs `Expedite Idea:`) distinguishes them. Introducing `## Expedites Idea Description` or similar for expedite capture tasks would provide a clear signal, but changes the task template.
-
-#### Use an inline marker
-
-Add a frontmatter-style marker like `expedite: true` at the top of the file. Breaks markdown purity.
-
-#### Keep title-based discrimination for this case only
-
-Accept that capture task mode (add vs expedite) is an exception that uses the title. Pragmatic but inconsistent.
-
-#### Introduce a separate `## Task Type` section
-
-A dedicated section like `## Task Type\n\nExpedite Idea` that explicitly states the type. Verbose but universal.
+Both are about taking a description and acting on it. The old `expedite-idea` capture tasks become `implement` tasks. The old `add-idea` capture tasks stay as `add-idea`. The task type section makes this unambiguous — no need to infer from title prefixes or section combinations.
 
 ### Should title prefixes be removed from generated tasks?
 
-#### Keep prefixes as convention
+**Decision:** Keep prefixes as optional convention
 
-If titles are no longer parsed for type detection, the prefixes (`Add Idea:`, `Refine Idea:`, etc.) become optional convention. Keeping them in generated tasks preserves human readability and existing familiarity. No code change required for generation, only for parsing.
+Title prefixes remain in generated tasks for human readability but are not parsed for type detection. This preserves familiarity while making titles purely cosmetic.
 
-#### Remove prefixes from generated tasks
+### How should "standard" (non-workflow) tasks be handled?
 
-Generate tasks with descriptive titles only (e.g., `# Smarter Error Recovery` instead of `# Add Idea: Smarter Error Recovery`). Cleaner titles, but breaks familiarity.
+**Decision:** All tasks are typed
 
-#### Make prefixes configurable
-
-Allow repositories to opt out of prefixes via `.dust/config/settings.json`. Maximum flexibility but added complexity.
+There are no untyped tasks. What were previously "standard" implementation tasks get `## Task Type\n\nimplement`. This means every task has a type, eliminating the implicit "no type = implementation task" convention.

@@ -6,25 +6,12 @@ When an agent works on a workflow task, run `dust lint` instead of `dust check` 
 
 Workflow tasks manage the dust planning system itself rather than implementing code changes. They include:
 
-- **Add Idea:** tasks (`CAPTURE_IDEA_PREFIX`) - Research and create a new idea file
-- **Expedite Idea:** tasks (`EXPEDITE_IDEA_PREFIX`) - Research briefly and implement directly if straightforward
-- **Refine Idea:** tasks - Research and refine an existing idea
-- **Decompose Idea:** tasks - Break an idea into concrete implementation tasks
-- **Shelve Idea:** tasks - Archive and remove an idea
+- **add-idea** tasks - Research and create a new idea file
+- **refine-idea** tasks - Research and refine an existing idea
+- **decompose-idea** tasks - Break an idea into concrete implementation tasks
+- **shelve-idea** tasks - Archive and remove an idea
 
-These task types are already identified by their title prefixes in `lib/artifacts/workflow-tasks.ts`:
-
-```typescript
-export const IDEA_TRANSITION_PREFIXES = [
-  'Refine Idea: ',
-  'Decompose Idea: ',
-  'Shelve Idea: ',
-  'Expedite Idea: ',
-]
-
-export const CAPTURE_IDEA_PREFIX = 'Add Idea: '
-export const EXPEDITE_IDEA_PREFIX = 'Expedite Idea: '
-```
+All non-`implement` task types are workflow tasks. See [Content-based task type detection](content-based-task-type-detection.md) for the proposed `## Task Type` section that would make task type identification reliable and explicit.
 
 ## Motivation
 
