@@ -54,7 +54,7 @@
       ]
     },
     {
-      "name": "tests (vitest)",
+      "name": "tests (vitest / coverage)",
       "command": "bun run test:coverage",
       "timeoutMilliseconds": 20000,
       "hints": [
