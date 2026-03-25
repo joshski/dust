@@ -11,7 +11,7 @@ Workflow tasks manage the dust planning system itself rather than implementing c
 - **decompose** tasks - Break an idea into concrete implementation tasks
 - **shelve** tasks - Archive and remove an idea
 
-All non-`implement` task types are workflow tasks. See [Content-based task type detection](content-based-task-type-detection.md) for the proposed `## Task Type` section that would make task type identification reliable and explicit.
+All non-`implement` task types are workflow tasks.
 
 ## Motivation
 
