@@ -39,6 +39,7 @@ import {
   type ParsedCaptureIdeaTask,
   parseCaptureIdeaTask as parseCaptureIdeaTaskImpl,
   parseResolvedQuestions,
+  type TaskType,
   type WorkflowTaskMatch,
   type WorkflowTaskType,
 } from './workflow-tasks'
@@ -60,6 +61,7 @@ export type {
   ParsedSection,
   Principle,
   Task,
+  TaskType,
   WorkflowTaskMatch,
   WorkflowTaskType,
 }

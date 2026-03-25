@@ -41,6 +41,75 @@ export function titleToFilename(title: string): string {
     .replace(/^-|-$/g, '')}.md`
 }
 
+export type TaskType =
+  | 'implement'
+  | 'capture'
+  | 'refine'
+  | 'decompose'
+  | 'shelve'
+
+const VALID_TASK_TYPES: TaskType[] = [
+  'implement',
+  'capture',
+  'refine',
+  'decompose',
+  'shelve',
+]
+
+/**
+ * Extracts and validates the task type from the ## Task Type section.
+ * Returns the task type if found and valid, null otherwise.
+ */
+export function parseTaskType(content: string): TaskType | null {
+  const lines = content.split('\n')
+  let inSection = false
+  let inCodeFence = false
+
+  for (const line of lines) {
+    if (line.startsWith('```')) {
+      inCodeFence = !inCodeFence
+      continue
+    }
+
+    if (inCodeFence) continue
+
+    if (line.startsWith('## ')) {
+      inSection = line.trimEnd() === '## Task Type'
+      continue
+    }
+
+    if (!inSection) continue
+
+    if (line.startsWith('# ')) break
+
+    const trimmed = line.trim()
+    if (trimmed && VALID_TASK_TYPES.includes(trimmed as TaskType)) {
+      return trimmed as TaskType
+    }
+  }
+
+  return null
+}
+
+/**
+ * Maps new TaskType to legacy WorkflowTaskType for backward compatibility.
+ * Returns null if the task type doesn't map to a workflow task type.
+ */
+function taskTypeToWorkflowType(taskType: TaskType): WorkflowTaskType | null {
+  switch (taskType) {
+    case 'refine':
+      return 'refine-idea'
+    case 'decompose':
+      return 'decompose-idea'
+    case 'shelve':
+      return 'shelve-idea'
+    case 'implement':
+      return 'expedite-idea'
+    default:
+      return null
+  }
+}
+
 export type WorkflowTaskType =
   | 'refine-idea'
   | 'decompose-idea'
@@ -147,18 +216,37 @@ export async function findAllWorkflowTasks(
 
     const title = titleMatch[1].trim()
     const taskSlug = file.replace(/\.md$/, '')
+    const taskType = parseTaskType(content)
 
-    // Check for capture idea tasks
-    if (title.startsWith(CAPTURE_IDEA_PREFIX)) {
-      captureIdeaTasks.push({
-        taskSlug,
-        ideaTitle: title.slice(CAPTURE_IDEA_PREFIX.length),
-      })
-    } else if (title.startsWith(EXPEDITE_IDEA_PREFIX)) {
-      captureIdeaTasks.push({
-        taskSlug,
-        ideaTitle: title.slice(EXPEDITE_IDEA_PREFIX.length),
-      })
+    // Check for capture idea tasks using task type
+    if (taskType === 'capture' || taskType === 'implement') {
+      // Extract idea title from task title by removing prefix
+      let ideaTitle: string | null = null
+      if (title.startsWith(CAPTURE_IDEA_PREFIX)) {
+        ideaTitle = title.slice(CAPTURE_IDEA_PREFIX.length)
+      } else if (title.startsWith(EXPEDITE_IDEA_PREFIX)) {
+        ideaTitle = title.slice(EXPEDITE_IDEA_PREFIX.length)
+      }
+
+      if (ideaTitle) {
+        captureIdeaTasks.push({
+          taskSlug,
+          ideaTitle,
+        })
+      }
+    } else if (!taskType) {
+      // Backward compatibility: fall back to title prefix detection
+      if (title.startsWith(CAPTURE_IDEA_PREFIX)) {
+        captureIdeaTasks.push({
+          taskSlug,
+          ideaTitle: title.slice(CAPTURE_IDEA_PREFIX.length),
+        })
+      } else if (title.startsWith(EXPEDITE_IDEA_PREFIX)) {
+        captureIdeaTasks.push({
+          taskSlug,
+          ideaTitle: title.slice(EXPEDITE_IDEA_PREFIX.length),
+        })
+      }
     }
 
     // Check for workflow task sections
@@ -199,17 +287,71 @@ export async function findWorkflowTaskForIdea(
 
   for (const file of files.filter(f => f.endsWith('.md')).toSorted()) {
     const content = await fileSystem.readFile(`${tasksPath}/${file}`)
+    const taskSlug = file.replace(/\.md$/, '')
 
-    for (const { type, heading } of WORKFLOW_SECTION_HEADINGS) {
-      const linkedSlug = extractIdeaSlugFromSection(content, heading)
-      if (linkedSlug === ideaSlug) {
-        const taskSlug = file.replace(/\.md$/, '')
-        return {
-          type,
-          ideaSlug,
-          taskSlug,
-          resolvedQuestions: parseResolvedQuestions(content),
-        }
+    // Try to find a match using either task type or section-based detection
+    const match = findWorkflowMatch(content, ideaSlug, taskSlug)
+    if (match) {
+      return match
+    }
+  }
+
+  return null
+}
+
+function findWorkflowMatch(
+  content: string,
+  ideaSlug: string,
+  taskSlug: string
+): WorkflowTaskMatch | null {
+  const taskType = parseTaskType(content)
+
+  // Try task type first if available
+  if (taskType) {
+    const workflowType = taskTypeToWorkflowType(taskType)
+    if (workflowType) {
+      const match = findWorkflowMatchByType(
+        content,
+        ideaSlug,
+        taskSlug,
+        workflowType
+      )
+      if (match) return match
+    }
+  }
+
+  // Fall back to section-based detection for backward compatibility
+  for (const { type, heading } of WORKFLOW_SECTION_HEADINGS) {
+    const linkedSlug = extractIdeaSlugFromSection(content, heading)
+    if (linkedSlug === ideaSlug) {
+      return {
+        type,
+        ideaSlug,
+        taskSlug,
+        resolvedQuestions: parseResolvedQuestions(content),
+      }
+    }
+  }
+
+  return null
+}
+
+function findWorkflowMatchByType(
+  content: string,
+  ideaSlug: string,
+  taskSlug: string,
+  workflowType: WorkflowTaskType
+): WorkflowTaskMatch | null {
+  for (const { type, heading } of WORKFLOW_SECTION_HEADINGS) {
+    if (type !== workflowType) continue
+
+    const linkedSlug = extractIdeaSlugFromSection(content, heading)
+    if (linkedSlug === ideaSlug) {
+      return {
+        type: workflowType,
+        ideaSlug,
+        taskSlug,
+        resolvedQuestions: parseResolvedQuestions(content),
       }
     }
   }
@@ -618,13 +760,28 @@ export async function parseCaptureIdeaTask(
   }
 
   const title = titleMatch[1].trim()
+  const taskType = parseTaskType(content)
+
   let ideaTitle: string
   let expedite: boolean
 
-  if (title.startsWith(EXPEDITE_IDEA_PREFIX)) {
+  // Use task type if available, fall back to title prefix
+  if (taskType === 'implement') {
+    expedite = true
+    ideaTitle = title.startsWith(EXPEDITE_IDEA_PREFIX)
+      ? title.slice(EXPEDITE_IDEA_PREFIX.length)
+      : title
+  } else if (taskType === 'capture') {
+    expedite = false
+    ideaTitle = title.startsWith(CAPTURE_IDEA_PREFIX)
+      ? title.slice(CAPTURE_IDEA_PREFIX.length)
+      : title
+  } else if (title.startsWith(EXPEDITE_IDEA_PREFIX)) {
+    // Backward compatibility: fall back to title prefix
     ideaTitle = title.slice(EXPEDITE_IDEA_PREFIX.length)
     expedite = true
   } else if (title.startsWith(CAPTURE_IDEA_PREFIX)) {
+    // Backward compatibility: fall back to title prefix
     ideaTitle = title.slice(CAPTURE_IDEA_PREFIX.length)
     expedite = false
   } else {

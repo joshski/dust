@@ -14,6 +14,7 @@ import {
   type OpenQuestionResponse,
   parseCaptureIdeaTask,
   parseResolvedQuestions,
+  parseTaskType,
   titleToFilename,
 } from './workflow-tasks'
 
@@ -33,6 +34,227 @@ describe('titleToFilename', () => {
     expect(titleToFilename('Refine Idea: My Great Idea')).toBe(
       'refine-idea-my-great-idea.md'
     )
+  })
+})
+
+describe('parseTaskType', () => {
+  test('returns null when no Task Type section exists', () => {
+    const content = `# Some Task
+
+Do something.
+
+## Blocked By
+
+(none)
+`
+    expect(parseTaskType(content)).toBeNull()
+  })
+
+  test('returns null when Task Type section is empty', () => {
+    const content = `# Some Task
+
+Do something.
+
+## Task Type
+
+## Blocked By
+
+(none)
+`
+    expect(parseTaskType(content)).toBeNull()
+  })
+
+  test('parses implement task type', () => {
+    const content = `# Some Task
+
+Do something.
+
+## Task Type
+
+implement
+
+## Blocked By
+
+(none)
+`
+    expect(parseTaskType(content)).toBe('implement')
+  })
+
+  test('parses capture task type', () => {
+    const content = `# Add Idea: Something
+
+Research this idea.
+
+## Task Type
+
+capture
+
+## Blocked By
+
+(none)
+`
+    expect(parseTaskType(content)).toBe('capture')
+  })
+
+  test('parses refine task type', () => {
+    const content = `# Refine Idea: Something
+
+Refine this idea.
+
+## Task Type
+
+refine
+
+## Blocked By
+
+(none)
+`
+    expect(parseTaskType(content)).toBe('refine')
+  })
+
+  test('parses decompose task type', () => {
+    const content = `# Decompose Idea: Something
+
+Create tasks.
+
+## Task Type
+
+decompose
+
+## Blocked By
+
+(none)
+`
+    expect(parseTaskType(content)).toBe('decompose')
+  })
+
+  test('parses shelve task type', () => {
+    const content = `# Shelve Idea: Something
+
+Archive this idea.
+
+## Task Type
+
+shelve
+
+## Blocked By
+
+(none)
+`
+    expect(parseTaskType(content)).toBe('shelve')
+  })
+
+  test('returns null for invalid task type', () => {
+    const content = `# Some Task
+
+Do something.
+
+## Task Type
+
+invalid-type
+
+## Blocked By
+
+(none)
+`
+    expect(parseTaskType(content)).toBeNull()
+  })
+
+  test('ignores task type inside code fences', () => {
+    const content = `# Some Task
+
+Do something.
+
+\`\`\`
+## Task Type
+
+implement
+\`\`\`
+
+## Blocked By
+
+(none)
+`
+    expect(parseTaskType(content)).toBeNull()
+  })
+
+  test('stops parsing at H1 heading', () => {
+    const content = `# Some Task
+
+Do something.
+
+## Task Type
+
+# Another Top-Level Heading
+
+implement
+`
+    expect(parseTaskType(content)).toBeNull()
+  })
+
+  test('ignores whitespace around task type value', () => {
+    const content = `# Some Task
+
+Do something.
+
+## Task Type
+
+  implement
+
+## Blocked By
+
+(none)
+`
+    expect(parseTaskType(content)).toBe('implement')
+  })
+
+  test('returns first valid task type value in section', () => {
+    const content = `# Some Task
+
+Do something.
+
+## Task Type
+
+implement
+capture
+
+## Blocked By
+
+(none)
+`
+    expect(parseTaskType(content)).toBe('implement')
+  })
+
+  test('ignores empty lines before task type value', () => {
+    const content = `# Some Task
+
+Do something.
+
+## Task Type
+
+
+implement
+
+## Blocked By
+
+(none)
+`
+    expect(parseTaskType(content)).toBe('implement')
+  })
+
+  test('handles task type section at end of file', () => {
+    const content = `# Some Task
+
+Do something.
+
+## Blocked By
+
+(none)
+
+## Task Type
+
+implement`
+    expect(parseTaskType(content)).toBe('implement')
   })
 })
 
@@ -883,6 +1105,248 @@ describe('findWorkflowTaskForIdea', () => {
     expect(result).toBeNull()
   })
 
+  test('finds task using Task Type section when present', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea\n\nDescription.',
+          },
+          tasks: {
+            'custom-task.md': `# Custom Task Name
+
+Do something.
+
+## Task Type
+
+refine
+
+## Refines Idea
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- Done
+`,
+          },
+        },
+      },
+    })
+    const result = await findWorkflowTaskForIdea(
+      fileSystem,
+      '/project/.dust',
+      'my-idea'
+    )
+    expect(result).toEqual({
+      type: 'refine-idea',
+      ideaSlug: 'my-idea',
+      taskSlug: 'custom-task',
+      resolvedQuestions: [],
+    })
+  })
+
+  test('finds decompose task using Task Type section', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea\n\nDescription.',
+          },
+          tasks: {
+            'custom-task.md': `# Custom Task Name
+
+Do something.
+
+## Task Type
+
+decompose
+
+## Decomposes Idea
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await findWorkflowTaskForIdea(
+      fileSystem,
+      '/project/.dust',
+      'my-idea'
+    )
+    expect(result).toEqual({
+      type: 'decompose-idea',
+      ideaSlug: 'my-idea',
+      taskSlug: 'custom-task',
+      resolvedQuestions: [],
+    })
+  })
+
+  test('finds shelve task using Task Type section', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea\n\nDescription.',
+          },
+          tasks: {
+            'custom-task.md': `# Custom Task Name
+
+Do something.
+
+## Task Type
+
+shelve
+
+## Shelves Idea
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await findWorkflowTaskForIdea(
+      fileSystem,
+      '/project/.dust',
+      'my-idea'
+    )
+    expect(result).toEqual({
+      type: 'shelve-idea',
+      ideaSlug: 'my-idea',
+      taskSlug: 'custom-task',
+      resolvedQuestions: [],
+    })
+  })
+
+  test('finds expedite task using Task Type section (implement type)', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea\n\nDescription.',
+          },
+          tasks: {
+            'custom-task.md': `# Custom Task Name
+
+Do something.
+
+## Task Type
+
+implement
+
+## Expedites Idea
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await findWorkflowTaskForIdea(
+      fileSystem,
+      '/project/.dust',
+      'my-idea'
+    )
+    expect(result).toEqual({
+      type: 'expedite-idea',
+      ideaSlug: 'my-idea',
+      taskSlug: 'custom-task',
+      resolvedQuestions: [],
+    })
+  })
+
+  test('returns null when task has Task Type but links to different idea', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea\n\nDescription.',
+            'other-idea.md': '# Other Idea\n\nDescription.',
+          },
+          tasks: {
+            'custom-task.md': `# Custom Task Name
+
+Do something.
+
+## Task Type
+
+refine
+
+## Refines Idea
+
+- [Other Idea](../ideas/other-idea.md)
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await findWorkflowTaskForIdea(
+      fileSystem,
+      '/project/.dust',
+      'my-idea'
+    )
+    expect(result).toBeNull()
+  })
+
+  test('ignores task with capture type when searching for workflow task', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea\n\nDescription.',
+          },
+          tasks: {
+            'capture-task.md': `# Add Idea: My Idea
+
+Research this idea.
+
+## Task Type
+
+capture
+
+## Idea Description
+
+A great idea.
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await findWorkflowTaskForIdea(
+      fileSystem,
+      '/project/.dust',
+      'my-idea'
+    )
+    // Capture type doesn't map to a workflow type, so should return null
+    expect(result).toBeNull()
+  })
+
   test('finds a refine task', async () => {
     const fileSystem = createFileSystem()
     await createRefineIdeaTask(
@@ -1478,6 +1942,158 @@ const x = 1;
       expedite: false,
     })
   })
+
+  test('parses capture task using Task Type section when present', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {
+            'custom-name.md': `# Custom Task Name
+
+Research this idea.
+
+## Task Type
+
+capture
+
+## Idea Description
+
+A great new idea.
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await parseCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'custom-name'
+    )
+    expect(result).toEqual({
+      ideaTitle: 'Custom Task Name',
+      ideaDescription: 'A great new idea.',
+      expedite: false,
+    })
+  })
+
+  test('parses implement task using Task Type section when present', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {
+            'custom-implement.md': `# Custom Implement Task
+
+Research and implement.
+
+## Task Type
+
+implement
+
+## Idea Description
+
+A quick implementation.
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await parseCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'custom-implement'
+    )
+    expect(result).toEqual({
+      ideaTitle: 'Custom Implement Task',
+      ideaDescription: 'A quick implementation.',
+      expedite: true,
+    })
+  })
+
+  test('parses implement task with prefix using Task Type section', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {
+            'prefixed-implement.md': `# Expedite Idea: Prefixed Implement
+
+Research and implement.
+
+## Task Type
+
+implement
+
+## Idea Description
+
+A quick implementation with prefix.
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await parseCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'prefixed-implement'
+    )
+    expect(result).toEqual({
+      ideaTitle: 'Prefixed Implement',
+      ideaDescription: 'A quick implementation with prefix.',
+      expedite: true,
+    })
+  })
+
+  test('parses capture task with prefix using Task Type section', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {
+            'prefixed-capture.md': `# Add Idea: Prefixed Capture
+
+Research this idea.
+
+## Task Type
+
+capture
+
+## Idea Description
+
+A great idea with prefix.
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await parseCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'prefixed-capture'
+    )
+    expect(result).toEqual({
+      ideaTitle: 'Prefixed Capture',
+      ideaDescription: 'A great idea with prefix.',
+      expedite: false,
+    })
+  })
 })
 
 describe('findAllWorkflowTasks', () => {
@@ -1605,6 +2221,208 @@ describe('findAllWorkflowTasks', () => {
       taskSlug: 'decompose-idea-existing-idea',
       resolvedQuestions: [],
     })
+  })
+
+  test('finds capture tasks using Task Type section', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {
+            'custom-capture.md': `# Add Idea: Custom Capture
+
+Research this idea.
+
+## Task Type
+
+capture
+
+## Idea Description
+
+A great idea.
+
+## Blocked By
+
+(none)
+`,
+            'custom-implement.md': `# Expedite Idea: Custom Implement
+
+Implement quickly.
+
+## Task Type
+
+implement
+
+## Idea Description
+
+Quick implementation.
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
+    expect(result.captureIdeaTasks).toEqual([
+      { taskSlug: 'custom-capture', ideaTitle: 'Custom Capture' },
+      { taskSlug: 'custom-implement', ideaTitle: 'Custom Implement' },
+    ])
+  })
+
+  test('handles capture task type but no title prefix', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {
+            'custom-task.md': `# Custom Task Name
+
+Research this idea.
+
+## Task Type
+
+capture
+
+## Idea Description
+
+A great idea.
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
+    // Task has Task Type but no title prefix, so it won't be found as capture task
+    expect(result.captureIdeaTasks).toEqual([])
+  })
+
+  test('handles implement task type but no title prefix', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {
+            'custom-implement.md': `# Custom Implement Task
+
+Implement this.
+
+## Task Type
+
+implement
+
+## Idea Description
+
+Quick implementation.
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
+    // Task has Task Type but no title prefix, so it won't be found as capture task
+    expect(result.captureIdeaTasks).toEqual([])
+  })
+
+  test('skips capture detection for refine task type', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {
+            'my-idea.md': '# My Idea\n\nDescription.',
+          },
+          tasks: {
+            'refine-task.md': `# Refine Idea: My Idea
+
+Refine this idea.
+
+## Task Type
+
+refine
+
+## Refines Idea
+
+- [My Idea](../ideas/my-idea.md)
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
+    // Refine task should not be in capture tasks
+    expect(result.captureIdeaTasks).toEqual([])
+    // But should be in workflow tasks map
+    expect(result.workflowTasksByIdeaSlug.has('my-idea')).toBe(true)
+  })
+
+  test('falls back to title prefix when no Task Type section exists', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {
+            'old-format.md': `# Add Idea: Old Format
+
+Research this idea.
+
+## Idea Description
+
+Legacy format without Task Type section.
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
+    expect(result.captureIdeaTasks).toEqual([
+      { taskSlug: 'old-format', ideaTitle: 'Old Format' },
+    ])
+  })
+
+  test('falls back to expedite title prefix when no Task Type section exists', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {
+            'old-expedite.md': `# Expedite Idea: Old Expedite
+
+Implement quickly.
+
+## Idea Description
+
+Legacy format without Task Type section.
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
+    expect(result.captureIdeaTasks).toEqual([
+      { taskSlug: 'old-expedite', ideaTitle: 'Old Expedite' },
+    ])
   })
 })
 

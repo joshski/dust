@@ -35,7 +35,7 @@ implement
 
 ## Blocked By
 
-- [Update task type detection to use Task Type section](./update-task-type-detection-to-use-task-type-section.md)
+(none)
 
 ## Definition of Done
 
