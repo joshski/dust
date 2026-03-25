@@ -378,14 +378,6 @@ const CHECK_CATEGORIES: CheckCategory[] = [
 
 // --- CI Configuration Patterns ---
 
-const _CI_FILES = [
-  '.github/workflows/*.yml',
-  '.github/workflows/*.yaml',
-  '.gitlab-ci.yml',
-  '.circleci/config.yml',
-  'Jenkinsfile',
-]
-
 const CI_CHECK_PATTERNS: Record<string, string[]> = {
   linting: ['eslint', 'lint:', 'npm run lint', 'bun run lint'],
   formatting: ['prettier', 'format:', '--check'],

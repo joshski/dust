@@ -10,20 +10,10 @@ import type { ReadableFileSystem } from '../filesystem/types'
 import type { Violation } from '../lint/validators/types'
 import { type ArtifactPatch, validatePatch } from '../validation/index'
 import { MARKDOWN_LINK_PATTERN } from '../markdown/markdown-utilities'
-import { type FactInput, buildFactFiles, serializeFact } from './fact'
-import { type IdeaInput, buildIdeaFiles, serializeIdea } from './idea'
-import {
-  type PrincipleInput,
-  buildPrincipleFiles,
-  serializePrinciple,
-} from './principle'
-import {
-  type TaskInput,
-  type StandardTaskInput,
-  type WorkflowTaskInput,
-  buildTaskFiles,
-  serializeTask,
-} from './task'
+import { type FactInput, buildFactFiles } from './fact'
+import { type IdeaInput, buildIdeaFiles } from './idea'
+import { type PrincipleInput, buildPrincipleFiles } from './principle'
+import { type TaskInput, buildTaskFiles } from './task'
 
 // Re-export types and functions
 export { serializeFact } from './fact'

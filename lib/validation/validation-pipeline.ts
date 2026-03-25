@@ -203,8 +203,7 @@ export async function parseArtifacts(
  */
 export function validateArtifacts(context: ValidationContext): Violation[] {
   const violations: Violation[] = []
-  const { byType, rootFiles, customAudits, dustPath, fileSystem } = context
-  const ideasPath = `${dustPath}/ideas`
+  const { byType, rootFiles, customAudits, fileSystem } = context
 
   // Validate links in root-level markdown files
   for (const artifact of rootFiles) {

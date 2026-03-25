@@ -153,18 +153,18 @@ export function validateIdeaOpenQuestions(
 }
 
 export function validateIdeaTransitionTitle(
-  artifact: ParsedArtifact,
-  ideasPath: string,
-  fileSystem: FileReader
+  _artifact: ParsedArtifact,
+  _ideasPath: string,
+  _fileSystem: FileReader
 ): Violation | null {
   // Title prefixes are now cosmetic - no validation needed
   return null
 }
 
 export function validateWorkflowTaskBodySection(
-  artifact: ParsedArtifact,
-  ideasPath: string,
-  fileSystem: FileReader
+  _artifact: ParsedArtifact,
+  _ideasPath: string,
+  _fileSystem: FileReader
 ): Violation[] {
   // Title prefixes are now cosmetic - no validation based on title prefix needed
   return []

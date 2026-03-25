@@ -57,13 +57,13 @@ describe('applyMiddleware', () => {
     const order: string[] = []
 
     const middleware1: CommandMiddleware = {
-      async after(command, result) {
+      async after(_, result) {
         order.push('after1')
         return result
       },
     }
     const middleware2: CommandMiddleware = {
-      async after(command, result) {
+      async after(_, result) {
         order.push('after2')
         return result
       },
@@ -111,7 +111,7 @@ describe('applyMiddleware', () => {
 
   test('after hooks can transform result', async () => {
     const middleware: CommandMiddleware = {
-      async after(command, result) {
+      async after(_, result) {
         return { exitCode: result.exitCode + 10 }
       },
     }
@@ -148,7 +148,7 @@ describe('applyMiddleware', () => {
     let capturedDependencies: CommandDependencies | undefined
 
     const middleware: CommandMiddleware = {
-      async before(command, dependencies) {
+      async before(_, dependencies) {
         capturedDependencies = dependencies
         return undefined
       },
@@ -182,7 +182,7 @@ describe('applyMiddleware', () => {
 
   test('middleware with only after hook works', async () => {
     const middleware: CommandMiddleware = {
-      async after(command, result) {
+      async after(_, result) {
         return result
       },
     }
@@ -204,7 +204,7 @@ describe('applyMiddleware', () => {
         order.push('before1')
         return undefined
       },
-      async after(command, result) {
+      async after(_, result) {
         order.push('after1')
         return result
       },
@@ -215,7 +215,7 @@ describe('applyMiddleware', () => {
         order.push('before2')
         return undefined
       },
-      async after(command, result) {
+      async after(_, result) {
         order.push('after2')
         return result
       },

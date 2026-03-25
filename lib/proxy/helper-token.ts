@@ -109,7 +109,7 @@ export function createHelperTokenState(): HelperTokenState {
  * @returns A new HelperTokenState with a fresh token
  */
 export function rotateHelperToken(
-  state: HelperTokenState,
+  _state: HelperTokenState,
   now: number = Date.now()
 ): HelperTokenState {
   return {
