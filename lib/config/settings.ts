@@ -5,11 +5,7 @@
  */
 
 import { join } from 'node:path'
-import type {
-  CheckConfig,
-  DustSettings,
-  FileReader,
-} from '../cli/types'
+import type { CheckConfig, DustSettings, FileReader } from '../cli/types'
 import type { RuntimeConfig } from '../env-config'
 
 // Re-export for backwards compatibility

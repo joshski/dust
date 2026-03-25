@@ -7,7 +7,6 @@ import type { RuntimeConfig } from '../env-config'
 import type { FileSystem, GlobScanner } from '../filesystem/types'
 
 export type {
-  DirectoryReader,
   FileReader,
   FileSystem,
   GlobScanner,

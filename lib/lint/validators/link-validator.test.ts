@@ -7,9 +7,7 @@ import {
   validateSemanticLinks,
 } from './link-validator'
 
-function createMockFileSystem(
-  existsFn: (path: string) => boolean
-): FileReader {
+function createMockFileSystem(existsFn: (path: string) => boolean): FileReader {
   return {
     exists: existsFn,
     readFile: async () => '',

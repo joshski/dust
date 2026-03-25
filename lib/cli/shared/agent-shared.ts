@@ -7,11 +7,7 @@
 import { join } from 'node:path'
 import { type AgentType, detectAgent } from '../../agents/detection'
 import { createHooksManager } from '../../git/hooks'
-import type {
-  CommandDependencies,
-  DustSettings,
-  FileReader,
-} from '../types'
+import type { CommandDependencies, DustSettings, FileReader } from '../types'
 
 /**
  * Type-safe template variables for agent commands.
