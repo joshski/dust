@@ -812,6 +812,168 @@ describe('connectWebSocket', () => {
     })
   })
 
+  test('falls back to empty connection-init when buildConnectionInit throws', async () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const state = createInitialState()
+
+    const ws = createMockWebSocket()
+    const sentMessages: string[] = []
+    ws.send = (data: string) => {
+      sentMessages.push(data)
+    }
+
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => ws,
+      buildConnectionInit: async () => {
+        throw new Error('System info unavailable')
+      },
+    })
+
+    connectWebSocket(
+      'token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false
+    )
+
+    ws.readyState = WS_OPEN
+    ws.emit('open')
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(context.stderrLines.join('\n')).toContain(
+      'Failed to build connection init: System info unavailable'
+    )
+    // Should still send a fallback connection-init
+    expect(sentMessages).toHaveLength(1)
+    expect(JSON.parse(sentMessages[0])).toEqual({
+      type: 'connection-init',
+      dustVersion: 'unknown',
+      platform: 'unknown',
+      agents: [],
+    })
+  })
+
+  test('handles non-Error throw from buildConnectionInit', async () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const state = createInitialState()
+
+    const ws = createMockWebSocket()
+    ws.send = () => {}
+
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => ws,
+      buildConnectionInit: async () => {
+        // eslint-disable-next-line no-throw-literal
+        throw 'string error from buildConnectionInit'
+      },
+    })
+
+    connectWebSocket(
+      'token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false
+    )
+
+    ws.readyState = WS_OPEN
+    ws.emit('open')
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(context.stderrLines.join('\n')).toContain(
+      'Failed to build connection init: string error from buildConnectionInit'
+    )
+  })
+
+  test('continues without handshake when ws.send throws during connection init', async () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const state = createInitialState()
+
+    const ws = createMockWebSocket()
+    ws.send = () => {
+      throw new Error('WebSocket not ready')
+    }
+
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => ws,
+    })
+
+    connectWebSocket(
+      'token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false
+    )
+
+    ws.readyState = WS_OPEN
+    ws.emit('open')
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(context.stderrLines.join('\n')).toContain(
+      'Failed to send connection init: WebSocket not ready'
+    )
+    // After send failure, should still process messages (connectionReady = true)
+    ws.emit('message', {
+      data: JSON.stringify({
+        type: 'repository-list',
+        repositories: [],
+      }),
+    })
+    // The message should be processed since connectionReady was set to true
+    expect(context.stdoutLines.join('\n')).toContain(
+      'Received repository list (0 repositories)'
+    )
+  })
+
+  test('handles non-Error throw from ws.send during connection init', async () => {
+    const dependencies = createDependencies()
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const state = createInitialState()
+
+    const ws = createMockWebSocket()
+    ws.send = () => {
+      // eslint-disable-next-line no-throw-literal
+      throw 42
+    }
+
+    const bucketDependencies = createBucketDependencies({
+      createWebSocket: () => ws,
+    })
+
+    connectWebSocket(
+      'token',
+      state,
+      bucketDependencies,
+      dependencies.context,
+      dependencies.fileSystem,
+      false
+    )
+
+    ws.readyState = WS_OPEN
+    ws.emit('open')
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    expect(context.stderrLines.join('\n')).toContain(
+      'Failed to send connection init: 42'
+    )
+  })
+
   test('handles connection-rejected by calling rejection callback', async () => {
     const dependencies = createDependencies()
     const context = dependencies.context as ReturnType<

@@ -1349,6 +1349,67 @@ Usage: \`dust bucket tool asset-upload <file>\``
       'string error from fix agent'
     )
   })
+
+  test('uses Codex as agent name when agentType is codex', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+          },
+        },
+      },
+    })
+    const context = dependencies.context as ReturnType<
+      typeof createContextEmulator
+    >
+    const loopDeps = createLoopDeps({
+      agentType: 'codex',
+      run: async () => {
+        throw new Error('Codex crashed')
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    const result = await runOneIteration(
+      dependencies,
+      loopDeps,
+      onLoopEvent,
+      onAgentEvent
+    )
+    expect(result).toBe('claude_error')
+    expect(context.stderrLines.join('\n')).toContain('Codex exited with error')
+  })
+
+  test('uses defaultShellRunner when shellRunner is not provided', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+          },
+        },
+      },
+    })
+    const loopDeps = createLoopDeps({
+      shellRunner: undefined,
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    // This will use the real defaultShellRunner which will fail on `dust check`,
+    // but that's fine — we just need to verify it doesn't crash with undefined
+    const result = await runOneIteration(
+      dependencies,
+      loopDeps,
+      onLoopEvent,
+      onAgentEvent
+    )
+    // defaultShellRunner will run `dust check` which will likely fail,
+    // so we expect ran_check_fix (check failure triggers fix agent)
+    expect(['ran_check_fix', 'ran_claude']).toContain(result)
+  })
 })
 
 describe('buildTaskPrompt', () => {

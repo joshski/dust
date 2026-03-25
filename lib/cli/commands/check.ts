@@ -89,8 +89,10 @@ async function runSingleCheck(
   cwd: string,
   runner: ShellRunner,
   emitEvent?: CommandContext['emitEvent'],
-  clock: Clock = Date.now
+  clock?: Clock
 ): Promise<CheckResult> {
+  clock ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ Date.now
   const timeoutMs = checkConfig.timeoutMilliseconds ?? DEFAULT_CHECK_TIMEOUT_MS
   log(`running check ${checkConfig.name}: ${checkConfig.command}`)
   emitEvent?.({ type: 'check-started', name: checkConfig.name })
@@ -129,8 +131,10 @@ async function runSingleCheck(
 async function runValidationCheck(
   dependencies: CommandDependencies,
   emitEvent?: CommandContext['emitEvent'],
-  clock: Clock = Date.now
+  clock?: Clock
 ): Promise<CheckResult> {
+  clock ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ Date.now
   const outputLines: string[] = []
   const bufferedContext: CommandContext = {
     cwd: dependencies.context.cwd,
@@ -235,11 +239,19 @@ function displaySummary(
 
 export async function check(
   dependencies: CommandDependencies,
-  shellRunner: ShellRunner = defaultShellRunner,
-  clock: Clock = Date.now,
-  _setInterval: typeof globalThis.setInterval = globalThis.setInterval,
-  _clearInterval: typeof globalThis.clearInterval = globalThis.clearInterval
+  shellRunner?: ShellRunner,
+  clock?: Clock,
+  _setInterval?: typeof globalThis.setInterval,
+  _clearInterval?: typeof globalThis.clearInterval
 ): Promise<CommandResult> {
+  shellRunner ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ defaultShellRunner
+  clock ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ Date.now
+  _setInterval ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ globalThis.setInterval
+  _clearInterval ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ globalThis.clearInterval
   const {
     arguments: commandArguments,
     context,

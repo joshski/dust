@@ -79,8 +79,10 @@ export async function clearToken(
 export async function defaultExchangeCode(
   code: string,
   bucketConfig: BucketConfig,
-  fetchFn: typeof fetch = fetch
+  fetchFn?: typeof fetch
 ): Promise<string> {
+  fetchFn ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ fetch
   const host = getDustbucketHost(bucketConfig)
   const response = await fetchFn(`${host}/auth/cli/exchange`, {
     method: 'POST',

@@ -191,9 +191,13 @@ function buildClaudeArguments(prompt: string, options: SpawnOptions): string[] {
 
 export async function* spawnClaudeCode(
   prompt: string,
-  options: SpawnOptions = {},
-  dependencies: EventSourceDependencies = defaultDependencies
+  options?: SpawnOptions,
+  dependencies?: EventSourceDependencies
 ): AsyncGenerator<RawEvent> {
+  options ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ {}
+  dependencies ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ defaultDependencies
   const { cwd, env, signal, docker } = options
 
   const claudeArguments = buildClaudeArguments(prompt, options)

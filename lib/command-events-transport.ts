@@ -46,9 +46,13 @@ export function parseProxyPort(value: string | undefined): number | undefined {
  * Creates a message writer for command events.
  */
 export function createCommandEventWriter(
-  env: Record<string, string | undefined> = process.env,
-  dependencies: EventTransportDependencies = defaultDependencies
+  env?: Record<string, string | undefined>,
+  dependencies?: EventTransportDependencies
 ): ((message: CommandEventMessage) => void) | undefined {
+  env ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ process.env
+  dependencies ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ defaultDependencies
   const proxyPort = parseProxyPort(env[DUST_PROXY_PORT])
   if (proxyPort === undefined) {
     return undefined

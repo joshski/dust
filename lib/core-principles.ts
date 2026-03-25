@@ -30,18 +30,21 @@ export { isInternalPrinciple, listCorePrinciples, getCorePrincipleTree }
 function createReadableFileSystem(): ReadableFileSystem {
   return {
     exists: existsSync,
-    /* v8 ignore start -- interface method not used by parsePrinciple */
-    isDirectory: (path: string) => {
-      try {
-        return statSync(path).isDirectory()
-      } catch {
-        return false
-      }
-    },
-    /* v8 ignore stop */
+    isDirectory:
+      /* istanbul ignore next @preserve -- interface method not used by parsePrinciple */ (
+        path: string
+      ) => {
+        try {
+          return statSync(path).isDirectory()
+        } catch {
+          return false
+        }
+      },
     readFile: (path: string) => readFile(path, 'utf-8'),
-    /* v8 ignore next -- interface method not used by parsePrinciple */
-    readdir: async (path: string) => readdirSync(path), // oxlint-disable-line dust/no-thin-delegate-wrappers -- wraps sync in async interface
+    readdir:
+      /* istanbul ignore next @preserve -- interface method not used by parsePrinciple */ async (
+        path: string
+      ) => readdirSync(path), // oxlint-disable-line dust/no-thin-delegate-wrappers -- wraps sync in async interface
   }
 }
 
@@ -59,14 +62,13 @@ function locatePackagePrinciplesDir(): string {
   const packageRoot = dirname(thisDir)
   const principlesDir = join(packageRoot, '.dust', 'principles')
 
-  /* v8 ignore start -- only fails if package is corrupted or not installed */
+  /* istanbul ignore next @preserve -- only fails if package is corrupted or not installed */
   if (!existsSync(principlesDir)) {
     throw new Error(
       `Core principles directory not found at ${principlesDir}. ` +
         'Ensure the @joshski/dust package is properly installed.'
     )
   }
-  /* v8 ignore stop */
 
   return principlesDir
 }

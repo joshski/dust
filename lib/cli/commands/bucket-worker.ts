@@ -279,7 +279,7 @@ export async function forwardToolExecutionWithDeps(
   })
 }
 
-/* v8 ignore start */
+/* istanbul ignore next @license */
 function findRepoPathByRepositoryId(
   repositories: Map<string, import('../../bucket/repository').RepositoryState>,
   repositoryId: number
@@ -291,7 +291,6 @@ function findRepoPathByRepositoryId(
   }
   return undefined
 }
-/* v8 ignore stop */
 
 const DEFAULT_DUSTBUCKET_WS_URL = 'wss://dustbucket.com/agent/connect'
 
@@ -401,7 +400,7 @@ interface BucketState {
 export function createInitialState(): BucketState {
   const sessionId = crypto.randomUUID()
   const systemBuffer = createLogBuffer()
-  /* v8 ignore start -- stub functions are placeholders, not called directly */
+  /* istanbul ignore next @license -- stub functions are placeholders, not called directly */
   const state: BucketState = {
     ws: null,
     repositories: new Map(),
@@ -416,7 +415,7 @@ export function createInitialState(): BucketState {
     tools: [],
     revealedFamilies: new Set(),
   }
-  /* v8 ignore stop */
+
   state.sendEvent = createEventMessageSender(() => state.ws)
   // Register system buffer so connection messages appear in the "All" TUI view
   state.logBuffers.set('system', systemBuffer)
@@ -431,7 +430,7 @@ export function getWebSocketUrl(bucketConfig: BucketConfig): string {
   return bucketConfig.agentConnectUrl || DEFAULT_DUSTBUCKET_WS_URL
 }
 
-/* v8 ignore start -- helper functions called by effect handlers */
+/* istanbul ignore next @license -- helper functions called by effect handlers */
 /**
  * Build RepositoryDependencies from BucketDependencies.
  */
@@ -462,6 +461,7 @@ function toRepositoryDependencies(
   }
 }
 
+/* istanbul ignore next @license -- helper function called by effect handlers */
 function ensureRepositoryLoopRunning(
   repoState: RepositoryState,
   state: BucketState,
@@ -489,6 +489,7 @@ function ensureRepositoryLoopRunning(
   startRepositoryLoop(repoState, repoDeps, state.sendEvent, state.sessionId)
 }
 
+/* istanbul ignore next @license -- helper function called by effect handlers */
 function signalTaskAvailable(
   repoState: RepositoryState,
   state: BucketState,
@@ -506,7 +507,6 @@ function signalTaskAvailable(
     repoState.taskAvailablePending = true
   }
 }
-/* v8 ignore stop */
 
 /**
  * Eagerly sync UI tabs with a repository list from the server.
@@ -771,7 +771,7 @@ export function connectWebSocket(
 
     try {
       message = await bucketDependencies.buildConnectionInit()
-    } catch (error) /* v8 ignore start -- error path for connection init failure */ {
+    } catch (error) {
       const messageText = error instanceof Error ? error.message : String(error)
       context.stderr(
         `Failed to build connection init: ${messageText}. Continuing with empty message.`
@@ -782,18 +782,18 @@ export function connectWebSocket(
         platform: 'unknown',
         agents: [],
       }
-    } /* v8 ignore stop */
+    }
 
     try {
       ws.send(JSON.stringify(message))
-    } catch (error) /* v8 ignore start -- error path for WebSocket send failure */ {
+    } catch (error) {
       const messageText = error instanceof Error ? error.message : String(error)
       context.stderr(
         `Failed to send connection init: ${messageText}. Continuing without handshake.`
       )
       // Mark as ready so we can process messages without waiting for server response
       connectionReady = true
-    } /* v8 ignore stop */
+    }
   }
 
   let ws: WebSocketLike
@@ -891,7 +891,7 @@ interface EffectExecutionDeps {
   onConnectionRejected?: (reason: string) => void
 }
 
-/* v8 ignore start -- thin adapter builds deps for already-tested message effect executor */
+/* istanbul ignore next @license -- thin adapter builds deps for already-tested message effect executor */
 /**
  * Create MessageEffectDeps from EffectExecutionDeps.
  * This adapter allows the message effect executor to work with the bucket worker's state.
@@ -987,7 +987,6 @@ function createMessageEffectDeps(
     },
   }
 }
-/* v8 ignore stop */
 
 /**
  * Execute effects returned by pure message handlers.
@@ -998,9 +997,9 @@ function executeEffects(
   effects: Effect[],
   dependencies: EffectExecutionDeps
 ): void {
-  /* v8 ignore start -- thin wrapper delegates to already-tested message effect executor */
+  /* istanbul ignore next @license -- thin wrapper delegates to already-tested message effect executor */
   const messageEffectDeps = createMessageEffectDeps(dependencies)
-  /* v8 ignore stop */
+
   executeMessageEffects(effects, messageEffectDeps)
 }
 
@@ -1151,7 +1150,7 @@ interface KeypressHandlerOptions {
   openBrowser?: (url: string) => void
 }
 
-/* v8 ignore start -- internal keypress handling, tested via createKeypressHandler */
+/* istanbul ignore next @license -- internal keypress handling, tested via createKeypressHandler */
 /**
  * Create a projection of UI state for the pure keypress handler.
  */
@@ -1166,9 +1165,8 @@ function createKeypressHandlerState(ui: TerminalUIState): KeypressHandlerState {
     repositoryUrls,
   }
 }
-/* v8 ignore stop */
 
-/* v8 ignore start -- thin adapter delegates to already-tested terminal-ui functions */
+/* istanbul ignore next @license -- thin adapter delegates to already-tested terminal-ui functions */
 /**
  * Create a UIEffectTarget adapter for TerminalUIState.
  * This bridges the concrete UI state to the abstract interface for keypress effect execution.
@@ -1188,7 +1186,6 @@ function createUIEffectTarget(ui: TerminalUIState): UIEffectTarget {
     getLogAreaHeight: () => getLogAreaHeight(ui),
   }
 }
-/* v8 ignore stop */
 
 /**
  * Create a keypress handler appropriate for the current mode.
@@ -1223,7 +1220,7 @@ export function createKeypressHandler(
   }
 }
 
-/* v8 ignore start -- authentication flow tested via bucketWorker integration tests */
+/* istanbul ignore next @license -- authentication flow tested via bucketWorker integration tests */
 async function resolveToken(
   bucketDeps: BucketDependencies,
   context: CommandDependencies['context']
@@ -1256,7 +1253,6 @@ async function resolveToken(
     return null
   }
 }
-/* v8 ignore stop */
 
 type BucketWorkerArgsResult =
   | { success: true; docker: boolean; appleContainer: boolean }
@@ -1356,7 +1352,7 @@ export async function bucketWorker(
   let cleanupKeypress: (() => void) | undefined
   let cleanupSignals: (() => void) | undefined
 
-  /* v8 ignore start -- thin wrapper only called during real tool execution flows */
+  /* istanbul ignore next @license -- thin wrapper only called during real tool execution flows */
   const forwardToolExecution = (
     request: import('../../bucket/command-events-proxy').ToolExecutionRequest
   ): Promise<ToolExecutionResult> => {
@@ -1372,7 +1368,6 @@ export async function bucketWorker(
       pendingExecutions: pendingToolExecutions,
     })
   }
-  /* v8 ignore stop */
 
   try {
     if (useTUI) {
@@ -1410,7 +1405,7 @@ export async function bucketWorker(
         fileSystem,
         useTUI,
         initialWs,
-        /* v8 ignore start -- tool execution result callback only runs during real WebSocket sessions */
+        /* istanbul ignore next @license -- tool execution result callback only runs during real WebSocket sessions */
         message => {
           const pending = pendingToolExecutions.get(message.requestId)
           if (!pending) {
@@ -1451,15 +1446,14 @@ export async function bucketWorker(
               break
           }
         },
-        /* v8 ignore stop */
+
         forwardToolExecution,
-        /* v8 ignore start -- connection rejection handler only runs during real WebSocket sessions */
+        /* istanbul ignore next @license -- connection rejection handler only runs during real WebSocket sessions */
         _reason => {
           // Shut down cleanly without reconnecting
           state.shuttingDown = true
           doShutdown()
         }
-        /* v8 ignore stop */
       )
 
       if (!useTUI) {
@@ -1470,12 +1464,12 @@ export async function bucketWorker(
     tuiHandle?.cleanup()
     cleanupKeypress?.()
     cleanupSignals?.()
-    /* v8 ignore start -- cleanup of pending tool executions only runs during real sessions */
+    /* istanbul ignore next @license -- cleanup of pending tool executions only runs during real sessions */
     for (const pending of pendingToolExecutions.values()) {
       clearTimeout(pending.timeoutId)
       pending.reject(new Error('Bucket proxy shutting down'))
     }
-    /* v8 ignore stop */
+
     pendingToolExecutions.clear()
   }
 

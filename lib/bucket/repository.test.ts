@@ -26,7 +26,9 @@ import {
   cloneRepository,
   computeRepositoryReconciliation,
   createDefaultRepositoryDependencies,
+  createLoopCancel,
   getRepoPath,
+  handleLoopFinished,
   handleRepositoryList,
   parseRepository,
   parseRepositoryList,
@@ -160,6 +162,20 @@ describe('createDefaultRepositoryDependencies', () => {
     expect(repoDeps.fileSystem).toBe(fileSystem)
     expect(typeof repoDeps.sleep).toBe('function')
     expect(typeof repoDeps.getReposDir).toBe('function')
+  })
+
+  test('sleep resolves after delay', async () => {
+    const fileSystem = createFileSystemEmulator()
+    const repoDeps = createDefaultRepositoryDependencies(fileSystem)
+    await repoDeps.sleep(1)
+  })
+
+  test('getReposDir returns a path', () => {
+    const fileSystem = createFileSystemEmulator()
+    const repoDeps = createDefaultRepositoryDependencies(fileSystem)
+    const dir = repoDeps.getReposDir()
+    expect(typeof dir).toBe('string')
+    expect(dir.length).toBeGreaterThan(0)
   })
 })
 
@@ -1456,6 +1472,108 @@ describe('runRepositoryLoop', () => {
   })
 })
 
+describe('handleLoopFinished', () => {
+  test('transitions stopping -> stopped', () => {
+    const repoState: RepositoryState = {
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        gitSshUrl: 'ssh-repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
+      path: '/tmp/repo',
+      logBuffer: createLogBuffer(),
+      lifecycle: { type: 'stopping' },
+      agentStatus: 'busy',
+      wakeUp: () => {},
+    }
+
+    handleLoopFinished(repoState)
+
+    expect(repoState.lifecycle.type).toBe('stopped')
+    expect(repoState.agentStatus).toBe('idle')
+    expect(repoState.wakeUp).toBeUndefined()
+  })
+
+  test('transitions non-stopping state to idle', () => {
+    const repoState: RepositoryState = {
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        gitSshUrl: 'ssh-repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
+      path: '/tmp/repo',
+      logBuffer: createLogBuffer(),
+      lifecycle: {
+        type: 'running',
+        loopPromise: Promise.resolve(),
+        cancel: () => {},
+      },
+      agentStatus: 'busy',
+      wakeUp: () => {},
+    }
+
+    handleLoopFinished(repoState)
+
+    expect(repoState.lifecycle.type).toBe('idle')
+    expect(repoState.agentStatus).toBe('idle')
+    expect(repoState.wakeUp).toBeUndefined()
+  })
+})
+
+describe('createLoopCancel', () => {
+  test('transitions running -> stopping', () => {
+    const repoState: RepositoryState = {
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        gitSshUrl: 'ssh-repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
+      path: '/tmp/repo',
+      logBuffer: createLogBuffer(),
+      lifecycle: {
+        type: 'running',
+        loopPromise: Promise.resolve(),
+        cancel: () => {},
+      },
+      agentStatus: 'idle',
+    }
+
+    const cancel = createLoopCancel(repoState)
+    cancel()
+
+    expect(repoState.lifecycle.type).toBe('stopping')
+  })
+
+  test('handles stop transition failure gracefully', () => {
+    const repoState: RepositoryState = {
+      repository: {
+        name: 'repo',
+        gitUrl: 'repo',
+        gitSshUrl: 'ssh-repo',
+        url: 'https://example.com/repo',
+        id: 1,
+      },
+      path: '/tmp/repo',
+      logBuffer: createLogBuffer(),
+      lifecycle: { type: 'idle' },
+      agentStatus: 'idle',
+    }
+
+    const cancel = createLoopCancel(repoState)
+    // Stop from idle fails (ok: false), exercising the else branch
+    cancel()
+
+    // State should remain idle since transition failed
+    expect(repoState.lifecycle.type).toBe('idle')
+  })
+})
+
 describe('startRepositoryLoop', () => {
   test('transitions idle -> starting -> running, then stopped when cancelled', async () => {
     const { spawn } = createAutoResolvingSpawn()
@@ -2437,5 +2555,47 @@ describe('removeRepositoryFromManager', () => {
 
     // Should have transitioned stopping -> idle via the stop action
     expect(manager.repositories.has('idle-repo')).toBe(false)
+  })
+
+  test('transitions starting repository to idle via stop action', async () => {
+    const context = createContextEmulator()
+    const manager = createMockManager()
+    const { spawn, processes } = createMockSpawn()
+
+    const repoState: RepositoryState = {
+      repository: {
+        name: 'starting-repo',
+        gitUrl: 'starting-repo',
+        gitSshUrl: 'ssh-starting-repo',
+        url: 'https://example.com/starting-repo',
+        id: 1,
+      },
+      path: '/tmp/starting-repo',
+      lifecycle: { type: 'starting' },
+      logBuffer: createLogBuffer(),
+      agentStatus: 'idle' as const,
+    }
+    manager.repositories.set('starting-repo', repoState)
+
+    const repoDeps = createTestRepositoryDependencies({
+      spawn,
+      sleep: () => Promise.resolve(),
+    })
+
+    const removePromise = removeRepositoryFromManager(
+      'starting-repo',
+      manager,
+      repoDeps,
+      context
+    )
+
+    await new Promise(resolve => setTimeout(resolve, 0))
+
+    const rmProc = processes.get('rm -rf /tmp/starting-repo')
+    rmProc?.emit('close', 0)
+
+    await removePromise
+
+    expect(manager.repositories.has('starting-repo')).toBe(false)
   })
 })

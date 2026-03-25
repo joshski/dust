@@ -214,9 +214,8 @@ async function buildPrincipleHierarchy(
     const rel = relMap.get(filePath)
     const children: PrincipleNode[] = []
 
-    /* v8 ignore start -- defensive: rel always exists for valid child paths */
+    /* istanbul ignore next @preserve -- defensive: rel always exists for valid child paths */
     if (rel) {
-      /* v8 ignore stop */
       for (const childPath of rel.subPrinciples) {
         children.push(buildNode(childPath))
       }
@@ -224,7 +223,7 @@ async function buildPrincipleHierarchy(
 
     return {
       filePath,
-      /* v8 ignore next -- defensive: titleMap always has entry for valid paths */
+      /* istanbul ignore next @preserve -- defensive: titleMap always has entry for valid paths */
       title: titleMap.get(filePath) || basename(filePath, '.md'),
       children,
     }
@@ -412,11 +411,10 @@ async function loadCorePrinciples(
   excludeSet: Set<string>
 ): Promise<Principle[]> {
   const corePath = getCorePrinciplesPath().replace(/\/$/, '')
-  /* v8 ignore start -- only true when running from the dust repo itself */
+  /* istanbul ignore next @preserve -- only true when running from the dust repo itself */
   if (resolve(localDirPath) === resolve(corePath)) {
     return []
   }
-  /* v8 ignore stop */
   const allCorePrinciples = await readAllCorePrinciples()
   return allCorePrinciples.filter(
     p => !isInternalPrinciple(p.content) && !excludeSet.has(p.slug)
@@ -446,12 +444,11 @@ async function processPrinciplesList(
   const localMdFiles = localFiles.filter(f => f.endsWith('.md')).toSorted()
   const hasLocalPrinciples = localMdFiles.length > 0
 
-  /* v8 ignore start -- core principles always exist in the package */
   // If both are empty, return false to indicate nothing was rendered
+  /* istanbul ignore next @preserve -- core principles always exist in the package */
   if (!hasCorePrinciples && !hasLocalPrinciples) {
     return false
   }
-  /* v8 ignore stop */
 
   // Output header
   stdout(SECTION_HEADERS['principles'])
@@ -461,9 +458,8 @@ async function processPrinciplesList(
 
   if (tree) {
     // Tree mode: render hierarchical structure with connectors
-    /* v8 ignore start -- core principles always exist in the package */
+    /* istanbul ignore next @preserve -- core principles always exist in the package */
     if (hasCorePrinciples) {
-      /* v8 ignore stop */
       const coreHierarchy = await getCorePrincipleHierarchy({
         excludeCorePrinciples,
       })
@@ -501,9 +497,8 @@ async function processPrinciplesList(
     }
   } else {
     // Compact mode (default): render flat list with slugs and opening sentences
-    /* v8 ignore start -- core principles always exist in the package */
+    /* istanbul ignore next @preserve -- core principles always exist in the package */
     if (hasCorePrinciples) {
-      /* v8 ignore stop */
       const corePath = getCorePrinciplesPath()
       const coreEntries: PrincipleEntry[] = corePrinciples
         .toSorted((a, b) => a.slug.localeCompare(b.slug))
@@ -610,7 +605,7 @@ export async function list(
         tree: treeFlag,
       })
 
-      /* v8 ignore start -- core principles always exist in the package */
+      /* istanbul ignore next @preserve -- core principles always exist in the package */
       if (!hasContent && specificTypeRequested) {
         context.stdout(SECTION_HEADERS[type])
         context.stdout('')
@@ -622,7 +617,6 @@ export async function list(
           emitListEvent(context.emitEvent, type, [])
         }
       }
-      /* v8 ignore stop */
       continue
     }
 

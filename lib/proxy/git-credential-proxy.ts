@@ -74,11 +74,9 @@ export async function getGitCredentials(
     const spawnOptions: import('node:child_process').SpawnOptions = {
       stdio: ['pipe', 'pipe', 'pipe'],
     }
-    /* v8 ignore start -- userHome only set in Docker mode */
     if (dependencies.userHome) {
       spawnOptions.env = { ...process.env, HOME: dependencies.userHome }
     }
-    /* v8 ignore stop */
     const proc = dependencies.spawn('git', ['credential', 'fill'], spawnOptions)
 
     // Send the credential query
@@ -180,7 +178,7 @@ export interface GitCredentialProxyServer {
   stop: () => void
 }
 
-/* v8 ignore start - HTTP server integration, tested via system tests */
+/* istanbul ignore next @preserve -- HTTP server integration, tested via system tests */
 async function streamResponseBody(
   body: ReadableStream<Uint8Array>,
   nodeResponse: import('node:http').ServerResponse
@@ -201,6 +199,7 @@ async function streamResponseBody(
  * The server accepts git smart HTTP protocol requests and forwards them
  * to the upstream HTTPS URL with credentials injected.
  */
+/* istanbul ignore next @preserve -- HTTP server integration, tested via system tests */
 export async function createGitCredentialProxyServer(
   dependencies: GitCredentialProxyDependencies
 ): Promise<GitCredentialProxyServer> {
@@ -321,4 +320,3 @@ export async function createGitCredentialProxyServer(
     },
   }
 }
-/* v8 ignore stop */

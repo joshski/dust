@@ -156,12 +156,11 @@ export async function runLoop(
 
   // Select container runtime based on flags
   const runtimeResult = selectContainerRuntime({ docker, appleContainer })
-  /* v8 ignore start -- parseLoopArgs already validates mutual exclusivity */
+  /* istanbul ignore next @preserve -- parseLoopArgs already validates mutual exclusivity */
   if (!runtimeResult.success) {
     context.stderr(runtimeResult.error)
     return { exitCode: 1 }
   }
-  /* v8 ignore stop */
   const { runtime: containerRuntime, forceContainer } = runtimeResult
 
   const eventsUrl = settings.eventsUrl

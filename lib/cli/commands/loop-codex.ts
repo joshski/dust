@@ -27,8 +27,10 @@ export function createCodexDependencies(
 
 export async function loopCodex(
   dependencies: CommandDependencies,
-  loopDependencies: LoopDependencies = createCodexDependencies()
+  loopDependencies?: LoopDependencies
 ): Promise<CommandResult> {
+  loopDependencies ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ createCodexDependencies()
   return runLoop(dependencies, {
     ...loopDependencies,
     agentType: 'codex',

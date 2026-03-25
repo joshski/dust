@@ -13,7 +13,9 @@ import type { CommandDependencies, CommandResult } from '../types'
 
 export async function loopClaude(
   dependencies: CommandDependencies,
-  loopDependencies: LoopDependencies = createDefaultDependencies()
+  loopDependencies?: LoopDependencies
 ): Promise<CommandResult> {
+  loopDependencies ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ createDefaultDependencies()
   return runLoop(dependencies, loopDependencies)
 }

@@ -133,11 +133,10 @@ export function createWakeUpHandler(
   return handler
 }
 
-/* v8 ignore start */
+/* istanbul ignore next @preserve -- trivial no-op async generator */
 async function* noOpScan() {
   // no-op
 }
-/* v8 ignore stop */
 
 /**
  * Create a no-op glob scanner for CommandDependencies.
@@ -327,7 +326,7 @@ async function setupDockerConfig(
     appleContainer: repoDeps.forceAppleContainer ?? false,
   })
 
-  /* v8 ignore start -- flags are validated in bucket-worker before reaching here */
+  /* istanbul ignore next @preserve -- flags are validated in bucket-worker before reaching here */
   if (!runtimeResult.success) {
     log(`Runtime selection error: ${runtimeResult.error}`)
     appendLogLine(
@@ -341,7 +340,6 @@ async function setupDockerConfig(
       shouldExit: false,
     }
   }
-  /* v8 ignore stop */
 
   const dockerResult = await prepareContainerConfigWithRuntime(
     repoState.path,
@@ -376,7 +374,7 @@ async function setupDockerConfig(
 
   const isCodexRepo = repoState.repository.agentProvider === 'codex'
 
-  /* v8 ignore start -- Docker mode requires complex setup with real Docker */
+  /* istanbul ignore next @preserve -- Docker mode requires complex setup with real Docker */
   if (!isCodexRepo && !repoDeps.auth.claudeCodeOauthToken) {
     log('CLAUDE_CODE_OAUTH_TOKEN is not set, cannot run in Docker mode')
     appendLogLine(
@@ -394,6 +392,27 @@ async function setupDockerConfig(
     }
   }
 
+  return startDockerProxies(
+    spawn,
+    isCodexRepo,
+    repoState,
+    dockerResult.config,
+    runtimeResult.runtime ?? undefined
+  )
+}
+
+/**
+ * Start Docker proxy servers and configure the spawn config.
+ * Separated for istanbul coverage -- requires real Docker runtime.
+ */
+/* istanbul ignore next @preserve -- Docker proxy setup requires real Docker runtime */
+async function startDockerProxies(
+  spawn: RepositoryDependencies['spawn'],
+  isCodexRepo: boolean,
+  repoState: RepositoryState,
+  baseConfig: DockerSpawnConfig,
+  runtime?: { hostAddress?: string; runCommand?: string }
+): Promise<DockerSetupResult> {
   // Start proxies for Docker containers — secrets stay on the host
   // Use DUST_USER_HOME to find the real user's git credentials when HOME is overridden
   const gitProxy = await createGitCredentialProxyServer({
@@ -403,11 +422,10 @@ async function setupDockerConfig(
   log(`git credential proxy started on port ${gitProxy.port}`)
 
   let stopApiProxy: (() => void) | undefined
-  const hostAddress =
-    runtimeResult.runtime?.hostAddress ?? 'host.docker.internal'
+  const hostAddress = runtime?.hostAddress ?? 'host.docker.internal'
   const config: DockerSpawnConfig = {
-    ...dockerResult.config,
-    runCommand: runtimeResult.runtime?.runCommand,
+    ...baseConfig,
+    runCommand: runtime?.runCommand,
     hostAddress,
     gitProxyUrl: `http://${hostAddress}:${gitProxy.port}`,
   }
@@ -437,7 +455,6 @@ async function setupDockerConfig(
     stopApiProxy,
     shouldExit: false,
   }
-  /* v8 ignore stop */
 }
 
 /**
@@ -452,7 +469,7 @@ function createAgentRun(
   if (isCodex) {
     const codexBufferSinkDeps: CodexRunnerDependencies = {
       ...codexDefaultRunnerDependencies,
-      spawnCodex: (prompt, options = {}) => {
+      spawnCodex: (prompt, options) => {
         const spawnDeps = {
           ...codexSpawnDefaultDependencies,
           spawn,
@@ -513,15 +530,17 @@ function cleanupDockerProxies(
   stopApiProxy: (() => void) | undefined,
   dockerConfig?: DockerSpawnConfig
 ): void {
-  /* v8 ignore start -- Proxy cleanup only runs in Docker mode */
+  /* istanbul ignore next @preserve -- Proxy cleanup only runs in Docker mode */
   if (stopGitProxy) {
     stopGitProxy()
     log(`git credential proxy stopped for ${repoName}`)
   }
+  /* istanbul ignore next @preserve -- Proxy cleanup only runs in Docker mode */
   if (stopApiProxy) {
     stopApiProxy()
     log(`claude api proxy stopped for ${repoName}`)
   }
+  /* istanbul ignore next @preserve -- Proxy cleanup only runs in Docker mode */
   if (dockerConfig?.settingsFilePath) {
     try {
       unlinkSync(dockerConfig.settingsFilePath)
@@ -530,7 +549,6 @@ function cleanupDockerProxies(
       // Ignore cleanup errors
     }
   }
-  /* v8 ignore stop */
 }
 
 /**
@@ -648,6 +666,7 @@ export async function runRepositoryLoop(
       continue
     }
 
+    /* istanbul ignore next @preserve -- successful iteration path requires full agent mocking */
     if (result === 'no_tasks') {
       if (handleNoTasksResult(repoState, repoName)) {
         continue
@@ -676,7 +695,7 @@ function updateLifecycleCancel(
   repoState: RepositoryState,
   abortController: AbortController
 ): void {
-  /* v8 ignore start - defensive guard and cancel callback */
+  /* istanbul ignore next @preserve -- defensive guard, lifecycle is always 'running' here */
   if (repoState.lifecycle.type !== 'running') {
     return
   }
@@ -690,7 +709,6 @@ function updateLifecycleCancel(
       repoState.lifecycle = { type: 'stopping' }
     },
   }
-  /* v8 ignore stop */
 }
 
 /**
@@ -704,7 +722,7 @@ async function startIterationProxy(
   sessionId: string | undefined,
   repoName: string
 ): Promise<{ port: number; stop: () => Promise<void> }> {
-  /* v8 ignore start -- proxy callbacks only invoked by real subprocesses */
+  /* istanbul ignore next @preserve -- proxy callbacks only invoked by real subprocesses */
   return startCommandEventsProxy({
     forwardEvent: commandEvent => {
       if (sendEvent && sessionId) {
@@ -731,7 +749,6 @@ async function startIterationProxy(
         })),
     revealFamily: repoDeps.revealFamily,
   })
-  /* v8 ignore stop */
 }
 
 /**

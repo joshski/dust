@@ -46,13 +46,12 @@ export interface ClaudeApiProxyDependencies {
   fetch: typeof fetch
 }
 
-/* v8 ignore start - default dependencies are used at runtime, not in unit tests */
+/* istanbul ignore next @preserve -- default dependencies are used at runtime, not in unit tests */
 export const defaultDependencies: ClaudeApiProxyDependencies = {
   homedir,
   readFileSync,
   fetch,
 }
-/* v8 ignore stop */
 
 /**
  * Credentials stored in ~/.claude/.credentials.json by Claude Code
@@ -69,6 +68,7 @@ export interface ClaudeCredentials {
  * Read OAuth token from Claude Code's credentials file.
  * Returns null if the file doesn't exist or doesn't contain a valid token.
  */
+/* istanbul ignore next @preserve -- default used at runtime only */
 export function readOAuthToken(
   dependencies: ClaudeApiProxyDependencies = defaultDependencies
 ): string | null {
@@ -109,6 +109,7 @@ export function readOAuthToken(
  * Check if the OAuth token is expired or about to expire.
  * Returns true if the token expires within the next 5 minutes.
  */
+/* istanbul ignore next @preserve -- default used at runtime only */
 export function isTokenExpired(
   dependencies: ClaudeApiProxyDependencies = defaultDependencies
 ): boolean {
@@ -451,7 +452,7 @@ export async function handleProxyRequest(
   }
 }
 
-/* v8 ignore start - Node.js HTTP adaptation, tested via system tests */
+/* istanbul ignore next @preserve -- Node.js HTTP adaptation, tested via system tests */
 async function streamResponseBody(
   body: ReadableStream<Uint8Array>,
   nodeResponse: import('node:http').ServerResponse
@@ -468,6 +469,7 @@ async function streamResponseBody(
   }
 }
 
+/* istanbul ignore next @preserve -- Node.js HTTP adaptation, tested via system tests */
 async function writeProxyResponse(
   proxyResponse: ProxyResponse,
   nodeResponse: import('node:http').ServerResponse
@@ -486,6 +488,7 @@ async function writeProxyResponse(
   }
 }
 
+/* istanbul ignore next @preserve -- Node.js HTTP adaptation, tested via system tests */
 async function readNodeRequestBody(
   nodeRequest: import('node:http').IncomingMessage
 ): Promise<ArrayBuffer | undefined> {
@@ -500,7 +503,6 @@ async function readNodeRequestBody(
     combined.byteOffset + combined.byteLength
   )
 }
-/* v8 ignore stop */
 
 /**
  * Creates a Claude API proxy server.
@@ -511,13 +513,14 @@ async function readNodeRequestBody(
  * that returns the current helper token. All other requests must include
  * a valid helper token in the Authorization or x-api-key header.
  */
+/* istanbul ignore next @preserve -- Node.js HTTP server lifecycle, tested via system tests */
 export async function createClaudeApiProxyServer(
   dependencies: ClaudeApiProxyDependencies = defaultDependencies
 ): Promise<ClaudeApiProxyServer> {
   let resolvedPort = 0
   let helperTokenState = createHelperTokenState()
 
-  /* v8 ignore start - Node.js HTTP adaptation, tested via system tests */
+  /* istanbul ignore next @preserve -- Node.js HTTP adaptation, tested via system tests */
   const server = httpCreateServer(async (nodeRequest, nodeResponse) => {
     const method = nodeRequest.method ?? 'GET'
     const url = new URL(
@@ -552,6 +555,7 @@ export async function createClaudeApiProxyServer(
     await writeProxyResponse(proxyResponse, nodeResponse)
   })
 
+  /* istanbul ignore next @preserve -- Node.js HTTP adaptation, tested via system tests */
   await new Promise<void>(resolve => {
     server.listen(0, () => {
       const addr = server.address()
@@ -563,6 +567,7 @@ export async function createClaudeApiProxyServer(
     })
   })
 
+  /* istanbul ignore next @preserve -- Node.js HTTP adaptation, tested via system tests */
   return {
     port: resolvedPort,
     stop: () => {
@@ -570,5 +575,4 @@ export async function createClaudeApiProxyServer(
       log('claude api proxy stopped')
     },
   }
-  /* v8 ignore stop */
 }

@@ -370,6 +370,20 @@ describe('selectPrevious', () => {
 })
 
 describe('scrollUp', () => {
+  it('scrolls up by 1 line when no lines argument provided', () => {
+    const state = createTerminalUIState()
+    addRepository(state, 'repo1', createLogBuffer())
+    const buffer = getBuffer(state, 'repo1')
+    for (let i = 0; i < 100; i++) {
+      appendLogLine(buffer, createLogLine(`line ${i}`, 'stdout', i))
+    }
+
+    scrollUp(state)
+
+    expect(state.scrollOffset).toBe(1)
+    expect(state.autoScroll).toBe(false)
+  })
+
   it('increases scroll offset', () => {
     const state = createTerminalUIState()
     addRepository(state, 'repo1', createLogBuffer())
@@ -402,6 +416,17 @@ describe('scrollUp', () => {
 })
 
 describe('scrollDown', () => {
+  it('scrolls down by 1 line when no lines argument provided', () => {
+    const state = createTerminalUIState()
+    state.scrollOffset = 5
+    state.autoScroll = false
+
+    scrollDown(state)
+
+    expect(state.scrollOffset).toBe(4)
+    expect(state.autoScroll).toBe(false)
+  })
+
   it('decreases scroll offset', () => {
     const state = createTerminalUIState()
     state.scrollOffset = 10

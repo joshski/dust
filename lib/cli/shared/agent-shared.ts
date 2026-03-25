@@ -62,9 +62,11 @@ export async function loadAgentInstructions(
 export function templateVariables(
   settings: DustSettings,
   hooksInstalled: boolean,
-  env: NodeJS.ProcessEnv = process.env,
+  env?: NodeJS.ProcessEnv,
   options?: { hasIdeaFile?: boolean }
 ): TemplateVars {
+  env ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ process.env
   const agent = detectAgent(env)
   // Default hasIdeaFile to true - only Decompose Idea tasks have no idea file
   const hasIdeaFile = options?.hasIdeaFile ?? true
@@ -85,9 +87,11 @@ export async function templateVariablesWithInstructions(
   fileSystem: ReadableFileSystem,
   settings: DustSettings,
   hooksInstalled: boolean,
-  env: NodeJS.ProcessEnv = process.env,
+  env?: NodeJS.ProcessEnv,
   options?: { hasIdeaFile?: boolean }
 ): Promise<TemplateVarsWithInstructions> {
+  env ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ process.env
   const agent = detectAgent(env)
   const agentInstructions = await loadAgentInstructions(
     cwd,

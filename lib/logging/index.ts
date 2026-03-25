@@ -196,7 +196,7 @@ export function createLoggingService(
   }
 }
 
-/* v8 ignore start -- module-level initialization, tested via createLoggingService */
+/* istanbul ignore next @preserve -- module-level initialization, tested via createLoggingService */
 /** Default service instance used by the module-level convenience exports. */
 const defaultService = createLoggingService({
   config: {
@@ -211,7 +211,6 @@ const defaultService = createLoggingService({
           : undefined,
   },
 })
-/* v8 ignore stop */
 
 /**
  * Activate file logging for this command. See {@link LoggingService.enableFileLogs}.

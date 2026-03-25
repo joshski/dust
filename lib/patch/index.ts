@@ -558,9 +558,8 @@ function parseArtifactPath(
   path: string
 ): { type: ArtifactType; slug: string } | null {
   const match = path.match(/^(facts|ideas|principles|tasks)\/([^/]+)\.md$/)
-  /* v8 ignore start -- defensive guard; all patch files are artifact paths */
+  /* istanbul ignore next @preserve -- defensive guard; all patch files are artifact paths */
   if (!match) return null
-  /* v8 ignore stop */
 
   const dirToType: Record<string, ArtifactType> = {
     facts: 'fact',
@@ -588,9 +587,8 @@ async function buildPreviews(
 
   for (const [path, content] of Object.entries(files)) {
     const parsed = parseArtifactPath(path)
-    /* v8 ignore start -- defensive guard; all patch files are artifact paths */
+    /* istanbul ignore next @preserve -- defensive guard; all patch files are artifact paths */
     if (!parsed) continue
-    /* v8 ignore stop */
 
     if (content === null) {
       previews.push({

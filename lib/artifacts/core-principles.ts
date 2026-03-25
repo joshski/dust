@@ -114,12 +114,8 @@ export function getCorePrincipleTree(
     if (!parentSlug || !filteredSlugs.has(parentSlug)) {
       roots.push(node)
     } else {
-      /* v8 ignore start -- defensive guard; parentSlug is always in filteredSlugs here */
-      const parentNode = nodeBySlug.get(parentSlug)
-      if (parentNode) {
-        parentNode.children.push(node)
-      }
-      /* v8 ignore stop */
+      // parentSlug is always in filteredSlugs here, so nodeBySlug always has it
+      nodeBySlug.get(parentSlug)!.children.push(node)
     }
   }
 

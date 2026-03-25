@@ -657,6 +657,21 @@ A local project principle.
     expect(output).toContain('* maintainable-codebase.md')
   })
 
+  test('shows Core section when principles directory does not exist', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {},
+      },
+    })
+
+    await list(createDependencies(context, fileSystem, ['principles']))
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('🎯 Core Principles')
+    expect(output).not.toContain('🎯 Local Principles')
+  })
+
   test('shows only Core section when no local principles exist', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
@@ -1588,5 +1603,37 @@ Second root principle.
     })
 
     expect(result.exitCode).toBe(0)
+  })
+
+  test('handles tree mode with non-existent sub-principle reference', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'parent-principle.md': `# Parent Principle
+
+This is a parent principle.
+
+## Parent Principle
+
+- (none)
+
+## Sub-Principles
+
+- [Non Existent](non-existent-principle.md)
+`,
+          },
+        },
+      },
+    })
+
+    await list(
+      createDependencies(context, fileSystem, ['principles', '--tree'])
+    )
+
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('Local')
+    expect(output).toContain('Parent Principle')
   })
 })

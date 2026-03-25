@@ -5,18 +5,18 @@ import { defineConfig } from 'vitest/config'
 // System tests in system-tests/ are excluded - they run via bun test.
 // Only unit tests (co-located with source in lib/) are in scope for coverage.
 export default defineConfig({
+  esbuild: {
+    legalComments: 'inline',
+  },
   test: {
-    exclude: ['system-tests/**', 'node_modules/**'],
+    exclude: ['system-tests/**', 'node_modules/**', '.claude/**'],
     coverage: {
-      provider: 'v8',
+      provider: 'istanbul',
       include: ['lib/**/*.ts'],
       exclude: [
         'lib/cli/run.ts',
         'lib/version.ts',
         'lib/test/**',
-        // v8 does not honor `/* v8 ignore */` comments for function-level metrics
-        // on native wrapper functions. This file contains thin wrappers around
-        // Node.js/Bun native APIs and is excluded for 100% function coverage.
         'lib/bucket/native-io.ts',
       ],
       reporter: [

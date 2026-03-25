@@ -4,9 +4,15 @@ Tests are run using [Vitest](https://vitest.dev) rather than Bun's built-in test
 
 Branch coverage is important for ensuring thorough test coverage, so Vitest is used until Bun adds this capability.
 
-## v8 Coverage Limitations
+## Istanbul Coverage
 
-The v8 coverage provider does not honor `/* v8 ignore */` comments for function-level metrics. Files with native wrapper functions (e.g., functions that directly access `process.stdin`, `process.stdout`, signals) work for line/statement coverage but require file-level exclusions in `vitest.config.ts` to achieve 100% function coverage. Currently affected files:
+Coverage uses the istanbul provider (`@vitest/coverage-istanbul`). Istanbul ignore comments use the `@preserve` annotation so esbuild retains them during TypeScript transpilation:
+
+```
+/* istanbul ignore next @preserve -- reason */
+```
+
+For default parameter branches, place the comment before the function declaration (not inside the parameter list), since esbuild strips comments from parameter positions.
+
+Files with native wrapper functions that can't be unit tested are excluded at the file level in `vitest.config.ts`:
 - `lib/bucket/native-io.ts` (native WebSocket, stdin, signals, resize, stdout wrappers)
-
-When v8 fixes this limitation upstream, these file-level exclusions can be removed.

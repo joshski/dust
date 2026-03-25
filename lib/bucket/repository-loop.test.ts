@@ -1200,4 +1200,117 @@ describe('runRepositoryLoop', () => {
     const dockerError = lines.find(l => l.text.includes('Docker error:'))
     expect(dockerError).toBeDefined()
   })
+
+  test('waits for tasks when no tasks available', async () => {
+    const repoState = createTestRepoState()
+
+    // Spawn that succeeds for git pull (exit code 0)
+    const successfulPullSpawn = asTestType<RepositoryDependencies['spawn']>(
+      () => {
+        const proc = {
+          on(event: string, listener: (arg: unknown) => void) {
+            if (event === 'close') setTimeout(() => listener(0), 0)
+            return proc
+          },
+          stdout: { on: () => {} },
+          stderr: { on: () => {} },
+        }
+        return proc
+      }
+    )
+
+    let waitCount = 0
+    const repoDeps: RepositoryDependencies = {
+      spawn: successfulPullSpawn,
+      run: async () => {},
+      fileSystem: {
+        exists: () => false,
+        readFile: async () => '',
+        readdir: async () => [],
+        isDirectory: () => false,
+        writeFile: async () => {},
+        mkdir: async () => {},
+        chmod: async () => {},
+        getFileCreationTime: () => 0,
+        rename: async () => {},
+      },
+      sleep: async () => {
+        waitCount++
+        // Stop the loop after the fallback timeout resolves
+        if (waitCount >= 1) {
+          repoState.lifecycle = { type: 'stopping' }
+        }
+      },
+      getReposDir: () => '/tmp/repos',
+      session: createTestSessionConfig(),
+      runtime: createTestRuntimeConfig(),
+      auth: createTestAuthConfig(),
+      shellRunner: { run: async () => ({ exitCode: 0, output: '' }) },
+    }
+
+    await runRepositoryLoop(repoState, repoDeps)
+
+    const lines = getLogLines(repoState.logBuffer)
+    const waitLine = lines.find(l => l.text.includes('Waiting for tasks...'))
+    expect(waitLine).toBeDefined()
+  })
+
+  test('rechecks immediately when taskAvailablePending is set during no_tasks', async () => {
+    const repoState = createTestRepoState()
+
+    // Spawn that succeeds for git pull (exit code 0)
+    const successfulPullSpawn = asTestType<RepositoryDependencies['spawn']>(
+      () => {
+        const proc = {
+          on(event: string, listener: (arg: unknown) => void) {
+            if (event === 'close') setTimeout(() => listener(0), 0)
+            return proc
+          },
+          stdout: { on: () => {} },
+          stderr: { on: () => {} },
+        }
+        return proc
+      }
+    )
+
+    let iterationCount = 0
+    const repoDeps: RepositoryDependencies = {
+      spawn: successfulPullSpawn,
+      run: async () => {},
+      fileSystem: {
+        exists: () => false,
+        readFile: async () => '',
+        readdir: async () => [],
+        isDirectory: () => false,
+        writeFile: async () => {},
+        mkdir: async () => {},
+        chmod: async () => {},
+        getFileCreationTime: () => 0,
+        rename: async () => {},
+      },
+      sleep: async () => {
+        iterationCount++
+        // On first iteration, set taskAvailablePending so it rechecks
+        if (iterationCount === 1) {
+          repoState.taskAvailablePending = true
+        } else {
+          // Stop on subsequent iterations
+          repoState.lifecycle = { type: 'stopping' }
+        }
+      },
+      getReposDir: () => '/tmp/repos',
+      session: createTestSessionConfig(),
+      runtime: createTestRuntimeConfig(),
+      auth: createTestAuthConfig(),
+      shellRunner: { run: async () => ({ exitCode: 0, output: '' }) },
+    }
+
+    await runRepositoryLoop(repoState, repoDeps)
+
+    const lines = getLogLines(repoState.logBuffer)
+    const recheckLine = lines.find(l =>
+      l.text.includes('Task signal received during iteration, rechecking...')
+    )
+    expect(recheckLine).toBeDefined()
+  })
 })

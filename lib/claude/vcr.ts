@@ -83,10 +83,14 @@ export const defaultRecorderDependencies: RecorderDependencies = {
 export async function recordCassette(
   name: string,
   prompt: string,
-  options: SpawnOptions = {},
+  options?: SpawnOptions,
   description?: string,
-  dependencies: RecorderDependencies = defaultRecorderDependencies
+  dependencies?: RecorderDependencies
 ): Promise<Cassette> {
+  options ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ {}
+  dependencies ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ defaultRecorderDependencies
   const rawEvents: RawEvent[] = []
   const sink = createRecordingSink()
 

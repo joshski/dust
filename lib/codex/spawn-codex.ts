@@ -91,9 +91,13 @@ export function buildDockerRunArguments(
 
 export async function* spawnCodex(
   prompt: string,
-  options: SpawnOptions = {},
-  dependencies: EventSourceDependencies = defaultDependencies
+  options?: SpawnOptions,
+  dependencies?: EventSourceDependencies
 ): AsyncGenerator<RawEvent> {
+  options ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ {}
+  dependencies ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ defaultDependencies
   const { cwd, env, signal, docker } = options
 
   const codexArguments = ['exec', prompt, '--json', '--yolo']

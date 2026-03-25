@@ -47,7 +47,7 @@ Create tests that mock `process.platform` to `'win32'` and verify the correct co
 
 #### Skip automated testing, rely on manual verification
 
-The function is already marked with `v8 ignore` (excluded from coverage). Document the Windows support and rely on manual testing.
+The function is in `native-io.ts` which is excluded from coverage. Document the Windows support and rely on manual testing.
 
 #### Add integration test with platform detection
 

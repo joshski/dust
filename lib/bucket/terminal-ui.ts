@@ -128,10 +128,9 @@ export function truncateLine(text: string, maxWidth: number): string {
     visibleCount++
   }
 
-  /* v8 ignore start - unreachable: textLength > maxWidth guarantees visibleCount
+  /* istanbul ignore next @preserve -- unreachable: textLength > maxWidth guarantees visibleCount
      reaches truncateAt before exhausting all characters. Required for TypeScript. */
   return result + ANSI.RESET
-  /* v8 ignore stop */
 }
 
 /**

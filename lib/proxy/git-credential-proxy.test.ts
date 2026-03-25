@@ -183,6 +183,41 @@ describe('getGitCredentials', () => {
     expect(result).toBeNull()
   })
 
+  test('passes userHome as HOME env var when provided', async () => {
+    let capturedOptions: import('node:child_process').SpawnOptions | undefined
+    const spawn = ((
+      _cmd: string,
+      _args: string[],
+      options: import('node:child_process').SpawnOptions
+    ) => {
+      capturedOptions = options
+      const proc = new EventEmitter() as EventEmitter & {
+        stdin: EventEmitter & { write: () => void; end: () => void }
+        stdout: EventEmitter
+        stderr: EventEmitter
+      }
+      proc.stdin = Object.assign(new EventEmitter(), {
+        write: () => {},
+        end: () => {},
+      })
+      proc.stdout = new EventEmitter()
+      proc.stderr = new EventEmitter()
+      setTimeout(() => {
+        proc.stdout.emit('data', Buffer.from('username=user\npassword=token\n'))
+        proc.emit('close', 0)
+      }, 0)
+      return asChildProcessStub(proc)
+    }) as GitCredentialProxyDependencies['spawn']
+
+    const dependencies: GitCredentialProxyDependencies = {
+      spawn,
+      userHome: '/real/home',
+    }
+
+    await getGitCredentials('github.com', dependencies)
+    expect(capturedOptions?.env?.HOME).toBe('/real/home')
+  })
+
   test('returns null when credentials are incomplete', async () => {
     const dependencies: GitCredentialProxyDependencies = {
       spawn: createMockSpawn(

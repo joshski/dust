@@ -121,6 +121,40 @@ export interface RepositoryDependencies {
 }
 
 /**
+ * Handle loop completion: transition lifecycle and reset agent status.
+ * Extracted as a named function for testability.
+ */
+export function handleLoopFinished(repoState: RepositoryState): void {
+  log(`loop finished for ${repoState.repository.name}`)
+  // Transition to stopped if we were stopping, otherwise back to idle
+  if (repoState.lifecycle.type === 'stopping') {
+    // stopped transition always succeeds from stopping state
+    repoState.lifecycle = { type: 'stopped' }
+  } else {
+    repoState.lifecycle = { type: 'idle' }
+  }
+  repoState.agentStatus = 'idle'
+  repoState.wakeUp = undefined
+}
+
+/**
+ * Create a cancel function for a running repository loop.
+ * Extracted as a named function for testability.
+ */
+export function createLoopCancel(repoState: RepositoryState): () => void {
+  return () => {
+    const stopResult = transition(repoState.lifecycle, { type: 'stop' })
+    if (stopResult.ok) {
+      repoState.lifecycle = stopResult.state
+    } else {
+      log(
+        `Cannot stop loop for ${repoState.repository.name}: ${stopResult.error}`
+      )
+    }
+  }
+}
+
+/**
  * Start (or restart) the per-repository loop and keep lifecycle state accurate.
  */
 export function startRepositoryLoop(
@@ -153,55 +187,18 @@ export function startRepositoryLoop(
         createLogLine(`Repository loop crashed: ${message}`, 'stderr')
       )
     })
-    .finally(() => {
-      log(`loop finished for ${repoState.repository.name}`)
-      // Transition to stopped if we were stopping, otherwise back to idle
-      if (repoState.lifecycle.type === 'stopping') {
-        const stoppedResult = transition(repoState.lifecycle, {
-          type: 'stopped',
-        })
-        /* v8 ignore start - defensive check, transition always succeeds from stopping */
-        if (stoppedResult.ok) {
-          repoState.lifecycle = stoppedResult.state
-        }
-        /* v8 ignore stop */
-      } else {
-        repoState.lifecycle = { type: 'idle' }
-      }
-      repoState.agentStatus = 'idle'
-      repoState.wakeUp = undefined
-    })
+    .finally(() => handleLoopFinished(repoState))
 
-  /* v8 ignore start - cancel callback invoked from within loop */
-  const cancel = (): void => {
-    const stopResult = transition(repoState.lifecycle, { type: 'stop' })
-    if (stopResult.ok) {
-      repoState.lifecycle = stopResult.state
-    } else {
-      log(
-        `Cannot stop loop for ${repoState.repository.name}: ${stopResult.error}`
-      )
-    }
-  }
-  /* v8 ignore stop */
+  const cancel = createLoopCancel(repoState)
 
-  const startedResult = transition(repoState.lifecycle, {
-    type: 'started',
+  // started transition always succeeds from starting state
+  repoState.lifecycle = {
+    type: 'running',
     loopPromise,
     cancel,
-  })
-  /* v8 ignore start - defensive check, should always succeed from starting state */
-  if (startedResult.ok) {
-    repoState.lifecycle = startedResult.state
-  } else {
-    log(
-      `Cannot mark loop started for ${repoState.repository.name}: ${startedResult.error}`
-    )
   }
-  /* v8 ignore stop */
 }
 
-/* v8 ignore start - simple wrappers around native functions */
 export function createDefaultRepositoryDependencies(
   fileSystem: FileSystem
 ): RepositoryDependencies {
@@ -217,7 +214,6 @@ export function createDefaultRepositoryDependencies(
     auth: envConfig.auth,
   }
 }
-/* v8 ignore stop */
 
 /**
  * Determine if a repository needs to be re-cloned due to branch change.
@@ -408,22 +404,15 @@ export async function removeRepositoryFromManager(
     repoState.wakeUp?.()
   }
 
-  /* v8 ignore start - defensive state machine transitions after async operations */
-  // Ensure we reach stopped state via state machine transitions
+  // Ensure we reach a terminal state via state machine transitions
   const lifecycle = repoState.lifecycle
   if (lifecycle.type === 'stopping') {
-    const stoppedResult = transition(lifecycle, { type: 'stopped' })
-    if (stoppedResult.ok) {
-      repoState.lifecycle = stoppedResult.state
-    }
+    // stopped transition always succeeds from stopping state
+    repoState.lifecycle = { type: 'stopped' }
   } else if (lifecycle.type !== 'stopped' && lifecycle.type !== 'idle') {
-    // Handle stop from other states (starting)
-    const stopResult = transition(lifecycle, { type: 'stop' })
-    if (stopResult.ok) {
-      repoState.lifecycle = stopResult.state
-    }
+    // stop transition always succeeds from starting/running states
+    repoState.lifecycle = { type: 'idle' }
   }
-  /* v8 ignore stop */
 
   await removeRepository(repoState.path, repoDeps.spawn, context)
 
@@ -495,10 +484,9 @@ export async function handleRepositoryList(
         await addRepository(action.repository, manager, repoDeps, context)
         break
       case 'updateProvider': {
-        const repoState = manager.repositories.get(action.name)
-        /* v8 ignore start - defensive check, updateProvider only created for existing repos */
-        if (!repoState) break
-        /* v8 ignore stop */
+        // updateProvider actions are only created for existing repos
+        // biome-ignore lint/style/noNonNullAssertion: guaranteed by computeRepositoryReconciliation
+        const repoState = manager.repositories.get(action.name)!
         const from = repoState.repository.agentProvider ?? '(unset)'
         const to = action.newProvider ?? '(unset)'
         log(`${action.name}: agentProvider changed from ${from} to ${to}`)

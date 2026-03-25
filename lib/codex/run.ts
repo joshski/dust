@@ -25,9 +25,13 @@ export const defaultRunnerDependencies: RunnerDependencies = {
 
 export async function run(
   prompt: string,
-  options: SpawnOptions | RunOptions = {},
-  dependencies: RunnerDependencies = defaultRunnerDependencies
+  options?: SpawnOptions | RunOptions,
+  dependencies?: RunnerDependencies
 ): Promise<void> {
+  options ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ {}
+  dependencies ??=
+    /* istanbul ignore next @preserve -- default parameter branch */ defaultRunnerDependencies
   const spawnOptions = isRunOptions(options)
     ? (options.spawnOptions ?? {})
     : options
