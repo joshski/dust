@@ -26,11 +26,7 @@ import {
   validateFilename,
   validateTitleFilenameMatch,
 } from '../lint/validators/filename-validator'
-import {
-  validateIdeaOpenQuestions,
-  validateIdeaTransitionTitle,
-  validateWorkflowTaskBodySection,
-} from '../lint/validators/idea-validator'
+import { validateIdeaOpenQuestions } from '../lint/validators/idea-validator'
 import {
   validateLinks,
   validatePrincipleHierarchyLinks,
@@ -247,16 +243,9 @@ export function validateArtifacts(context: ValidationContext): Violation[] {
     const imperativeViolation = validateImperativeOpeningSentence(artifact)
     if (imperativeViolation) violations.push(imperativeViolation)
 
-    const ideaTransitionViolation = validateIdeaTransitionTitle(
-      artifact,
-      ideasPath,
-      fileSystem
-    )
-    if (ideaTransitionViolation) violations.push(ideaTransitionViolation)
-
-    violations.push(
-      ...validateWorkflowTaskBodySection(artifact, ideasPath, fileSystem)
-    )
+    // Title prefix validation removed - prefixes are now cosmetic
+    // validateIdeaTransitionTitle and validateWorkflowTaskBodySection
+    // no longer perform validation
   }
 
   // Validate principle files

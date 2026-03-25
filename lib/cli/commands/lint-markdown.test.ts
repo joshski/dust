@@ -2893,7 +2893,7 @@ describe('validateIdeaTransitionTitle', () => {
     expect(violation).toBeNull()
   })
 
-  test('returns violation when referenced idea does not exist', () => {
+  test('returns null when referenced idea does not exist (title prefixes are cosmetic)', () => {
     const content = '# Refine Idea: Nonexistent Idea\n\nRefine this idea.'
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -2911,9 +2911,7 @@ describe('validateIdeaTransitionTitle', () => {
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violation).not.toBeNull()
-    expect(violation?.message).toContain('Nonexistent Idea')
-    expect(violation?.message).toContain('nonexistent-idea.md')
+    expect(violation).toBeNull()
   })
 
   test('returns null when content has no title', () => {
@@ -2986,7 +2984,7 @@ Research this idea briefly.
     expect(violation).toBeNull()
   })
 
-  test('returns violation for transition-style expedite task when idea file does not exist', () => {
+  test('returns null for transition-style expedite task when idea file does not exist (title prefixes are cosmetic)', () => {
     const content = `# Expedite Idea: Nonexistent Idea
 
 Research this idea briefly.
@@ -3015,9 +3013,7 @@ Research this idea briefly.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violation).not.toBeNull()
-    expect(violation?.message).toContain('Nonexistent Idea')
-    expect(violation?.message).toContain('nonexistent-idea.md')
+    expect(violation).toBeNull()
   })
 })
 
@@ -3066,7 +3062,7 @@ Do something.
     expect(violations).toEqual([])
   })
 
-  test('returns violation when Refines Idea section is missing', () => {
+  test('returns no violations when Refines Idea section is missing (title prefixes are cosmetic)', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -3088,12 +3084,10 @@ Research and refine this idea.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('missing required')
-    expect(violations[0].message).toContain('## Refines Idea')
+    expect(violations).toEqual([])
   })
 
-  test('returns violation when Refines Idea section has no links', () => {
+  test('returns no violations when Refines Idea section has no links (title prefixes are cosmetic)', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -3119,11 +3113,10 @@ This section has no links.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('contains no link')
+    expect(violations).toEqual([])
   })
 
-  test('returns violation when Refines Idea section has no idea links', () => {
+  test('returns no violations when Refines Idea section has no idea links (title prefixes are cosmetic)', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -3149,11 +3142,10 @@ Research and refine this idea.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('contains no link to an idea file')
+    expect(violations).toEqual([])
   })
 
-  test('returns violation when linked idea file does not exist', () => {
+  test('returns no violations when linked idea file does not exist (title prefixes are cosmetic)', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -3179,8 +3171,7 @@ Research and refine this idea.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('points to non-existent file')
+    expect(violations).toEqual([])
   })
 
   test('returns no violations when Refines Idea section links to existing idea', () => {
@@ -3212,7 +3203,7 @@ Research and refine this idea.
     expect(violations).toEqual([])
   })
 
-  test('returns violation for Decompose Idea task missing section', () => {
+  test('returns no violations for Decompose Idea task missing section (title prefixes are cosmetic)', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -3234,11 +3225,10 @@ Create tasks from this idea.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('## Decomposes Idea')
+    expect(violations).toEqual([])
   })
 
-  test('returns violation for Shelve Idea task missing section', () => {
+  test('returns no violations for Shelve Idea task missing section (title prefixes are cosmetic)', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -3260,8 +3250,7 @@ Archive this idea.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('## Shelves Idea')
+    expect(violations).toEqual([])
   })
 
   test('returns no violations for capture-style expedite task with Idea Description section', () => {
@@ -3296,7 +3285,7 @@ This is an inline idea description.
     expect(violations).toEqual([])
   })
 
-  test('returns violation for transition-style expedite task missing Expedites Idea section', () => {
+  test('returns no violations for transition-style expedite task missing Expedites Idea section (title prefixes are cosmetic)', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -3318,11 +3307,10 @@ Research this idea briefly.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('## Expedites Idea')
+    expect(violations).toEqual([])
   })
 
-  test('section parsing stops at next H1 heading', () => {
+  test('returns no violations when section parsing stops at next H1 heading (title prefixes are cosmetic)', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -3350,11 +3338,10 @@ Research and refine this idea.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('contains no link')
+    expect(violations).toEqual([])
   })
 
-  test('section parsing stops at next H2 heading', () => {
+  test('returns no violations when section parsing stops at next H2 heading (title prefixes are cosmetic)', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -3382,11 +3369,10 @@ Research and refine this idea.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('contains no link')
+    expect(violations).toEqual([])
   })
 
-  test('ignores idea links without .md extension in filename', () => {
+  test('returns no violations for links without .md extension (title prefixes are cosmetic)', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -3413,8 +3399,7 @@ Research and refine this idea.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('other-idea.md')
+    expect(violations).toEqual([])
   })
 })
 
@@ -3448,7 +3433,7 @@ Refine this idea.
     expect(result.exitCode).toBe(0)
   })
 
-  test('reports violation when transition task references non-existent idea', async () => {
+  test('still validates broken links even though title prefixes are cosmetic', async () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator({
       project: {
@@ -3474,7 +3459,6 @@ Refine this idea.
     const result = await lintMarkdown(createDependencies(context, fileSystem))
     expect(result.exitCode).toBe(1)
     const output = context.stderrLines.join('\n')
-    expect(output).toContain('Missing Idea')
     expect(output).toContain('missing-idea.md')
   })
 })
@@ -4267,7 +4251,7 @@ Do something.
     expect(violations).toEqual([])
   })
 
-  test('reports missing Refines Idea section', () => {
+  test('returns no violations for missing Refines Idea section (title prefixes are cosmetic)', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -4287,13 +4271,10 @@ Refine this idea.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain(
-      'missing required "## Refines Idea" section'
-    )
+    expect(violations).toEqual([])
   })
 
-  test('reports missing Decomposes Idea section', () => {
+  test('returns no violations for missing Decomposes Idea section (title prefixes are cosmetic)', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -4313,13 +4294,10 @@ Create tasks from this idea.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain(
-      'missing required "## Decomposes Idea" section'
-    )
+    expect(violations).toEqual([])
   })
 
-  test('reports missing Shelves Idea section', () => {
+  test('returns no violations for missing Shelves Idea section (title prefixes are cosmetic)', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -4339,13 +4317,10 @@ Archive this idea.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain(
-      'missing required "## Shelves Idea" section'
-    )
+    expect(violations).toEqual([])
   })
 
-  test('reports empty body section with no links', () => {
+  test('returns no violations for empty body section with no links (title prefixes are cosmetic)', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -4369,11 +4344,10 @@ No links here.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('contains no link')
+    expect(violations).toEqual([])
   })
 
-  test('reports section with only non-idea links', () => {
+  test('returns no violations for section with only non-idea links (title prefixes are cosmetic)', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -4397,11 +4371,10 @@ Refine this idea.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('contains no link to an idea file')
+    expect(violations).toEqual([])
   })
 
-  test('reports link to non-existent idea file', () => {
+  test('returns no violations for link to non-existent idea file (title prefixes are cosmetic)', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -4425,9 +4398,7 @@ Refine this idea.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('points to non-existent file')
-    expect(violations[0].message).toContain('my-idea.md')
+    expect(violations).toEqual([])
   })
 
   test('passes with valid body section linking to existing idea', () => {
@@ -4470,7 +4441,7 @@ Refine this idea.
     expect(violations).toEqual([])
   })
 
-  test('stops parsing section at H1 heading', () => {
+  test('returns no violations when section parsing stops at H1 heading (title prefixes are cosmetic)', () => {
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -4495,8 +4466,7 @@ Refine this idea.
       '/project/.dust/ideas',
       fileSystem
     )
-    expect(violations).toHaveLength(1)
-    expect(violations[0].message).toContain('contains no link')
+    expect(violations).toEqual([])
   })
 
   test('ignores idea links without .md extension', () => {

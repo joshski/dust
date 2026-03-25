@@ -2025,8 +2025,8 @@ describe('buildArtifactPatch with ideas', () => {
       result.patch.files['tasks/decompose-idea-deleted-idea.md']
     expect(updatedTask).not.toContain('deleted-idea.md')
     expect(updatedTask).toContain('Deleted Idea')
-    // Validation fails because workflow task sections require a valid link
-    expect(result.valid).toBe(false)
+    // Validation passes because title prefixes are cosmetic
+    expect(result.valid).toBe(true)
   })
 
   test('deleting an idea updates multiple workflow task types', async () => {
@@ -2050,8 +2050,8 @@ describe('buildArtifactPatch with ideas', () => {
     expect(result.patch.files['tasks/shelve-idea-my-idea.md']).not.toContain(
       'my-idea.md'
     )
-    // Validation fails because workflow task sections require a valid link
-    expect(result.valid).toBe(false)
+    // Validation passes because title prefixes are cosmetic
+    expect(result.valid).toBe(true)
   })
 
   test('deleting an idea removes references from other ideas', async () => {
