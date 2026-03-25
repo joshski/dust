@@ -42,14 +42,48 @@ export interface AuditsRepository {
 /**
  * Transforms audit template content for the task file.
  * Changes the title from "# Original Title" to "# Audit: Original Title"
+ * and adds the Task Type section.
  */
 export function transformAuditContent(content: string): string {
+  // Update title
   const titleMatch = content.match(/^#\s+(.+)$/m)
   if (!titleMatch) {
     return content
   }
   const originalTitle = titleMatch[1]
-  return content.replace(/^#\s+.+$/m, `# Audit: ${originalTitle}`)
+  let transformed = content.replace(/^#\s+.+$/m, `# Audit: ${originalTitle}`)
+
+  // Insert Task Type section before Blocked By, skipping code fences
+  const lines = transformed.split('\n')
+  let inCodeFence = false
+  let blockedByIndex = -1
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+
+    // Track code fences
+    if (line.startsWith('```')) {
+      inCodeFence = !inCodeFence
+      continue
+    }
+
+    // Skip lines inside code fences
+    if (inCodeFence) continue
+
+    // Find the first ## Blocked By outside of code fences
+    if (line === '## Blocked By') {
+      blockedByIndex = i
+      break
+    }
+  }
+
+  if (blockedByIndex !== -1) {
+    // Insert Task Type section before Blocked By
+    lines.splice(blockedByIndex, 0, '## Task Type', '', 'implement', '')
+    transformed = lines.join('\n')
+  }
+
+  return transformed
 }
 
 /**

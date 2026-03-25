@@ -91,6 +91,7 @@ function serializeStandardTask(input: StandardTaskInput): string {
     sections.push(renderPrinciplesSection(input.principles))
   }
 
+  sections.push('## Task Type\n\nimplement')
   sections.push(renderBlockedBySection(input.blockedBy ?? []))
   sections.push(renderDefinitionOfDoneSection(input.definitionOfDone))
 
@@ -108,11 +109,25 @@ function serializeWorkflowTask(input: WorkflowTaskInput): string {
 
   const ideaSection = `## ${sectionHeading}\n\n- [${ideaTitle}](../ideas/${input.ideaSlug}.md)`
 
+  // Map workflow type to task type
+  const taskType =
+    input.type === 'capture-idea'
+      ? 'capture'
+      : input.type === 'refine-idea'
+        ? 'refine'
+        : input.type === 'decompose-idea'
+          ? 'decompose'
+          : 'shelve' // shelve-idea
+
   return `# ${title}
 
 ${openingSentence}
 
 ${ideaSection}
+
+## Task Type
+
+${taskType}
 
 ## Blocked By
 

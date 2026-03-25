@@ -5,7 +5,15 @@
 import type { ParsedArtifact } from '../../artifacts/parsed-artifact'
 import type { Violation } from './types'
 
-const REQUIRED_TASK_HEADINGS = ['Blocked By', 'Definition of Done']
+const REQUIRED_TASK_HEADINGS = ['Task Type', 'Blocked By', 'Definition of Done']
+
+const ALLOWED_TASK_TYPES = new Set([
+  'implement',
+  'capture',
+  'refine',
+  'decompose',
+  'shelve',
+])
 
 const MAX_OPENING_SENTENCE_LENGTH = 150 // Enforces concise summaries that fit comfortably in a single line of context
 
@@ -93,4 +101,39 @@ export function validateTaskHeadings(artifact: ParsedArtifact): Violation[] {
     }
   }
   return violations
+}
+
+export function validateTaskType(artifact: ParsedArtifact): Violation | null {
+  const taskTypeSection = artifact.sections.find(s => s.heading === 'Task Type')
+
+  if (!taskTypeSection) {
+    return null // Missing section is handled by validateTaskHeadings
+  }
+
+  // Extract section content from rawContent using startLine and endLine
+  const lines = artifact.rawContent.split('\n')
+  const sectionLines = lines.slice(
+    taskTypeSection.startLine,
+    taskTypeSection.endLine + 1
+  )
+  const content = sectionLines.join('\n').trim()
+
+  if (!content) {
+    return {
+      file: artifact.filePath,
+      line: taskTypeSection.startLine,
+      message:
+        'Task Type section must contain one of: implement, capture, refine, decompose, shelve',
+    }
+  }
+
+  if (!ALLOWED_TASK_TYPES.has(content)) {
+    return {
+      file: artifact.filePath,
+      line: taskTypeSection.startLine,
+      message: `Invalid task type "${content}". Must be one of: implement, capture, refine, decompose, shelve`,
+    }
+  }
+
+  return null
 }

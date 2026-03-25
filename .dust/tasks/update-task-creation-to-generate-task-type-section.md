@@ -35,7 +35,7 @@ implement
 
 ## Blocked By
 
-- [Add Task Type section to task file format](./add-task-type-section-to-task-file-format.md)
+(none)
 
 ## Definition of Done
 

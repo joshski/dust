@@ -5,6 +5,7 @@ import {
   validateImperativeOpeningSentence,
   validateOpeningSentence,
   validateOpeningSentenceLength,
+  validateTaskType,
 } from './content-validator'
 
 function createArtifact(overrides: Partial<ParsedArtifact>): ParsedArtifact {
@@ -116,6 +117,170 @@ Adding new functionality.
       const violation = validateImperativeOpeningSentence(artifact)
       expect(violation).not.toBeNull()
       expect(violation!.line).toBeUndefined()
+    })
+  })
+
+  describe('validateTaskType', () => {
+    test('returns null when Task Type section is missing', () => {
+      const content = `# Task Title
+
+Some content.
+
+## Blocked By
+
+(none)
+
+## Definition of Done
+
+- Task is complete
+`
+      const artifact = parseArtifact('/test.md', content)
+      const violation = validateTaskType(artifact)
+      expect(violation).toBeNull()
+    })
+
+    test('returns violation when Task Type section is empty', () => {
+      const content = `# Task Title
+
+Some content.
+
+## Task Type
+
+## Blocked By
+
+(none)
+`
+      const artifact = parseArtifact('/test.md', content)
+      const violation = validateTaskType(artifact)
+      expect(violation).not.toBeNull()
+      expect(violation!.message).toContain('must contain one of')
+    })
+
+    test('returns violation for invalid task type', () => {
+      const content = `# Task Title
+
+Some content.
+
+## Task Type
+
+invalid-type
+
+## Blocked By
+
+(none)
+`
+      const artifact = parseArtifact('/test.md', content)
+      const violation = validateTaskType(artifact)
+      expect(violation).not.toBeNull()
+      expect(violation!.message).toContain('Invalid task type "invalid-type"')
+    })
+
+    test('returns null for valid task type: implement', () => {
+      const content = `# Task Title
+
+Some content.
+
+## Task Type
+
+implement
+
+## Blocked By
+
+(none)
+`
+      const artifact = parseArtifact('/test.md', content)
+      const violation = validateTaskType(artifact)
+      expect(violation).toBeNull()
+    })
+
+    test('returns null for valid task type: capture', () => {
+      const content = `# Task Title
+
+Some content.
+
+## Task Type
+
+capture
+
+## Blocked By
+
+(none)
+`
+      const artifact = parseArtifact('/test.md', content)
+      const violation = validateTaskType(artifact)
+      expect(violation).toBeNull()
+    })
+
+    test('returns null for valid task type: refine', () => {
+      const content = `# Task Title
+
+Some content.
+
+## Task Type
+
+refine
+
+## Blocked By
+
+(none)
+`
+      const artifact = parseArtifact('/test.md', content)
+      const violation = validateTaskType(artifact)
+      expect(violation).toBeNull()
+    })
+
+    test('returns null for valid task type: decompose', () => {
+      const content = `# Task Title
+
+Some content.
+
+## Task Type
+
+decompose
+
+## Blocked By
+
+(none)
+`
+      const artifact = parseArtifact('/test.md', content)
+      const violation = validateTaskType(artifact)
+      expect(violation).toBeNull()
+    })
+
+    test('returns null for valid task type: shelve', () => {
+      const content = `# Task Title
+
+Some content.
+
+## Task Type
+
+shelve
+
+## Blocked By
+
+(none)
+`
+      const artifact = parseArtifact('/test.md', content)
+      const violation = validateTaskType(artifact)
+      expect(violation).toBeNull()
+    })
+
+    test('handles whitespace around task type value', () => {
+      const content = `# Task Title
+
+Some content.
+
+## Task Type
+
+  implement
+
+## Blocked By
+
+(none)
+`
+      const artifact = parseArtifact('/test.md', content)
+      const violation = validateTaskType(artifact)
+      expect(violation).toBeNull()
     })
   })
 })

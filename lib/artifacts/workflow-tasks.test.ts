@@ -2094,6 +2094,40 @@ A great idea with prefix.
       expedite: false,
     })
   })
+
+  test('falls back to expedite title prefix when no Task Type section', async () => {
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          ideas: {},
+          tasks: {
+            'legacy-expedite.md': `# Expedite Idea: Legacy Format
+
+Research and implement quickly.
+
+## Idea Description
+
+A legacy task without Task Type section.
+
+## Blocked By
+
+(none)
+`,
+          },
+        },
+      },
+    })
+    const result = await parseCaptureIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'legacy-expedite'
+    )
+    expect(result).toEqual({
+      ideaTitle: 'Legacy Format',
+      ideaDescription: 'A legacy task without Task Type section.',
+      expedite: true,
+    })
+  })
 })
 
 describe('findAllWorkflowTasks', () => {

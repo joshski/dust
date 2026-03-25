@@ -339,7 +339,7 @@ describe('validatePatch', () => {
     const result = await validatePatch(fileSystem, dustPath, {
       files: {
         'tasks/refine-idea-my-idea.md':
-          '# Refine Idea: My Idea\n\nRefine this idea.\n\n## Refines Idea\n\n- [My Idea](../ideas/my-idea.md)\n\n## Blocked By\n\nNone.\n\n## Definition of Done\n\nDone when refined.',
+          '# Refine Idea: My Idea\n\nRefine this idea.\n\n## Refines Idea\n\n- [My Idea](../ideas/my-idea.md)\n\n## Task Type\n\nrefine\n\n## Blocked By\n\nNone.\n\n## Definition of Done\n\nDone when refined.',
       },
     })
     expect(result.valid).toBe(true)
@@ -354,6 +354,20 @@ describe('validatePatch', () => {
       },
     })
     expect(result.valid).toBe(false)
+  })
+
+  test('task with invalid task type fails', async () => {
+    const fileSystem = makeFs()
+    const result = await validatePatch(fileSystem, dustPath, {
+      files: {
+        'tasks/my-task.md':
+          '# My Task\n\nDo something.\n\n## Task Type\n\ninvalid-type\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+      },
+    })
+    expect(result.valid).toBe(false)
+    expect(
+      result.violations.some(v => v.message.includes('Invalid task type'))
+    ).toBe(true)
   })
 
   test('opening sentence length violation', async () => {

@@ -4,8 +4,9 @@ Task files in `.dust/tasks/` must follow a specific structure.
 
 ## Required Headings
 
-Every task file must contain these two headings in any order:
+Every task file must contain these three headings in any order:
 
+- `## Task Type` - One of five allowed values: `implement`, `capture`, `refine`, `decompose`, or `shelve`
 - `## Blocked By` - Links to tasks that must complete first (can be empty)
 - `## Definition of Done` - Criteria for determining task completion
 

@@ -765,6 +765,7 @@ Sure.
 describe('validateTaskHeadings', () => {
   test('returns no violations for valid task', () => {
     const content = `# Task
+## Task Type
 ## Blocked By
 ## Definition of Done`
 
@@ -777,7 +778,7 @@ describe('validateTaskHeadings', () => {
 ## Blocked By`
 
     const violations = validateTaskHeadings(parseArtifact('task.md', content))
-    expect(violations).toHaveLength(1)
+    expect(violations).toHaveLength(2)
   })
 })
 
@@ -1019,6 +1020,10 @@ This is a principle.
             'my-task.md': `# My Task
 
 Implement the task functionality.
+
+## Task Type
+
+implement
 
 ## Principles
 [Principle](../principles/principle.md)
@@ -3420,6 +3425,10 @@ Refine this idea.
 ## Refines Idea
 
 - [My Idea](../ideas/my-idea.md)
+
+## Task Type
+
+refine
 
 ## Principles
 ## Blocked By

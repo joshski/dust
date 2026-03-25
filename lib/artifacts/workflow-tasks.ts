@@ -479,6 +479,7 @@ function renderTask(
   openingSentence: string,
   definitionOfDone: string[],
   ideaSection: IdeaSection,
+  taskType: TaskType,
   options?: {
     description?: string
     resolvedQuestions?: OpenQuestionResponse[]
@@ -501,7 +502,12 @@ function renderTask(
   return `# ${title}
 
 ${openingSentence}
-${descriptionParagraph}${resolvedSection}${ideaSectionContent}## Blocked By
+${descriptionParagraph}${resolvedSection}${ideaSectionContent}
+## Task Type
+
+${taskType}
+
+## Blocked By
 
 (none)
 ${repositoryHintsSection}
@@ -536,11 +542,22 @@ async function createIdeaTransitionTask(
 
   const ideaSection = { heading: ideaSectionHeading, ideaTitle, ideaSlug }
 
+  // Map workflow type to task type
+  const taskType: TaskType =
+    workflowType === 'refine-idea'
+      ? 'refine'
+      : workflowType === 'decompose-idea'
+        ? 'decompose'
+        : workflowType === 'shelve-idea'
+          ? 'shelve'
+          : 'implement' // expedite-idea maps to implement
+
   const content = renderTask(
     taskTitle,
     baseOpeningSentence,
     definitionOfDone,
     ideaSection,
+    taskType,
     {
       description: taskOptions?.description,
       resolvedQuestions: taskOptions?.resolvedQuestions,
@@ -694,6 +711,10 @@ ${baseOpeningSentence}
 
 ${description}
 
+## Task Type
+
+implement
+
 ## Blocked By
 
 (none)
@@ -723,6 +744,10 @@ ${baseOpeningSentence}
 ## Idea Description
 
 ${description}
+
+## Task Type
+
+capture
 
 ## Blocked By
 

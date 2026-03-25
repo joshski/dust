@@ -269,7 +269,7 @@ describe('buildArtifactPatch', () => {
     const fileSystem = makeFs({
       'facts/linked-fact.md': '# Linked Fact\n\nThis is linked.',
       'tasks/my-task.md':
-        '# My Task\n\nDo something with [Linked Fact](../facts/linked-fact.md).\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\nDone.',
+        '# My Task\n\nDo something with [Linked Fact](../facts/linked-fact.md).\n\n## Task Type\n\nimplement\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\nDone.',
     })
     const result = await buildArtifactPatch(fileSystem, dustPath, {
       facts: {
@@ -444,7 +444,7 @@ describe('buildArtifactPatch', () => {
       'principles/deleted-principle.md':
         '# Deleted Principle\n\nGoing away.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
       'tasks/my-task.md':
-        '# My Task\n\nSee [Principle](../principles/deleted-principle.md) for guidance.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\nDone.',
+        '# My Task\n\nSee [Principle](../principles/deleted-principle.md) for guidance.\n\n## Task Type\n\nimplement\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\nDone.',
     })
     const result = await buildArtifactPatch(fileSystem, dustPath, {
       facts: {
@@ -539,7 +539,7 @@ describe('buildArtifactPatch', () => {
   test('creates task with body, blockedBy, and principles', async () => {
     const fileSystem = makeFs({
       'tasks/design-feature.md':
-        '# Design Feature\n\nDesign the feature.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Design complete',
+        '# Design Feature\n\nDesign the feature.\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Design complete',
       'principles/small-units.md':
         '# Small Units\n\nKeep units small.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
     })
@@ -673,7 +673,7 @@ describe('buildArtifactPatch', () => {
   test('deleting a task sets null in the patch', async () => {
     const fileSystem = makeFs({
       'tasks/old-task.md':
-        '# Old Task\n\nThis task is being removed.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+        '# Old Task\n\nThis task is being removed.\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
     })
     const result = await buildArtifactPatch(fileSystem, dustPath, {
       tasks: {
@@ -688,9 +688,9 @@ describe('buildArtifactPatch', () => {
   test('deleting a task updates Blocked By sections in other tasks', async () => {
     const fileSystem = makeFs({
       'tasks/deleted-task.md':
-        '# Deleted Task\n\nRemove stale code.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+        '# Deleted Task\n\nRemove stale code.\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
       'tasks/dependent-task.md':
-        '# Dependent Task\n\nImplement the feature.\n\n## Blocked By\n\n- [Deleted Task](deleted-task.md)\n\n## Definition of Done\n\n- Done',
+        '# Dependent Task\n\nImplement the feature.\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n- [Deleted Task](deleted-task.md)\n\n## Definition of Done\n\n- Done',
     })
     const result = await buildArtifactPatch(fileSystem, dustPath, {
       tasks: {
@@ -710,11 +710,11 @@ describe('buildArtifactPatch', () => {
   test('deleting a task preserves other blockedBy links', async () => {
     const fileSystem = makeFs({
       'tasks/deleted-task.md':
-        '# Deleted Task\n\nRemove stale code.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+        '# Deleted Task\n\nRemove stale code.\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
       'tasks/other-task.md':
-        '# Other Task\n\nKeep the other feature.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+        '# Other Task\n\nKeep the other feature.\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
       'tasks/dependent-task.md':
-        '# Dependent Task\n\nImplement the feature.\n\n## Blocked By\n\n- [Deleted Task](deleted-task.md)\n- [Other Task](other-task.md)\n\n## Definition of Done\n\n- Done',
+        '# Dependent Task\n\nImplement the feature.\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n- [Deleted Task](deleted-task.md)\n- [Other Task](other-task.md)\n\n## Definition of Done\n\n- Done',
     })
     const result = await buildArtifactPatch(fileSystem, dustPath, {
       tasks: {
@@ -799,9 +799,9 @@ describe('buildArtifactPatch', () => {
     // Task file where Blocked By is the last section (no Definition of Done after it in content)
     const fileSystem = makeFs({
       'tasks/deleted-task.md':
-        '# Deleted Task\n\nRemove stale code.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+        '# Deleted Task\n\nRemove stale code.\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
       'tasks/dependent-task.md':
-        '# Dependent Task\n\nImplement the feature.\n\n## Definition of Done\n\n- Done\n\n## Blocked By\n\n- [Deleted Task](deleted-task.md)',
+        '# Dependent Task\n\nImplement the feature.\n\n## Definition of Done\n\n- Done\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n- [Deleted Task](deleted-task.md)',
     })
     const result = await buildArtifactPatch(fileSystem, dustPath, {
       tasks: {
@@ -818,9 +818,9 @@ describe('buildArtifactPatch', () => {
   test('handles non-bullet content in Blocked By section', async () => {
     const fileSystem = makeFs({
       'tasks/deleted-task.md':
-        '# Deleted Task\n\nRemove stale code.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+        '# Deleted Task\n\nRemove stale code.\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
       'tasks/dependent-task.md':
-        '# Dependent Task\n\nImplement the feature.\n\n## Blocked By\n\nSome descriptive text here.\n\n## Definition of Done\n\n- Done',
+        '# Dependent Task\n\nImplement the feature.\n\n## Task Type\n\nimplement\n\n## Blocked By\n\nSome descriptive text here.\n\n## Definition of Done\n\n- Done',
     })
     const result = await buildArtifactPatch(fileSystem, dustPath, {
       tasks: {
@@ -836,9 +836,9 @@ describe('buildArtifactPatch', () => {
   test('preserves non-bullet content when link is removed from same section', async () => {
     const fileSystem = makeFs({
       'tasks/deleted-task.md':
-        '# Deleted Task\n\nRemove stale code.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+        '# Deleted Task\n\nRemove stale code.\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
       'tasks/dependent-task.md':
-        '# Dependent Task\n\nImplement the feature.\n\n## Blocked By\n\nSee related context:\n- [Deleted Task](deleted-task.md)\n\n## Definition of Done\n\n- Done',
+        '# Dependent Task\n\nImplement the feature.\n\n## Task Type\n\nimplement\n\n## Blocked By\n\nSee related context:\n- [Deleted Task](deleted-task.md)\n\n## Definition of Done\n\n- Done',
     })
     const result = await buildArtifactPatch(fileSystem, dustPath, {
       tasks: {
@@ -856,9 +856,9 @@ describe('buildArtifactPatch', () => {
   test('cleans up Blocked By with existing (none) and a link', async () => {
     const fileSystem = makeFs({
       'tasks/deleted-task.md':
-        '# Deleted Task\n\nRemove stale code.\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+        '# Deleted Task\n\nRemove stale code.\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
       'tasks/dependent-task.md':
-        '# Dependent Task\n\nImplement the feature.\n\n## Blocked By\n\n(none)\n- [Deleted Task](deleted-task.md)\n\n## Definition of Done\n\n- Done',
+        '# Dependent Task\n\nImplement the feature.\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n(none)\n- [Deleted Task](deleted-task.md)\n\n## Definition of Done\n\n- Done',
     })
     const result = await buildArtifactPatch(fileSystem, dustPath, {
       tasks: {
@@ -1314,7 +1314,7 @@ describe('buildArtifactPatch with principles', () => {
       'principles/deleted-principle.md':
         '# Deleted Principle\n\nGoing away.\n\n## Parent Principle\n\n- (none)\n\n## Sub-Principles\n\n- (none)\n',
       'tasks/my-task.md':
-        '# My Task\n\nDo something.\n\n## Principles\n\n- [Deleted Principle](../principles/deleted-principle.md)\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done\n',
+        '# My Task\n\nDo something.\n\n## Principles\n\n- [Deleted Principle](../principles/deleted-principle.md)\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done\n',
     })
     const result = await buildArtifactPatch(fileSystem, dustPath, {
       principles: {
@@ -2011,7 +2011,7 @@ describe('buildArtifactPatch with ideas', () => {
     const fileSystem = makeFs({
       'ideas/deleted-idea.md': '# Deleted Idea\n\nThis idea is being removed.',
       'tasks/decompose-idea-deleted-idea.md':
-        '# Decompose Idea: Deleted Idea\n\nCreate tasks from this idea.\n\n## Decomposes Idea\n\n- [Deleted Idea](../ideas/deleted-idea.md)\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+        '# Decompose Idea: Deleted Idea\n\nCreate tasks from this idea.\n\n## Decomposes Idea\n\n- [Deleted Idea](../ideas/deleted-idea.md)\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
     })
     const result = await buildArtifactPatch(fileSystem, dustPath, {
       ideas: {
@@ -2033,9 +2033,9 @@ describe('buildArtifactPatch with ideas', () => {
     const fileSystem = makeFs({
       'ideas/my-idea.md': '# My Idea\n\nAn idea.',
       'tasks/refine-idea-my-idea.md':
-        '# Refine Idea: My Idea\n\nRefine this idea.\n\n## Refines Idea\n\n- [My Idea](../ideas/my-idea.md)\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+        '# Refine Idea: My Idea\n\nRefine this idea.\n\n## Refines Idea\n\n- [My Idea](../ideas/my-idea.md)\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
       'tasks/shelve-idea-my-idea.md':
-        '# Shelve Idea: My Idea\n\nArchive this idea.\n\n## Shelves Idea\n\n- [My Idea](../ideas/my-idea.md)\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+        '# Shelve Idea: My Idea\n\nArchive this idea.\n\n## Shelves Idea\n\n- [My Idea](../ideas/my-idea.md)\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
     })
     const result = await buildArtifactPatch(fileSystem, dustPath, {
       ideas: {

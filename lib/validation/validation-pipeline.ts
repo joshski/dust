@@ -20,6 +20,7 @@ import {
   validateOpeningSentence,
   validateOpeningSentenceLength,
   validateTaskHeadings,
+  validateTaskType,
 } from '../lint/validators/content-validator'
 import { validateContentDirectoryFiles } from '../lint/validators/directory-validator'
 import {
@@ -242,6 +243,9 @@ export function validateArtifacts(context: ValidationContext): Violation[] {
 
     const imperativeViolation = validateImperativeOpeningSentence(artifact)
     if (imperativeViolation) violations.push(imperativeViolation)
+
+    const taskTypeViolation = validateTaskType(artifact)
+    if (taskTypeViolation) violations.push(taskTypeViolation)
 
     // Title prefix validation removed - prefixes are now cosmetic
     // validateIdeaTransitionTitle and validateWorkflowTaskBodySection
