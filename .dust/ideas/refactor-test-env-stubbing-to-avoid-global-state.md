@@ -1,6 +1,6 @@
 # Refactor test env stubbing to avoid global state
 
-Replace the module-level `originalEnvValues` Map in `lib/test-support/test-utilities.ts` with explicit state management to enable parallel test execution.
+Replace the module-level `originalEnvValues` Map in `lib/test-support/test-utilities.ts` with explicit state management. This enables parallel test execution.
 
 ## Current State
 
