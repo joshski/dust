@@ -1,4 +1,4 @@
-import type { ReadableFileSystem } from '../filesystem/types'
+import type { FileReader } from '../filesystem/types'
 import { extractTitle } from '../markdown/markdown-utilities'
 
 export interface Fact {
@@ -11,7 +11,7 @@ export interface Fact {
  * Parses a fact markdown file into a structured Fact object.
  */
 export async function parseFact(
-  fileSystem: ReadableFileSystem,
+  fileSystem: FileReader,
   dustPath: string,
   slug: string
 ): Promise<Fact> {

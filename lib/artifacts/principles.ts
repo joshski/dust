@@ -1,4 +1,4 @@
-import type { ReadableFileSystem } from '../filesystem/types'
+import type { FileReader } from '../filesystem/types'
 import {
   extractTitle,
   MARKDOWN_LINK_PATTERN,
@@ -68,7 +68,7 @@ function extractSingleLinkFromSection(
  * Parses a principle markdown file into a structured Principle object.
  */
 export async function parsePrinciple(
-  fileSystem: ReadableFileSystem,
+  fileSystem: FileReader,
   dustPath: string,
   slug: string
 ): Promise<Principle> {

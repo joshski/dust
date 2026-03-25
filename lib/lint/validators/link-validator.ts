@@ -7,7 +7,7 @@ import type {
   ParsedArtifact,
   ParsedMarkdownLink,
 } from '../../artifacts/parsed-artifact'
-import type { ReadableFileSystem } from '../../filesystem/types'
+import type { FileReader } from '../../filesystem/types'
 import type { Violation } from './types'
 
 interface SemanticRule {
@@ -47,7 +47,7 @@ function isExternalLink(target: string): boolean {
 
 export function validateLinks(
   artifact: ParsedArtifact,
-  fileSystem: ReadableFileSystem
+  fileSystem: FileReader
 ): Violation[] {
   const violations: Violation[] = []
   const fileDir = dirname(artifact.filePath)

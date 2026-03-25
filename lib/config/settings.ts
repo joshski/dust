@@ -8,7 +8,7 @@ import { join } from 'node:path'
 import type {
   CheckConfig,
   DustSettings,
-  ReadableFileSystem,
+  FileReader,
 } from '../cli/types'
 import type { RuntimeConfig } from '../env-config'
 
@@ -247,7 +247,7 @@ const DEFAULT_SETTINGS: DustSettings = {
  */
 export function detectDustCommand(
   cwd: string,
-  fileSystem: ReadableFileSystem,
+  fileSystem: FileReader,
   runtime: RuntimeConfig
 ): string {
   if (
@@ -309,7 +309,7 @@ const LOCKFILE_COMMANDS: Array<{
  */
 export function detectInstallCommand(
   cwd: string,
-  fileSystem: ReadableFileSystem
+  fileSystem: FileReader
 ): string | null {
   const foundEcosystems = new Set<string>()
   let firstCommand: string | null = null
@@ -345,7 +345,7 @@ export function detectInstallCommand(
  */
 export function detectTestCommand(
   cwd: string,
-  fileSystem: ReadableFileSystem,
+  fileSystem: FileReader,
   runtime: RuntimeConfig
 ): string | null {
   if (
@@ -381,7 +381,7 @@ function normalizeCheckEntry(entry: string | CheckConfig): CheckConfig {
 
 export async function loadSettings(
   cwd: string,
-  fileSystem: ReadableFileSystem,
+  fileSystem: FileReader,
   runtime: RuntimeConfig
 ): Promise<DustSettings> {
   const settingsPath = join(cwd, '.dust', 'config', 'settings.json')

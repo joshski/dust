@@ -1,4 +1,4 @@
-import type { ReadableFileSystem } from '../filesystem/types'
+import type { FileReader } from '../filesystem/types'
 import {
   extractTitle,
   MARKDOWN_LINK_PATTERN,
@@ -90,7 +90,7 @@ function extractDefinitionOfDone(content: string): string[] {
  * Parses a task markdown file into a structured Task object.
  */
 export async function parseTask(
-  fileSystem: ReadableFileSystem,
+  fileSystem: FileReader,
   dustPath: string,
   slug: string
 ): Promise<Task> {

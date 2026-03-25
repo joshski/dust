@@ -3,7 +3,7 @@
  */
 
 import { ARTIFACT_TYPES } from '../../artifacts/index'
-import type { ReadableFileSystem } from '../../filesystem/types'
+import type { DirectoryReader } from '../../filesystem/types'
 import type { Violation } from './types'
 
 const EXPECTED_DIRECTORIES = [...ARTIFACT_TYPES, 'config']
@@ -13,7 +13,7 @@ const EXPECTED_CONFIG_DIRECTORIES = ['audits', 'agents', 'container', 'hints']
 
 export async function validateContentDirectoryFiles(
   dirPath: string,
-  fileSystem: ReadableFileSystem
+  fileSystem: DirectoryReader
 ): Promise<Violation[]> {
   const violations: Violation[] = []
 
@@ -62,7 +62,7 @@ export async function validateContentDirectoryFiles(
 
 export async function validateDirectoryStructure(
   dustPath: string,
-  fileSystem: ReadableFileSystem
+  fileSystem: DirectoryReader
 ): Promise<Violation[]> {
   const violations: Violation[] = []
 

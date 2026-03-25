@@ -7,7 +7,7 @@
 
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { existsSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { parsePrinciple } from './artifacts/principles'
 import type { Principle } from './artifacts/principles'
@@ -18,33 +18,19 @@ import {
   listCorePrinciples,
   getCorePrincipleTree,
 } from './artifacts/core-principles'
-import type { ReadableFileSystem } from './filesystem/types'
+import type { FileReader } from './filesystem/types'
 
 // Re-export types and pure functions
 export type { CorePrinciplesConfig, CorePrincipleNode, Principle }
 export { isInternalPrinciple, listCorePrinciples, getCorePrincipleTree }
 
 /**
- * Creates a minimal ReadableFileSystem for use with parsePrinciple.
+ * Creates a FileReader for use with parsePrinciple.
  */
-function createReadableFileSystem(): ReadableFileSystem {
+function createFileReader(): FileReader {
   return {
     exists: existsSync,
-    isDirectory:
-      /* istanbul ignore next @preserve -- interface method not used by parsePrinciple */ (
-        path: string
-      ) => {
-        try {
-          return statSync(path).isDirectory()
-        } catch {
-          return false
-        }
-      },
     readFile: (path: string) => readFile(path, 'utf-8'),
-    readdir:
-      /* istanbul ignore next @preserve -- interface method not used by parsePrinciple */ async (
-        path: string
-      ) => readdirSync(path), // oxlint-disable-line dust/no-thin-delegate-wrappers -- wraps sync in async interface
   }
 }
 
@@ -82,7 +68,7 @@ export async function readAllCorePrinciples(): Promise<Principle[]> {
   const packageRoot = dirname(dirname(principlesDir))
   const dustPath = join(packageRoot, '.dust')
 
-  const fileSystem = createReadableFileSystem()
+  const fileSystem = createFileReader()
   const files = readdirSync(principlesDir)
   const mdFiles = files.filter(f => f.endsWith('.md'))
 

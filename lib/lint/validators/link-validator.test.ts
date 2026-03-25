@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { parseArtifact } from '../../artifacts/parsed-artifact'
-import type { ReadableFileSystem } from '../../filesystem/types'
+import type { FileReader } from '../../filesystem/types'
 import {
   validateLinks,
   validatePrincipleHierarchyLinks,
@@ -9,12 +9,10 @@ import {
 
 function createMockFileSystem(
   existsFn: (path: string) => boolean
-): ReadableFileSystem {
+): FileReader {
   return {
     exists: existsFn,
     readFile: async () => '',
-    readdir: async () => [],
-    isDirectory: () => false,
   }
 }
 

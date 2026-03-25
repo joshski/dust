@@ -6,12 +6,17 @@ export interface WriteOptions {
   flag?: 'w' | 'wx' // 'w' = overwrite (default), 'wx' = exclusive create (fail if exists)
 }
 
-export interface ReadableFileSystem {
+export interface FileReader {
   exists: (path: string) => boolean
   readFile: (path: string) => Promise<string>
+}
+
+export interface DirectoryReader {
   readdir: (path: string) => Promise<string[]>
   isDirectory: (path: string) => boolean
 }
+
+export interface ReadableFileSystem extends FileReader, DirectoryReader {}
 
 export interface FileSystem extends ReadableFileSystem {
   writeFile: (

@@ -10,7 +10,7 @@ import { createHooksManager } from '../../git/hooks'
 import type {
   CommandDependencies,
   DustSettings,
-  ReadableFileSystem,
+  FileReader,
 } from '../types'
 
 /**
@@ -35,7 +35,7 @@ export interface TemplateVarsWithInstructions extends TemplateVars {
  */
 export async function loadAgentInstructions(
   cwd: string,
-  fileSystem: ReadableFileSystem,
+  fileSystem: FileReader,
   agentType: AgentType
 ): Promise<string> {
   const instructionsPath = join(
@@ -82,7 +82,7 @@ export function templateVariables(
  */
 export async function templateVariablesWithInstructions(
   cwd: string,
-  fileSystem: ReadableFileSystem,
+  fileSystem: FileReader,
   settings: DustSettings,
   hooksInstalled: boolean,
   env: NodeJS.ProcessEnv,

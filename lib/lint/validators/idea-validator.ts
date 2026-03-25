@@ -3,7 +3,7 @@
  */
 
 import type { ParsedArtifact } from '../../artifacts/parsed-artifact'
-import type { ReadableFileSystem } from '../../filesystem/types'
+import type { FileReader } from '../../filesystem/types'
 import type { Violation } from './types'
 
 function validateH2Heading(
@@ -155,7 +155,7 @@ export function validateIdeaOpenQuestions(
 export function validateIdeaTransitionTitle(
   artifact: ParsedArtifact,
   ideasPath: string,
-  fileSystem: ReadableFileSystem
+  fileSystem: FileReader
 ): Violation | null {
   // Title prefixes are now cosmetic - no validation needed
   return null
@@ -164,7 +164,7 @@ export function validateIdeaTransitionTitle(
 export function validateWorkflowTaskBodySection(
   artifact: ParsedArtifact,
   ideasPath: string,
-  fileSystem: ReadableFileSystem
+  fileSystem: FileReader
 ): Violation[] {
   // Title prefixes are now cosmetic - no validation based on title prefix needed
   return []
