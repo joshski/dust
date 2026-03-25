@@ -544,11 +544,10 @@ interface PatchAccumulator {
  * Parses artifact type and slug from a file path.
  * E.g., 'facts/my-fact.md' → { type: 'fact', slug: 'my-fact' }
  */
-function parseArtifactPath(
+export function parseArtifactPath(
   path: string
 ): { type: ArtifactType; slug: string } | null {
   const match = path.match(/^(facts|ideas|principles|tasks)\/([^/]+)\.md$/)
-  /* istanbul ignore next @preserve -- defensive guard; all patch files are artifact paths */
   if (!match) return null
 
   const dirToType: Record<string, ArtifactType> = {
@@ -568,7 +567,7 @@ function parseArtifactPath(
  * Builds preview objects from patch files.
  * For create vs update determination, checks filesystem existence.
  */
-async function buildPreviews(
+export async function buildPreviews(
   fileSystem: ReadableFileSystem,
   dustPath: string,
   files: Record<string, string | null>
@@ -577,7 +576,6 @@ async function buildPreviews(
 
   for (const [path, content] of Object.entries(files)) {
     const parsed = parseArtifactPath(path)
-    /* istanbul ignore next @preserve -- defensive guard; all patch files are artifact paths */
     if (!parsed) continue
 
     if (content === null) {

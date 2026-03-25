@@ -2,6 +2,8 @@ import { describe, expect, test } from 'vitest'
 import { createFileSystemEmulator } from '../filesystem/emulator'
 import {
   buildArtifactPatch,
+  buildPreviews,
+  parseArtifactPath,
   serializeFact,
   serializeIdea,
   serializePrinciple,
@@ -2345,5 +2347,65 @@ describe('buildArtifactPatch previews', () => {
         },
       })
     ).rejects.toThrow('EACCES: permission denied')
+  })
+})
+
+describe('parseArtifactPath', () => {
+  test('parses a valid fact path', () => {
+    expect(parseArtifactPath('facts/my-fact.md')).toEqual({
+      type: 'fact',
+      slug: 'my-fact',
+    })
+  })
+
+  test('parses a valid idea path', () => {
+    expect(parseArtifactPath('ideas/some-idea.md')).toEqual({
+      type: 'idea',
+      slug: 'some-idea',
+    })
+  })
+
+  test('parses a valid principle path', () => {
+    expect(parseArtifactPath('principles/my-principle.md')).toEqual({
+      type: 'principle',
+      slug: 'my-principle',
+    })
+  })
+
+  test('parses a valid task path', () => {
+    expect(parseArtifactPath('tasks/do-something.md')).toEqual({
+      type: 'task',
+      slug: 'do-something',
+    })
+  })
+
+  test('returns null for an invalid path', () => {
+    expect(parseArtifactPath('not-a-valid-path.txt')).toBeNull()
+  })
+
+  test('returns null for a nested path', () => {
+    expect(parseArtifactPath('facts/sub/nested.md')).toBeNull()
+  })
+
+  test('returns null for an unknown directory', () => {
+    expect(parseArtifactPath('notes/something.md')).toBeNull()
+  })
+})
+
+describe('buildPreviews', () => {
+  test('skips files with invalid artifact paths', async () => {
+    const fileSystem = createFileSystemEmulator({})
+    const previews = await buildPreviews(fileSystem, '/dust', {
+      'not-a-valid-path.txt': 'content',
+      'facts/valid-fact.md': '# Valid Fact\n\nContent.\n',
+    })
+    expect(previews).toEqual([
+      {
+        type: 'fact',
+        slug: 'valid-fact',
+        action: 'create',
+        content: '# Valid Fact\n\nContent.\n',
+      },
+    ])
   })
 })
