@@ -3,17 +3,12 @@
  */
 
 import type { ParsedArtifact } from '../../artifacts/parsed-artifact'
+import { VALID_TASK_TYPES } from '../../artifacts/workflow-tasks'
 import type { Violation } from './types'
 
 const REQUIRED_TASK_HEADINGS = ['Task Type', 'Blocked By', 'Definition of Done']
 
-const ALLOWED_TASK_TYPES = new Set([
-  'implement',
-  'capture',
-  'refine',
-  'decompose',
-  'shelve',
-])
+const ALLOWED_TASK_TYPES: Set<string> = new Set(VALID_TASK_TYPES)
 
 const MAX_OPENING_SENTENCE_LENGTH = 150 // Enforces concise summaries that fit comfortably in a single line of context
 

@@ -3,7 +3,7 @@
  */
 
 import { basename, resolve } from 'node:path'
-import { ARTIFACT_TYPES } from '../../artifacts/index'
+import { ARTIFACT_TYPES, type TaskType } from '../../artifacts/index'
 import {
   getCorePrincipleHierarchy,
   getCorePrinciplesPath,
@@ -34,17 +34,16 @@ type IdeaStatus =
   | 'shelving'
   | 'expediting'
 
-function workflowTypeToStatus(
-  type: 'refine-idea' | 'decompose-idea' | 'shelve-idea' | 'expedite-idea'
-): IdeaStatus {
+function workflowTypeToStatus(type: TaskType): IdeaStatus {
   switch (type) {
-    case 'refine-idea':
+    case 'refine':
       return 'refining'
-    case 'decompose-idea':
+    case 'decompose':
       return 'decomposing'
-    case 'shelve-idea':
+    case 'shelve':
       return 'shelving'
-    case 'expedite-idea':
+    case 'implement':
+    case 'capture':
       return 'expediting'
   }
 }
@@ -286,14 +285,8 @@ function parseTypesToList(commandArguments: string[]): ListType[] {
 }
 
 interface WorkflowTasksMap {
-  workflowTasksByIdeaSlug: Map<string, { type: IdeaWorkflowType }>
+  workflowTasksByIdeaSlug: Map<string, { type: TaskType }>
 }
-
-type IdeaWorkflowType =
-  | 'refine-idea'
-  | 'decompose-idea'
-  | 'shelve-idea'
-  | 'expedite-idea'
 
 function getIdeaStatus(
   slug: string,

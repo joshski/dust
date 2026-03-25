@@ -41,20 +41,15 @@ export function titleToFilename(title: string): string {
     .replace(/^-|-$/g, '')}.md`
 }
 
-export type TaskType =
-  | 'implement'
-  | 'capture'
-  | 'refine'
-  | 'decompose'
-  | 'shelve'
-
-const VALID_TASK_TYPES: TaskType[] = [
+export const VALID_TASK_TYPES = [
   'implement',
   'capture',
   'refine',
   'decompose',
   'shelve',
-]
+] as const
+
+export type TaskType = (typeof VALID_TASK_TYPES)[number]
 
 /**
  * Extracts and validates the task type from the ## Task Type section.
@@ -91,46 +86,20 @@ export function parseTaskType(content: string): TaskType | null {
   return null
 }
 
-/**
- * Maps new TaskType to legacy WorkflowTaskType for backward compatibility.
- * Returns null if the task type doesn't map to a workflow task type.
- */
-function taskTypeToWorkflowType(taskType: TaskType): WorkflowTaskType | null {
-  switch (taskType) {
-    case 'refine':
-      return 'refine-idea'
-    case 'decompose':
-      return 'decompose-idea'
-    case 'shelve':
-      return 'shelve-idea'
-    case 'implement':
-      return 'expedite-idea'
-    default:
-      return null
-  }
-}
-
-export type WorkflowTaskType =
-  | 'refine-idea'
-  | 'decompose-idea'
-  | 'shelve-idea'
-  | 'expedite-idea'
-type WorkflowHintType = WorkflowTaskType | 'add-idea' | 'expedite-idea'
-
-const WORKFLOW_HINT_PATHS: Record<WorkflowHintType, string> = {
-  'refine-idea': 'config/hints/refine-idea.md',
-  'decompose-idea': 'config/hints/decompose-idea.md',
-  'shelve-idea': 'config/hints/shelve-idea.md',
-  'add-idea': 'config/hints/add-idea.md',
-  'expedite-idea': 'config/hints/expedite-idea.md',
+const WORKFLOW_HINT_PATHS: Record<TaskType, string> = {
+  refine: 'config/hints/refine-idea.md',
+  decompose: 'config/hints/decompose-idea.md',
+  shelve: 'config/hints/shelve-idea.md',
+  capture: 'config/hints/add-idea.md',
+  implement: 'config/hints/expedite-idea.md',
 }
 
 async function readWorkflowHint(
   fileSystem: ReadableFileSystem,
   dustPath: string,
-  workflowType: WorkflowHintType
+  taskType: TaskType
 ): Promise<string | null> {
-  const hintPath = `${dustPath}/${WORKFLOW_HINT_PATHS[workflowType]}`
+  const hintPath = `${dustPath}/${WORKFLOW_HINT_PATHS[taskType]}`
   if (!fileSystem.exists(hintPath)) {
     return null
   }
@@ -138,19 +107,18 @@ async function readWorkflowHint(
 }
 
 export interface WorkflowTaskMatch {
-  type: WorkflowTaskType
+  type: TaskType
   ideaSlug: string
   taskSlug: string
   resolvedQuestions: OpenQuestionResponse[]
 }
 
-const WORKFLOW_SECTION_HEADINGS: { type: WorkflowTaskType; heading: string }[] =
-  [
-    { type: 'refine-idea', heading: 'Refines Idea' },
-    { type: 'decompose-idea', heading: 'Decomposes Idea' },
-    { type: 'shelve-idea', heading: 'Shelves Idea' },
-    { type: 'expedite-idea', heading: 'Expedites Idea' },
-  ]
+const WORKFLOW_SECTION_HEADINGS: { type: TaskType; heading: string }[] = [
+  { type: 'refine', heading: 'Refines Idea' },
+  { type: 'decompose', heading: 'Decomposes Idea' },
+  { type: 'shelve', heading: 'Shelves Idea' },
+  { type: 'implement', heading: 'Expedites Idea' },
+]
 
 function extractIdeaSlugFromSection(
   content: string,
@@ -308,15 +276,19 @@ function findWorkflowMatch(
 
   // Try task type first if available
   if (taskType) {
-    const workflowType = taskTypeToWorkflowType(taskType)
-    if (workflowType) {
-      const match = findWorkflowMatchByType(
-        content,
-        ideaSlug,
-        taskSlug,
-        workflowType
-      )
-      if (match) return match
+    const heading = WORKFLOW_SECTION_HEADINGS.find(
+      h => h.type === taskType
+    )?.heading
+    if (heading) {
+      const linkedSlug = extractIdeaSlugFromSection(content, heading)
+      if (linkedSlug === ideaSlug) {
+        return {
+          type: taskType,
+          ideaSlug,
+          taskSlug,
+          resolvedQuestions: parseResolvedQuestions(content),
+        }
+      }
     }
   }
 
@@ -326,29 +298,6 @@ function findWorkflowMatch(
     if (linkedSlug === ideaSlug) {
       return {
         type,
-        ideaSlug,
-        taskSlug,
-        resolvedQuestions: parseResolvedQuestions(content),
-      }
-    }
-  }
-
-  return null
-}
-
-function findWorkflowMatchByType(
-  content: string,
-  ideaSlug: string,
-  taskSlug: string,
-  workflowType: WorkflowTaskType
-): WorkflowTaskMatch | null {
-  for (const { type, heading } of WORKFLOW_SECTION_HEADINGS) {
-    if (type !== workflowType) continue
-
-    const linkedSlug = extractIdeaSlugFromSection(content, heading)
-    if (linkedSlug === ideaSlug) {
-      return {
-        type: workflowType,
         ideaSlug,
         taskSlug,
         resolvedQuestions: parseResolvedQuestions(content),
@@ -521,7 +470,7 @@ ${definitionOfDone.map(item => `- ${item}`).join('\n')}
 async function createIdeaTransitionTask(
   fileSystem: FileSystem,
   dustPath: string,
-  workflowType: WorkflowTaskType,
+  taskType: TaskType,
   prefix: string,
   ideaSlug: string,
   openingSentenceTemplate: (ideaTitle: string) => string,
@@ -538,19 +487,9 @@ async function createIdeaTransitionTask(
   const filePath = `${dustPath}/tasks/${filename}`
   const baseOpeningSentence = openingSentenceTemplate(ideaTitle)
 
-  const hint = await readWorkflowHint(fileSystem, dustPath, workflowType)
+  const hint = await readWorkflowHint(fileSystem, dustPath, taskType)
 
   const ideaSection = { heading: ideaSectionHeading, ideaTitle, ideaSlug }
-
-  // Map workflow type to task type
-  const taskType: TaskType =
-    workflowType === 'refine-idea'
-      ? 'refine'
-      : workflowType === 'decompose-idea'
-        ? 'decompose'
-        : workflowType === 'shelve-idea'
-          ? 'shelve'
-          : 'implement' // expedite-idea maps to implement
 
   const content = renderTask(
     taskTitle,
@@ -580,7 +519,7 @@ export async function createRefineIdeaTask(
   return createIdeaTransitionTask(
     fileSystem,
     dustPath,
-    'refine-idea',
+    'refine',
     'Refine Idea: ',
     ideaSlug,
     ideaTitle =>
@@ -609,7 +548,7 @@ export async function decomposeIdea(
   return createIdeaTransitionTask(
     fileSystem,
     dustPath,
-    'decompose-idea',
+    'decompose',
     'Decompose Idea: ',
     options.ideaSlug,
     ideaTitle =>
@@ -637,7 +576,7 @@ export async function createShelveIdeaTask(
   return createIdeaTransitionTask(
     fileSystem,
     dustPath,
-    'shelve-idea',
+    'shelve',
     'Shelve Idea: ',
     ideaSlug,
     ideaTitle =>
@@ -659,7 +598,7 @@ export async function createExpediteIdeaTask(
   return createIdeaTransitionTask(
     fileSystem,
     dustPath,
-    'expedite-idea',
+    'implement',
     'Expedite Idea: ',
     ideaSlug,
     ideaTitle =>
@@ -698,7 +637,7 @@ export async function createIdeaTask(
     const filename = titleToFilename(taskTitle)
     const filePath = `${dustPath}/tasks/${filename}`
     const baseOpeningSentence = `Research this idea briefly. If confident the implementation is straightforward (clear scope, minimal risk, no open questions), implement directly and commit. Otherwise, create one or more narrowly-scoped task files in \`.dust/tasks/\`. Run \`${cmd} principles\` and \`${cmd} facts\` for relevant context.`
-    const hint = await readWorkflowHint(fileSystem, dustPath, 'expedite-idea')
+    const hint = await readWorkflowHint(fileSystem, dustPath, 'implement')
     const repositoryHintsSection = renderRepositoryHintsSection(
       hint ?? undefined
     )
@@ -734,7 +673,7 @@ ${repositoryHintsSection}
   const filename = titleToFilename(taskTitle)
   const filePath = `${dustPath}/tasks/${filename}`
   const baseOpeningSentence = `Research this idea thoroughly, then create one or more idea files in \`.dust/ideas/\`. Read the codebase for relevant context, flesh out the description, and identify any ambiguity. Where aspects are unclear or could go multiple ways, add open questions to the idea file. If you add open questions, use \`## Open Questions\` with \`### Question?\` headings and one or more \`#### Option\` headings beneath each question, and only add questions that are meaningful decisions worth asking. Run \`${cmd} principles\` and \`${cmd} facts\` for relevant context.`
-  const hint = await readWorkflowHint(fileSystem, dustPath, 'add-idea')
+  const hint = await readWorkflowHint(fileSystem, dustPath, 'capture')
   const repositoryHintsSection = renderRepositoryHintsSection(hint ?? undefined)
 
   const content = `# ${taskTitle}

@@ -41,7 +41,6 @@ import {
   parseResolvedQuestions,
   type TaskType,
   type WorkflowTaskMatch,
-  type WorkflowTaskType,
 } from './workflow-tasks'
 
 // Re-export types
@@ -63,12 +62,11 @@ export type {
   Task,
   TaskType,
   WorkflowTaskMatch,
-  WorkflowTaskType,
 }
 
 export interface TaskGraphNode {
   task: Task
-  workflowType: WorkflowTaskType | null
+  workflowType: TaskType | null
 }
 
 export interface TaskGraph {
@@ -265,7 +263,7 @@ function buildReadOperations(
       const taskSlugs = await this.listTasks()
       const allWorkflowTasks = await findAllWorkflowTasks(fileSystem, dustPath)
 
-      const workflowTypeByTaskSlug = new Map<string, WorkflowTaskType>()
+      const workflowTypeByTaskSlug = new Map<string, TaskType>()
       for (const match of allWorkflowTasks.workflowTasksByIdeaSlug.values()) {
         workflowTypeByTaskSlug.set(match.taskSlug, match.type)
       }

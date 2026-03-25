@@ -27,7 +27,6 @@ export type {
   OpenQuestionResponse,
   ParsedCaptureIdeaTask,
   WorkflowTaskMatch,
-  WorkflowTaskType,
 } from './artifacts/workflow-tasks'
 
 // Bucket repository

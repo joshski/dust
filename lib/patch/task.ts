@@ -2,6 +2,8 @@
  * Task serialization and patch building functions.
  */
 
+import type { TaskType } from '../artifacts/workflow-tasks'
+
 export interface StandardTaskInput {
   type?: undefined
   title: string
@@ -12,7 +14,7 @@ export interface StandardTaskInput {
 }
 
 export interface WorkflowTaskInput {
-  type: 'capture-idea' | 'refine-idea' | 'decompose-idea' | 'shelve-idea'
+  type: Extract<TaskType, 'capture' | 'refine' | 'decompose' | 'shelve'>
   ideaSlug: string
   definitionOfDone?: string[]
 }
@@ -20,34 +22,32 @@ export interface WorkflowTaskInput {
 export type TaskInput = StandardTaskInput | WorkflowTaskInput
 
 const WORKFLOW_SECTION_HEADINGS: Record<string, string> = {
-  'capture-idea': 'Captures Idea',
-  'refine-idea': 'Refines Idea',
-  'decompose-idea': 'Decomposes Idea',
-  'shelve-idea': 'Shelves Idea',
+  capture: 'Captures Idea',
+  refine: 'Refines Idea',
+  decompose: 'Decomposes Idea',
+  shelve: 'Shelves Idea',
 }
 
 const WORKFLOW_TITLE_PREFIXES: Record<string, string> = {
-  'capture-idea': 'Add Idea: ',
-  'refine-idea': 'Refine Idea: ',
-  'decompose-idea': 'Decompose Idea: ',
-  'shelve-idea': 'Shelve Idea: ',
+  capture: 'Add Idea: ',
+  refine: 'Refine Idea: ',
+  decompose: 'Decompose Idea: ',
+  shelve: 'Shelve Idea: ',
 }
 
 const WORKFLOW_OPENING_SENTENCES: Record<string, string> = {
-  'capture-idea': 'Research this idea thoroughly and create an idea file.',
-  'refine-idea':
+  capture: 'Research this idea thoroughly and create an idea file.',
+  refine:
     'Thoroughly research this idea and refine it into a well-defined proposal.',
-  'decompose-idea': 'Create one or more well-defined tasks from this idea.',
-  'shelve-idea': 'Archive this idea and remove it from the active backlog.',
+  decompose: 'Create one or more well-defined tasks from this idea.',
+  shelve: 'Archive this idea and remove it from the active backlog.',
 }
 
 const WORKFLOW_DEFAULT_DEFINITION_OF_DONE: Record<string, string[]> = {
-  'capture-idea': ['Idea file is created in .dust/ideas/'],
-  'refine-idea': [
-    'Idea is thoroughly researched with relevant codebase context',
-  ],
-  'decompose-idea': ['One or more new tasks are created in .dust/tasks/'],
-  'shelve-idea': ['Idea file is deleted'],
+  capture: ['Idea file is created in .dust/ideas/'],
+  refine: ['Idea is thoroughly researched with relevant codebase context'],
+  decompose: ['One or more new tasks are created in .dust/tasks/'],
+  shelve: ['Idea file is deleted'],
 }
 
 function ideaSlugToTitle(slug: string): string {
@@ -109,16 +109,6 @@ function serializeWorkflowTask(input: WorkflowTaskInput): string {
 
   const ideaSection = `## ${sectionHeading}\n\n- [${ideaTitle}](../ideas/${input.ideaSlug}.md)`
 
-  // Map workflow type to task type
-  const taskType =
-    input.type === 'capture-idea'
-      ? 'capture'
-      : input.type === 'refine-idea'
-        ? 'refine'
-        : input.type === 'decompose-idea'
-          ? 'decompose'
-          : 'shelve' // shelve-idea
-
   return `# ${title}
 
 ${openingSentence}
@@ -127,7 +117,7 @@ ${ideaSection}
 
 ## Task Type
 
-${taskType}
+${input.type}
 
 ## Blocked By
 

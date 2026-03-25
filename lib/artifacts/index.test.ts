@@ -371,7 +371,7 @@ describe('buildArtifactsRepository', () => {
       })
 
       expect(result).toEqual({
-        type: 'refine-idea',
+        type: 'refine',
         ideaSlug: 'progress-broadcasting',
         taskSlug: 'refine-idea-progress-broadcasting',
         resolvedQuestions: [],
@@ -896,7 +896,7 @@ A regular non-workflow task.
     const refineNode = graph.nodes.find(
       n => n.task.slug === 'refine-idea-new-feature'
     )
-    expect(refineNode?.workflowType).toBe('refine-idea')
+    expect(refineNode?.workflowType).toBe('refine')
 
     const regularNode = graph.nodes.find(n => n.task.slug === 'regular-task')
     expect(regularNode?.workflowType).toBeNull()
@@ -974,7 +974,7 @@ Decompose this idea.
     const decomposeNode = graph.nodes.find(
       n => n.task.slug === 'decompose-idea-my-idea'
     )
-    expect(decomposeNode?.workflowType).toBe('decompose-idea')
+    expect(decomposeNode?.workflowType).toBe('decompose')
 
     expect(graph.edges).toContainEqual({
       from: 'first-task',

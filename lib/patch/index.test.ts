@@ -576,7 +576,7 @@ describe('buildArtifactPatch', () => {
     const result = await buildArtifactPatch(fileSystem, dustPath, {
       tasks: {
         'refine-idea-my-feature': {
-          type: 'refine-idea',
+          type: 'refine',
           ideaSlug: 'my-feature',
         },
       },
@@ -599,7 +599,7 @@ describe('buildArtifactPatch', () => {
     const result = await buildArtifactPatch(fileSystem, dustPath, {
       tasks: {
         'decompose-idea-my-feature': {
-          type: 'decompose-idea',
+          type: 'decompose',
           ideaSlug: 'my-feature',
         },
       },
@@ -619,7 +619,7 @@ describe('buildArtifactPatch', () => {
     const result = await buildArtifactPatch(fileSystem, dustPath, {
       tasks: {
         'shelve-idea-old-feature': {
-          type: 'shelve-idea',
+          type: 'shelve',
           ideaSlug: 'old-feature',
         },
       },
@@ -639,7 +639,7 @@ describe('buildArtifactPatch', () => {
     const result = await buildArtifactPatch(fileSystem, dustPath, {
       tasks: {
         'add-idea-new-feature': {
-          type: 'capture-idea',
+          type: 'capture',
           ideaSlug: 'new-feature',
         },
       },
@@ -659,7 +659,7 @@ describe('buildArtifactPatch', () => {
     const result = await buildArtifactPatch(fileSystem, dustPath, {
       tasks: {
         'refine-idea-my-feature': {
-          type: 'refine-idea',
+          type: 'refine',
           ideaSlug: 'my-feature',
           definitionOfDone: ['Custom item 1', 'Custom item 2'],
         },
@@ -938,7 +938,7 @@ describe('serializeTask', () => {
 
   test('produces valid task markdown for refine-idea workflow task', () => {
     const input: WorkflowTaskInput = {
-      type: 'refine-idea',
+      type: 'refine',
       ideaSlug: 'my-feature',
     }
     const result = serializeTask(input)
@@ -952,7 +952,7 @@ describe('serializeTask', () => {
 
   test('produces valid task markdown for decompose-idea workflow task', () => {
     const input: WorkflowTaskInput = {
-      type: 'decompose-idea',
+      type: 'decompose',
       ideaSlug: 'my-feature',
     }
     const result = serializeTask(input)
@@ -963,7 +963,7 @@ describe('serializeTask', () => {
 
   test('produces valid task markdown for shelve-idea workflow task', () => {
     const input: WorkflowTaskInput = {
-      type: 'shelve-idea',
+      type: 'shelve',
       ideaSlug: 'old-feature',
     }
     const result = serializeTask(input)
@@ -974,7 +974,7 @@ describe('serializeTask', () => {
 
   test('produces valid task markdown for capture-idea workflow task', () => {
     const input: WorkflowTaskInput = {
-      type: 'capture-idea',
+      type: 'capture',
       ideaSlug: 'new-feature',
     }
     const result = serializeTask(input)
@@ -985,7 +985,7 @@ describe('serializeTask', () => {
 
   test('uses custom definitionOfDone for workflow task', () => {
     const input: WorkflowTaskInput = {
-      type: 'refine-idea',
+      type: 'refine',
       ideaSlug: 'my-feature',
       definitionOfDone: ['Custom item'],
     }
@@ -995,7 +995,7 @@ describe('serializeTask', () => {
 
   test('uses default definitionOfDone for workflow task when not provided', () => {
     const input: WorkflowTaskInput = {
-      type: 'refine-idea',
+      type: 'refine',
       ideaSlug: 'my-feature',
     }
     const result = serializeTask(input)
@@ -1018,7 +1018,7 @@ describe('buildTaskFiles', () => {
 
   test('produces file entries for a workflow task patch', () => {
     const input: WorkflowTaskInput = {
-      type: 'refine-idea',
+      type: 'refine',
       ideaSlug: 'my-feature',
     }
     const result = buildTaskFiles(input, 'refine-idea-my-feature')

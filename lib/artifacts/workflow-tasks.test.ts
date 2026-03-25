@@ -1194,7 +1194,7 @@ refine
       'my-idea'
     )
     expect(result).toEqual({
-      type: 'refine-idea',
+      type: 'refine',
       ideaSlug: 'my-idea',
       taskSlug: 'custom-task',
       resolvedQuestions: [],
@@ -1235,7 +1235,7 @@ decompose
       'my-idea'
     )
     expect(result).toEqual({
-      type: 'decompose-idea',
+      type: 'decompose',
       ideaSlug: 'my-idea',
       taskSlug: 'custom-task',
       resolvedQuestions: [],
@@ -1276,7 +1276,7 @@ shelve
       'my-idea'
     )
     expect(result).toEqual({
-      type: 'shelve-idea',
+      type: 'shelve',
       ideaSlug: 'my-idea',
       taskSlug: 'custom-task',
       resolvedQuestions: [],
@@ -1317,7 +1317,7 @@ implement
       'my-idea'
     )
     expect(result).toEqual({
-      type: 'expedite-idea',
+      type: 'implement',
       ideaSlug: 'my-idea',
       taskSlug: 'custom-task',
       resolvedQuestions: [],
@@ -1411,7 +1411,7 @@ A great idea.
       'progress-broadcasting'
     )
     expect(result).toEqual({
-      type: 'refine-idea',
+      type: 'refine',
       ideaSlug: 'progress-broadcasting',
       taskSlug: 'refine-idea-progress-broadcasting',
       resolvedQuestions: [],
@@ -1429,7 +1429,7 @@ A great idea.
       'progress-broadcasting'
     )
     expect(result).toEqual({
-      type: 'decompose-idea',
+      type: 'decompose',
       ideaSlug: 'progress-broadcasting',
       taskSlug: 'decompose-idea-progress-broadcasting',
       resolvedQuestions: [],
@@ -1449,7 +1449,7 @@ A great idea.
       'progress-broadcasting'
     )
     expect(result).toEqual({
-      type: 'shelve-idea',
+      type: 'shelve',
       ideaSlug: 'progress-broadcasting',
       taskSlug: 'shelve-idea-progress-broadcasting',
       resolvedQuestions: [],
@@ -1469,7 +1469,7 @@ A great idea.
       'progress-broadcasting'
     )
     expect(result).toEqual({
-      type: 'expedite-idea',
+      type: 'implement',
       ideaSlug: 'progress-broadcasting',
       taskSlug: 'expedite-idea-progress-broadcasting',
       resolvedQuestions: [],
@@ -1551,7 +1551,7 @@ Do something.
       'progress-broadcasting'
     )
     expect(result).toEqual({
-      type: 'refine-idea',
+      type: 'refine',
       ideaSlug: 'progress-broadcasting',
       taskSlug: 'some-unrelated-name',
       resolvedQuestions: [],
@@ -1592,7 +1592,7 @@ Do something.
       'my-idea'
     )
     expect(result).toEqual({
-      type: 'decompose-idea',
+      type: 'decompose',
       ideaSlug: 'my-idea',
       taskSlug: 'custom-task-name',
       resolvedQuestions: [],
@@ -1633,7 +1633,7 @@ Archive this idea.
       'my-idea'
     )
     expect(result).toEqual({
-      type: 'shelve-idea',
+      type: 'shelve',
       ideaSlug: 'my-idea',
       taskSlug: 'archive-task',
       resolvedQuestions: [],
@@ -2244,13 +2244,13 @@ describe('findAllWorkflowTasks', () => {
     await createShelveIdeaTask(fileSystem, '/project/.dust', 'idea-b')
     const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
     expect(result.workflowTasksByIdeaSlug.get('idea-a')).toEqual({
-      type: 'refine-idea',
+      type: 'refine',
       ideaSlug: 'idea-a',
       taskSlug: 'refine-idea-idea-a',
       resolvedQuestions: [],
     })
     expect(result.workflowTasksByIdeaSlug.get('idea-b')).toEqual({
-      type: 'shelve-idea',
+      type: 'shelve',
       ideaSlug: 'idea-b',
       taskSlug: 'shelve-idea-idea-b',
       resolvedQuestions: [],
@@ -2271,7 +2271,7 @@ describe('findAllWorkflowTasks', () => {
     await createExpediteIdeaTask(fileSystem, '/project/.dust', 'idea-c')
     const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
     expect(result.workflowTasksByIdeaSlug.get('idea-c')).toEqual({
-      type: 'expedite-idea',
+      type: 'implement',
       ideaSlug: 'idea-c',
       taskSlug: 'expedite-idea-idea-c',
       resolvedQuestions: [],
@@ -2301,7 +2301,7 @@ describe('findAllWorkflowTasks', () => {
       { taskSlug: 'add-idea-new-idea', ideaTitle: 'New Idea' },
     ])
     expect(result.workflowTasksByIdeaSlug.get('existing-idea')).toEqual({
-      type: 'decompose-idea',
+      type: 'decompose',
       ideaSlug: 'existing-idea',
       taskSlug: 'decompose-idea-existing-idea',
       resolvedQuestions: [],
@@ -2688,7 +2688,7 @@ describe('resolvedQuestions in finder functions', () => {
       'progress-broadcasting'
     )
     expect(result).toEqual({
-      type: 'refine-idea',
+      type: 'refine',
       ideaSlug: 'progress-broadcasting',
       taskSlug: 'refine-idea-progress-broadcasting',
       resolvedQuestions: responses,
@@ -2716,7 +2716,7 @@ describe('resolvedQuestions in finder functions', () => {
     })
     const result = await findAllWorkflowTasks(fileSystem, '/project/.dust')
     expect(result.workflowTasksByIdeaSlug.get('my-idea')).toEqual({
-      type: 'decompose-idea',
+      type: 'decompose',
       ideaSlug: 'my-idea',
       taskSlug: 'decompose-idea-my-idea',
       resolvedQuestions: responses,
