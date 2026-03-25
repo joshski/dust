@@ -217,16 +217,34 @@ export async function findAllWorkflowTasks(
       }
     }
 
-    // Check for workflow task sections
-    for (const { type, heading } of WORKFLOW_SECTION_HEADINGS) {
-      const linkedSlug = extractIdeaSlugFromSection(content, heading)
-      if (linkedSlug) {
-        workflowTasksByIdeaSlug.set(linkedSlug, {
-          type,
-          ideaSlug: linkedSlug,
-          taskSlug,
-          resolvedQuestions: parseResolvedQuestions(content),
-        })
+    // Check for workflow task linking to an idea
+    if (taskType) {
+      const heading = WORKFLOW_SECTION_HEADINGS.find(
+        h => h.type === taskType
+      )?.heading
+      if (heading) {
+        const linkedSlug = extractIdeaSlugFromSection(content, heading)
+        if (linkedSlug) {
+          workflowTasksByIdeaSlug.set(linkedSlug, {
+            type: taskType,
+            ideaSlug: linkedSlug,
+            taskSlug,
+            resolvedQuestions: parseResolvedQuestions(content),
+          })
+        }
+      }
+    } else {
+      // Backward compatibility: fall back to section-based detection
+      for (const { type, heading } of WORKFLOW_SECTION_HEADINGS) {
+        const linkedSlug = extractIdeaSlugFromSection(content, heading)
+        if (linkedSlug) {
+          workflowTasksByIdeaSlug.set(linkedSlug, {
+            type,
+            ideaSlug: linkedSlug,
+            taskSlug,
+            resolvedQuestions: parseResolvedQuestions(content),
+          })
+        }
       }
     }
   }
