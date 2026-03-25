@@ -34,7 +34,6 @@ function openBrowser(url: string): void {
   nodeSpawn(cmd, [url], { stdio: 'ignore', detached: true }).unref()
 }
 
-/* istanbul ignore next */
 function adaptWebSocket(ws: WebSocket): WebSocketLike {
   const emitter = new EventEmitter()
   let currentReadyState = ws.readyState
@@ -70,7 +69,6 @@ function adaptWebSocket(ws: WebSocket): WebSocketLike {
   }
 }
 
-/* istanbul ignore next */
 function defaultCreateWebSocket(url: string, token: string): WebSocketLike {
   const ws = new WebSocket(url, {
     // @ts-expect-error - Bun's WebSocket accepts headers option
@@ -81,7 +79,6 @@ function defaultCreateWebSocket(url: string, token: string): WebSocketLike {
   return adaptWebSocket(ws)
 }
 
-/* istanbul ignore next */
 function defaultSetupKeypress(onKey: (key: string) => void): () => void {
   const stdin = process.stdin
   if (!stdin.isTTY) {
@@ -105,7 +102,6 @@ function defaultSetupKeypress(onKey: (key: string) => void): () => void {
   }
 }
 
-/* istanbul ignore next */
 function defaultSetupSignals(onSignal: () => void): () => void {
   const handler = onSignal
 
@@ -118,7 +114,6 @@ function defaultSetupSignals(onSignal: () => void): () => void {
   }
 }
 
-/* istanbul ignore next */
 function defaultSetupResize(
   onResize: (width: number, height: number) => void
 ): () => void {
@@ -134,7 +129,6 @@ function defaultSetupResize(
   }
 }
 
-/* istanbul ignore next */
 function defaultGetTerminalSize(): { width: number; height: number } {
   return {
     width: process.stdout.columns || 80,
@@ -142,7 +136,6 @@ function defaultGetTerminalSize(): { width: number; height: number } {
   }
 }
 
-/* istanbul ignore next */
 function defaultWriteStdout(data: string): void {
   process.stdout.write(data)
 }
@@ -151,7 +144,6 @@ function defaultWriteStdout(data: string): void {
  * Get the dust version from package.json.
  * Returns 'unknown' if version cannot be determined.
  */
-/* istanbul ignore next */
 function getDustVersion(): string {
   // Import the version from the build-time embedded package.json
   // This is available at runtime via dynamic import
@@ -165,7 +157,6 @@ function getDustVersion(): string {
 /**
  * Get the platform string in the format "os.platform os.release".
  */
-/* istanbul ignore next */
 function getPlatformString(): string {
   return `${platform()} ${release()}`
 }
@@ -174,7 +165,6 @@ function getPlatformString(): string {
  * Get the git remote URL for the current directory.
  * Returns undefined if git remote is not available.
  */
-/* istanbul ignore next */
 async function getGitRemote(
   spawn: typeof nodeSpawn
 ): Promise<string | undefined> {
@@ -211,7 +201,6 @@ async function getGitRemote(
  * Build a ConnectionInitMessage with version, platform, git remote, and agents.
  * This is the imperative shell that gathers all the information needed.
  */
-/* istanbul ignore next */
 async function defaultBuildConnectionInit(
   spawn: typeof nodeSpawn
 ): Promise<ConnectionInitMessage> {
@@ -228,7 +217,6 @@ async function defaultBuildConnectionInit(
   return buildConnectionInitPayload(dustVersion, platformStr, gitRemote, agents)
 }
 
-/* istanbul ignore next */
 export function createDefaultBucketDependencies(): BucketDependencies {
   const envConfig = readEnvConfig(process.env)
   const authFileSystem = createAuthFileSystem({
