@@ -24,10 +24,10 @@ Every task has a mandatory `## Task Type` section containing one of these values
 | Task Type | Purpose |
 |-----------|---------|
 | `implement` | Implement a change (replaces both "standard tasks" and "expedite-idea") |
-| `add-idea` | Research and create idea files |
-| `refine-idea` | Research and refine an existing idea |
-| `decompose-idea` | Break an idea into implementation tasks |
-| `shelve-idea` | Archive and remove an idea |
+| `capture` | Research and create idea files |
+| `refine` | Research and refine an existing idea |
+| `decompose` | Break an idea into implementation tasks |
+| `shelve` | Archive and remove an idea |
 
 The old `expedite-idea` type is eliminated. Both "expedite" variants (capture and transition) become `implement` — the agent's job is the same in both cases: implement the thing. Standard implementation tasks (previously untyped) also become `implement`.
 
@@ -61,7 +61,7 @@ Task type is derived solely from the `## Task Type` section. Title prefixes beco
 
 **Decision:** Eliminate the distinction
 
-Both are about taking a description and acting on it. The old `expedite-idea` capture tasks become `implement` tasks. The old `add-idea` capture tasks stay as `add-idea`. The task type section makes this unambiguous — no need to infer from title prefixes or section combinations.
+Both are about taking a description and acting on it. The old `expedite-idea` capture tasks become `implement` tasks. The old `add-idea` capture tasks stay as `capture`. The task type section makes this unambiguous — no need to infer from title prefixes or section combinations.
 
 ### Should title prefixes be removed from generated tasks?
 
@@ -74,3 +74,9 @@ Title prefixes remain in generated tasks for human readability but are not parse
 **Decision:** All tasks are typed
 
 There are no untyped tasks. What were previously "standard" implementation tasks get `## Task Type\n\nimplement`. This means every task has a type, eliminating the implicit "no type = implementation task" convention.
+
+### What should task type values be named?
+
+**Decision:** Single-word verbs
+
+Task types use short, consistent verb-form names: `implement`, `capture`, `refine`, `decompose`, `shelve`. No hyphens, no `-idea` suffixes. Each verb clearly describes what the agent does when it picks up the task.

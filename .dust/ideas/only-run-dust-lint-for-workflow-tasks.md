@@ -6,10 +6,10 @@ When an agent works on a workflow task, run `dust lint` instead of `dust check` 
 
 Workflow tasks manage the dust planning system itself rather than implementing code changes. They include:
 
-- **add-idea** tasks - Research and create a new idea file
-- **refine-idea** tasks - Research and refine an existing idea
-- **decompose-idea** tasks - Break an idea into concrete implementation tasks
-- **shelve-idea** tasks - Archive and remove an idea
+- **capture** tasks - Research and create a new idea file
+- **refine** tasks - Research and refine an existing idea
+- **decompose** tasks - Break an idea into concrete implementation tasks
+- **shelve** tasks - Archive and remove an idea
 
 All non-`implement` task types are workflow tasks. See [Content-based task type detection](content-based-task-type-detection.md) for the proposed `## Task Type` section that would make task type identification reliable and explicit.
 
