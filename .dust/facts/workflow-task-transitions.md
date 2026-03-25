@@ -1,15 +1,18 @@
 # Workflow Task Transitions
 
-Transition tasks operate on an existing idea and use `IDEA_TRANSITION_PREFIXES`.
+Transition tasks operate on an existing idea. The task type is determined by a `## Task Type` section containing one of: `refine`, `decompose`, or `shelve`.
 
 `createRefineIdeaTask(...)` accepts optional `openQuestionResponses` and renders a `## Resolved Questions` section when provided with one or more responses.
 
-## Prefixes and Filenames
+## Task Types and Filenames
 
-- `Refine Idea: <Idea Title>` -> `refine-idea-<idea-title>.md`
-- `Decompose Idea: <Idea Title>` -> `decompose-idea-<idea-title>.md`
-- `Shelve Idea: <Idea Title>` -> `shelve-idea-<idea-title>.md`
-- `Expedite Idea: <Idea Title>` -> `expedite-idea-<idea-title>.md`
+All transition tasks include a `## Task Type` section:
+
+- `## Task Type\n\nrefine` -> `refine-idea-<idea-title>.md`
+- `## Task Type\n\ndecompose` -> `decompose-idea-<idea-title>.md`
+- `## Task Type\n\nshelve` -> `shelve-idea-<idea-title>.md`
+
+Title prefixes like `Refine Idea:`, `Decompose Idea:`, etc. are optional conventions for human readability but are not used for type detection.
 
 Filename generation uses `titleToFilename(...)`:
 - Lowercases text
@@ -19,17 +22,17 @@ Filename generation uses `titleToFilename(...)`:
 
 Example:
 - Title: `Decompose Idea: API v2.1 Rollout`
+- Task type section: `## Task Type\n\ndecompose`
 - Filename: `decompose-idea-api-v2-1-rollout.md`
 
 ## Linking to an Idea
 
-Association is section-based, not title-based.
+Association uses back-reference sections to link tasks to ideas.
 
 `findWorkflowTaskForIdea({ ideaSlug })` scans each task for these sections:
 - `## Refines Idea`
 - `## Decomposes Idea`
 - `## Shelves Idea`
-- `## Expedites Idea`
 
 Then it extracts the first markdown link in that section.
 
@@ -40,7 +43,7 @@ Example:
 If found, the method returns:
 
 ```ts
-{ type: "decompose-idea", ideaSlug: "api-v2-1-rollout", taskSlug: "decompose-idea-api-v2-1-rollout" }
+{ type: "decompose", ideaSlug: "api-v2-1-rollout", taskSlug: "decompose-idea-api-v2-1-rollout" }
 ```
 
 If the idea file does not exist, it throws. If no matching section link is found, it returns `null`.
@@ -49,6 +52,6 @@ If the idea file does not exist, it throws. If no matching section link is found
 
 `lib/lint/validators/idea-validator.ts` validates that:
 
-1. The idea title after a transition prefix maps to an existing `.dust/ideas/*.md` file.
-2. The required operation section exists (`Refines/Decomposes/Shelves/Expedites Idea`).
+1. The task has a `## Task Type` section with a valid type (`refine`, `decompose`, or `shelve`).
+2. The required operation section exists (`Refines/Decomposes/Shelves Idea`).
 3. The operation section links to an existing idea file.
