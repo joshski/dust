@@ -7,7 +7,7 @@ import {
   createFileSystemEmulator,
   type FileSystemEmulator,
   createTestRuntimeConfig,
-} from '../../test/test-utilities'
+} from '../../test-support/test-utilities'
 import { createShellRunner, type ShellRunner } from '../process-runner'
 import type {
   CommandContext,

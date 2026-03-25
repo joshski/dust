@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { createFetchStub, restoreEnv, stubEnv } from '../test/test-utilities'
+import { createFetchStub, restoreEnv, stubEnv } from '../test-support/test-utilities'
 import {
   buildInvalidHelperTokenResponse,
   buildNoTokenResponse,

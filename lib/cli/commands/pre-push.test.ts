@@ -6,7 +6,7 @@ import {
   createFileSystemEmulator,
   createTestRuntimeConfig,
   type FileSystemEmulator,
-} from '../../test/test-utilities'
+} from '../../test-support/test-utilities'
 import { createGitRunner, type GitRunner } from '../process-runner'
 import type {
   CommandContext,

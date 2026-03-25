@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, test } from 'vitest'
-import type { FileSystemEmulator } from '../test/test-utilities'
+import type { FileSystemEmulator } from '../test-support/test-utilities'
 import {
   createContextEmulator,
   createFileSystemEmulator,
   createTestRuntimeConfig,
   restoreEnv,
   stubEnv,
-} from '../test/test-utilities'
+} from '../test-support/test-utilities'
 import {
   COMMANDS,
   generateHelpText,

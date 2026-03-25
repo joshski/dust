@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { createFetchStub, createTestBucketConfig } from '../test/test-utilities'
+import { createFetchStub, createTestBucketConfig } from '../test-support/test-utilities'
 import type { ToolDefinition } from './server-messages'
 import {
   buildToolUrl,

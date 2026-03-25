@@ -38,7 +38,7 @@ import {
 } from '../lib/cli/commands/bucket-worker'
 import type { CommandDependencies } from '../lib/cli/types'
 import { createFileSystem, defaultFileSystemPrimitives } from '../lib/cli/wire'
-import { realSleep, stubEnv, waitFor } from '../lib/test/test-utilities'
+import { realSleep, stubEnv, waitFor } from '../lib/test-support/test-utilities'
 import { createBucketServerEmulator } from './support/bucket-server-emulator'
 
 const DUST_BIN = join(process.cwd(), 'bin', 'dust')

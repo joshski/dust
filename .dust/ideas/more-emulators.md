@@ -6,8 +6,8 @@ Look for ways we can use more high-level, hermetic emulators instead of low-leve
 
 The codebase strongly favors emulators over mocks (see [Stubs Over Mocks](../principles/stubs-over-mocks.md)). Several emulators already exist:
 
-- **FileSystemEmulator** (`lib/test/test-utilities.ts`) - In-memory file system with read/write tracking
-- **ContextEmulator** (`lib/test/test-utilities.ts`) - Captures stdout/stderr for assertions
+- **FileSystemEmulator** (`lib/test-support/test-utilities.ts`) - In-memory file system with read/write tracking
+- **ContextEmulator** (`lib/test-support/test-utilities.ts`) - Captures stdout/stderr for assertions
 - **ShellEmulator** (`system-tests/support/shell-emulator.ts`) - Executes CLI commands in-memory
 - **AgentEmulator** (`system-tests/support/agent-emulator.ts`) - Pattern-based AI session simulation
 - **VCR cassettes** (`lib/claude/vcr.ts`) - Record/replay for Claude Code interactions

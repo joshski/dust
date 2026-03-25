@@ -13,7 +13,7 @@ import {
   type FileSystemEmulator,
   type FileSystemTree,
   stubEnv,
-} from '../../lib/test/test-utilities'
+} from '../../lib/test-support/test-utilities'
 
 export interface CommandResult {
   stdout: string

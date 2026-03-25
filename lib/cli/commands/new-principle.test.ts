@@ -3,7 +3,7 @@ import {
   createCommandDependencies,
   restoreEnv,
   stubEnv,
-} from '../../test/test-utilities'
+} from '../../test-support/test-utilities'
 import { newPrinciple } from './new-principle'
 
 describe('new-principle', () => {

@@ -1,10 +1,10 @@
 # Refactor test env stubbing to avoid global state
 
-Replace the module-level `originalEnvValues` Map in `lib/test/test-utilities.ts` with explicit state management to enable parallel test execution.
+Replace the module-level `originalEnvValues` Map in `lib/test-support/test-utilities.ts` with explicit state management to enable parallel test execution.
 
 ## Current State
 
-The `stubEnv()` and `restoreEnv()` functions in `lib/test/test-utilities.ts:79-145` use a module-level Map to track original environment variable values:
+The `stubEnv()` and `restoreEnv()` functions in `lib/test-support/test-utilities.ts:79-145` use a module-level Map to track original environment variable values:
 
 ```typescript
 const originalEnvValues = new Map<string, string | undefined>()
@@ -46,7 +46,7 @@ Migration: Update callers from `stubEnv(); ...; restoreEnv()` to `const restore 
 
 #### Create EnvEmulator class
 
-Add an `EnvEmulator` to `lib/test/test-utilities.ts` that wraps `process.env` access. Each test creates its own instance. Aligns with existing emulator patterns (FileSystemEmulator, ContextEmulator).
+Add an `EnvEmulator` to `lib/test-support/test-utilities.ts` that wraps `process.env` access. Each test creates its own instance. Aligns with existing emulator patterns (FileSystemEmulator, ContextEmulator).
 
 Migration: Tests would instantiate `new EnvEmulator()` and pass it to code under test. Requires code changes to accept injected env objects.
 

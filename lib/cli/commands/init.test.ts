@@ -6,7 +6,7 @@ import {
   restoreEnv,
   stripAnsi,
   stubEnv,
-} from '../../test/test-utilities'
+} from '../../test-support/test-utilities'
 import type { CommandDependencies } from '../types'
 import { init } from './init'
 

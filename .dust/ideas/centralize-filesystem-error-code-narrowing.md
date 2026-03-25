@@ -63,7 +63,7 @@ Define small helpers near each subsystem to avoid a new cross-cutting module. Th
 
 #### Add test utility for errno errors
 
-Create a helper in `lib/test/test-utilities.ts` for constructing typed errors with `code` set. Reduces repeated test casting and aligns runtime/test patterns.
+Create a helper in `lib/test-support/test-utilities.ts` for constructing typed errors with `code` set. Reduces repeated test casting and aligns runtime/test patterns.
 
 #### Keep tests as-is for now
 

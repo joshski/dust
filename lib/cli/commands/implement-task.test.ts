@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { createCommandDependencies } from '../../test/test-utilities'
+import { createCommandDependencies } from '../../test-support/test-utilities'
 import { implementTask } from './implement-task'
 
 describe('implement-task', () => {

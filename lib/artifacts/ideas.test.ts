@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { createFileSystemEmulator } from '../test/test-utilities'
+import { createFileSystemEmulator } from '../test-support/test-utilities'
 import {
   ideaContentToMarkdown,
   parseIdea,

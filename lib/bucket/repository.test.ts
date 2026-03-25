@@ -7,7 +7,7 @@ import {
   createTestRuntimeConfig,
   createTestSessionConfig,
   waitFor,
-} from '../test/test-utilities'
+} from '../test-support/test-utilities'
 import { createLogBuffer, getLogLines } from './log-buffer'
 
 const VALID_TASK_CONTENT = `# My Task

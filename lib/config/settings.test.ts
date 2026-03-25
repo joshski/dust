@@ -4,7 +4,7 @@ import {
   createTestRuntimeConfig,
   restoreEnv,
   stubEnv,
-} from '../test/test-utilities'
+} from '../test-support/test-utilities'
 import {
   detectDustCommand,
   detectInstallCommand,

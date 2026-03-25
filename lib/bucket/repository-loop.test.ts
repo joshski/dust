@@ -9,7 +9,7 @@ import {
   createTestSessionConfig,
   restoreEnv,
   stubEnv,
-} from '../test/test-utilities'
+} from '../test-support/test-utilities'
 import type { SendEventFn } from './events'
 import { createLogBuffer, getLogLines } from './log-buffer'
 import type { RepositoryDependencies, RepositoryState } from './repository'

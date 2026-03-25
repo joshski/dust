@@ -3,7 +3,7 @@ import type { BucketConfig } from '../env-config'
 import {
   createFetchStub,
   createFileSystemEmulator,
-} from '../test/test-utilities'
+} from '../test-support/test-utilities'
 import {
   type AuthDependencies,
   authenticate,

@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
 import type { EventMessage } from '../agent-events'
-import { createTestAgentSessionStartedEvent } from '../test/test-utilities'
+import { createTestAgentSessionStartedEvent } from '../test-support/test-utilities'
 import {
   createEventMessageSender,
   formatBucketEvent,

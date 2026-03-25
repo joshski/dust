@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
-import { asChildProcessStub } from '../test/test-utilities'
+import { asChildProcessStub } from '../test-support/test-utilities'
 import {
   createAuthHeader,
   extractGitEndpoint,

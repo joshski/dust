@@ -21,8 +21,8 @@ import {
   restoreEnv,
   stubEnv,
   waitFor,
-} from '../../test/test-utilities'
-import { createTimeEmulator } from '../../test/time-emulator'
+} from '../../test-support/test-utilities'
+import { createTimeEmulator } from '../../test-support/time-emulator'
 import type { CommandDependencies } from '../types'
 import {
   type AuthFileSystemDependencies,

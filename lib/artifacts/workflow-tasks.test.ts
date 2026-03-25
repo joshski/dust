@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { createFileSystemEmulator, lintTaskFile } from '../test/test-utilities'
+import { createFileSystemEmulator, lintTaskFile } from '../test-support/test-utilities'
 import {
   CAPTURE_IDEA_PREFIX,
   createIdeaTask,

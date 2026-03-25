@@ -9,7 +9,7 @@ import {
   createContextEmulator,
   createFileSystemEmulator,
   createTestRuntimeConfig,
-} from '../test/test-utilities'
+} from '../test-support/test-utilities'
 
 function createTestDependencies(): CommandDependencies {
   return {

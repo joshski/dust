@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { createTestRuntimeConfig } from '../../test/test-utilities'
+import { createTestRuntimeConfig } from '../../test-support/test-utilities'
 import type {
   CommandContext,
   CommandDependencies,

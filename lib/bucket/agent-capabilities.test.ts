@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
-import { asChildProcessStub, stubEnv } from '../test/test-utilities'
+import { asChildProcessStub, stubEnv } from '../test-support/test-utilities'
 import { stubFetch } from '../test-support/stub-fetch'
 import {
   CLAUDE_MODEL_ALIASES,

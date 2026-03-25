@@ -5,7 +5,7 @@ import {
   createTestRuntimeConfig,
   type FileSystemTree,
   stripAnsi,
-} from '../../test/test-utilities'
+} from '../../test-support/test-utilities'
 import type { CommandDependencies } from '../types'
 import { pickTask } from './pick-task'
 

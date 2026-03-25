@@ -16,7 +16,7 @@ export default defineConfig({
       exclude: [
         'lib/cli/run.ts',
         'lib/version.ts',
-        'lib/test/**',
+        'lib/test-support/**',
         'lib/bucket/native-io.ts',
       ],
       reporter: [

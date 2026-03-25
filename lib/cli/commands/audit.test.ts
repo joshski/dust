@@ -7,7 +7,7 @@ import {
   createTestRuntimeConfig,
   type FileSystemEmulator,
   lintTaskFile,
-} from '../../test/test-utilities'
+} from '../../test-support/test-utilities'
 import type { CommandContext, CommandDependencies } from '../types'
 import { audit } from './audit'
 

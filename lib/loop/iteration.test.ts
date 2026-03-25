@@ -7,7 +7,7 @@ import {
   createFileSystemEmulator,
   createTestRuntimeConfig,
   createTestSessionConfig,
-} from '../test/test-utilities'
+} from '../test-support/test-utilities'
 import type { CommandDependencies } from '../cli/types'
 import type { LoopEmitFn } from './events'
 import type { LoopEvent } from './events'

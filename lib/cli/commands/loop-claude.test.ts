@@ -6,7 +6,7 @@ import {
   createFileSystemEmulator,
   createTestRuntimeConfig,
   createTestSessionConfig,
-} from '../../test/test-utilities'
+} from '../../test-support/test-utilities'
 import type { LoopDependencies } from '../../loop/iteration'
 import type { CommandDependencies } from '../types'
 import { loopClaude } from './loop-claude'

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { afterEach, describe, expect, test } from 'vitest'
-import { restoreEnv, stubEnv } from '../test/test-utilities'
+import { restoreEnv, stubEnv } from '../test-support/test-utilities'
 import { streamEvents } from './streamer'
 import {
   type Cassette,

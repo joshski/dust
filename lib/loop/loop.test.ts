@@ -10,7 +10,7 @@ import {
   restoreEnv,
   stubEnv,
   waitFor,
-} from '../test/test-utilities'
+} from '../test-support/test-utilities'
 import type { CommandDependencies } from '../cli/types'
 import type { LoopDependencies } from './iteration'
 import type { PostEventFn } from './wire-events'

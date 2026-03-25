@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { restoreEnv, stubEnv, stubStdoutIsTTY } from '../test/test-utilities'
+import { restoreEnv, stubEnv, stubStdoutIsTTY } from '../test-support/test-utilities'
 import { getColors, shouldDisableColors } from './colors'
 
 describe('colors', () => {

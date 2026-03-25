@@ -4,7 +4,7 @@ import {
   createFileSystemEmulator,
   createTestRuntimeConfig,
   type FileSystemEmulator,
-} from '../../test/test-utilities'
+} from '../../test-support/test-utilities'
 import type { CommandContext, CommandDependencies } from '../types'
 import { formatPrincipleEntry, formatPrinciplesSection, list } from './list'
 

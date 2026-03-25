@@ -5,7 +5,7 @@ import {
   createFetchStub,
   createFileSystemEmulator,
   createTestRuntimeConfig,
-} from '../../test/test-utilities'
+} from '../../test-support/test-utilities'
 import type { CommandDependencies } from '../types'
 import { type BucketToolDependencies, bucketTool } from './bucket-tool'
 

@@ -6,7 +6,7 @@ import {
   createProcessEventSourceDependencies,
   createReadlineStub,
   createSpawnStub,
-} from '../test/process-event-source-stubs'
+} from '../test-support/process-event-source-stubs'
 import {
   buildDockerRunArguments,
   defaultDependencies,
