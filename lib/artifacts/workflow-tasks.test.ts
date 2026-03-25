@@ -409,6 +409,18 @@ describe('createRefineIdeaTask', () => {
     expect(content).toContain('`bin/dust facts` for relevant design decisions')
   })
 
+  test('includes Task Type section with refine value', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createRefineIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('## Task Type\n\nrefine')
+  })
+
   test('includes Refines Idea section with link to target idea', async () => {
     const fileSystem = createFileSystem()
     const result = await createRefineIdeaTask(
@@ -583,6 +595,16 @@ describe('decomposeIdea', () => {
     expect(content).not.toContain('## Resolved Questions')
   })
 
+  test('includes Task Type section with decompose value', async () => {
+    const fileSystem = createFileSystem()
+    const result = await decomposeIdea(fileSystem, '/project/.dust', {
+      ideaSlug: 'progress-broadcasting',
+    })
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('## Task Type\n\ndecompose')
+  })
+
   test('includes Decomposes Idea section with link to target idea', async () => {
     const fileSystem = createFileSystem()
     const result = await decomposeIdea(fileSystem, '/project/.dust', {
@@ -661,6 +683,18 @@ describe('createShelveIdeaTask', () => {
     )
     expect(content).toContain('- Idea file is deleted')
     expect(content).toContain('- Rationale is recorded in the commit message')
+  })
+
+  test('includes Task Type section with shelve value', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createShelveIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('## Task Type\n\nshelve')
   })
 
   test('includes Shelves Idea section with link to target idea', async () => {
@@ -749,6 +783,18 @@ describe('createExpediteIdeaTask', () => {
     expect(content).toContain(
       '- Idea is implemented directly OR one or more new tasks are created in `.dust/tasks/`'
     )
+  })
+
+  test('includes Task Type section with implement value', async () => {
+    const fileSystem = createFileSystem()
+    const result = await createExpediteIdeaTask(
+      fileSystem,
+      '/project/.dust',
+      'progress-broadcasting'
+    )
+
+    const content = fileSystem.writtenFiles.get(result.filePath) as string
+    expect(content).toContain('## Task Type\n\nimplement')
   })
 
   test('includes Expedites Idea section with link to target idea', async () => {
@@ -854,6 +900,7 @@ describe('createIdeaTask', () => {
     // Opening sentence should NOT reference title/description inline
     expect(content).not.toContain('The idea should have the title')
     expect(content).not.toContain('start from the following description')
+    expect(content).toContain('## Task Type\n\ncapture')
     expect(content).toContain(
       '- One or more idea files are created in `.dust/ideas/`'
     )
@@ -932,6 +979,7 @@ describe('createIdeaTask', () => {
     expect(content).toContain(
       'Run `dust principles` and `dust facts` for relevant context.'
     )
+    expect(content).toContain('## Task Type\n\nimplement')
     expect(content).toContain(
       '- Idea is implemented directly OR one or more new tasks are created'
     )
