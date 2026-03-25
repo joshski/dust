@@ -103,16 +103,28 @@ describe('focus', () => {
 
 describe('buildImplementationInstructions', () => {
   test('includes idea file deletion instruction for regular tasks', () => {
-    const result = buildImplementationInstructions('dust', false, 'Add login')
+    const result = buildImplementationInstructions(
+      'dust',
+      false,
+      'Add login',
+      undefined,
+      undefined,
+      undefined,
+      'refine'
+    )
 
     expect(result).toContain('Deletion of the idea file that spawned this task')
   })
 
-  test('omits idea file deletion instruction for Expedite Idea tasks', () => {
+  test('omits idea file deletion instruction for implement type tasks', () => {
     const result = buildImplementationInstructions(
       'dust',
       false,
-      'Expedite Idea: Add login feature'
+      'Add login feature',
+      undefined,
+      undefined,
+      undefined,
+      'implement'
     )
 
     expect(result).not.toContain(
@@ -120,7 +132,7 @@ describe('buildImplementationInstructions', () => {
     )
   })
 
-  test('includes idea file deletion instruction when no task title provided', () => {
+  test('includes idea file deletion instruction when no task type provided', () => {
     const result = buildImplementationInstructions('dust', false)
 
     expect(result).toContain('Deletion of the idea file that spawned this task')

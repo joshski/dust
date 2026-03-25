@@ -7,7 +7,7 @@
  * Usage: dust focus "add login box"
  */
 
-import { EXPEDITE_IDEA_PREFIX } from '../../artifacts/workflow-tasks'
+import type { TaskType } from '../../artifacts/workflow-tasks'
 import type { CommandDependencies, CommandResult } from '../types'
 import { manageGitHooks, templateVariables } from '../shared/agent-shared'
 
@@ -17,13 +17,14 @@ export function buildImplementationInstructions(
   taskTitle?: string,
   taskPath?: string,
   installCommand?: string,
-  skipPreflightSteps?: boolean
+  skipPreflightSteps?: boolean,
+  taskType?: TaskType
 ): string {
   const steps: string[] = []
   let step = 1
 
-  // Expedite Idea tasks have no associated idea file since the idea content lives inline in the task
-  const hasIdeaFile = !taskTitle?.startsWith(EXPEDITE_IDEA_PREFIX)
+  // Tasks of type 'implement' have no associated idea file since the idea content lives inline in the task
+  const hasIdeaFile = taskType !== 'implement'
 
   steps.push(`Note: Do NOT run \`${bin} agent\`.`, '')
 

@@ -61,14 +61,15 @@ Use a todo list to track your progress through these steps.
 4. Create a new markdown file in \`.dust/tasks/\` with a descriptive kebab-case name (e.g., \`add-user-authentication.md\`)
 5. Add a title as the first line using an H1 heading (e.g., \`# Add user authentication\`)
 6. Write a comprehensive description starting with an imperative opening sentence (e.g., "Add caching to the API layer." not "This task adds caching."). The opening sentence must be 150 characters or fewer. Include technical details and references to relevant files.
-7. Add a \`## Principles\` section with links to relevant principles this task supports (e.g., \`- [Principle Name](../principles/principle-name.md)\`)
-8. Add a \`## Blocked By\` section listing any tasks that must complete first, or \`(none)\` if there are no blockers
-9. Add a \`## Definition of Done\` section with completion criteria using \`- \` for each item
-10. Run \`dust lint\` to catch any issues with the task format
-11. Create a single atomic commit with a message in the format "Create task: Add task: <title>" that includes:
+7. Add a \`## Task Type\` section with the task type (\`implement\` for most tasks)
+8. Add a \`## Principles\` section with links to relevant principles this task supports (e.g., \`- [Principle Name](../principles/principle-name.md)\`)
+9. Add a \`## Blocked By\` section listing any tasks that must complete first, or \`(none)\` if there are no blockers
+10. Add a \`## Definition of Done\` section with completion criteria using \`- \` for each item
+11. Run \`dust lint\` to catch any issues with the task format
+12. Create a single atomic commit with a message in the format "Create task: Add task: <title>" that includes:
     - The new task file
     - Deletion of the idea file that spawned this task (if remaining scope exists, create new ideas for it)
-12. **Start a sub-agent** to implement the task: "Run \`dust implement task\` and implement the task in \`.dust/tasks/[task-file].md\`"`)
+13. **Start a sub-agent** to implement the task: "Run \`dust implement task\` and implement the task in \`.dust/tasks/[task-file].md\`"`)
 
     // Verify no stray template syntax or formatting issues
     expect(output).not.toContain('{{else}}')

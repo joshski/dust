@@ -60,19 +60,22 @@ function newTaskInstructions(vars: TemplateVars): string {
     '6. Write a comprehensive description starting with an imperative opening sentence (e.g., "Add caching to the API layer." not "This task adds caching."). The opening sentence must be 150 characters or fewer. Include technical details and references to relevant files.'
   )
   steps.push(
-    '7. Add a `## Principles` section with links to relevant principles this task supports (e.g., `- [Principle Name](../principles/principle-name.md)`)'
+    '7. Add a `## Task Type` section with the task type (`implement` for most tasks)'
   )
   steps.push(
-    '8. Add a `## Blocked By` section listing any tasks that must complete first, or `(none)` if there are no blockers'
+    '8. Add a `## Principles` section with links to relevant principles this task supports (e.g., `- [Principle Name](../principles/principle-name.md)`)'
   )
   steps.push(
-    '9. Add a `## Definition of Done` section with completion criteria using `- ` for each item'
+    '9. Add a `## Blocked By` section listing any tasks that must complete first, or `(none)` if there are no blockers'
   )
   steps.push(
-    `10. Run \`${vars.bin} lint\` to catch any issues with the task format`
+    '10. Add a `## Definition of Done` section with completion criteria using `- ` for each item'
   )
   steps.push(
-    '11. Create a single atomic commit with a message in the format "Create task: Add task: <title>" that includes:'
+    `11. Run \`${vars.bin} lint\` to catch any issues with the task format`
+  )
+  steps.push(
+    '12. Create a single atomic commit with a message in the format "Create task: Add task: <title>" that includes:'
   )
   steps.push('    - The new task file')
 
@@ -82,10 +85,10 @@ function newTaskInstructions(vars: TemplateVars): string {
 
   if (vars.isClaudeCodeWeb) {
     steps.push(
-      `12. **Start a sub-agent** to implement the task: "Run \`${vars.bin} implement task\` and implement the task in \`.dust/tasks/[task-file].md\`"`
+      `13. **Start a sub-agent** to implement the task: "Run \`${vars.bin} implement task\` and implement the task in \`.dust/tasks/[task-file].md\`"`
     )
   } else {
-    steps.push('12. Push your commit to the remote repository')
+    steps.push('13. Push your commit to the remote repository')
   }
 
   return steps.join('\n')
