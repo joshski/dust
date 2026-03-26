@@ -514,7 +514,7 @@ describe('decomposeIdea', () => {
       "- Task's Principles section links to relevant principles from .dust/principles/"
     )
     expect(content).toContain(
-      '- The original idea is deleted or updated to reflect remaining scope'
+      '- The original idea (.dust/ideas/progress-broadcasting.md) is deleted or updated to reflect remaining scope'
     )
   })
 

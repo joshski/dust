@@ -574,7 +574,7 @@ export async function decomposeIdea(
     [
       'One or more new tasks are created in .dust/tasks/',
       "Task's Principles section links to relevant principles from .dust/principles/",
-      'The original idea is deleted or updated to reflect remaining scope',
+      `The original idea (.dust/ideas/${options.ideaSlug}.md) is deleted or updated to reflect remaining scope`,
     ],
     'Decomposes Idea',
     {
