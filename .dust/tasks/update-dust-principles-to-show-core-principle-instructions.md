@@ -26,7 +26,7 @@ implement
 
 ## Blocked By
 
-- [Add dust core principle Command](add-dust-core-principle-command.md)
+(none)
 
 ## Definition of Done
 

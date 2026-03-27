@@ -21,6 +21,7 @@ import { audit } from './commands/audit'
 import { bucketWorker } from './commands/bucket-worker'
 import { bucketTool } from './commands/bucket-tool'
 import { check as checkCommand } from './commands/check'
+import { corePrinciple } from './commands/core-principle'
 import { focus } from './commands/focus'
 import { generateHelpText, help } from './commands/help'
 import { implementTask } from './commands/implement-task'
@@ -92,6 +93,7 @@ const commandRegistry = {
   audit,
   'bucket worker': bucketWorker,
   'bucket tool': bucketTool,
+  'core principle': corePrinciple,
   focus,
   'new task': newTask,
   'new principle': newPrinciple,
