@@ -491,7 +491,7 @@ async function processPrinciplesList(
           openingSentence: extractOpeningSentence(p.content),
         }))
       const coreLines = formatPrinciplesSection(
-        '🎯 Core Principles (bundled)',
+        '🎯 Core Principles (use: dust core principle <name>)',
         coreEntries
       )
       for (const line of coreLines) {
