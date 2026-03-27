@@ -2,11 +2,10 @@
  * dust [type] - List tasks, ideas, principles, or facts (e.g., dust tasks, dust principles)
  */
 
-import { basename, resolve } from 'node:path'
+import { basename } from 'node:path'
 import { ARTIFACT_TYPES, type TaskType } from '../../artifacts/index'
 import {
   getCorePrincipleHierarchy,
-  getCorePrinciplesPath,
   readAllCorePrinciples,
   type CorePrincipleNode,
   type Principle,
@@ -400,14 +399,8 @@ interface PrinciplesListContext {
 }
 
 async function loadCorePrinciples(
-  localDirPath: string,
   excludeSet: Set<string>
 ): Promise<Principle[]> {
-  const corePath = getCorePrinciplesPath().replace(/\/$/, '')
-  /* istanbul ignore next @preserve -- only true when running from the dust repo itself */
-  if (resolve(localDirPath) === resolve(corePath)) {
-    return []
-  }
   const allCorePrinciples = await readAllCorePrinciples()
   return allCorePrinciples.filter(
     p => !isInternalPrinciple(p.content) && !excludeSet.has(p.slug)
@@ -424,9 +417,8 @@ async function processPrinciplesList(
   // Get local principles path
   const localDirPath = `${dustPath}/principles`
 
-  // Load core principles, skipping when local and core point to the same
-  // directory (i.e. when running from the dust repo itself)
-  const corePrinciples = await loadCorePrinciples(localDirPath, excludeSet)
+  // Load core principles from bundled module
+  const corePrinciples = await loadCorePrinciples(excludeSet)
   const hasCorePrinciples = corePrinciples.length > 0
 
   // Get local principles
@@ -492,7 +484,6 @@ async function processPrinciplesList(
     // Compact mode (default): render flat list with slugs and opening sentences
     /* istanbul ignore next @preserve -- core principles always exist in the package */
     if (hasCorePrinciples) {
-      const corePath = getCorePrinciplesPath()
       const coreEntries: PrincipleEntry[] = corePrinciples
         .toSorted((a, b) => a.slug.localeCompare(b.slug))
         .map(p => ({
@@ -500,7 +491,7 @@ async function processPrinciplesList(
           openingSentence: extractOpeningSentence(p.content),
         }))
       const coreLines = formatPrinciplesSection(
-        `🎯 Core Principles (${corePath})`,
+        '🎯 Core Principles (bundled)',
         coreEntries
       )
       for (const line of coreLines) {

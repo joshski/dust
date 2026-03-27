@@ -3,7 +3,6 @@ import {
   readAllCorePrinciples,
   getCorePrincipleSlugs,
   getCorePrincipleHierarchy,
-  getCorePrinciplesPath,
   isInternalPrinciple,
   listCorePrinciples,
   getCorePrincipleTree,
@@ -137,13 +136,6 @@ describe('core-principles entry point', () => {
 
       const filteredSlugs = collectSlugs(filteredHierarchy)
       expect(filteredSlugs).not.toContain(slugToExclude)
-    })
-  })
-
-  describe('getCorePrinciplesPath', () => {
-    test('returns path ending with .dust/principles/', () => {
-      const path = getCorePrinciplesPath()
-      expect(path).toMatch(/\.dust\/principles\/$/)
     })
   })
 

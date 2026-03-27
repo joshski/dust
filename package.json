@@ -56,8 +56,7 @@
     "bin",
     "lib/istanbul/minimal-reporter.cjs",
     "lib/docker/default.Dockerfile",
-    "biome",
-    ".dust/principles"
+    "biome"
   ],
   "repository": {
     "type": "git",

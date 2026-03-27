@@ -26,7 +26,6 @@ implement
 
 ## Blocked By
 
-- [Bundle Core Principles as JavaScript Module](bundle-core-principles-as-javascript-module.md)
 - [Add dust core principle Command](add-dust-core-principle-command.md)
 
 ## Definition of Done

@@ -29,7 +29,7 @@ implement
 
 ## Blocked By
 
-- [Bundle Core Principles as JavaScript Module](bundle-core-principles-as-javascript-module.md)
+(none)
 
 ## Definition of Done
 

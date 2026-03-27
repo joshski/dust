@@ -11,5 +11,11 @@
   "bracketSameLine": false,
   "bracketSpacing": true,
   "singleAttributePerLine": false,
-  "ignorePatterns": ["node_modules", "dist", "coverage", ".claude"]
+  "ignorePatterns": [
+    "node_modules",
+    "dist",
+    "coverage",
+    ".claude",
+    "lib/bundled-core-principles.ts"
+  ]
 }

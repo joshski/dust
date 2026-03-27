@@ -9,6 +9,21 @@ const version = packageJson.version
 
 const define = { __DUST_VERSION__: JSON.stringify(version) }
 
+// Bundle core principles before building
+const bundlePrinciples = Bun.spawn(
+  ['bun', 'run', join(root, 'scripts', 'bundle-core-principles.ts')],
+  {
+    cwd: root,
+    stdout: 'inherit',
+    stderr: 'inherit',
+  }
+)
+const bundleExitCode = await bundlePrinciples.exited
+if (bundleExitCode !== 0) {
+  console.error('Failed to bundle core principles')
+  process.exit(bundleExitCode)
+}
+
 const bundles: { entrypoint: string; outfile: string; shebang?: boolean }[] = [
   { entrypoint: 'lib/cli/run.ts', outfile: 'dist/dust.js', shebang: true },
   { entrypoint: 'lib/logging/index.ts', outfile: 'dist/logging.js' },

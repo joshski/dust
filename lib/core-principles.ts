@@ -1,16 +1,15 @@
 /**
  * Core Principles Reading API - Entry point
  *
- * Imperative shell that reads principles from the package's bundled directory
- * and provides access through pure functional filtering.
+ * Reads principles from bundled JavaScript module (no file system access needed).
  */
 
-import { join, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { existsSync, readdirSync } from 'node:fs'
-import { readFile } from 'node:fs/promises'
-import { parsePrinciple } from './artifacts/principles'
+import { BUNDLED_PRINCIPLES } from './bundled-core-principles'
 import type { Principle } from './artifacts/principles'
+import {
+  extractTitle,
+  MARKDOWN_LINK_PATTERN,
+} from './markdown/markdown-utilities'
 import {
   type CorePrinciplesConfig,
   type CorePrincipleNode,
@@ -18,68 +17,98 @@ import {
   listCorePrinciples,
   getCorePrincipleTree,
 } from './artifacts/core-principles'
-import type { FileReader } from './filesystem/types'
 
 // Re-export types and pure functions
 export type { CorePrinciplesConfig, CorePrincipleNode, Principle }
 export { isInternalPrinciple, listCorePrinciples, getCorePrincipleTree }
 
 /**
- * Creates a FileReader for use with parsePrinciple.
+ * Extracts link targets from a section of markdown.
+ * Returns an array of slugs derived from the link targets.
  */
-function createFileReader(): FileReader {
+function extractLinksFromSection(
+  content: string,
+  sectionHeading: string
+): string[] {
+  const lines = content.split('\n')
+  const links: string[] = []
+
+  let inSection = false
+
+  for (const line of lines) {
+    // Check for h2 headings
+    if (line.startsWith('## ')) {
+      inSection = line.trimEnd() === `## ${sectionHeading}`
+      continue
+    }
+
+    if (!inSection) continue
+
+    // Stop at next h2 or h1
+    /* istanbul ignore next @preserve -- only triggers for malformed principles with content after h1 */
+    if (line.startsWith('# ')) break
+
+    // Look for markdown links
+    const linkMatch = line.match(MARKDOWN_LINK_PATTERN)
+    if (linkMatch) {
+      const target = linkMatch[2]
+      // Extract slug from relative path like '../principles/some-principle.md'
+      // or 'some-principle.md'
+      const slugMatch = target.match(/([^/]+)\.md$/)
+      /* istanbul ignore else @preserve -- all core principles links have .md extension */
+      if (slugMatch) {
+        links.push(slugMatch[1])
+      }
+    }
+  }
+
+  return links
+}
+
+/**
+ * Extracts a single link from a section, or null if none/multiple exist.
+ */
+function extractSingleLinkFromSection(
+  content: string,
+  sectionHeading: string
+): string | null {
+  const links = extractLinksFromSection(content, sectionHeading)
+  return links.length === 1 ? links[0] : null
+}
+
+/**
+ * Parses principle content into a structured Principle object.
+ */
+function parsePrincipleContent(slug: string, content: string): Principle {
+  const title = extractTitle(content)
+  /* istanbul ignore next @preserve -- all bundled principles have valid titles */
+  if (!title) {
+    throw new Error(`Principle has no title: ${slug}`)
+  }
+
+  const parentPrinciple = extractSingleLinkFromSection(
+    content,
+    'Parent Principle'
+  )
+  const subPrinciples = extractLinksFromSection(content, 'Sub-Principles')
+
   return {
-    exists: existsSync,
-    readFile: (path: string) => readFile(path, 'utf-8'),
+    slug,
+    title,
+    content,
+    parentPrinciple,
+    subPrinciples,
   }
 }
 
 /**
- * Locates the package's .dust/principles directory.
- * Works whether running from source or from the installed package.
- */
-function locatePackagePrinciplesDir(): string {
-  // __dirname equivalent for ESM
-  const thisFile = fileURLToPath(import.meta.url)
-  const thisDir = dirname(thisFile)
-
-  // When running from dist/, go up one level to package root
-  // When running from lib/, also go up one level to package root
-  const packageRoot = dirname(thisDir)
-  const principlesDir = join(packageRoot, '.dust', 'principles')
-
-  /* istanbul ignore next @preserve -- only fails if package is corrupted or not installed */
-  if (!existsSync(principlesDir)) {
-    throw new Error(
-      `Core principles directory not found at ${principlesDir}. ` +
-        'Ensure the @joshski/dust package is properly installed.'
-    )
-  }
-
-  return principlesDir
-}
-
-/**
- * Reads all principles from the package's bundled .dust/principles directory.
- * This is the imperative shell - it performs I/O to load principle data.
+ * Reads all principles from the bundled module.
+ * No file system access required.
  */
 export async function readAllCorePrinciples(): Promise<Principle[]> {
-  const principlesDir = locatePackagePrinciplesDir()
-  const packageRoot = dirname(dirname(principlesDir))
-  const dustPath = join(packageRoot, '.dust')
-
-  const fileSystem = createFileReader()
-  const files = readdirSync(principlesDir)
-  const mdFiles = files.filter(f => f.endsWith('.md'))
-
-  const principles: Principle[] = []
-  for (const file of mdFiles) {
-    const slug = file.replace(/\.md$/, '')
-    const principle = await parsePrinciple(fileSystem, dustPath, slug)
-    principles.push(principle)
-  }
-
-  return principles
+  return BUNDLED_PRINCIPLES.map(({ slug, content }) =>
+    parsePrincipleContent(slug, content)
+  )
 }
 
 /**
@@ -102,14 +131,4 @@ export async function getCorePrincipleHierarchy(
 ): Promise<CorePrincipleNode[]> {
   const allPrinciples = await readAllCorePrinciples()
   return getCorePrincipleTree(allPrinciples, config)
-}
-
-/**
- * Returns the path to the core principles directory for display purposes.
- * Returns a relative path suitable for showing to users.
- */
-export function getCorePrinciplesPath(): string {
-  const principlesDir = locatePackagePrinciplesDir()
-  // Return the path with trailing slash for clarity
-  return `${principlesDir}/`
 }
