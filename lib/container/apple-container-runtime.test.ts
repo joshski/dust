@@ -1,35 +1,12 @@
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
-import { asChildProcessStub } from '../test-support/test-utilities'
+import {
+  asChildProcessStub,
+  asTestType,
+  createSpawnEmulator,
+} from '../test-support/test-utilities'
 import type { ContainerDependencies } from './runtime'
 import { appleContainerRuntime } from './apple-container-runtime'
-
-function createMockSpawn(
-  exitCode: number | null = 0,
-  errorToThrow?: Error,
-  stderrData?: string
-): ContainerDependencies['spawn'] {
-  return (() => {
-    const proc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter | null
-      stderr: EventEmitter
-    }
-    proc.stdout = new EventEmitter()
-    proc.stderr = new EventEmitter()
-
-    setTimeout(() => {
-      if (stderrData) {
-        proc.stderr.emit('data', Buffer.from(stderrData))
-      }
-      if (errorToThrow) {
-        proc.emit('error', errorToThrow)
-      } else {
-        proc.emit('close', exitCode)
-      }
-    }, 0)
-    return asChildProcessStub(proc)
-  }) as ContainerDependencies['spawn']
-}
 
 describe('appleContainerRuntime', () => {
   test('has correct name', () => {
@@ -43,8 +20,9 @@ describe('appleContainerRuntime', () => {
 
 describe('appleContainerRuntime.isAvailable', () => {
   test('returns true when container --version succeeds', async () => {
+    const { spawn } = createSpawnEmulator({ autoResolve: true })
     const dependencies: ContainerDependencies = {
-      spawn: createMockSpawn(0),
+      spawn: asTestType<ContainerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }
@@ -54,8 +32,12 @@ describe('appleContainerRuntime.isAvailable', () => {
   })
 
   test('returns false when container --version fails', async () => {
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      defaultExitCode: 1,
+    })
     const dependencies: ContainerDependencies = {
-      spawn: createMockSpawn(1),
+      spawn: asTestType<ContainerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }
@@ -65,8 +47,14 @@ describe('appleContainerRuntime.isAvailable', () => {
   })
 
   test('returns false when container command is not found', async () => {
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        container: { error: new Error('spawn ENOENT') },
+      },
+    })
     const dependencies: ContainerDependencies = {
-      spawn: createMockSpawn(null, new Error('spawn ENOENT')),
+      spawn: asTestType<ContainerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }
@@ -78,8 +66,9 @@ describe('appleContainerRuntime.isAvailable', () => {
 
 describe('appleContainerRuntime.buildImage', () => {
   test('returns success when build succeeds', async () => {
+    const { spawn } = createSpawnEmulator({ autoResolve: true })
     const dependencies: ContainerDependencies = {
-      spawn: createMockSpawn(0),
+      spawn: asTestType<ContainerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }
@@ -93,8 +82,14 @@ describe('appleContainerRuntime.buildImage', () => {
   })
 
   test('returns error when build fails', async () => {
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        container: { exitCode: 1, stderr: 'Build error: no such file' },
+      },
+    })
     const dependencies: ContainerDependencies = {
-      spawn: createMockSpawn(1, undefined, 'Build error: no such file'),
+      spawn: asTestType<ContainerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }
@@ -112,8 +107,14 @@ describe('appleContainerRuntime.buildImage', () => {
   })
 
   test('returns error when spawn fails', async () => {
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        container: { error: new Error('spawn ENOENT') },
+      },
+    })
     const dependencies: ContainerDependencies = {
-      spawn: createMockSpawn(null, new Error('spawn ENOENT')),
+      spawn: asTestType<ContainerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }

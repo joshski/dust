@@ -1,6 +1,10 @@
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
-import { asChildProcessStub } from '../test-support/test-utilities'
+import {
+  asChildProcessStub,
+  asTestType,
+  createSpawnEmulator,
+} from '../test-support/test-utilities'
 import {
   createAuthHeader,
   extractGitEndpoint,
@@ -8,42 +12,6 @@ import {
   getGitCredentials,
   parseGitPath,
 } from './git-credential-proxy'
-
-function createMockSpawn(
-  exitCode: number | null = 0,
-  stdoutData?: string,
-  stderrData?: string,
-  errorToThrow?: Error
-): GitCredentialProxyDependencies['spawn'] {
-  return (() => {
-    const proc = new EventEmitter() as EventEmitter & {
-      stdin: EventEmitter & { write: () => void; end: () => void }
-      stdout: EventEmitter
-      stderr: EventEmitter
-    }
-    proc.stdin = Object.assign(new EventEmitter(), {
-      write: () => {},
-      end: () => {},
-    })
-    proc.stdout = new EventEmitter()
-    proc.stderr = new EventEmitter()
-
-    setTimeout(() => {
-      if (stdoutData) {
-        proc.stdout.emit('data', Buffer.from(stdoutData))
-      }
-      if (stderrData) {
-        proc.stderr.emit('data', Buffer.from(stderrData))
-      }
-      if (errorToThrow) {
-        proc.emit('error', errorToThrow)
-      } else {
-        proc.emit('close', exitCode)
-      }
-    }, 0)
-    return asChildProcessStub(proc)
-  }) as GitCredentialProxyDependencies['spawn']
-}
 
 describe('parseGitPath', () => {
   test('parses owner/repo format with github.com default', () => {
@@ -151,11 +119,18 @@ describe('extractGitEndpoint', () => {
 
 describe('getGitCredentials', () => {
   test('returns credentials when git credential fill succeeds', async () => {
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        git: {
+          exitCode: 0,
+          stdout:
+            'protocol=https\nhost=github.com\nusername=user\npassword=token123\n',
+        },
+      },
+    })
     const dependencies: GitCredentialProxyDependencies = {
-      spawn: createMockSpawn(
-        0,
-        'protocol=https\nhost=github.com\nusername=user\npassword=token123\n'
-      ),
+      spawn: asTestType<GitCredentialProxyDependencies['spawn']>(spawn),
     }
 
     const result = await getGitCredentials('github.com', dependencies)
@@ -166,8 +141,14 @@ describe('getGitCredentials', () => {
   })
 
   test('returns null when git credential fill fails', async () => {
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        git: { exitCode: 1, stderr: 'error: no credential helper' },
+      },
+    })
     const dependencies: GitCredentialProxyDependencies = {
-      spawn: createMockSpawn(1, '', 'error: no credential helper'),
+      spawn: asTestType<GitCredentialProxyDependencies['spawn']>(spawn),
     }
 
     const result = await getGitCredentials('github.com', dependencies)
@@ -175,8 +156,14 @@ describe('getGitCredentials', () => {
   })
 
   test('returns null when spawn throws error', async () => {
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        git: { error: new Error('spawn ENOENT') },
+      },
+    })
     const dependencies: GitCredentialProxyDependencies = {
-      spawn: createMockSpawn(null, '', '', new Error('spawn ENOENT')),
+      spawn: asTestType<GitCredentialProxyDependencies['spawn']>(spawn),
     }
 
     const result = await getGitCredentials('github.com', dependencies)
@@ -219,11 +206,17 @@ describe('getGitCredentials', () => {
   })
 
   test('returns null when credentials are incomplete', async () => {
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        git: {
+          exitCode: 0,
+          stdout: 'protocol=https\nhost=github.com\nusername=user\n',
+        },
+      },
+    })
     const dependencies: GitCredentialProxyDependencies = {
-      spawn: createMockSpawn(
-        0,
-        'protocol=https\nhost=github.com\nusername=user\n'
-      ),
+      spawn: asTestType<GitCredentialProxyDependencies['spawn']>(spawn),
     }
 
     const result = await getGitCredentials('github.com', dependencies)

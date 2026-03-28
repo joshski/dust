@@ -1,6 +1,10 @@
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
-import { asChildProcessStub } from '../test-support/test-utilities'
+import {
+  asChildProcessStub,
+  asTestType,
+  createSpawnEmulator,
+} from '../test-support/test-utilities'
 import {
   buildDockerImage,
   type DockerDependencies,
@@ -13,37 +17,11 @@ import {
 } from './docker-agent'
 import { appleContainerRuntime } from '../container/apple-container-runtime'
 
-function createMockSpawn(
-  exitCode: number | null = 0,
-  errorToThrow?: Error,
-  stderrData?: string
-): DockerDependencies['spawn'] {
-  return (() => {
-    const proc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter | null
-      stderr: EventEmitter
-    }
-    proc.stdout = new EventEmitter()
-    proc.stderr = new EventEmitter()
-
-    setTimeout(() => {
-      if (stderrData) {
-        proc.stderr.emit('data', Buffer.from(stderrData))
-      }
-      if (errorToThrow) {
-        proc.emit('error', errorToThrow)
-      } else {
-        proc.emit('close', exitCode)
-      }
-    }, 0)
-    return asChildProcessStub(proc)
-  }) as DockerDependencies['spawn']
-}
-
 describe('isDockerAvailable', () => {
   test('returns true when docker --version succeeds', async () => {
+    const { spawn } = createSpawnEmulator({ autoResolve: true })
     const dependencies: DockerDependencies = {
-      spawn: createMockSpawn(0),
+      spawn: asTestType<DockerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }
@@ -53,8 +31,12 @@ describe('isDockerAvailable', () => {
   })
 
   test('returns false when docker --version fails', async () => {
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      defaultExitCode: 1,
+    })
     const dependencies: DockerDependencies = {
-      spawn: createMockSpawn(1),
+      spawn: asTestType<DockerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }
@@ -64,8 +46,14 @@ describe('isDockerAvailable', () => {
   })
 
   test('returns false when docker command is not found', async () => {
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        docker: { error: new Error('spawn ENOENT') },
+      },
+    })
     const dependencies: DockerDependencies = {
-      spawn: createMockSpawn(null, new Error('spawn ENOENT')),
+      spawn: asTestType<DockerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }
@@ -103,8 +91,9 @@ describe('generateImageTag', () => {
 
 describe('buildDockerImage', () => {
   test('returns success when build succeeds', async () => {
+    const { spawn } = createSpawnEmulator({ autoResolve: true })
     const dependencies: DockerDependencies = {
-      spawn: createMockSpawn(0),
+      spawn: asTestType<DockerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }
@@ -118,8 +107,14 @@ describe('buildDockerImage', () => {
   })
 
   test('returns error when build fails', async () => {
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        docker: { exitCode: 1, stderr: 'Build error: no such file' },
+      },
+    })
     const dependencies: DockerDependencies = {
-      spawn: createMockSpawn(1, undefined, 'Build error: no such file'),
+      spawn: asTestType<DockerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }
@@ -137,8 +132,14 @@ describe('buildDockerImage', () => {
   })
 
   test('returns error when spawn fails', async () => {
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        docker: { error: new Error('spawn ENOENT') },
+      },
+    })
     const dependencies: DockerDependencies = {
-      spawn: createMockSpawn(null, new Error('spawn ENOENT')),
+      spawn: asTestType<DockerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }
@@ -194,8 +195,9 @@ describe('buildDockerImage', () => {
 
 describe('hasDockerfile', () => {
   test('returns true when .dust/config/container/Dockerfile exists', () => {
+    const { spawn } = createSpawnEmulator({ autoResolve: true })
     const dependencies: DockerDependencies = {
-      spawn: createMockSpawn(0),
+      spawn: asTestType<DockerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: (p: string) =>
         p === '/home/user/project/.dust/config/container/Dockerfile',
@@ -205,8 +207,9 @@ describe('hasDockerfile', () => {
   })
 
   test('returns false when .dust/config/container/Dockerfile does not exist', () => {
+    const { spawn } = createSpawnEmulator({ autoResolve: true })
     const dependencies: DockerDependencies = {
-      spawn: createMockSpawn(0),
+      spawn: asTestType<DockerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => false,
     }
@@ -225,8 +228,9 @@ describe('getDefaultDockerfilePath', () => {
 describe('prepareDockerConfig', () => {
   test('returns empty object when no Dockerfile and forceDocker is false', async () => {
     const events: { type: string }[] = []
+    const { spawn } = createSpawnEmulator({ autoResolve: true })
     const dependencies: DockerDependencies = {
-      spawn: createMockSpawn(0),
+      spawn: asTestType<DockerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => false,
     }
@@ -325,8 +329,12 @@ describe('prepareDockerConfig', () => {
 
   test('returns error when Docker not available with forceDocker', async () => {
     const events: { type: string; imageTag?: string }[] = []
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      defaultExitCode: 1,
+    })
     const dependencies: DockerDependencies = {
-      spawn: createMockSpawn(1),
+      spawn: asTestType<DockerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => false,
     }
@@ -345,8 +353,12 @@ describe('prepareDockerConfig', () => {
 
   test('returns Apple Container error when runtime not available with forceContainer', async () => {
     const events: { type: string; imageTag?: string }[] = []
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      defaultExitCode: 1,
+    })
     const dependencies: DockerDependencies = {
-      spawn: createMockSpawn(1),
+      spawn: asTestType<DockerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => false,
     }

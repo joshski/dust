@@ -1,9 +1,9 @@
-import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
 import {
-  asChildProcessStub,
+  asTestType,
   createContextEmulator,
   createFileSystemEmulator,
+  createSpawnEmulator,
   createTestRuntimeConfig,
   createTestSessionConfig,
 } from '../../test-support/test-utilities'
@@ -26,27 +26,12 @@ function createDependencies(
   }
 }
 
-function createMockChildProcess(exitCode = 0) {
-  const proc = new EventEmitter() as EventEmitter & {
-    stdout: EventEmitter | null
-    stderr: EventEmitter
-  }
-  proc.stdout = null
-  proc.stderr = new EventEmitter()
-  setTimeout(() => proc.emit('close', exitCode), 0)
-  return asChildProcessStub(proc)
-}
-
-function createMockSpawn(pullExitCode = 0) {
-  return (() =>
-    createMockChildProcess(pullExitCode)) as LoopDependencies['spawn']
-}
-
 function createLoopDeps(
   overrides: Partial<LoopDependencies> = {}
 ): LoopDependencies {
+  const { spawn } = createSpawnEmulator({ autoResolve: true })
   return {
-    spawn: createMockSpawn(),
+    spawn: asTestType<LoopDependencies['spawn']>(spawn),
     run: async () => {},
     sleep: async () => {},
     postEvent: async () => {},

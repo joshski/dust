@@ -1,6 +1,10 @@
 import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
-import { asChildProcessStub } from '../test-support/test-utilities'
+import {
+  asChildProcessStub,
+  asTestType,
+  createSpawnEmulator,
+} from '../test-support/test-utilities'
 import type { ContainerDependencies } from './runtime'
 import {
   dockerRuntime,
@@ -8,33 +12,6 @@ import {
   getDefaultDockerfilePath,
   hasDockerfile,
 } from './docker-runtime'
-
-function createMockSpawn(
-  exitCode: number | null = 0,
-  errorToThrow?: Error,
-  stderrData?: string
-): ContainerDependencies['spawn'] {
-  return (() => {
-    const proc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter | null
-      stderr: EventEmitter
-    }
-    proc.stdout = new EventEmitter()
-    proc.stderr = new EventEmitter()
-
-    setTimeout(() => {
-      if (stderrData) {
-        proc.stderr.emit('data', Buffer.from(stderrData))
-      }
-      if (errorToThrow) {
-        proc.emit('error', errorToThrow)
-      } else {
-        proc.emit('close', exitCode)
-      }
-    }, 0)
-    return asChildProcessStub(proc)
-  }) as ContainerDependencies['spawn']
-}
 
 describe('dockerRuntime', () => {
   test('has correct name', () => {
@@ -48,8 +25,9 @@ describe('dockerRuntime', () => {
 
 describe('dockerRuntime.isAvailable', () => {
   test('returns true when docker --version succeeds', async () => {
+    const { spawn } = createSpawnEmulator({ autoResolve: true })
     const dependencies: ContainerDependencies = {
-      spawn: createMockSpawn(0),
+      spawn: asTestType<ContainerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }
@@ -59,8 +37,12 @@ describe('dockerRuntime.isAvailable', () => {
   })
 
   test('returns false when docker --version fails', async () => {
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      defaultExitCode: 1,
+    })
     const dependencies: ContainerDependencies = {
-      spawn: createMockSpawn(1),
+      spawn: asTestType<ContainerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }
@@ -70,8 +52,14 @@ describe('dockerRuntime.isAvailable', () => {
   })
 
   test('returns false when docker command is not found', async () => {
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        docker: { error: new Error('spawn ENOENT') },
+      },
+    })
     const dependencies: ContainerDependencies = {
-      spawn: createMockSpawn(null, new Error('spawn ENOENT')),
+      spawn: asTestType<ContainerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }
@@ -83,8 +71,9 @@ describe('dockerRuntime.isAvailable', () => {
 
 describe('dockerRuntime.buildImage', () => {
   test('returns success when build succeeds', async () => {
+    const { spawn } = createSpawnEmulator({ autoResolve: true })
     const dependencies: ContainerDependencies = {
-      spawn: createMockSpawn(0),
+      spawn: asTestType<ContainerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }
@@ -98,8 +87,14 @@ describe('dockerRuntime.buildImage', () => {
   })
 
   test('returns error when build fails', async () => {
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        docker: { exitCode: 1, stderr: 'Build error: no such file' },
+      },
+    })
     const dependencies: ContainerDependencies = {
-      spawn: createMockSpawn(1, undefined, 'Build error: no such file'),
+      spawn: asTestType<ContainerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }
@@ -117,8 +112,14 @@ describe('dockerRuntime.buildImage', () => {
   })
 
   test('returns error when spawn fails', async () => {
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        docker: { error: new Error('spawn ENOENT') },
+      },
+    })
     const dependencies: ContainerDependencies = {
-      spawn: createMockSpawn(null, new Error('spawn ENOENT')),
+      spawn: asTestType<ContainerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => true,
     }
@@ -260,8 +261,9 @@ describe('generateImageTag', () => {
 
 describe('hasDockerfile', () => {
   test('returns true when .dust/config/container/Dockerfile exists', () => {
+    const { spawn } = createSpawnEmulator({ autoResolve: true })
     const dependencies: ContainerDependencies = {
-      spawn: createMockSpawn(0),
+      spawn: asTestType<ContainerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: (p: string) =>
         p === '/home/user/project/.dust/config/container/Dockerfile',
@@ -271,8 +273,9 @@ describe('hasDockerfile', () => {
   })
 
   test('returns false when .dust/config/container/Dockerfile does not exist', () => {
+    const { spawn } = createSpawnEmulator({ autoResolve: true })
     const dependencies: ContainerDependencies = {
-      spawn: createMockSpawn(0),
+      spawn: asTestType<ContainerDependencies['spawn']>(spawn),
       homedir: () => '/home/user',
       existsSync: () => false,
     }
