@@ -671,15 +671,13 @@ function flakyTests(): string {
   return dedent`
     # Flaky Tests
 
-    Detect timing-dependent patterns that cause test flakiness, focusing on fixed sleep/delay usage.
+    Detect timing-dependent patterns that cause test flakiness. This includes fixed sleep/delay usage, event ordering assumptions, race conditions, missing synchronization, and subprocess timing issues.
 
     ${ideasHint}
 
     ## Context
 
-    Test flakiness undermines confidence in CI and slows development. The most common cause is timing dependencies—tests that use hardcoded delays like \`setTimeout()\` or \`sleep()\` instead of waiting for specific conditions. This audit detects fixed sleep patterns statically, enabling proactive remediation before flakiness manifests.
-
-    According to industry research, fixed delays account for nearly 50% of async-related test flakiness, making this the highest-impact category to address first.
+    Test flakiness undermines confidence in CI and slows development. While fixed delays account for nearly 50% of async-related test flakiness, the remaining issues stem from race conditions, event ordering assumptions, and missing synchronization. This audit provides comprehensive detection of async patterns that cause flakiness through semantic analysis of code structure and control flow.
 
     ## Scope
 
@@ -689,6 +687,10 @@ function flakyTests(): string {
     2. **Wait/delay utilities** - Custom wait functions that use fixed timeouts
     3. **Retry with fixed delays** - Retry loops that sleep a constant amount between attempts
     4. **Timing comments** - Comments indicating timing assumptions (e.g., "wait 100ms", "give it time to settle")
+    5. **Event ordering assumptions** - Tests assuming synchronous event propagation
+    6. **Race conditions** - Multiple concurrent async operations without proper synchronization
+    7. **Missing synchronization** - Assertions on eventually-consistent state without waiting
+    8. **Subprocess timing issues** - Child process tests with improper async handling
 
     ## Analysis Steps
 
@@ -720,7 +722,111 @@ function flakyTests(): string {
     - "let it settle"
     - References to specific millisecond values in comments near test assertions
 
-    ### 3. Identify Available Utilities
+    ### 3. Detect Event Ordering Assumptions
+
+    Search for tests that assume synchronous event propagation:
+
+    **Patterns to detect:**
+    - \`emitter.emit('event')\` or similar followed immediately by assertions (without await/wait)
+    - Event handler registration followed by immediate state checks
+    - Tests asserting on event-driven state changes without synchronization
+    - Missing promise wrappers around event-driven flows
+
+    **Example problematic pattern:**
+    \`\`\`typescript
+    eventEmitter.emit('data-updated')
+    expect(component.state).toBe('updated') // Assumes synchronous propagation
+    \`\`\`
+
+    **Suggested alternatives:**
+    - Promise-based event waiting: Wrap events in promises
+    - Polling utilities: Wait for state to match expected value
+    - Framework-specific event handling patterns
+
+    ### 4. Detect Race Conditions
+
+    Search for tests with multiple concurrent async operations without proper synchronization:
+
+    **Patterns to detect:**
+    - Multiple promise calls without \`Promise.all()\` or sequential awaits
+    - State mutations from different async contexts without locks/ordering
+    - \`afterEach()\`/\`afterAll()\` cleanup that may run before async operations complete
+    - Shared state between tests without proper reset in setup/teardown
+    - Tests where the outcome depends on which operation finishes first
+
+    **Example problematic patterns:**
+    \`\`\`typescript
+    // Missing Promise.all()
+    doAsync1() // Not awaited
+    doAsync2() // Not awaited
+    expect(result).toBe(expected) // Which result?
+
+    // Cleanup race
+    afterEach(() => {
+      cleanupState() // May run before async operations finish
+    })
+    \`\`\`
+
+    **Severity:** Mark as Critical when operations clearly race, Warning for potential races
+
+    ### 5. Detect Missing Synchronization
+
+    Search for assertions on eventually-consistent state:
+
+    **Patterns to detect:**
+    - Assertions on state modified by async operations without awaiting
+    - Manual polling with \`while\` loops and fixed delays
+    - Comments mentioning "eventually", "should become", "will be"
+    - Integration test retries or manual delay logic around assertions
+    - Database/cache operations followed by immediate reads without guarantees
+
+    **Example problematic pattern:**
+    \`\`\`typescript
+    saveToDatabase(data) // Async operation
+    const result = readFromDatabase() // Immediate read
+    expect(result).toBe(data) // May fail if write not complete
+    \`\`\`
+
+    **Suggest:** Condition-based waiting utilities or framework-provided eventually helpers
+
+    ### 6. Detect Subprocess/Child Process Timing Issues
+
+    Search for tests using child processes with improper async handling:
+
+    **Patterns to detect:**
+    - \`spawn()\`, \`exec()\`, \`fork()\` without waiting for completion
+    - Assertions on subprocess output without waiting for exit/close events
+    - Race conditions between stdout/stderr events and exit events
+    - Cleanup that doesn't account for async process termination
+    - Reading process output before process completes
+
+    **Example problematic patterns:**
+    \`\`\`typescript
+    const proc = spawn('command')
+    expect(proc.stdout).toContain('expected') // May not have output yet
+
+    // Cleanup race
+    afterEach(() => {
+      proc.kill() // Doesn't wait for process to actually exit
+    })
+    \`\`\`
+
+    **Suggest:** Promise-based subprocess wrappers or event-to-promise utilities
+
+    ### 7. Detect Framework-Agnostic Async Patterns
+
+    Search for common cross-framework async issues:
+
+    **Patterns to detect:**
+    - Missing awaits after state/DOM updates
+    - Hardcoded waits instead of selector/condition-based waiting
+    - Improper async wrapper usage (forgetting await, not handling promises)
+    - Async test functions without proper await chains
+    - \`.then()\` chains without error handling in tests
+
+    **Focus on patterns that appear across frameworks rather than framework-specific APIs.**
+
+    ### 8. Identify Available Utilities
 
     Before proposing solutions, search the codebase for existing condition-based waiting utilities:
 
@@ -802,18 +908,29 @@ function flakyTests(): string {
 
     Use these severity indicators in idea titles:
 
-    - **Critical:** Obvious fixed sleeps in critical test paths (e.g., "Flaky Test [CRITICAL]: ...")
+    - **Critical:** Obvious issues likely to cause flakiness (e.g., "Flaky Test [CRITICAL]: ...")
     - **Warning:** Suspicious patterns or edge cases (e.g., "Flaky Test [WARNING]: ...")
+    - **Info:** Timing dependencies that may be intentional (e.g., "Flaky Test [INFO]: ...")
 
     Mark patterns as Critical when:
     - Direct \`setTimeout\`/\`sleep\` calls with hardcoded durations
     - Retry logic with fixed delays
     - Comments explicitly mentioning waiting for time to pass
+    - Obvious race conditions between async operations
+    - Missing awaits on async operations before assertions
+    - Event emission followed immediately by assertions
 
     Mark patterns as Warning when:
     - Unclear if the delay is test-related or production code
     - Complex timing logic that may be intentional
+    - Potential race conditions requiring analysis
+    - Subprocess tests without clear synchronization
+    - Shared state between tests without visible reset
+
+    Mark patterns as Info when:
     - Borderline cases requiring human judgment
+    - Patterns that might be intentional performance tests
+    - Timing dependencies with unclear context
 
     ## Applicability
 
@@ -832,11 +949,16 @@ function flakyTests(): string {
     - Identified all test files in the codebase using common patterns
     - Searched test files for fixed sleep patterns (\`setTimeout\`, \`sleep\`, etc.)
     - Searched for timing-related comments in test files
+    - Detected event ordering assumptions (emit without wait)
+    - Detected race conditions (multiple async operations without synchronization)
+    - Detected missing synchronization (assertions on eventually-consistent state)
+    - Detected subprocess/child process timing issues
+    - Detected framework-agnostic async patterns (missing awaits, hardcoded waits)
     - Identified available condition-based waiting utilities (existing or framework-provided)
-    - Created idea files for each test file containing fixed sleep patterns
+    - Created idea files for each test file containing async patterns (one idea per test file)
     - Each idea includes context, findings with line numbers, and actionable solutions
     - Solutions are adapted to utilities available in the target codebase
-    - Severity levels assigned appropriately (Critical vs Warning)
+    - Severity levels assigned appropriately (Critical, Warning, or Info)
     - No changes to files outside \`.dust/\`
   `
 }
