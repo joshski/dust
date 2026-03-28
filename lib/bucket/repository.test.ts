@@ -1,8 +1,9 @@
-import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
 import {
+  asTestType,
   createContextEmulator,
   createFileSystemEmulator,
+  createSpawnEmulator,
   createTestAuthConfig,
   createTestRuntimeConfig,
   createTestSessionConfig,
@@ -43,70 +44,6 @@ import {
   startRepositoryLoop,
 } from './repository'
 
-interface SpawnCall {
-  command: string
-  spawnArguments: string[]
-  options?: { cwd?: string; env?: NodeJS.ProcessEnv; stdio?: unknown }
-}
-
-function createMockSpawn(): {
-  spawn: RepositoryDependencies['spawn']
-  calls: SpawnCall[]
-  processes: Map<string, EventEmitter>
-} {
-  const calls: SpawnCall[] = []
-  const processes = new Map<string, EventEmitter>()
-
-  const spawn = ((
-    command: string,
-    spawnArguments: string[],
-    options?: { cwd?: string; env?: NodeJS.ProcessEnv; stdio?: unknown }
-  ) => {
-    calls.push({ command, spawnArguments, options })
-    const proc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter | null
-      stderr: EventEmitter | null
-    }
-    proc.stdout = new EventEmitter()
-    proc.stderr = new EventEmitter()
-    const key = `${command} ${spawnArguments.join(' ')}`
-    processes.set(key, proc)
-    return proc
-  }) as RepositoryDependencies['spawn']
-
-  return { spawn, calls, processes }
-}
-
-/**
- * Create a spawn that auto-resolves all processes with exit code 0.
- * Useful for tests that go through runOneIteration where we don't
- * need to manually control subprocess timing.
- */
-function createAutoResolvingSpawn(): {
-  spawn: RepositoryDependencies['spawn']
-  calls: SpawnCall[]
-} {
-  const calls: SpawnCall[] = []
-
-  const spawn = ((
-    command: string,
-    spawnArguments: string[],
-    options?: { cwd?: string; env?: NodeJS.ProcessEnv; stdio?: unknown }
-  ) => {
-    calls.push({ command, spawnArguments, options })
-    const proc = new EventEmitter() as EventEmitter & {
-      stdout: EventEmitter | null
-      stderr: EventEmitter | null
-    }
-    proc.stdout = new EventEmitter()
-    proc.stderr = new EventEmitter()
-    process.nextTick(() => proc.emit('close', 0))
-    return proc
-  }) as RepositoryDependencies['spawn']
-
-  return { spawn, calls }
-}
-
 function createMockRun(): RepositoryDependencies['run'] {
   return async () => {}
 }
@@ -116,7 +53,9 @@ function createTestRepositoryDependencies(
 ): RepositoryDependencies {
   const fileSystem = createFileSystemEmulator()
   return {
-    spawn: createMockSpawn().spawn,
+    spawn: asTestType<RepositoryDependencies['spawn']>(
+      createSpawnEmulator().spawn
+    ),
     run: createMockRun(),
     fileSystem,
     sleep: () => new Promise(() => {}),
@@ -627,7 +566,7 @@ describe('getRepoPath', () => {
 
 describe('cloneRepository', () => {
   test('spawns git clone with correct arguments', async () => {
-    const { spawn, calls, processes } = createMockSpawn()
+    const emulator = createSpawnEmulator()
     const context = createContextEmulator()
     const repo: Repository = {
       name: 'test-repo',
@@ -637,17 +576,21 @@ describe('cloneRepository', () => {
       id: 1,
     }
 
-    const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
-
-    const proc = processes.get(
-      'git clone https://github.com/user/repo.git /tmp/test-repo'
+    const promise = cloneRepository(
+      repo,
+      '/tmp/test-repo',
+      asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
+      context
     )
-    proc?.emit('close', 0)
+
+    const stub = emulator.getLastProcess()!
+    stub.emitClose(0)
 
     const result = await promise
     expect(result).toBe(true)
-    expect(calls[0].command).toBe('git')
-    expect(calls[0].spawnArguments).toEqual([
+    const processes = emulator.getSpawnedProcesses()
+    expect(processes[0].command).toBe('git')
+    expect(processes[0].arguments).toEqual([
       'clone',
       'https://github.com/user/repo.git',
       '/tmp/test-repo',
@@ -655,7 +598,7 @@ describe('cloneRepository', () => {
   })
 
   test('returns false on clone failure', async () => {
-    const { spawn, processes } = createMockSpawn()
+    const emulator = createSpawnEmulator()
     const context = createContextEmulator()
     const repo: Repository = {
       name: 'test-repo',
@@ -665,24 +608,25 @@ describe('cloneRepository', () => {
       id: 2,
     }
 
-    const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
+    const promise = cloneRepository(
+      repo,
+      '/tmp/test-repo',
+      asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
+      context
+    )
 
     // HTTPS clone fails
-    const httpsProc = processes.get('git clone invalid-url /tmp/test-repo')
-    const httpsStderr = (httpsProc as EventEmitter & { stderr: EventEmitter })
-      .stderr
-    httpsStderr?.emit('data', 'fatal: not a git repository')
-    httpsProc?.emit('close', 128)
+    const httpsStub = emulator.getSpawnedProcesses()[0].stub
+    httpsStub.emitStderr('fatal: not a git repository')
+    httpsStub.emitClose(128)
 
     // Wait for SSH fallback attempt
     await new Promise(resolve => setTimeout(resolve, 0))
 
     // SSH clone also fails
-    const sshProc = processes.get('git clone invalid-ssh-url /tmp/test-repo')
-    const sshStderr = (sshProc as EventEmitter & { stderr: EventEmitter })
-      .stderr
-    sshStderr?.emit('data', 'SSH authentication failed')
-    sshProc?.emit('close', 128)
+    const sshStub = emulator.getSpawnedProcesses()[1].stub
+    sshStub.emitStderr('SSH authentication failed')
+    sshStub.emitClose(128)
 
     const result = await promise
     expect(result).toBe(false)
@@ -692,7 +636,7 @@ describe('cloneRepository', () => {
   })
 
   test('handles spawn error', async () => {
-    const { spawn, processes } = createMockSpawn()
+    const emulator = createSpawnEmulator()
     const context = createContextEmulator()
     const repo: Repository = {
       name: 'test-repo',
@@ -702,18 +646,23 @@ describe('cloneRepository', () => {
       id: 3,
     }
 
-    const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
+    const promise = cloneRepository(
+      repo,
+      '/tmp/test-repo',
+      asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
+      context
+    )
 
     // HTTPS clone fails with spawn error
-    const httpsProc = processes.get('git clone url /tmp/test-repo')
-    httpsProc?.emit('error', new Error('spawn failed'))
+    const httpsStub = emulator.getSpawnedProcesses()[0].stub
+    httpsStub.emitError(new Error('spawn failed'))
 
     // Wait for SSH fallback attempt
     await new Promise(resolve => setTimeout(resolve, 0))
 
     // SSH clone also fails
-    const sshProc = processes.get('git clone ssh-url /tmp/test-repo')
-    sshProc?.emit('error', new Error('SSH spawn failed'))
+    const sshStub = emulator.getSpawnedProcesses()[1].stub
+    sshStub.emitError(new Error('SSH spawn failed'))
 
     const result = await promise
     expect(result).toBe(false)
@@ -721,7 +670,7 @@ describe('cloneRepository', () => {
   })
 
   test('falls back to SSH when HTTPS clone fails', async () => {
-    const { spawn, calls, processes } = createMockSpawn()
+    const emulator = createSpawnEmulator()
     const context = createContextEmulator()
     const repo: Repository = {
       name: 'test-repo',
@@ -731,35 +680,35 @@ describe('cloneRepository', () => {
       id: 4,
     }
 
-    const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
+    const promise = cloneRepository(
+      repo,
+      '/tmp/test-repo',
+      asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
+      context
+    )
 
     // Fail the HTTPS clone
-    const httpsProc = processes.get(
-      'git clone https://github.com/user/repo.git /tmp/test-repo'
-    )
-    const httpsStderr = (httpsProc as EventEmitter & { stderr: EventEmitter })
-      .stderr
-    httpsStderr?.emit('data', 'authentication failed')
-    httpsProc?.emit('close', 128)
+    const httpsStub = emulator.getSpawnedProcesses()[0].stub
+    httpsStub.emitStderr('authentication failed')
+    httpsStub.emitClose(128)
 
     // Wait for SSH clone to be spawned
     await new Promise(resolve => setTimeout(resolve, 0))
 
     // Succeed the SSH clone
-    const sshProc = processes.get(
-      'git clone git@github.com:user/repo.git /tmp/test-repo'
-    )
-    sshProc?.emit('close', 0)
+    const sshStub = emulator.getSpawnedProcesses()[1].stub
+    sshStub.emitClose(0)
 
     const result = await promise
     expect(result).toBe(true)
-    expect(calls.length).toBe(2)
-    expect(calls[0].spawnArguments).toEqual([
+    const processes = emulator.getSpawnedProcesses()
+    expect(processes.length).toBe(2)
+    expect(processes[0].arguments).toEqual([
       'clone',
       'https://github.com/user/repo.git',
       '/tmp/test-repo',
     ])
-    expect(calls[1].spawnArguments).toEqual([
+    expect(processes[1].arguments).toEqual([
       'clone',
       'git@github.com:user/repo.git',
       '/tmp/test-repo',
@@ -770,7 +719,7 @@ describe('cloneRepository', () => {
   })
 
   test('reports SSH failure when both HTTPS and SSH fail', async () => {
-    const { spawn, processes } = createMockSpawn()
+    const emulator = createSpawnEmulator()
     const context = createContextEmulator()
     const repo: Repository = {
       name: 'test-repo',
@@ -780,28 +729,25 @@ describe('cloneRepository', () => {
       id: 5,
     }
 
-    const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
+    const promise = cloneRepository(
+      repo,
+      '/tmp/test-repo',
+      asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
+      context
+    )
 
     // Fail the HTTPS clone
-    const httpsProc = processes.get(
-      'git clone https://github.com/user/repo.git /tmp/test-repo'
-    )
-    const httpsStderr = (httpsProc as EventEmitter & { stderr: EventEmitter })
-      .stderr
-    httpsStderr?.emit('data', 'authentication failed')
-    httpsProc?.emit('close', 128)
+    const httpsStub = emulator.getSpawnedProcesses()[0].stub
+    httpsStub.emitStderr('authentication failed')
+    httpsStub.emitClose(128)
 
     // Wait for SSH clone to be spawned
     await new Promise(resolve => setTimeout(resolve, 0))
 
     // Fail the SSH clone
-    const sshProc = processes.get(
-      'git clone git@github.com:user/repo.git /tmp/test-repo'
-    )
-    const sshStderr = (sshProc as EventEmitter & { stderr: EventEmitter })
-      .stderr
-    sshStderr?.emit('data', 'Permission denied (publickey)')
-    sshProc?.emit('close', 128)
+    const sshStub = emulator.getSpawnedProcesses()[1].stub
+    sshStub.emitStderr('Permission denied (publickey)')
+    sshStub.emitClose(128)
 
     const result = await promise
     expect(result).toBe(false)
@@ -811,7 +757,7 @@ describe('cloneRepository', () => {
   })
 
   test('passes branch flag to git clone when branch is specified', async () => {
-    const { spawn, calls, processes } = createMockSpawn()
+    const emulator = createSpawnEmulator()
     const context = createContextEmulator()
     const repo: Repository = {
       name: 'test-repo',
@@ -822,17 +768,21 @@ describe('cloneRepository', () => {
       branch: 'develop',
     }
 
-    const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
-
-    const proc = processes.get(
-      'git clone --branch develop https://github.com/user/repo.git /tmp/test-repo'
+    const promise = cloneRepository(
+      repo,
+      '/tmp/test-repo',
+      asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
+      context
     )
-    proc?.emit('close', 0)
+
+    const stub = emulator.getLastProcess()!
+    stub.emitClose(0)
 
     const result = await promise
     expect(result).toBe(true)
-    expect(calls[0].command).toBe('git')
-    expect(calls[0].spawnArguments).toEqual([
+    const processes = emulator.getSpawnedProcesses()
+    expect(processes[0].command).toBe('git')
+    expect(processes[0].arguments).toEqual([
       'clone',
       '--branch',
       'develop',
@@ -842,7 +792,7 @@ describe('cloneRepository', () => {
   })
 
   test('passes branch flag to SSH fallback when branch is specified', async () => {
-    const { spawn, calls, processes } = createMockSpawn()
+    const emulator = createSpawnEmulator()
     const context = createContextEmulator()
     const repo: Repository = {
       name: 'test-repo',
@@ -853,30 +803,30 @@ describe('cloneRepository', () => {
       branch: 'feature/test',
     }
 
-    const promise = cloneRepository(repo, '/tmp/test-repo', spawn, context)
+    const promise = cloneRepository(
+      repo,
+      '/tmp/test-repo',
+      asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
+      context
+    )
 
     // Fail the HTTPS clone
-    const httpsProc = processes.get(
-      'git clone --branch feature/test https://github.com/user/repo.git /tmp/test-repo'
-    )
-    const httpsStderr = (httpsProc as EventEmitter & { stderr: EventEmitter })
-      .stderr
-    httpsStderr?.emit('data', 'authentication failed')
-    httpsProc?.emit('close', 128)
+    const httpsStub = emulator.getSpawnedProcesses()[0].stub
+    httpsStub.emitStderr('authentication failed')
+    httpsStub.emitClose(128)
 
     // Wait for SSH clone to be spawned
     await new Promise(resolve => setTimeout(resolve, 0))
 
     // Succeed the SSH clone
-    const sshProc = processes.get(
-      'git clone --branch feature/test git@github.com:user/repo.git /tmp/test-repo'
-    )
-    sshProc?.emit('close', 0)
+    const sshStub = emulator.getSpawnedProcesses()[1].stub
+    sshStub.emitClose(0)
 
     const result = await promise
     expect(result).toBe(true)
-    expect(calls.length).toBe(2)
-    expect(calls[1].spawnArguments).toEqual([
+    const processes = emulator.getSpawnedProcesses()
+    expect(processes.length).toBe(2)
+    expect(processes[1].arguments).toEqual([
       'clone',
       '--branch',
       'feature/test',
@@ -888,41 +838,54 @@ describe('cloneRepository', () => {
 
 describe('removeRepository', () => {
   test('spawns rm -rf with correct path', async () => {
-    const { spawn, calls, processes } = createMockSpawn()
+    const emulator = createSpawnEmulator()
     const context = createContextEmulator()
 
-    const promise = removeRepository('/tmp/test-repo', spawn, context)
+    const promise = removeRepository(
+      '/tmp/test-repo',
+      asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
+      context
+    )
 
-    const proc = processes.get('rm -rf /tmp/test-repo')
-    proc?.emit('close', 0)
+    const stub = emulator.getLastProcess()!
+    stub.emitClose(0)
 
     const result = await promise
     expect(result).toBe(true)
-    expect(calls[0].command).toBe('rm')
-    expect(calls[0].spawnArguments).toEqual(['-rf', '/tmp/test-repo'])
+    const processes = emulator.getSpawnedProcesses()
+    expect(processes[0].command).toBe('rm')
+    expect(processes[0].arguments).toEqual(['-rf', '/tmp/test-repo'])
   })
 
   test('returns false on failure', async () => {
-    const { spawn, processes } = createMockSpawn()
+    const emulator = createSpawnEmulator()
     const context = createContextEmulator()
 
-    const promise = removeRepository('/tmp/test-repo', spawn, context)
+    const promise = removeRepository(
+      '/tmp/test-repo',
+      asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
+      context
+    )
 
-    const proc = processes.get('rm -rf /tmp/test-repo')
-    proc?.emit('close', 1)
+    const stub = emulator.getLastProcess()!
+    stub.emitClose(1)
 
     const result = await promise
     expect(result).toBe(false)
   })
 
   test('returns false on spawn error', async () => {
-    const { spawn, processes } = createMockSpawn()
+    const emulator = createSpawnEmulator()
     const context = createContextEmulator()
 
-    const promise = removeRepository('/tmp/test-repo', spawn, context)
+    const promise = removeRepository(
+      '/tmp/test-repo',
+      asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
+      context
+    )
 
-    const proc = processes.get('rm -rf /tmp/test-repo')
-    proc?.emit('error', new Error('spawn failed'))
+    const stub = emulator.getLastProcess()!
+    stub.emitError(new Error('spawn failed'))
 
     const result = await promise
     expect(result).toBe(false)
@@ -934,7 +897,7 @@ describe('removeRepository', () => {
 
 describe('runRepositoryLoop', () => {
   test('stops when lifecycle is stopping', async () => {
-    const { spawn } = createAutoResolvingSpawn()
+    const emulator = createSpawnEmulator({ autoResolve: true })
     const fileSystem = createFileSystemEmulator()
 
     const repoState: RepositoryState = {
@@ -952,7 +915,7 @@ describe('runRepositoryLoop', () => {
     }
 
     const repoDeps = createTestRepositoryDependencies({
-      spawn,
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
       fileSystem,
     })
 
@@ -965,7 +928,7 @@ describe('runRepositoryLoop', () => {
   })
 
   test('waits for wakeUp signal when no tasks available', async () => {
-    const { spawn } = createAutoResolvingSpawn()
+    const emulator = createSpawnEmulator({ autoResolve: true })
     const fileSystem = createFileSystemEmulator()
 
     const repoState: RepositoryState = {
@@ -988,7 +951,7 @@ describe('runRepositoryLoop', () => {
 
     let sleepCalled = false
     const repoDeps = createTestRepositoryDependencies({
-      spawn,
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
       fileSystem,
       sleep: async () => {
         sleepCalled = true
@@ -1014,7 +977,7 @@ describe('runRepositoryLoop', () => {
   })
 
   test('skips wait when taskAvailablePending is set', async () => {
-    const { spawn } = createAutoResolvingSpawn()
+    const emulator = createSpawnEmulator({ autoResolve: true })
     const fileSystem = createFileSystemEmulator()
 
     const repoState: RepositoryState = {
@@ -1038,7 +1001,7 @@ describe('runRepositoryLoop', () => {
 
     let sleepCalled = false
     const repoDeps = createTestRepositoryDependencies({
-      spawn,
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
       fileSystem,
       sleep: async () => {
         sleepCalled = true
@@ -1065,7 +1028,7 @@ describe('runRepositoryLoop', () => {
   })
 
   test('wakeUp resolves the wait immediately', async () => {
-    const { spawn } = createAutoResolvingSpawn()
+    const emulator = createSpawnEmulator({ autoResolve: true })
     const fileSystem = createFileSystemEmulator()
 
     const repoState: RepositoryState = {
@@ -1087,7 +1050,7 @@ describe('runRepositoryLoop', () => {
     }
 
     const repoDeps = createTestRepositoryDependencies({
-      spawn,
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
       fileSystem,
       sleep: () => new Promise(() => {}),
     })
@@ -1110,7 +1073,7 @@ describe('runRepositoryLoop', () => {
   })
 
   test('lifecycle cancel aborts an in-flight agent run', async () => {
-    const { spawn } = createAutoResolvingSpawn()
+    const emulator = createSpawnEmulator({ autoResolve: true })
     const fileSystem = createFileSystemEmulator({
       // biome-ignore lint: tmp is the /tmp directory name, not an abbreviation
       tmp: {
@@ -1149,7 +1112,7 @@ describe('runRepositoryLoop', () => {
     })
 
     const repoDeps = createTestRepositoryDependencies({
-      spawn,
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
       fileSystem,
       run: async (_prompt, options) => {
         const signal = (options as { spawnOptions?: { signal?: AbortSignal } })
@@ -1188,7 +1151,7 @@ describe('runRepositoryLoop', () => {
   })
 
   test('stale fallback timeout does not clear a newer wait wakeUp handler', async () => {
-    const { spawn } = createAutoResolvingSpawn()
+    const emulator = createSpawnEmulator({ autoResolve: true })
     const fileSystem = createFileSystemEmulator()
 
     const repoState: RepositoryState = {
@@ -1211,7 +1174,7 @@ describe('runRepositoryLoop', () => {
 
     const sleepResolvers: Array<() => void> = []
     const repoDeps = createTestRepositoryDependencies({
-      spawn,
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
       fileSystem,
       sleep: () =>
         new Promise<void>(resolve => {
@@ -1249,7 +1212,7 @@ describe('runRepositoryLoop', () => {
   })
 
   test('sends agent events over WebSocket when tasks are found and claude runs', async () => {
-    const { spawn } = createAutoResolvingSpawn()
+    const emulator = createSpawnEmulator({ autoResolve: true })
 
     // Set up filesystem with a task file (tmp = /tmp directory)
     const fileSystem = createFileSystemEmulator({
@@ -1287,7 +1250,7 @@ describe('runRepositoryLoop', () => {
     const sentEvents: unknown[] = []
 
     const repoDeps = createTestRepositoryDependencies({
-      spawn,
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
       fileSystem,
       run: async (_prompt, options, dependencies) => {
         // Exercise the bufferSinkDeps callbacks
@@ -1362,7 +1325,7 @@ describe('runRepositoryLoop', () => {
   })
 
   test('logs claude errors to repo log buffer via context.stderr', async () => {
-    const { spawn } = createAutoResolvingSpawn()
+    const emulator = createSpawnEmulator({ autoResolve: true })
     const fileSystem = createFileSystemEmulator({
       // biome-ignore lint: tmp is the /tmp directory name, not an abbreviation
       tmp: {
@@ -1395,7 +1358,7 @@ describe('runRepositoryLoop', () => {
     }
 
     const repoDeps = createTestRepositoryDependencies({
-      spawn,
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
       fileSystem,
       run: async () => {
         fileSystem.files.delete('/tmp/repo/.dust/tasks/my-task.md')
@@ -1416,7 +1379,7 @@ describe('runRepositoryLoop', () => {
   })
 
   test('sets agentStatus to busy on agent-session-started and idle on agent-session-ended', async () => {
-    const { spawn } = createAutoResolvingSpawn()
+    const emulator = createSpawnEmulator({ autoResolve: true })
 
     const fileSystem = createFileSystemEmulator({
       // biome-ignore lint: tmp is the /tmp directory name, not an abbreviation
@@ -1452,7 +1415,7 @@ describe('runRepositoryLoop', () => {
     let statusDuringRun: string | undefined
 
     const repoDeps = createTestRepositoryDependencies({
-      spawn,
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
       fileSystem,
       run: async () => {
         // By the time run is called, agent-session-started has been emitted
@@ -1576,7 +1539,7 @@ describe('createLoopCancel', () => {
 
 describe('startRepositoryLoop', () => {
   test('transitions idle -> starting -> running, then stopped when cancelled', async () => {
-    const { spawn } = createAutoResolvingSpawn()
+    const emulator = createSpawnEmulator({ autoResolve: true })
     const fileSystem = createFileSystemEmulator()
 
     const repoState: RepositoryState = {
@@ -1594,7 +1557,7 @@ describe('startRepositoryLoop', () => {
     }
 
     const repoDeps = createTestRepositoryDependencies({
-      spawn,
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
       fileSystem,
       sleep: async () => {
         // Use cancel to properly transition through the state machine
@@ -1619,7 +1582,7 @@ describe('startRepositoryLoop', () => {
   })
 
   test('does not start loop when not in idle state', async () => {
-    const { spawn } = createAutoResolvingSpawn()
+    const emulator = createSpawnEmulator({ autoResolve: true })
     const fileSystem = createFileSystemEmulator()
 
     const repoState: RepositoryState = {
@@ -1637,7 +1600,7 @@ describe('startRepositoryLoop', () => {
     }
 
     const repoDeps = createTestRepositoryDependencies({
-      spawn,
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
       fileSystem,
     })
 
@@ -1647,7 +1610,7 @@ describe('startRepositoryLoop', () => {
   })
 
   test('cancel transitions running -> stopping -> stopped', async () => {
-    const { spawn } = createAutoResolvingSpawn()
+    const emulator = createSpawnEmulator({ autoResolve: true })
     const fileSystem = createFileSystemEmulator()
 
     const repoState: RepositoryState = {
@@ -1667,7 +1630,7 @@ describe('startRepositoryLoop', () => {
     let sleepResolve: (() => void) | undefined
     let sleepCalled = false
     const repoDeps = createTestRepositoryDependencies({
-      spawn,
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
       fileSystem,
       sleep: () =>
         new Promise<void>(resolve => {
@@ -1967,21 +1930,19 @@ describe('handleRepositoryList', () => {
     const manager = createMockManager()
 
     // Use manual spawn for clone, auto-resolve for everything else
-    const { spawn: manualSpawn, processes } = createMockSpawn()
-    const { spawn: autoSpawn } = createAutoResolvingSpawn()
+    const manualEmulator = createSpawnEmulator()
+    const autoEmulator = createSpawnEmulator({ autoResolve: true })
 
     let cloneResolved = false
-    const combinedSpawn = ((
-      command: string,
-      spawnArguments: string[],
-      options?: unknown
-    ) => {
-      // Use manual spawn for clone, auto-resolving for git pull
-      if (command === 'git' && spawnArguments[0] === 'clone') {
-        return manualSpawn(command, spawnArguments, options as never)
+    const combinedSpawn = asTestType<RepositoryDependencies['spawn']>(
+      (command: string, spawnArguments: string[]) => {
+        // Use manual spawn for clone, auto-resolving for git pull
+        if (command === 'git' && spawnArguments[0] === 'clone') {
+          return manualEmulator.spawn(command, spawnArguments)
+        }
+        return autoEmulator.spawn(command, spawnArguments)
       }
-      return autoSpawn(command, spawnArguments, options as never)
-    }) as RepositoryDependencies['spawn']
+    )
 
     const repoDeps = createTestRepositoryDependencies({
       spawn: combinedSpawn,
@@ -2012,10 +1973,8 @@ describe('handleRepositoryList', () => {
     // Wait for clone to be spawned
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    const cloneProc = processes.get(
-      'git clone https://github.com/user/repo1.git /tmp/repo1'
-    )
-    cloneProc?.emit('close', 0)
+    const cloneStub = manualEmulator.getLastProcess()!
+    cloneStub.emitClose(0)
     cloneResolved = true
 
     // Wake the loop now that clone is done
@@ -2032,7 +1991,7 @@ describe('handleRepositoryList', () => {
   test('removes repositories not in list', async () => {
     const context = createContextEmulator()
     const manager = createMockManager()
-    const { spawn, processes } = createMockSpawn()
+    const emulator = createSpawnEmulator()
 
     manager.repositories.set('old-repo', {
       repository: {
@@ -2053,7 +2012,7 @@ describe('handleRepositoryList', () => {
     })
 
     const repoDeps = createTestRepositoryDependencies({
-      spawn,
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
       sleep: () => Promise.resolve(),
     })
 
@@ -2061,8 +2020,8 @@ describe('handleRepositoryList', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    const rmProc = processes.get('rm -rf /tmp/old-repo')
-    rmProc?.emit('close', 0)
+    const rmStub = emulator.getLastProcess()!
+    rmStub.emitClose(0)
 
     await handlePromise
 
@@ -2072,7 +2031,7 @@ describe('handleRepositoryList', () => {
   test('removes idle repositories and calls wakeUp', async () => {
     const context = createContextEmulator()
     const manager = createMockManager()
-    const { spawn, processes } = createMockSpawn()
+    const emulator = createSpawnEmulator()
 
     let wakeUpCalled = false
     manager.repositories.set('idle-repo', {
@@ -2093,7 +2052,7 @@ describe('handleRepositoryList', () => {
     })
 
     const repoDeps = createTestRepositoryDependencies({
-      spawn,
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
       sleep: () => Promise.resolve(),
     })
 
@@ -2101,8 +2060,8 @@ describe('handleRepositoryList', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    const rmProc = processes.get('rm -rf /tmp/idle-repo')
-    rmProc?.emit('close', 0)
+    const rmStub = emulator.getLastProcess()!
+    rmStub.emitClose(0)
 
     await handlePromise
 
@@ -2113,19 +2072,17 @@ describe('handleRepositoryList', () => {
   test('re-clones repository when branch changes', async () => {
     const context = createContextEmulator()
     const manager = createMockManager()
-    const { spawn: manualSpawn, processes } = createMockSpawn()
-    const { spawn: autoSpawn } = createAutoResolvingSpawn()
+    const manualEmulator = createSpawnEmulator()
+    const autoEmulator = createSpawnEmulator({ autoResolve: true })
 
-    const combinedSpawn = ((
-      command: string,
-      spawnArguments: string[],
-      options?: unknown
-    ) => {
-      if (command === 'git' && spawnArguments[0] === 'clone') {
-        return manualSpawn(command, spawnArguments, options as never)
+    const combinedSpawn = asTestType<RepositoryDependencies['spawn']>(
+      (command: string, spawnArguments: string[]) => {
+        if (command === 'git' && spawnArguments[0] === 'clone') {
+          return manualEmulator.spawn(command, spawnArguments)
+        }
+        return autoEmulator.spawn(command, spawnArguments)
       }
-      return autoSpawn(command, spawnArguments, options as never)
-    }) as RepositoryDependencies['spawn']
+    )
 
     // Pre-populate with a repo on the default branch
     manager.repositories.set('user/repo', {
@@ -2169,17 +2126,13 @@ describe('handleRepositoryList', () => {
       context
     )
 
-    // Wait for rm to be spawned (removal of existing repo)
+    // Wait for rm to be spawned (removal of existing repo) - this is auto-resolved
     await new Promise(resolve => setTimeout(resolve, 0))
-    const rmProc = processes.get('rm -rf /tmp/user/repo')
-    rmProc?.emit('close', 0)
 
-    // Wait for clone to be spawned with new branch
+    // Wait for clone to be spawned with new branch - this needs manual control
     await new Promise(resolve => setTimeout(resolve, 0))
-    const cloneProc = processes.get(
-      'git clone --branch develop https://github.com/user/repo.git /tmp/user/repo'
-    )
-    cloneProc?.emit('close', 0)
+    const cloneStub = manualEmulator.getLastProcess()!
+    cloneStub.emitClose(0)
 
     // Wake the loop
     for (const repoState of manager.repositories.values()) {
@@ -2197,19 +2150,17 @@ describe('handleRepositoryList', () => {
   test('re-clones repository when branch changes to default', async () => {
     const context = createContextEmulator()
     const manager = createMockManager()
-    const { spawn: manualSpawn, processes } = createMockSpawn()
-    const { spawn: autoSpawn } = createAutoResolvingSpawn()
+    const manualEmulator = createSpawnEmulator()
+    const autoEmulator = createSpawnEmulator({ autoResolve: true })
 
-    const combinedSpawn = ((
-      command: string,
-      spawnArguments: string[],
-      options?: unknown
-    ) => {
-      if (command === 'git' && spawnArguments[0] === 'clone') {
-        return manualSpawn(command, spawnArguments, options as never)
+    const combinedSpawn = asTestType<RepositoryDependencies['spawn']>(
+      (command: string, spawnArguments: string[]) => {
+        if (command === 'git' && spawnArguments[0] === 'clone') {
+          return manualEmulator.spawn(command, spawnArguments)
+        }
+        return autoEmulator.spawn(command, spawnArguments)
       }
-      return autoSpawn(command, spawnArguments, options as never)
-    }) as RepositoryDependencies['spawn']
+    )
 
     // Pre-populate with a repo on a specific branch
     manager.repositories.set('user/repo', {
@@ -2252,17 +2203,13 @@ describe('handleRepositoryList', () => {
       context
     )
 
-    // Wait for rm to be spawned (removal of existing repo)
+    // Wait for rm to be spawned (removal of existing repo) - this is auto-resolved
     await new Promise(resolve => setTimeout(resolve, 0))
-    const rmProc = processes.get('rm -rf /tmp/user/repo')
-    rmProc?.emit('close', 0)
 
-    // Wait for clone to be spawned without branch
+    // Wait for clone to be spawned without branch - this needs manual control
     await new Promise(resolve => setTimeout(resolve, 0))
-    const cloneProc = processes.get(
-      'git clone https://github.com/user/repo.git /tmp/user/repo'
-    )
-    cloneProc?.emit('close', 0)
+    const cloneStub = manualEmulator.getLastProcess()!
+    cloneStub.emitClose(0)
 
     // Wake the loop
     for (const repoState of manager.repositories.values()) {
@@ -2298,12 +2245,12 @@ describe('addRepository', () => {
     })
 
     let cloneCalled = false
-    const { spawn } = createMockSpawn()
+    const emulator = createSpawnEmulator()
     const repoDeps = createTestRepositoryDependencies({
-      spawn: ((command: string) => {
+      spawn: asTestType<RepositoryDependencies['spawn']>((command: string) => {
         if (command === 'git') cloneCalled = true
-        return spawn(command, [], {})
-      }) as RepositoryDependencies['spawn'],
+        return emulator.spawn(command, [])
+      }),
     })
 
     await addRepository(
@@ -2335,23 +2282,21 @@ describe('addRepository', () => {
       },
     })
 
-    const { spawn: manualSpawn, processes } = createMockSpawn()
-    const { spawn: autoSpawn } = createAutoResolvingSpawn()
+    const manualEmulator = createSpawnEmulator()
+    const autoEmulator = createSpawnEmulator({ autoResolve: true })
 
-    const combinedSpawn = ((
-      command: string,
-      spawnArguments: string[],
-      options?: unknown
-    ) => {
-      // Use manual spawn for clone, auto-resolving for rm -rf and git pull
-      if (command === 'git' && spawnArguments[0] === 'clone') {
-        return manualSpawn(command, spawnArguments, options as never)
+    const combinedSpawn = asTestType<RepositoryDependencies['spawn']>(
+      (command: string, spawnArguments: string[]) => {
+        // Use manual spawn for clone, auto-resolving for rm -rf and git pull
+        if (command === 'git' && spawnArguments[0] === 'clone') {
+          return manualEmulator.spawn(command, spawnArguments)
+        }
+        if (command === 'rm') {
+          return autoEmulator.spawn(command, spawnArguments)
+        }
+        return autoEmulator.spawn(command, spawnArguments)
       }
-      if (command === 'rm') {
-        return autoSpawn(command, spawnArguments, options as never)
-      }
-      return autoSpawn(command, spawnArguments, options as never)
-    }) as RepositoryDependencies['spawn']
+    )
 
     const repoDeps = createTestRepositoryDependencies({
       spawn: combinedSpawn,
@@ -2376,10 +2321,13 @@ describe('addRepository', () => {
       context
     )
 
-    await new Promise(resolve => setTimeout(resolve, 0))
+    // Wait for rm to be spawned and auto-resolved, then wait for clone
+    await waitFor(() => {
+      expect(manualEmulator.getSpawnedProcesses().length).toBeGreaterThan(0)
+    })
 
-    const cloneProc = processes.get('git clone stale-repo /tmp/stale-repo')
-    cloneProc?.emit('close', 0)
+    const cloneStub = manualEmulator.getLastProcess()!
+    cloneStub.emitClose(0)
 
     await addPromise
 
@@ -2394,8 +2342,10 @@ describe('addRepository', () => {
       emittedEvents.push(event)
     }
 
-    const { spawn, processes } = createMockSpawn()
-    const repoDeps = createTestRepositoryDependencies({ spawn })
+    const emulator = createSpawnEmulator()
+    const repoDeps = createTestRepositoryDependencies({
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
+    })
 
     const addPromise = addRepository(
       {
@@ -2413,23 +2363,17 @@ describe('addRepository', () => {
     await new Promise(resolve => setTimeout(resolve, 0))
 
     // HTTPS clone fails
-    const httpsProc = processes.get('git clone bad-url /tmp/fail-repo')
-    const httpsStderr = (httpsProc as EventEmitter & { stderr: EventEmitter })
-      .stderr
-    httpsStderr?.emit('data', 'clone error')
-    httpsProc?.emit('close', 128)
+    const httpsStub = emulator.getSpawnedProcesses()[0].stub
+    httpsStub.emitStderr('clone error')
+    httpsStub.emitClose(128)
 
     // Wait for SSH fallback attempt
     await new Promise(resolve => setTimeout(resolve, 0))
 
     // SSH clone also fails
-    const sshProc = processes.get(
-      'git clone git@example.com:fail-repo.git /tmp/fail-repo'
-    )
-    const sshStderr = (sshProc as EventEmitter & { stderr: EventEmitter })
-      .stderr
-    sshStderr?.emit('data', 'SSH clone error')
-    sshProc?.emit('close', 128)
+    const sshStub = emulator.getSpawnedProcesses()[1].stub
+    sshStub.emitStderr('SSH clone error')
+    sshStub.emitClose(128)
 
     await addPromise
 
@@ -2457,7 +2401,7 @@ describe('removeRepositoryFromManager', () => {
   test('transitions running -> stopping -> stopped when removing running repository', async () => {
     const context = createContextEmulator()
     const manager = createMockManager()
-    const { spawn, processes } = createMockSpawn()
+    const emulator = createSpawnEmulator()
 
     let loopResolve: (() => void) | undefined
     const loopPromise = new Promise<void>(resolve => {
@@ -2491,7 +2435,7 @@ describe('removeRepositoryFromManager', () => {
     manager.repositories.set('running-repo', repoState)
 
     const repoDeps = createTestRepositoryDependencies({
-      spawn,
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
       sleep: () => Promise.resolve(),
     })
 
@@ -2504,8 +2448,8 @@ describe('removeRepositoryFromManager', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    const rmProc = processes.get('rm -rf /tmp/running-repo')
-    rmProc?.emit('close', 0)
+    const rmStub = emulator.getLastProcess()!
+    rmStub.emitClose(0)
 
     await removePromise
 
@@ -2517,7 +2461,7 @@ describe('removeRepositoryFromManager', () => {
   test('transitions idle repository using state machine stop action', async () => {
     const context = createContextEmulator()
     const manager = createMockManager()
-    const { spawn, processes } = createMockSpawn()
+    const emulator = createSpawnEmulator()
 
     const repoState: RepositoryState = {
       repository: {
@@ -2535,7 +2479,7 @@ describe('removeRepositoryFromManager', () => {
     manager.repositories.set('idle-repo', repoState)
 
     const repoDeps = createTestRepositoryDependencies({
-      spawn,
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
       sleep: () => Promise.resolve(),
     })
 
@@ -2548,8 +2492,8 @@ describe('removeRepositoryFromManager', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    const rmProc = processes.get('rm -rf /tmp/idle-repo')
-    rmProc?.emit('close', 0)
+    const rmStub = emulator.getLastProcess()!
+    rmStub.emitClose(0)
 
     await removePromise
 
@@ -2560,7 +2504,7 @@ describe('removeRepositoryFromManager', () => {
   test('transitions starting repository to idle via stop action', async () => {
     const context = createContextEmulator()
     const manager = createMockManager()
-    const { spawn, processes } = createMockSpawn()
+    const emulator = createSpawnEmulator()
 
     const repoState: RepositoryState = {
       repository: {
@@ -2578,7 +2522,7 @@ describe('removeRepositoryFromManager', () => {
     manager.repositories.set('starting-repo', repoState)
 
     const repoDeps = createTestRepositoryDependencies({
-      spawn,
+      spawn: asTestType<RepositoryDependencies['spawn']>(emulator.spawn),
       sleep: () => Promise.resolve(),
     })
 
@@ -2591,8 +2535,8 @@ describe('removeRepositoryFromManager', () => {
 
     await new Promise(resolve => setTimeout(resolve, 0))
 
-    const rmProc = processes.get('rm -rf /tmp/starting-repo')
-    rmProc?.emit('close', 0)
+    const rmStub = emulator.getLastProcess()!
+    rmStub.emitClose(0)
 
     await removePromise
 
