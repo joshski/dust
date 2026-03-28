@@ -25,7 +25,7 @@ implement
 
 ## Blocked By
 
-- [Create Spawn Emulator Core](../tasks/create-spawn-emulator-core.md)
+(none)
 
 ## Repository Hints
 

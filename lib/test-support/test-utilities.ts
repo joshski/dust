@@ -6,6 +6,7 @@
  * See .dust/principles/stubs-over-mocks.md for the rationale.
  */
 
+import { EventEmitter } from 'node:events'
 import type { ChildProcess } from 'node:child_process'
 import type { AgentSessionEvent } from '../agent-events'
 import type {
@@ -385,4 +386,193 @@ export function createCommandDependencies(
  */
 export function realSleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**
+ * Configuration for spawn emulator behavior
+ */
+export interface SpawnEmulatorConfig {
+  /**
+   * Default exit code for processes (default: 0)
+   */
+  defaultExitCode?: number
+  /**
+   * Auto-resolve mode: automatically emit close event on next tick (default: false)
+   * When true, processes automatically resolve without manual control
+   */
+  autoResolve?: boolean
+  /**
+   * Command-specific configurations
+   * Key can be a command name or pattern (e.g., "git", "docker build")
+   */
+  commands?: Record<
+    string,
+    {
+      exitCode?: number
+      stdout?: string
+      stderr?: string
+      error?: Error
+    }
+  >
+}
+
+/**
+ * A spawned process stub with manual control over its lifecycle
+ */
+export interface SpawnedProcessStub {
+  /**
+   * The ChildProcess stub instance
+   */
+  process: ChildProcess
+  /**
+   * Manually emit stdout data
+   */
+  emitStdout: (data: string) => void
+  /**
+   * Manually emit stderr data
+   */
+  emitStderr: (data: string) => void
+  /**
+   * Manually emit close event with exit code
+   */
+  emitClose: (code: number) => void
+  /**
+   * Manually emit error event
+   */
+  emitError: (error: Error) => void
+}
+
+/**
+ * Result from createSpawnEmulator
+ */
+export interface SpawnEmulator {
+  /**
+   * Spawn function compatible with child_process.spawn signature
+   */
+  spawn: (command: string, spawnArguments?: string[]) => ChildProcess
+  /**
+   * Get all spawned processes for assertions
+   */
+  getSpawnedProcesses: () => Array<{
+    command: string
+    arguments: string[]
+    stub: SpawnedProcessStub
+  }>
+  /**
+   * Get the most recently spawned process
+   */
+  getLastProcess: () => SpawnedProcessStub | undefined
+}
+
+/**
+ * Creates a configurable spawn emulator for testing child process execution.
+ * Returns a spawn-compatible function and utilities for tracking and controlling processes.
+ *
+ * @example
+ * // Manual control mode (for timing-sensitive tests)
+ * const { spawn, getLastProcess } = createSpawnEmulator()
+ * const proc = spawn('git', ['pull'])
+ * const stub = getLastProcess()!
+ * stub.emitStderr('fatal: merge conflict')
+ * stub.emitClose(1)
+ *
+ * @example
+ * // Auto-resolve mode (for integration tests)
+ * const { spawn } = createSpawnEmulator({
+ *   autoResolve: true,
+ *   commands: {
+ *     git: { exitCode: 0 },
+ *     'docker build': { exitCode: 1, stderr: 'Build failed' }
+ *   }
+ * })
+ *
+ * @example
+ * // Command pattern matching
+ * const { spawn } = createSpawnEmulator({
+ *   commands: {
+ *     'git pull': { exitCode: 1, stderr: 'merge conflict' }
+ *   }
+ * })
+ */
+export function createSpawnEmulator(
+  config: SpawnEmulatorConfig = {}
+): SpawnEmulator {
+  const { defaultExitCode = 0, autoResolve = false, commands = {} } = config
+
+  const spawnedProcesses: Array<{
+    command: string
+    arguments: string[]
+    stub: SpawnedProcessStub
+  }> = []
+
+  function spawn(command: string, spawnArguments: string[] = []): ChildProcess {
+    // Create EventEmitter-based ChildProcess stub
+    const proc = new EventEmitter() as EventEmitter & {
+      stdout: EventEmitter | null
+      stderr: EventEmitter
+    }
+    proc.stdout = new EventEmitter()
+    proc.stderr = new EventEmitter()
+
+    // Helper functions for manual control
+    const emitStdout = (data: string) => {
+      proc.stdout?.emit('data', Buffer.from(data))
+    }
+
+    const emitStderr = (data: string) => {
+      proc.stderr.emit('data', Buffer.from(data))
+    }
+
+    const emitClose = (code: number) => {
+      proc.emit('close', code)
+    }
+
+    const emitError = (error: Error) => {
+      proc.emit('error', error)
+    }
+
+    const stub: SpawnedProcessStub = {
+      process: asChildProcessStub(proc),
+      emitStdout,
+      emitStderr,
+      emitClose,
+      emitError,
+    }
+
+    // Track the spawned process
+    spawnedProcesses.push({ command, arguments: spawnArguments, stub })
+
+    // Auto-resolve if configured
+    if (autoResolve) {
+      const fullCommand =
+        spawnArguments.length > 0 ? `${command} ${spawnArguments[0]}` : command
+      const commandConfig = commands[fullCommand] ?? commands[command] ?? {}
+
+      setTimeout(() => {
+        if (commandConfig.stdout) {
+          emitStdout(commandConfig.stdout)
+        }
+        if (commandConfig.stderr) {
+          emitStderr(commandConfig.stderr)
+        }
+        if (commandConfig.error) {
+          emitError(commandConfig.error)
+        } else {
+          const exitCode = commandConfig.exitCode ?? defaultExitCode
+          emitClose(exitCode)
+        }
+      }, 0)
+    }
+
+    return asChildProcessStub(proc)
+  }
+
+  return {
+    spawn,
+    getSpawnedProcesses: () => spawnedProcesses,
+    getLastProcess: () =>
+      spawnedProcesses.length > 0
+        ? spawnedProcesses[spawnedProcesses.length - 1].stub
+        : undefined,
+  }
 }
