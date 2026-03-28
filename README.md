@@ -9,11 +9,10 @@ Dust provides a CLI that agents use to systematically blaze through your backlog
 ## Quick Start
 
 ```bash
-npm install @joshski/dust
-npx dust init
+claude "install dust as per https://github.com/joshski/dust"
 ```
 
-This creates a [.dust](./.dust/facts/dust-directory-structure.md) directory and adds an [instruction](./.dust/facts/agents-md-instruction.md) to your `AGENTS.md` file.
+This works with other agents (aider, cursor, etc.) too. The agent will install dust and set up the [.dust](./.dust/facts/dust-directory-structure.md) directory with an [instruction](./.dust/facts/agents-md-instruction.md) in your `AGENTS.md` file.
 
 ## Adding Tasks
 
