@@ -667,6 +667,180 @@ function feedbackLoopSpeed(): string {
   `
 }
 
+function flakyTests(): string {
+  return dedent`
+    # Flaky Tests
+
+    Detect timing-dependent patterns that cause test flakiness, focusing on fixed sleep/delay usage.
+
+    ${ideasHint}
+
+    ## Context
+
+    Test flakiness undermines confidence in CI and slows development. The most common cause is timing dependencies—tests that use hardcoded delays like \`setTimeout()\` or \`sleep()\` instead of waiting for specific conditions. This audit detects fixed sleep patterns statically, enabling proactive remediation before flakiness manifests.
+
+    According to industry research, fixed delays account for nearly 50% of async-related test flakiness, making this the highest-impact category to address first.
+
+    ## Scope
+
+    Focus on detecting these patterns in test files:
+
+    1. **Fixed sleep calls** - \`setTimeout()\`, \`sleep()\`, \`delay()\` with hardcoded millisecond values
+    2. **Wait/delay utilities** - Custom wait functions that use fixed timeouts
+    3. **Retry with fixed delays** - Retry loops that sleep a constant amount between attempts
+    4. **Timing comments** - Comments indicating timing assumptions (e.g., "wait 100ms", "give it time to settle")
+
+    ## Analysis Steps
+
+    ### 1. Identify Test Files
+
+    Search for test files using common patterns:
+    - \`**/*.test.ts\`
+    - \`**/*.test.js\`
+    - \`**/*.spec.ts\`
+    - \`**/*.spec.js\`
+    - Framework-specific patterns (e.g., \`__tests__/**\`)
+
+    ### 2. Search for Fixed Sleep Patterns
+
+    Search test files for these patterns:
+
+    **Direct delay calls:**
+    - \`setTimeout\`
+    - \`sleep\`
+    - \`delay\`
+    - \`wait\`
+    - \`Thread.sleep\`
+    - \`time.sleep\`
+
+    **Timing comments:**
+    - "wait for"
+    - "sleep"
+    - "give it time"
+    - "let it settle"
+    - References to specific millisecond values in comments near test assertions
+
+    ### 3. Identify Available Utilities
+
+    Before proposing solutions, search the codebase for existing condition-based waiting utilities:
+
+    **Common utility names:**
+    - \`waitFor\`
+    - \`waitUntil\`
+    - \`waitForCondition\`
+    - \`poll\`
+    - \`eventually\`
+    - \`retryUntil\`
+
+    **Framework-specific helpers:**
+    - Testing Library: \`waitFor\`, \`waitForElementToBeRemoved\`
+    - Playwright/Puppeteer: \`waitForSelector\`, \`waitForFunction\`
+    - Cypress: \`cy.wait\` with aliases (not fixed delays)
+    - WebdriverIO: \`waitUntil\`
+
+    If utilities exist, adapt recommendations to use them. If not, suggest implementing simple polling helpers.
+
+    ## Output Format
+
+    ### Per-File Ideas
+
+    Create one idea file per test file containing fixed sleep patterns. Each idea should include:
+
+    **Title format:** "Flaky Test: Fixed Delays in [Component/Feature] Tests"
+
+    **Structure:**
+    \`\`\`markdown
+    # Flaky Test: Fixed Delays in [Component/Feature] Tests
+
+    ## Context
+
+    [Test file path] contains hardcoded delays that make tests timing-dependent and prone to flakiness.
+
+    ## Findings
+
+    ### [Test Suite/Describe Block Name]
+
+    **Location:** [file:line]
+
+    **Pattern:**
+    \`\`\`[language]
+    [code excerpt showing the fixed delay]
+    \`\`\`
+
+    **Issue:** This test waits a fixed duration instead of waiting for a specific condition, making it either unreliable (if too short) or unnecessarily slow (if too long).
+
+    [Repeat for each finding in the file]
+
+    ## Proposed Solution
+
+    Replace fixed delays with condition-based waiting:
+
+    ### Before
+    \`\`\`[language]
+    [current code with setTimeout/sleep]
+    \`\`\`
+
+    ### After
+    \`\`\`[language]
+    [refactored code using waitFor/polling utility]
+    \`\`\`
+
+    [If no utility exists:]
+    Consider implementing a simple polling utility:
+    \`\`\`[language]
+    [example polling helper implementation]
+    \`\`\`
+
+    ## Benefits
+
+    - Tests become more reliable (no race conditions)
+    - Tests run faster (don't wait longer than necessary)
+    - Tests are more explicit about what they're waiting for
+    \`\`\`
+
+    ### Severity Levels
+
+    Use these severity indicators in idea titles:
+
+    - **Critical:** Obvious fixed sleeps in critical test paths (e.g., "Flaky Test [CRITICAL]: ...")
+    - **Warning:** Suspicious patterns or edge cases (e.g., "Flaky Test [WARNING]: ...")
+
+    Mark patterns as Critical when:
+    - Direct \`setTimeout\`/\`sleep\` calls with hardcoded durations
+    - Retry logic with fixed delays
+    - Comments explicitly mentioning waiting for time to pass
+
+    Mark patterns as Warning when:
+    - Unclear if the delay is test-related or production code
+    - Complex timing logic that may be intentional
+    - Borderline cases requiring human judgment
+
+    ## Applicability
+
+    This audit applies to codebases with:
+    - Automated test suites (unit, integration, or end-to-end tests)
+    - Async operations being tested (API calls, UI updates, event handling)
+
+    If the project has no tests or only synchronous tests, document that finding and skip the detailed analysis.
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - Identified all test files in the codebase using common patterns
+    - Searched test files for fixed sleep patterns (\`setTimeout\`, \`sleep\`, etc.)
+    - Searched for timing-related comments in test files
+    - Identified available condition-based waiting utilities (existing or framework-provided)
+    - Created idea files for each test file containing fixed sleep patterns
+    - Each idea includes context, findings with line numbers, and actionable solutions
+    - Solutions are adapted to utilities available in the target codebase
+    - Severity levels assigned appropriately (Critical vs Warning)
+    - No changes to files outside \`.dust/\`
+  `
+}
+
 function ideasFromPrinciples(): string {
   return dedent`
     # Ideas from Principles
@@ -2374,6 +2548,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'error-handling': errorHandling,
   'facts-verification': factsVerification,
   'feedback-loop-speed': feedbackLoopSpeed,
+  'flaky-tests': flakyTests,
   'global-state': globalState,
   'commit-review': commitReview,
   'ideas-from-principles': ideasFromPrinciples,

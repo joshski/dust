@@ -100,7 +100,7 @@ Focus on patterns that appear across frameworks rather than framework-specific A
 
 ## Blocked By
 
-- [Implement Fixed Sleep Detection Audit](implement-fixed-sleep-detection-audit.md)
+(none)
 
 ## Task Type
 
