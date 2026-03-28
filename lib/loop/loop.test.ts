@@ -1,10 +1,10 @@
-import { EventEmitter } from 'node:events'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import type { EventMessage } from '../agent-events'
 import {
-  asChildProcessStub,
+  asTestType,
   createContextEmulator,
   createFileSystemEmulator,
+  createSpawnEmulator,
   createTestRuntimeConfig,
   createTestSessionConfig,
   restoreEnv,
@@ -39,22 +39,6 @@ function createDependencies(
   }
 }
 
-function createMockChildProcess(exitCode = 0) {
-  const proc = new EventEmitter() as EventEmitter & {
-    stdout: EventEmitter | null
-    stderr: EventEmitter
-  }
-  proc.stdout = null
-  proc.stderr = new EventEmitter()
-  setTimeout(() => proc.emit('close', exitCode), 0)
-  return asChildProcessStub(proc)
-}
-
-function createMockSpawn(pullExitCode = 0) {
-  return (() =>
-    createMockChildProcess(pullExitCode)) as LoopDependencies['spawn']
-}
-
 class LoopBreaker extends Error {
   constructor() {
     super('Loop broken for testing')
@@ -64,8 +48,9 @@ class LoopBreaker extends Error {
 function createLoopDeps(
   overrides: Partial<LoopDependencies> = {}
 ): LoopDependencies {
+  const { spawn } = createSpawnEmulator({ autoResolve: true })
   return {
-    spawn: createMockSpawn(),
+    spawn: asTestType<LoopDependencies['spawn']>(spawn),
     run: async () => {},
     sleep: async () => {},
     postEvent: async () => {},
@@ -420,20 +405,14 @@ describe('runLoop', () => {
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        git: { exitCode: 1, stderr: 'no remote configured' },
+      },
+    })
     const loopDeps = createLoopDeps({
-      spawn: (() => {
-        const proc = new EventEmitter() as EventEmitter & {
-          stdout: EventEmitter | null
-          stderr: EventEmitter
-        }
-        proc.stdout = null
-        proc.stderr = new EventEmitter()
-        setTimeout(() => {
-          proc.stderr.emit('data', Buffer.from('no remote configured'))
-          proc.emit('close', 1)
-        }, 0)
-        return asChildProcessStub(proc)
-      }) as LoopDependencies['spawn'],
+      spawn: asTestType<LoopDependencies['spawn']>(spawn),
       run: async () => {},
     })
 
@@ -792,13 +771,14 @@ describe('runLoop', () => {
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
+    const { spawn: emulatorSpawn } = createSpawnEmulator({ autoResolve: true })
     const loopDeps = createLoopDeps({
       run: async () => {},
       dockerDeps: {
         existsSync: (p: string) =>
           p === '/project/.dust/config/container/Dockerfile',
         homedir: () => '/home/user',
-        spawn: createMockSpawn(0),
+        spawn: asTestType(emulatorSpawn),
       },
     })
 
@@ -839,13 +819,14 @@ describe('runLoop', () => {
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
+    const { spawn: emulatorSpawn } = createSpawnEmulator({ autoResolve: true })
     const loopDeps = createLoopDeps({
       run: async () => {},
       dockerDeps: {
         existsSync: (p: string) =>
           p === '/project/.dust/config/container/Dockerfile',
         homedir: () => '/home/user',
-        spawn: createMockSpawn(0),
+        spawn: asTestType(emulatorSpawn),
       },
     })
 
@@ -881,6 +862,7 @@ describe('runLoop', () => {
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
+    const { spawn: emulatorSpawn } = createSpawnEmulator({ autoResolve: true })
     const loopDeps = createLoopDeps({
       run: async () => {},
       agentType: 'codex',
@@ -888,7 +870,7 @@ describe('runLoop', () => {
         existsSync: (p: string) =>
           p === '/project/.dust/config/container/Dockerfile',
         homedir: () => '/home/user',
-        spawn: createMockSpawn(0),
+        spawn: asTestType(emulatorSpawn),
       },
     })
 
@@ -919,12 +901,16 @@ describe('runLoop', () => {
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
+    const { spawn: emulatorSpawn } = createSpawnEmulator({
+      autoResolve: true,
+      defaultExitCode: 1,
+    })
     const loopDeps = createLoopDeps({
       dockerDeps: {
         existsSync: (p: string) =>
           p === '/project/.dust/config/container/Dockerfile',
         homedir: () => '/home/user',
-        spawn: createMockSpawn(1), // Docker --version fails
+        spawn: asTestType(emulatorSpawn),
       },
     })
 
@@ -950,33 +936,30 @@ describe('runLoop', () => {
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
-    let dockerCallCount = 0
+    const { spawn: emulatorSpawn, getSpawnedProcesses } = createSpawnEmulator()
     const loopDeps = createLoopDeps({
       dockerDeps: {
         existsSync: (p: string) =>
           p === '/project/.dust/config/container/Dockerfile',
         homedir: () => '/home/user',
-        spawn: (() => {
-          dockerCallCount++
-          // First call is docker --version (success), second is docker build (fail)
-          if (dockerCallCount === 1) {
-            return createMockChildProcess(0)
-          }
-          const proc = new EventEmitter() as EventEmitter & {
-            stdout: EventEmitter | null
-            stderr: EventEmitter
-          }
-          proc.stdout = null
-          proc.stderr = new EventEmitter()
+        spawn: asTestType((command: string, spawnArguments?: string[]) => {
+          const proc = emulatorSpawn(command, spawnArguments)
+          const processes = getSpawnedProcesses()
+          const stub = processes[processes.length - 1].stub
+
+          // Emit events asynchronously
           setTimeout(() => {
-            proc.stderr.emit(
-              'data',
-              Buffer.from('Build error: invalid Dockerfile')
-            )
-            proc.emit('close', 1)
+            // First call is docker --version (success)
+            if (processes.length === 1) {
+              stub.emitClose(0)
+            } else {
+              // Second call is docker build (fail)
+              stub.emitStderr('Build error: invalid Dockerfile')
+              stub.emitClose(1)
+            }
           }, 0)
-          return asChildProcessStub(proc)
-        }) as LoopDependencies['spawn'],
+          return proc
+        }),
       },
     })
 

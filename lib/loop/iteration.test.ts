@@ -1,10 +1,10 @@
-import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
 import type { AgentSessionEvent } from '../agent-events'
 import {
-  asChildProcessStub,
+  asTestType,
   createContextEmulator,
   createFileSystemEmulator,
+  createSpawnEmulator,
   createTestRuntimeConfig,
   createTestSessionConfig,
 } from '../test-support/test-utilities'
@@ -36,22 +36,6 @@ function createDependencies(
   }
 }
 
-function createMockChildProcess(exitCode = 0) {
-  const proc = new EventEmitter() as EventEmitter & {
-    stdout: EventEmitter | null
-    stderr: EventEmitter
-  }
-  proc.stdout = null
-  proc.stderr = new EventEmitter()
-  setTimeout(() => proc.emit('close', exitCode), 0)
-  return asChildProcessStub(proc)
-}
-
-function createMockSpawn(pullExitCode = 0) {
-  return (() =>
-    createMockChildProcess(pullExitCode)) as LoopDependencies['spawn']
-}
-
 function createPassingShellRunner(): LoopDependencies['shellRunner'] {
   return {
     run: async () => ({ exitCode: 0, output: '' }),
@@ -61,8 +45,9 @@ function createPassingShellRunner(): LoopDependencies['shellRunner'] {
 function createLoopDeps(
   overrides: Partial<LoopDependencies> = {}
 ): LoopDependencies {
+  const { spawn } = createSpawnEmulator({ autoResolve: true })
   return {
-    spawn: createMockSpawn(),
+    spawn: asTestType<LoopDependencies['spawn']>(spawn),
     run: async () => {},
     sleep: async () => {},
     postEvent: async () => {},
@@ -134,36 +119,29 @@ describe('findAvailableTasks', () => {
 describe('runOneIteration', () => {
   test('syncs with git pull', async () => {
     const dependencies = createDependencies()
-    let pullCalled = false
+    const { spawn, getSpawnedProcesses } = createSpawnEmulator({
+      autoResolve: true,
+    })
     const loopDeps = createLoopDeps({
-      spawn: (() => {
-        pullCalled = true
-        return createMockChildProcess(0)
-      }) as LoopDependencies['spawn'],
+      spawn: asTestType<LoopDependencies['spawn']>(spawn),
     })
     const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
     await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
-    expect(pullCalled).toBe(true)
+    expect(getSpawnedProcesses().length).toBeGreaterThan(0)
   })
 
   test('spawns Claude to resolve git pull failures and emits events', async () => {
     const dependencies = createDependencies()
     let claudePrompt: string | undefined
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        git: { exitCode: 1, stderr: 'merge conflict' },
+      },
+    })
     const loopDeps = createLoopDeps({
-      spawn: (() => {
-        const proc = new EventEmitter() as EventEmitter & {
-          stdout: EventEmitter | null
-          stderr: EventEmitter
-        }
-        proc.stdout = null
-        proc.stderr = new EventEmitter()
-        setTimeout(() => {
-          proc.stderr.emit('data', Buffer.from('merge conflict'))
-          proc.emit('close', 1)
-        }, 0)
-        return asChildProcessStub(proc)
-      }) as LoopDependencies['spawn'],
+      spawn: asTestType<LoopDependencies['spawn']>(spawn),
       run: async prompt => {
         claudePrompt = prompt
       },
@@ -204,20 +182,14 @@ describe('runOneIteration', () => {
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        git: { exitCode: 1, stderr: 'conflict' },
+      },
+    })
     const loopDeps = createLoopDeps({
-      spawn: (() => {
-        const proc = new EventEmitter() as EventEmitter & {
-          stdout: EventEmitter | null
-          stderr: EventEmitter
-        }
-        proc.stdout = null
-        proc.stderr = new EventEmitter()
-        setTimeout(() => {
-          proc.stderr.emit('data', Buffer.from('conflict'))
-          proc.emit('close', 1)
-        }, 0)
-        return asChildProcessStub(proc)
-      }) as LoopDependencies['spawn'],
+      spawn: asTestType<LoopDependencies['spawn']>(spawn),
       run: async () => {
         throw new Error('Claude crashed')
       },
@@ -251,20 +223,14 @@ describe('runOneIteration', () => {
     const context = dependencies.context as ReturnType<
       typeof createContextEmulator
     >
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        git: { exitCode: 1, stderr: 'conflict' },
+      },
+    })
     const loopDeps = createLoopDeps({
-      spawn: (() => {
-        const proc = new EventEmitter() as EventEmitter & {
-          stdout: EventEmitter | null
-          stderr: EventEmitter
-        }
-        proc.stdout = null
-        proc.stderr = new EventEmitter()
-        setTimeout(() => {
-          proc.stderr.emit('data', Buffer.from('conflict'))
-          proc.emit('close', 1)
-        }, 0)
-        return asChildProcessStub(proc)
-      }) as LoopDependencies['spawn'],
+      spawn: asTestType<LoopDependencies['spawn']>(spawn),
       run: async () => {
         throw 'string error'
       },
@@ -853,20 +819,14 @@ describe('runOneIteration', () => {
 
   test('includes prompt, agentType, and purpose in agent-session-started event for git conflicts', async () => {
     const dependencies = createDependencies()
+    const { spawn } = createSpawnEmulator({
+      autoResolve: true,
+      commands: {
+        git: { exitCode: 1, stderr: 'merge conflict' },
+      },
+    })
     const loopDeps = createLoopDeps({
-      spawn: (() => {
-        const proc = new EventEmitter() as EventEmitter & {
-          stdout: EventEmitter | null
-          stderr: EventEmitter
-        }
-        proc.stdout = null
-        proc.stderr = new EventEmitter()
-        setTimeout(() => {
-          proc.stderr.emit('data', Buffer.from('merge conflict'))
-          proc.emit('close', 1)
-        }, 0)
-        return asChildProcessStub(proc)
-      }) as LoopDependencies['spawn'],
+      spawn: asTestType<LoopDependencies['spawn']>(spawn),
       run: async () => {},
     })
     const { onLoopEvent, onAgentEvent } = createStubCallbacks()
