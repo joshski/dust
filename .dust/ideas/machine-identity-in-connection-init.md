@@ -177,3 +177,116 @@ Default to hostname, allow override via `--machine-id` flag or config file. Stor
 **Disadvantages:**
 - Hostname collisions in large organizations
 - Less discoverable than explicit prompt
+
+### How should machine ID be editable after initial setup?
+
+#### Option: Manual File Edit (Recommended)
+
+Once a machine ID is stored in `~/.dust/machine-id`, users can edit it directly to change their machine name.
+
+**Advantages:**
+- Simple implementation - no additional code needed
+- Follows Unix philosophy - config files are editable
+- Power users can script changes
+
+**Disadvantages:**
+- Not discoverable for casual users
+- No validation of new values
+- Requires knowledge of file location
+
+#### Option: CLI Command
+
+Add `dust bucket set-machine-id <name>` command to change the stored value.
+
+**Advantages:**
+- Discoverable via `dust help`
+- Can include validation
+- Clear intent
+
+**Disadvantages:**
+- Additional command to implement and maintain
+- More surface area to test
+
+#### Option: Prompt with Override Flag
+
+Always prompt when file is missing, plus add `--machine-id` flag to bucket worker command for one-time override.
+
+**Advantages:**
+- Flag provides immediate override without changing stored value
+- Useful for testing or temporary sessions
+
+**Disadvantages:**
+- Two mechanisms (stored file + flag) to coordinate
+- Flag value persistence unclear
+
+### What validation should apply to machine IDs?
+
+#### Option: Minimal (Non-Empty Only) (Recommended)
+
+The proposal states "no validation beyond non-empty string" but this option accepts any non-empty string with leading/trailing whitespace trimmed.
+
+**Advantages:**
+- Maximum flexibility
+- No arbitrary restrictions
+- Simple to implement
+
+**Disadvantages:**
+- Users could enter extremely long strings
+- Special characters might cause logging issues
+
+#### Option: Reasonable Constraints
+
+Require: 1-64 characters, printable ASCII only, no leading/trailing whitespace.
+
+**Advantages:**
+- Prevents pathological cases
+- Ensures compatibility with logging systems
+- Still very permissive
+
+**Disadvantages:**
+- Requires validation logic
+- May reject valid use cases (emoji, unicode names)
+
+#### Option: Strict Format
+
+Require: alphanumeric plus hyphens, 1-32 characters, must start with letter.
+
+**Advantages:**
+- Guaranteed safe for all systems
+- Matches common naming conventions
+- Simple validation
+
+**Disadvantages:**
+- Overly restrictive for human-readable names
+- Rejects natural names like "Josh's MacBook"
+
+### Should CLI flags or environment variables override stored machine ID?
+
+#### Option: Flag and Env Var Support (Recommended)
+
+The Hybrid option mentions `--machine-id` flag support. This option supports both `--machine-id` flag and `DUST_MACHINE_ID` environment variable as overrides.
+
+**Advantages:**
+- Flexible for different contexts (CI, testing, temporary sessions)
+- Doesn't modify stored file
+- Standard pattern (like DUST_BUCKET_TOKEN)
+- Enables running multiple workers with different IDs on same machine
+
+**Disadvantages:**
+- Three sources to check (env → flag → file)
+- Precedence rules to document
+- More complex discovery logic
+
+#### Option: File Only
+
+Machine ID comes exclusively from `~/.dust/machine-id` file.
+
+**Advantages:**
+- Single source of truth
+- Simpler implementation
+- Forces intentional, persistent identity
+
+**Disadvantages:**
+- Less flexible for testing scenarios
+- Can't easily run multiple workers with different IDs on same machine
+- No escape hatch if file is corrupted
