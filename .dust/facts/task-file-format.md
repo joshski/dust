@@ -13,6 +13,7 @@ Every task file must contain these three headings in any order:
 ## Optional Headings
 
 - `## Principles` - Links to principle documents this task supports (optional)
+- `## Guidance` - Inlined content from relevant principles to help implementing agents (optional)
 
 ## Naming Convention
 

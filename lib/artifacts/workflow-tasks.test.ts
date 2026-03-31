@@ -502,7 +502,10 @@ describe('decomposeIdea', () => {
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain('# Decompose Idea: Progress Broadcasting')
     expect(content).toContain(
-      'Run `dust principles` to link relevant principles and `dust facts` for design decisions that should inform the task.'
+      'Run `dust principles` to identify relevant principles'
+    )
+    expect(content).toContain(
+      'inline the FULL content of ALL selected principles in a Guidance section'
     )
     expect(content).toContain(
       'See [Progress Broadcasting](../ideas/progress-broadcasting.md).'
@@ -531,9 +534,11 @@ describe('decomposeIdea', () => {
 
     const content = fileSystem.writtenFiles.get(result.filePath) as string
     expect(content).toContain(
-      'Run `bin/dust principles` to link relevant principles'
+      'Run `bin/dust principles` to identify relevant principles'
     )
-    expect(content).toContain('`bin/dust facts` for design decisions')
+    expect(content).toContain(
+      'inline the FULL content of ALL selected principles in a Guidance section'
+    )
   })
 
   test('includes open question responses as a Resolved Questions section', async () => {
