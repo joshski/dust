@@ -1147,4 +1147,56 @@ describe('buildConnectionInitPayload', () => {
     )
     expect(result.agents).toEqual([])
   })
+
+  it('includes machineId when provided', () => {
+    const result = buildConnectionInitPayload(
+      '0.1.0',
+      'darwin 23.0.0',
+      'git@github.com:user/repo.git',
+      [{ agentType: 'claude', models: ['opus'] }],
+      'my-machine-id'
+    )
+    expect(result).toEqual({
+      type: 'connection-init',
+      dustVersion: '0.1.0',
+      platform: 'darwin 23.0.0',
+      gitRemote: 'git@github.com:user/repo.git',
+      machineId: 'my-machine-id',
+      agents: [{ agentType: 'claude', models: ['opus'] }],
+    })
+  })
+
+  it('omits machineId when undefined', () => {
+    const result = buildConnectionInitPayload(
+      '0.1.0',
+      'linux 5.0.0',
+      'git@github.com:user/repo.git',
+      [],
+      undefined
+    )
+    expect(result).toEqual({
+      type: 'connection-init',
+      dustVersion: '0.1.0',
+      platform: 'linux 5.0.0',
+      gitRemote: 'git@github.com:user/repo.git',
+      agents: [],
+    })
+    expect('machineId' in result).toBe(false)
+  })
+
+  it('omits machineId when not provided', () => {
+    const result = buildConnectionInitPayload(
+      '0.1.0',
+      'linux 5.0.0',
+      undefined,
+      []
+    )
+    expect(result).toEqual({
+      type: 'connection-init',
+      dustVersion: '0.1.0',
+      platform: 'linux 5.0.0',
+      agents: [],
+    })
+    expect('machineId' in result).toBe(false)
+  })
 })

@@ -41,7 +41,7 @@ implement
 
 ## Blocked By
 
-- [Extend Connection Init with Machine ID](extend-connection-init-with-machine-id.md)
+(none)
 
 ## Repository Hints
 

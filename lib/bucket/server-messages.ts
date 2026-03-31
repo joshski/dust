@@ -44,13 +44,14 @@ export interface ToolDefinitionsMessage {
 
 /**
  * Sent by client on connect to initiate the handshake.
- * Includes version, platform, git remote, and agent capabilities.
+ * Includes version, platform, git remote, machine ID, and agent capabilities.
  */
 export interface ConnectionInitMessage {
   type: 'connection-init'
   dustVersion: string
   platform: string
   gitRemote?: string
+  machineId?: string
   agents: AgentCapability[]
 }
 
@@ -325,7 +326,8 @@ export function buildConnectionInitPayload(
   dustVersion: string,
   platform: string,
   gitRemote: string | undefined,
-  agents: AgentCapability[]
+  agents: AgentCapability[],
+  machineId?: string
 ): ConnectionInitMessage {
   const message: ConnectionInitMessage = {
     type: 'connection-init',
@@ -335,6 +337,9 @@ export function buildConnectionInitPayload(
   }
   if (gitRemote !== undefined) {
     message.gitRemote = gitRemote
+  }
+  if (machineId !== undefined) {
+    message.machineId = machineId
   }
   return message
 }

@@ -199,7 +199,7 @@ async function getGitRemote(
 }
 
 /**
- * Build a ConnectionInitMessage with version, platform, git remote, and agents.
+ * Build a ConnectionInitMessage with version, platform, git remote, machine ID, and agents.
  * This is the imperative shell that gathers all the information needed.
  */
 async function defaultBuildConnectionInit(
@@ -208,14 +208,27 @@ async function defaultBuildConnectionInit(
   const dustVersion = getDustVersion()
   const platformStr = getPlatformString()
 
-  const [gitRemote, capabilitiesMessage] = await Promise.all([
+  const io: MachineIdIO = {
+    getEnv: (key: string) => process.env[key],
+    readFile,
+    getHostname: () => require('node:os').hostname(),
+  }
+
+  const [gitRemote, capabilitiesMessage, machineId] = await Promise.all([
     getGitRemote(spawn),
     discoverAgentCapabilities({ spawn }),
+    getMachineId(io),
   ])
 
   const agents: AgentCapability[] = capabilitiesMessage.agents
 
-  return buildConnectionInitPayload(dustVersion, platformStr, gitRemote, agents)
+  return buildConnectionInitPayload(
+    dustVersion,
+    platformStr,
+    gitRemote,
+    agents,
+    machineId
+  )
 }
 
 /**
