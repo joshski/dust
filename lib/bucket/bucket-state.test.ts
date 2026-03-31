@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  type ConnectionInfo,
   type ConnectionLifecycleState,
   type Effect,
   handleClose,
@@ -14,6 +15,7 @@ import {
   MAX_RECONNECT_DELAY_MS,
   type MessageHandlerResult,
   type MessageHandlerState,
+  shouldReplaceConnection,
 } from './bucket-state'
 import type {
   ConnectionReadyMessage,
@@ -1052,6 +1054,139 @@ describe('bucket-state', () => {
       const result = handleOpen(state)
 
       expect(result.state.shuttingDown).toBe(true)
+    })
+  })
+
+  describe('shouldReplaceConnection', () => {
+    describe('same machine replacement', () => {
+      it('replaces existing connection when machineIds match', () => {
+        const existing: ConnectionInfo = {
+          userId: 'user123',
+          machineId: 'laptop',
+        }
+        const incoming: ConnectionInfo = {
+          userId: 'user123',
+          machineId: 'laptop',
+        }
+
+        expect(shouldReplaceConnection(existing, incoming)).toBe(true)
+      })
+    })
+
+    describe('different machine coexistence', () => {
+      it('does not replace when machineIds differ', () => {
+        const existing: ConnectionInfo = {
+          userId: 'user123',
+          machineId: 'laptop',
+        }
+        const incoming: ConnectionInfo = {
+          userId: 'user123',
+          machineId: 'desktop',
+        }
+
+        expect(shouldReplaceConnection(existing, incoming)).toBe(false)
+      })
+
+      it('allows multiple different machines to coexist', () => {
+        const laptop: ConnectionInfo = {
+          userId: 'user123',
+          machineId: 'laptop',
+        }
+        const desktop: ConnectionInfo = {
+          userId: 'user123',
+          machineId: 'desktop',
+        }
+        const server: ConnectionInfo = {
+          userId: 'user123',
+          machineId: 'server',
+        }
+
+        expect(shouldReplaceConnection(laptop, desktop)).toBe(false)
+        expect(shouldReplaceConnection(laptop, server)).toBe(false)
+        expect(shouldReplaceConnection(desktop, server)).toBe(false)
+      })
+    })
+
+    describe('legacy behavior - incoming without machineId', () => {
+      it('replaces existing connection with machineId', () => {
+        const existing: ConnectionInfo = {
+          userId: 'user123',
+          machineId: 'laptop',
+        }
+        const incoming: ConnectionInfo = {
+          userId: 'user123',
+        }
+
+        expect(shouldReplaceConnection(existing, incoming)).toBe(true)
+      })
+
+      it('replaces existing connection without machineId', () => {
+        const existing: ConnectionInfo = {
+          userId: 'user123',
+        }
+        const incoming: ConnectionInfo = {
+          userId: 'user123',
+        }
+
+        expect(shouldReplaceConnection(existing, incoming)).toBe(true)
+      })
+
+      it('replaces all existing connections when incoming lacks machineId', () => {
+        const laptop: ConnectionInfo = {
+          userId: 'user123',
+          machineId: 'laptop',
+        }
+        const desktop: ConnectionInfo = {
+          userId: 'user123',
+          machineId: 'desktop',
+        }
+        const legacy: ConnectionInfo = {
+          userId: 'user123',
+        }
+        const incoming: ConnectionInfo = {
+          userId: 'user123',
+        }
+
+        expect(shouldReplaceConnection(laptop, incoming)).toBe(true)
+        expect(shouldReplaceConnection(desktop, incoming)).toBe(true)
+        expect(shouldReplaceConnection(legacy, incoming)).toBe(true)
+      })
+    })
+
+    describe('mixed scenario - existing without machineId', () => {
+      it('replaces existing connection without machineId when incoming has machineId', () => {
+        const existing: ConnectionInfo = {
+          userId: 'user123',
+        }
+        const incoming: ConnectionInfo = {
+          userId: 'user123',
+          machineId: 'laptop',
+        }
+
+        expect(shouldReplaceConnection(existing, incoming)).toBe(true)
+      })
+
+      it('allows new connection with machineId to coexist with other machined connections', () => {
+        const legacy: ConnectionInfo = {
+          userId: 'user123',
+        }
+        const desktop: ConnectionInfo = {
+          userId: 'user123',
+          machineId: 'desktop',
+        }
+        const laptop: ConnectionInfo = {
+          userId: 'user123',
+          machineId: 'laptop',
+        }
+
+        // Legacy connection should be replaced by any new connection with machineId
+        expect(shouldReplaceConnection(legacy, laptop)).toBe(true)
+        expect(shouldReplaceConnection(legacy, desktop)).toBe(true)
+
+        // But laptop and desktop should coexist
+        expect(shouldReplaceConnection(laptop, desktop)).toBe(false)
+        expect(shouldReplaceConnection(desktop, laptop)).toBe(false)
+      })
     })
   })
 })

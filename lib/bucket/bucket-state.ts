@@ -503,6 +503,52 @@ export function handleKeypress(
 export const INITIAL_RECONNECT_DELAY_MS = 1000
 export const MAX_RECONNECT_DELAY_MS = 30000
 
+// --- Connection Replacement Logic ---
+
+/**
+ * Information about a WebSocket connection needed for replacement decisions.
+ */
+export interface ConnectionInfo {
+  /** Optional machine identifier from connection-init */
+  machineId?: string
+  /** User identifier (e.g., userId or token) */
+  userId: string
+}
+
+/**
+ * Determine if a new incoming connection should replace an existing connection.
+ * Pure function implementing machine-aware connection replacement logic.
+ *
+ * Rules:
+ * 1. Same machine replacement: If both have machineId and they match, replace
+ * 2. Different machine coexistence: If both have machineId and they differ, coexist (don't replace)
+ * 3. Legacy behavior: If incoming lacks machineId, replace all (backward compatible)
+ * 4. Mixed scenario: Existing without machineId is replaced by any new connection
+ *
+ * @param existing - Information about the existing connection
+ * @param incoming - Information about the new connection attempting to connect
+ * @returns true if existing should be closed with code 4000, false if they should coexist
+ */
+export function shouldReplaceConnection(
+  existing: ConnectionInfo,
+  incoming: ConnectionInfo
+): boolean {
+  // Rule 3: Incoming connection without machineId replaces all existing connections (legacy behavior)
+  if (!incoming.machineId) {
+    return true
+  }
+
+  // Rule 4: Existing connection without machineId is replaced by any new connection with machineId
+  if (!existing.machineId) {
+    return true
+  }
+
+  // Both have machineId - Rule 1 or 2
+  // Rule 1: Same machineId → replace
+  // Rule 2: Different machineId → coexist (don't replace)
+  return existing.machineId === incoming.machineId
+}
+
 /**
  * State needed for connection lifecycle handlers.
  */
@@ -526,8 +572,10 @@ interface ConnectionLifecycleResult {
  * Handle WebSocket close event.
  * Returns updated state and effects (log, scheduleReconnect).
  *
- * Code 4000 means we were replaced by another connection from the same user;
+ * Code 4000 means we were replaced by another connection from the same machine;
  * in that case we don't reconnect to avoid an infinite replacement loop.
+ * With machine IDs, connections from different machines coexist, but connections
+ * from the same machine replace each other.
  */
 export function handleClose(
   state: ConnectionLifecycleState,
@@ -542,7 +590,7 @@ export function handleClose(
     stream: 'stdout',
   })
 
-  // Code 4000: replaced by another connection - don't reconnect
+  // Code 4000: replaced by another connection from the same machine - don't reconnect
   if (code === 4000) {
     effects.push({
       type: 'log',
