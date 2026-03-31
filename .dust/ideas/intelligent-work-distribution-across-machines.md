@@ -91,9 +91,9 @@ Client-side (this repository):
 - No changes required beyond machine identity support
 - Existing reconciliation logic handles assignment changes
 
-## Related Ideas
+## Related Tasks
 
-- [Machine Identity in Connection Init](machine-identity-in-connection-init.md) — Required foundation
+- [Add Machine ID Storage and Discovery](../tasks/add-machine-id-storage-and-discovery.md) — Required foundation
 
 ## Related Facts
 
