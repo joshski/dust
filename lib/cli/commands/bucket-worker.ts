@@ -109,7 +109,10 @@ import type {
 import { createLogger, enableFileLogs } from '../../logging'
 import { isUnattended } from '../../session'
 import type { CommandDependencies, CommandResult, FileSystem } from '../types'
-import { createDefaultBucketDependencies } from '../../bucket/native-io'
+import {
+  createDefaultBucketDependencies,
+  storeMachineId,
+} from '../../bucket/native-io'
 
 export { createDefaultBucketDependencies }
 
@@ -1255,7 +1258,12 @@ async function resolveToken(
 }
 
 type BucketWorkerArgsResult =
-  | { success: true; docker: boolean; appleContainer: boolean }
+  | {
+      success: true
+      docker: boolean
+      appleContainer: boolean
+      machineId: string | undefined
+    }
   | { success: false; error: string }
 
 /**
@@ -1275,7 +1283,28 @@ export function parseBucketWorkerArgs(
     }
   }
 
-  return { success: true, docker, appleContainer }
+  // Parse --machine-id <name> flag
+  let machineId: string | undefined
+  const machineIdIndex = commandArguments.indexOf('--machine-id')
+  if (machineIdIndex !== -1) {
+    const machineIdValue = commandArguments[machineIdIndex + 1]
+    if (!machineIdValue || machineIdValue.startsWith('--')) {
+      return {
+        success: false,
+        error: '--machine-id flag requires a value',
+      }
+    }
+    const trimmedValue = machineIdValue.trim()
+    if (!trimmedValue) {
+      return {
+        success: false,
+        error: 'Machine ID cannot be empty or whitespace-only',
+      }
+    }
+    machineId = trimmedValue
+  }
+
+  return { success: true, docker, appleContainer, machineId }
 }
 
 export async function bucketWorker(
@@ -1285,7 +1314,7 @@ export async function bucketWorker(
   enableFileLogs('bucket')
   const { context, fileSystem } = dependencies
 
-  // Parse --docker and --apple-container flags from command arguments
+  // Parse --docker, --apple-container, and --machine-id flags from command arguments
   const argsResult = parseBucketWorkerArgs(dependencies.arguments)
   if (!argsResult.success) {
     context.stderr(argsResult.error)
@@ -1293,6 +1322,21 @@ export async function bucketWorker(
   }
   bucketDeps.forceDocker = argsResult.docker
   bucketDeps.forceAppleContainer = argsResult.appleContainer
+
+  // Store machine ID if provided via --machine-id flag
+  /* istanbul ignore next @license -- dynamic imports for side-effect function */
+  if (argsResult.machineId) {
+    try {
+      const { mkdir, writeFile } = await import('node:fs/promises')
+      const { homedir } = await import('node:os')
+      await storeMachineId(argsResult.machineId, homedir(), mkdir, writeFile)
+    } catch (error) {
+      context.stderr(
+        `Failed to store machine ID: ${error instanceof Error ? error.message : String(error)}`
+      )
+      return { exitCode: 1 }
+    }
+  }
 
   if (isUnattended(bucketDeps.session)) {
     context.stderr(

@@ -449,6 +449,70 @@ describe('parseBucketWorkerArgs', () => {
       )
     }
   })
+
+  test('returns machineId when --machine-id flag is present with value', () => {
+    const result = parseBucketWorkerArgs(['--machine-id', 'my-laptop'])
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.machineId).toBe('my-laptop')
+      expect(result.docker).toBe(false)
+      expect(result.appleContainer).toBe(false)
+    }
+  })
+
+  test('trims whitespace from machine ID value', () => {
+    const result = parseBucketWorkerArgs(['--machine-id', '  my-laptop  '])
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.machineId).toBe('my-laptop')
+    }
+  })
+
+  test('returns error when --machine-id flag has no value', () => {
+    const result = parseBucketWorkerArgs(['--machine-id'])
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toBe('--machine-id flag requires a value')
+    }
+  })
+
+  test('returns error when --machine-id value starts with --', () => {
+    const result = parseBucketWorkerArgs(['--machine-id', '--other-flag'])
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toBe('--machine-id flag requires a value')
+    }
+  })
+
+  test('returns error when --machine-id value is whitespace-only', () => {
+    const result = parseBucketWorkerArgs(['--machine-id', '   '])
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toBe('Machine ID cannot be empty or whitespace-only')
+    }
+  })
+
+  test('combines --machine-id with --docker', () => {
+    const result = parseBucketWorkerArgs([
+      '--docker',
+      '--machine-id',
+      'my-laptop',
+    ])
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.docker).toBe(true)
+      expect(result.machineId).toBe('my-laptop')
+      expect(result.appleContainer).toBe(false)
+    }
+  })
+
+  test('returns undefined machineId when flag not present', () => {
+    const result = parseBucketWorkerArgs(['--docker'])
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.machineId).toBeUndefined()
+    }
+  })
 })
 
 describe('logMessage', () => {

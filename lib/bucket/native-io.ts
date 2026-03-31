@@ -11,6 +11,7 @@ import { EventEmitter } from 'node:events'
 import { accessSync, statSync } from 'node:fs'
 import { chmod, mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir, platform, release } from 'node:os'
+import { join } from 'node:path'
 import { readEnvConfig } from '../env-config'
 import { createLocalServer } from './auth-server'
 import {
@@ -215,6 +216,80 @@ async function defaultBuildConnectionInit(
   const agents: AgentCapability[] = capabilitiesMessage.agents
 
   return buildConnectionInitPayload(dustVersion, platformStr, gitRemote, agents)
+}
+
+/**
+ * IO dependencies for machine ID operations.
+ * This interface enables testing by allowing injection of file system operations.
+ */
+export interface MachineIdIO {
+  /** Read environment variable */
+  getEnv: (key: string) => string | undefined
+  /** Read file contents */
+  readFile: (path: string, encoding: 'utf8') => Promise<string>
+  /** Get OS hostname */
+  getHostname: () => string
+}
+
+/**
+ * Get the stable machine identifier.
+ *
+ * Precedence (first non-empty value wins):
+ * 1. DUST_MACHINE_ID environment variable
+ * 2. ~/.dust/machine-id file contents
+ * 3. os.hostname()
+ *
+ * Returns a trimmed, non-empty string.
+ * This is a pure function when io dependencies are pure.
+ */
+export async function getMachineId(io: MachineIdIO): Promise<string> {
+  // 1. Check environment variable
+  const envMachineId = io.getEnv('DUST_MACHINE_ID')
+  if (envMachineId && envMachineId.trim()) {
+    return envMachineId.trim()
+  }
+
+  // 2. Check ~/.dust/machine-id file
+  try {
+    const homeDir = homedir()
+    const machineIdPath = join(homeDir, '.dust', 'machine-id')
+    const fileContent = await io.readFile(machineIdPath, 'utf8')
+    const trimmedContent = fileContent.trim()
+    if (trimmedContent) {
+      return trimmedContent
+    }
+  } catch {
+    // File doesn't exist or can't be read, continue to fallback
+  }
+
+  // 3. Fallback to hostname
+  return io.getHostname()
+}
+
+/**
+ * Store a machine ID to ~/.dust/machine-id.
+ * Creates the ~/.dust directory if it doesn't exist.
+ * Throws if the machine ID is empty after trimming.
+ */
+export async function storeMachineId(
+  machineId: string,
+  homeDir: string,
+  mkdirFn: typeof mkdir,
+  writeFileFn: typeof writeFile
+): Promise<void> {
+  const trimmedId = machineId.trim()
+  if (!trimmedId) {
+    throw new Error('Machine ID cannot be empty or whitespace-only')
+  }
+
+  const dustDir = join(homeDir, '.dust')
+  const machineIdPath = join(dustDir, 'machine-id')
+
+  // Ensure .dust directory exists
+  await mkdirFn(dustDir, { recursive: true })
+
+  // Write machine ID to file
+  await writeFileFn(machineIdPath, trimmedId, 'utf8')
 }
 
 export function createDefaultBucketDependencies(): BucketDependencies {
