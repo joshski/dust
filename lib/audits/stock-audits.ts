@@ -615,6 +615,111 @@ function factsVerification(): string {
   `
 }
 
+function factsExpansion(): string {
+  return dedent`
+    # Facts Expansion
+
+    Review the codebase for significant facts that should be documented in \`.dust/facts/\`.
+
+    ${ideasHint}
+
+    ## Context
+
+    Facts capture how things work today, providing context for agents and contributors. However, not all significant aspects of the codebase are currently documented as facts. This creates gaps where agents working in specific areas may lack important context that isn't obvious from scanning code or having prior framework knowledge.
+
+    ## Applicability
+
+    This audit applies to all codebases. If \`.dust/facts/\` does not exist, the audit will identify initial facts to document.
+
+    ## Scope
+
+    Analyze the codebase for undocumented facts across these areas:
+
+    ### Architectural Decisions
+    - Separation of concerns patterns not enforced by directory structure
+    - Dependency flow rules (e.g., what can depend on what)
+    - Layer boundaries and their purposes
+    - Module initialization order requirements
+    - Plugin or extension mechanisms
+
+    ### Implementation Conventions
+    - Naming patterns for specific types of code (factories, builders, validators)
+    - Error handling conventions (when to throw vs return errors)
+    - Async/await patterns and Promise handling
+    - Resource cleanup patterns
+    - State management approaches
+
+    ### External Integration Points
+    - CLI command structure and parsing approach
+    - Event emission patterns
+    - File system conventions
+    - Process spawning patterns
+    - Network communication protocols
+
+    ### Performance Characteristics
+    - Known performance bottlenecks
+    - Caching strategies
+    - Lazy loading patterns
+    - Resource pooling approaches
+    - Optimization trade-offs
+
+    ### Historical Context
+    - Migration paths from previous approaches
+    - Deprecated patterns still present in legacy code
+    - Trade-offs made in past decisions
+    - Features that were removed and why
+
+    ## Analysis Approach
+
+    1. **Scan for patterns** - Look for repeated implementation patterns across multiple files
+    2. **Identify conventions** - Find coding conventions that aren't enforced by linters
+    3. **Review configuration** - Document configuration systems and their purposes
+    4. **Trace data flows** - Identify how data moves through the system
+    5. **Check existing facts** - Compare findings against what's already documented in \`.dust/facts/\`
+    6. **Filter for significance** - Only suggest facts that would genuinely help future agents (facts that aren't obvious from code inspection or general framework knowledge)
+
+    ## Significance Criteria
+
+    A fact is worth documenting if:
+    - It's not obvious from reading the code in isolation
+    - It represents a project-specific decision or convention
+    - Future agents would benefit from knowing it before making changes
+    - It documents framework patterns actually used in this project
+
+    ## Output Format
+
+    For each suggested fact, create an idea file in \`.dust/ideas/\` that includes:
+
+    ### Fact Title
+    A clear, concise title for the proposed fact.
+
+    ### Why This Matters
+    Explanation of why this fact would be valuable to document (what gaps it fills, what problems it prevents).
+
+    ### What to Document
+    Specific aspects to cover in the fact file.
+
+    ### Where to Look
+    File paths or code locations that demonstrate this fact.
+
+    ### Example Content
+    A sketch of what the fact file might contain (2-3 sentences showing the style and key points).
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - Analyzed codebase for undocumented patterns across all specified areas
+    - Compared findings against existing facts in \`.dust/facts/\`
+    - Applied significance criteria to filter suggestions
+    - Created idea files for each suggested fact with complete metadata
+    - Each idea includes: fact title, why it matters, what to document, where to look, example content
+    - No changes to files outside \`.dust/\`
+  `
+}
+
 function feedbackLoopSpeed(): string {
   return dedent`
     # Feedback Loop Speed
@@ -2828,6 +2933,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'design-patterns': designPatterns,
   'directory-hierarchy': directoryHierarchy,
   'error-handling': errorHandling,
+  'facts-expansion': factsExpansion,
   'facts-verification': factsVerification,
   'feedback-loop-speed': feedbackLoopSpeed,
   'flaky-tests': flakyTests,
