@@ -62,7 +62,7 @@ implement
 
 ## Blocked By
 
-- [Implement test errno error factory](implement-test-errno-error-factory.md)
+(none)
 
 ## Definition of Done
 

@@ -465,6 +465,22 @@ export interface SpawnEmulator {
 }
 
 /**
+ * Creates a typed errno error for use in tests.
+ *
+ * @param code - The errno code (e.g., 'ENOENT', 'EEXIST', 'EACCES')
+ * @param message - Optional custom message. If not provided, uses a standard format.
+ * @returns A properly typed NodeJS.ErrnoException
+ */
+export function createErrnoError(
+  code: string,
+  message?: string
+): NodeJS.ErrnoException {
+  const error = new Error(message || `${code}: error`) as NodeJS.ErrnoException
+  error.code = code
+  return error
+}
+
+/**
  * Creates a configurable spawn emulator for testing child process execution.
  * Returns a spawn-compatible function and utilities for tracking and controlling processes.
  *
