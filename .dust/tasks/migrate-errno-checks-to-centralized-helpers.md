@@ -86,7 +86,7 @@ implement
 
 ## Blocked By
 
-- [Implement filesystem error type guards](implement-filesystem-error-type-guards.md)
+(none)
 
 ## Definition of Done
 
