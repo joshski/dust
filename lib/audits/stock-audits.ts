@@ -2561,27 +2561,14 @@ function commitMessageQuality(): string {
 }
 
 function suggestAudits(): string {
-  // Build the list of available audits with descriptions
-  // Exclude 'suggest-audits' itself to avoid circular reference
-  const auditList = Object.entries(stockAuditFunctions)
-    .filter(([name]) => name !== 'suggest-audits')
-    .toSorted(([a], [b]) => a.localeCompare(b))
-    .map(([name, render]) => {
-      const template = render()
-      const description = extractOpeningSentence(template)
-      return `- **${name}**: ${description}`
-    })
-    .join('\n')
-
-  // Build template in parts to avoid dedent issues with interpolated multi-line strings
-  let content = dedent`
+  return dedent`
     # Suggest Audits
 
     Analyze recent commits and create tasks for relevant audits to run.
 
     ## Context
 
-    This audit examines recent commit history and suggests which stock audits would be valuable based on what changed. Rather than manually selecting audits, this provides an automated way to maintain codebase health by matching recent work to appropriate audits.
+    This audit examines recent commit history and suggests which audits would be valuable based on what changed. Rather than manually selecting audits, this provides an automated way to maintain codebase health by matching recent work to appropriate audits.
 
     ## Commit Range
 
@@ -2593,20 +2580,17 @@ function suggestAudits(): string {
 
     ## Available Audits
 
-  `
-
-  content += '\n\n' + auditList + '\n'
-
-  content += dedent`
+    Run \`dust audit\` to list all available audits (including both stock audits and any repository-specific audits configured in \`.dust/config/audits/\`). This will show the audit name and description for each available audit.
 
     ## Analysis Steps
 
-    1. **Gather commits** - Get the list of commits in the determined range with their messages and changed files
-    2. **Categorize changes** - Group commits by the type of work (features, fixes, refactoring, tests, docs, config)
-    3. **Match to audits** - For each relevant audit, explain why recent changes make it valuable:
+    1. **List audits** - Run \`dust audit\` to get the complete list of available audits with descriptions
+    2. **Gather commits** - Get the list of commits in the determined range with their messages and changed files
+    3. **Categorize changes** - Group commits by the type of work (features, fixes, refactoring, tests, docs, config)
+    4. **Match to audits** - For each relevant audit, explain why recent changes make it valuable:
        - What specific commits or file changes triggered the suggestion?
        - What might the audit uncover given this context?
-    4. **Create tasks** - For each suggested audit, create a task file in \`.dust/tasks/\`
+    5. **Create tasks** - For each suggested audit, create a task file in \`.dust/tasks/\`
 
     ## Output
 
@@ -2655,8 +2639,6 @@ function suggestAudits(): string {
     - Each task explains why the audit is valuable given recent changes
     - No changes to files outside \`.dust/\`
   `
-
-  return content
 }
 
 const stockAuditFunctions: Record<string, () => string> = {
