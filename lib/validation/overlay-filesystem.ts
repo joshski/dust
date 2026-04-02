@@ -3,6 +3,7 @@
  * Supports deletions via a set of paths to hide from the base filesystem.
  */
 
+import { isErrorCode } from '../filesystem/error-codes'
 import type { ReadableFileSystem } from '../filesystem/types'
 
 export function createOverlayFileSystem(
@@ -68,7 +69,7 @@ export function createOverlayFileSystem(
           }
         }
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        if (!isErrorCode(error, 'ENOENT')) {
           throw error
         }
         // Base directory may not exist

@@ -6,6 +6,7 @@
  */
 
 import { ARTIFACT_TYPES } from '../artifacts/index'
+import { isErrorCode } from '../filesystem/error-codes'
 import type { ReadableFileSystem } from '../filesystem/types'
 import type { Violation } from '../lint/validators/types'
 import { type ArtifactPatch, validatePatch } from '../validation/index'
@@ -133,7 +134,7 @@ async function loadExistingPrincipleRelationships(
   try {
     entries = await fileSystem.readdir(principlesDir)
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrorCode(error, 'ENOENT')) {
       return relationships
     }
     throw error
@@ -324,7 +325,7 @@ async function findReferencesToDeletedPaths(
     try {
       entries = await fileSystem.readdir(dirPath)
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if (isErrorCode(error, 'ENOENT')) {
         continue
       }
       throw error
@@ -610,7 +611,7 @@ async function fileExists(
     await fileSystem.readFile(path)
     return true
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrorCode(error, 'ENOENT')) {
       return false
     }
     throw error

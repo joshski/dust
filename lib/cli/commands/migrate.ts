@@ -2,6 +2,7 @@
  * dust migrate - Migrate from legacy goals to principles terminology
  */
 
+import { isErrorCode } from '../../filesystem/error-codes'
 import { getColors } from '../colors'
 import type { CommandDependencies, CommandResult, GlobScanner } from '../types'
 
@@ -21,7 +22,7 @@ async function scanMarkdownFiles(
     }
     return files
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrorCode(error, 'ENOENT')) {
       return []
     }
     throw error

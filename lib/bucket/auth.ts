@@ -1,5 +1,6 @@
 import { join } from 'node:path'
 import type { BucketConfig } from '../env-config'
+import { isErrorCode } from '../filesystem/error-codes'
 import type { FileSystem } from '../filesystem/types'
 
 const CREDENTIALS_DIR = '.dust'
@@ -39,7 +40,7 @@ export async function loadStoredToken(
     const data = JSON.parse(content)
     return typeof data.token === 'string' ? data.token : null
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrorCode(error, 'ENOENT')) {
       return null
     }
     throw error
@@ -67,7 +68,7 @@ export async function clearToken(
   try {
     await fileSystem.writeFile(path, '{}')
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrorCode(error, 'ENOENT')) {
       // If file doesn't exist, nothing to clear
       return
     }

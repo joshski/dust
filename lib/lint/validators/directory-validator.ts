@@ -3,6 +3,7 @@
  */
 
 import { ARTIFACT_TYPES } from '../../artifacts/index'
+import { isErrorCode } from '../../filesystem/error-codes'
 import type { DirectoryReader } from '../../filesystem/types'
 import type { Violation } from './types'
 
@@ -21,7 +22,7 @@ export async function validateContentDirectoryFiles(
   try {
     entries = await fileSystem.readdir(dirPath)
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrorCode(error, 'ENOENT')) {
       return []
     }
     throw error
@@ -70,7 +71,7 @@ export async function validateDirectoryStructure(
   try {
     entries = await fileSystem.readdir(dustPath)
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrorCode(error, 'ENOENT')) {
       return []
     }
     throw error
@@ -125,7 +126,7 @@ export async function validateDirectoryStructure(
   try {
     configEntries = await fileSystem.readdir(configPath)
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrorCode(error, 'ENOENT')) {
       return violations
     }
     throw error

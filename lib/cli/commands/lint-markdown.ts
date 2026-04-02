@@ -4,6 +4,7 @@
 
 import { isAbsolute, join, relative, sep } from 'node:path'
 import { validateSettingsJson } from '../../config/settings'
+import { isErrorCode } from '../../filesystem/error-codes'
 import { validateDirectoryStructure } from '../../lint/validators/directory-validator'
 import type { Violation } from '../../lint/validators/types'
 import {
@@ -24,7 +25,7 @@ async function safeReadFile(
   try {
     return await fileSystem.readFile(filePath)
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrorCode(error, 'ENOENT')) {
       return null
     }
     throw error

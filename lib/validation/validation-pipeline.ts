@@ -13,6 +13,7 @@ import {
   type ParsedArtifact,
   parseArtifact,
 } from '../artifacts/parsed-artifact'
+import { isErrorCode } from '../filesystem/error-codes'
 import type { ReadableFileSystem } from '../filesystem/types'
 import { validateAuditHeadings } from '../lint/validators/audit-validator'
 import {
@@ -84,7 +85,7 @@ export async function parseArtifacts(
   try {
     rootEntries = await fileSystem.readdir(dustPath)
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrorCode(error, 'ENOENT')) {
       rootEntries = []
     } else {
       throw error
@@ -99,7 +100,7 @@ export async function parseArtifacts(
     try {
       content = await fileSystem.readFile(filePath)
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if (isErrorCode(error, 'ENOENT')) {
         continue
       }
       throw error
@@ -124,7 +125,7 @@ export async function parseArtifacts(
     try {
       entries = await fileSystem.readdir(dirPath)
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if (isErrorCode(error, 'ENOENT')) {
         continue
       }
       throw error
@@ -156,7 +157,7 @@ export async function parseArtifacts(
   try {
     auditEntries = await fileSystem.readdir(auditsPath)
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrorCode(error, 'ENOENT')) {
       auditEntries = []
     } else {
       throw error
@@ -171,7 +172,7 @@ export async function parseArtifacts(
     try {
       content = await fileSystem.readFile(filePath)
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      if (isErrorCode(error, 'ENOENT')) {
         continue
       }
       throw error

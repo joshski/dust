@@ -7,6 +7,7 @@
 import { join } from 'node:path'
 import type { CheckConfig, DustSettings, FileReader } from '../cli/types'
 import type { RuntimeConfig } from '../env-config'
+import { isErrorCode } from '../filesystem/error-codes'
 
 // Re-export for backwards compatibility
 export type { CheckConfig, DustSettings }
@@ -426,7 +427,7 @@ export async function loadSettings(
     }
     return result
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrorCode(error, 'ENOENT')) {
       const result: DustSettings = {
         dustCommand: detectDustCommand(cwd, fileSystem, runtime),
       }

@@ -6,6 +6,7 @@
 
 import { join } from 'node:path'
 import { type AgentType, detectAgent } from '../../agents/detection'
+import { isErrorCode } from '../../filesystem/error-codes'
 import { createHooksManager } from '../../git/hooks'
 import type { CommandDependencies, DustSettings, FileReader } from '../types'
 
@@ -48,7 +49,7 @@ export async function loadAgentInstructions(
     const content = await fileSystem.readFile(instructionsPath)
     return content.trim()
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+    if (isErrorCode(error, 'ENOENT')) {
       return ''
     }
     throw error

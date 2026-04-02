@@ -7,6 +7,7 @@
 
 import { join } from 'node:path'
 import type { DustSettings } from '../cli/types'
+import { isErrorCode } from '../filesystem/error-codes'
 import type { FileSystem } from '../filesystem/types'
 
 const DUST_HOOK_START = '# BEGIN DUST HOOK'
@@ -67,7 +68,7 @@ export function createHooksManager(
         const content = await fileSystem.readFile(prePushPath)
         return content.includes(DUST_HOOK_START)
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (isErrorCode(error, 'ENOENT')) {
           return false
         }
         throw error
@@ -95,7 +96,7 @@ export function createHooksManager(
           finalContent = `${existingContent.trimEnd()}\n\n${hookContent}\n`
         }
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (isErrorCode(error, 'ENOENT')) {
           // Create new hook file
           finalContent = `#!/bin/sh\n\n${hookContent}\n`
         } else {
@@ -118,7 +119,7 @@ export function createHooksManager(
         const match = dustSection.match(/^(.+) pre push$/m)
         return match ? match[1] : null
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (isErrorCode(error, 'ENOENT')) {
           return null
         }
         throw error
@@ -130,7 +131,7 @@ export function createHooksManager(
       try {
         content = await fileSystem.readFile(prePushPath)
       } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        if (isErrorCode(error, 'ENOENT')) {
           // No hook file exists, nothing to update
           return
         }
