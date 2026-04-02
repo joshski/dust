@@ -1757,6 +1757,169 @@ function slowTests(): string {
   `
 }
 
+function overAbstraction(): string {
+  return dedent`
+    # Over-Abstraction
+
+    Identify violations of the "reasonably-dry" principle where code has been over-engineered with excessive abstraction.
+
+    ${ideasHint}
+
+    ## Scope
+
+    Detect these over-abstraction patterns:
+
+    1. **Single-use abstractions** - Interfaces, base classes, or utility functions used in only one place
+    2. **Deep inheritance hierarchies** - Classes extending more than 2 levels deep
+    3. **Premature generalization** - Parameters always used with the same value, unused options/flags
+    4. **Excessive indirection** - Multiple layers of wrappers adding no value
+
+    ## Analysis Steps
+
+    ### 1. Find Single-Use Abstractions
+
+    Search for abstractions that are only used once:
+
+    1. **Interfaces with one implementation**
+       - Search for \`interface\` declarations
+       - Check if each interface has only one implementing class
+       - Flag interfaces that exist solely for testing (can be replaced with the concrete type)
+
+    2. **Base classes with one subclass**
+       - Search for \`abstract class\` or classes used as base classes
+       - Count implementations extending each base class
+       - Flag base classes with only one subclass
+
+    3. **Utility functions called once**
+       - Search for exported utility functions
+       - Check call sites - if only called from one location, it's over-abstraction
+       - Consider inlining single-use utilities
+
+    4. **Generic types with one concrete usage**
+       - Find generic type parameters: \`<T>\`, \`<TData>\`, etc.
+       - Check if T is always the same type at all call sites
+       - Flag generics that could be concrete types
+
+    ### 2. Detect Deep Inheritance Hierarchies
+
+    Find inheritance chains longer than 2 levels:
+
+    1. Search for \`extends\` keywords in class declarations
+    2. Build inheritance tree for each class
+    3. Flag chains deeper than 2 (A extends B extends C extends D...)
+    4. Respect framework conventions (don't flag React.Component, etc.)
+
+    ### 3. Identify Premature Generalization
+
+    Look for flexibility that's never used:
+
+    1. **Always-same parameter values**
+       - Find function parameters
+       - Check all call sites - if always the same value, it's not needed
+       - Flag parameters that could be constants or removed
+
+    2. **Unused configuration options**
+       - Search for configuration objects/interfaces
+       - Check which options are actually used
+       - Flag options that are never set or always default
+
+    3. **Unused function parameters**
+       - Find parameters that aren't referenced in function bodies
+       - Flag as candidates for removal
+
+    ### 4. Find Excessive Indirection
+
+    Detect wrapper chains that add no value:
+
+    1. **Delegation chains**
+       - Search for functions that only call another function
+       - Flag wrappers that don't add logic, just forward calls
+       - Example: \`function foo(x) { return bar(x) }\`
+
+    2. **Proxy patterns without behavior**
+       - Find classes that wrap another class
+       - Check if wrapper adds any logic beyond forwarding
+       - Flag pure proxies
+
+    3. **Middleware without transformation**
+       - Look for middleware/interceptor patterns
+       - Check if they modify data or just pass through
+       - Flag pass-through middleware
+
+    ## Output Format
+
+    For each over-abstraction found, create an idea file in \`.dust/ideas/\` with:
+
+    \`\`\`markdown
+    # Over-Abstraction: [Type] in [Location]
+
+    ## Type
+
+    [Single-use | Deep hierarchy | Premature generalization | Excessive indirection]
+
+    ## Location
+
+    \`\`\`
+    [file path]:[line number]
+    \`\`\`
+
+    ## Description
+
+    [What the abstraction is]
+
+    ## Problem
+
+    [Why this is over-abstraction - complexity without benefit]
+
+    ## Usage Analysis
+
+    - **Times used**: [count]
+    - **Variation in usage**: [how different are the use cases]
+    - **Complexity cost**: [lines of code, indirection levels, etc.]
+
+    ## Suggested Simplification
+
+    [How to remove or reduce this abstraction]
+
+    ## Impact
+
+    [Lines of code saved, reduced complexity, improved clarity]
+    \`\`\`
+
+    ## Special Considerations
+
+    1. **Framework conventions** - Don't flag patterns mandated by frameworks:
+       - React: Component base classes, hooks patterns
+       - Express: Middleware signatures
+       - Testing: Test base classes, fixture patterns
+
+    2. **Library boundaries** - Public API abstractions may be justified even if internal usage is simple
+
+    3. **Test code** - Apply the same standards to test code as production code
+
+    4. **Context depth thresholds**:
+       - Deep hierarchies (>2 levels) make understanding difficult
+       - Wrapper chains (>2 levels) obscure actual behavior
+       - Generic parameters should have multiple concrete usages
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - Searched for single-use interfaces, base classes, and utility functions
+    - Identified deep inheritance hierarchies (>2 levels)
+    - Found parameters always used with the same value
+    - Detected unused configuration options
+    - Located excessive wrapper chains and delegation
+    - Respected framework conventions (didn't flag framework-mandated patterns)
+    - Created idea files for each over-abstraction found
+    - Each idea includes usage analysis and simplification suggestions
+    - No changes to files outside \`.dust/\`
+  `
+}
+
 function primitiveObsession(): string {
   return dedent`
     # Primitive Obsession
@@ -3147,6 +3310,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'idiomatic-style': idiomaticStyle,
   'incidental-test-details': incidentalTestDetails,
   'logging-and-traceability': loggingAndTraceability,
+  'over-abstraction': overAbstraction,
   'primitive-obsession': primitiveObsession,
   'repository-context': repositoryContext,
   'security-review': securityReview,

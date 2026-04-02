@@ -50,6 +50,7 @@ describe('buildAuditsRepository', () => {
       expect(audits.every(a => a.source === 'stock')).toBe(true)
       // Check a known stock audit exists
       expect(audits.some(a => a.name === 'dead-code')).toBe(true)
+      expect(audits.some(a => a.name === 'over-abstraction')).toBe(true)
     })
 
     test('returns combined stock and user audits', async () => {
@@ -177,6 +178,26 @@ describe('buildAuditsRepository', () => {
 
       expect(audit.name).toBe('no-description')
       expect(audit.description).toBe('')
+    })
+
+    test('parses the over-abstraction stock audit', async () => {
+      const fileSystem = createFileSystemEmulator({
+        project: { '.dust': { tasks: {} } },
+      })
+      const repository = buildAuditsRepository(fileSystem, '/project/.dust')
+
+      const audit = await repository.parseAudit({ name: 'over-abstraction' })
+
+      expect(audit.name).toBe('over-abstraction')
+      expect(audit.title).toBe('Over-Abstraction')
+      expect(audit.source).toBe('stock')
+      expect(audit.template).toContain('Over-Abstraction')
+      expect(audit.template).toContain('reasonably-dry')
+      expect(audit.template).toContain('Single-use abstractions')
+      expect(audit.template).toContain('Deep inheritance hierarchies')
+      expect(audit.template).toContain('Premature generalization')
+      expect(audit.template).toContain('Excessive indirection')
+      expect(audit.description).toBeDefined()
     })
   })
 
