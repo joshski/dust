@@ -16,18 +16,6 @@ import {
 import { loadStockAudits } from './stock-audits'
 
 export { loadStockAudits } from './stock-audits'
-export {
-  analyzeDirectoryHierarchy,
-  type DirectoryNode,
-  type IssueType,
-  type MigrationComplexity,
-  type Finding,
-} from './directory-hierarchy-analysis'
-export {
-  detectDeterminismIssues,
-  type DeterminismIssue,
-  type IssueCategory,
-} from './test-determinism-detector'
 
 export interface Audit {
   name: string

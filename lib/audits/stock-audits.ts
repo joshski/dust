@@ -408,22 +408,14 @@ function directoryHierarchy(): string {
 
     ## Analysis Steps
 
-    1. **Build directory tree** - Create a \`DirectoryNode\` structure representing the project's file system (excluding \`node_modules\`, \`.git\`, build artifacts)
-    2. **Run analysis** - Import and call \`analyzeDirectoryHierarchy()\` from \`lib/audits/directory-hierarchy-analysis.ts\` with the directory tree
-    3. **Create ideas** - For each finding returned by the analysis, create an idea file in \`.dust/ideas/\` with:
+    1. **Explore the directory tree** - Walk the project's file system recursively, excluding \`node_modules\`, \`.git\`, \`dist\`, \`build\`, \`coverage\`, and other common build artifact directories
+    2. **Identify issues** - For each of the issue types listed above, look for concrete examples in the directory structure
+    3. **Create ideas** - For each issue found, create an idea file in \`.dust/ideas/\` with:
        - Descriptive filename based on the issue type and affected paths
-       - Current directory structure issue (specific paths from \`affectedPaths\`)
-       - Why the current structure is problematic (from \`description\`)
-       - Proposed reorganization (from \`suggestedReorganization\`)
-       - Migration impact and complexity (from \`migrationComplexity\`)
-
-    ## Implementation Notes
-
-    - Use Node.js \`fs\` APIs to read the directory structure recursively
-    - Filter out standard excluded directories (see \`EXCLUDED_DIRECTORIES\` in \`directory-hierarchy-analysis.ts\`)
-    - Each \`DirectoryNode\` should have: \`name\`, \`path\`, \`type\` ('file' or 'directory'), and \`children\` (for directories)
-    - The analysis function is pure - it takes a tree and returns findings
-    - Create one idea file per finding, with clear, actionable titles
+       - The specific paths affected
+       - Why the current structure is problematic
+       - A proposed reorganization
+       - Migration complexity estimate (low/medium/high)
 
     ## Output Format
 
@@ -455,8 +447,7 @@ function directoryHierarchy(): string {
 
     ## Definition of Done
 
-    - Built complete directory tree structure excluding standard directories
-    - Called \`analyzeDirectoryHierarchy()\` from \`lib/audits/directory-hierarchy-analysis.ts\`
+    - Explored the directory tree excluding standard build/tool directories
     - Created idea files for all findings in \`.dust/ideas/\`
     - Each idea includes specific paths, problem description, proposed solution, and complexity
     - No changes to files outside \`.dust/\`
@@ -2305,8 +2296,6 @@ function testDeterminism(): string {
 
     Tests must produce the same result regardless of where they run. Non-deterministic tests undermine confidence in CI, make debugging harder, and waste developer time chasing phantom failures. This audit identifies patterns that introduce non-determinism: time dependencies, randomness, environment variable access, filesystem operations, real timers, and platform-specific behavior.
 
-    The audit uses the test determinism detector to find these issues systematically across unit test files.
-
     ## Scope
 
     Search for unit test files and analyze them for determinism issues:
@@ -2316,12 +2305,12 @@ function testDeterminism(): string {
        - Exclude exploratory test files
 
     2. **Issue categories to detect**:
-       - Time dependencies (\`Date.now()\`, \`new Date()\`)
-       - Randomness (\`Math.random()\`, \`crypto.randomBytes()\`, \`randomUUID()\`)
-       - Environment variables (\`process.env.VARIABLE\` without \`stubEnv\`)
-       - Filesystem operations (file reads/writes in unit tests)
-       - Real timers (\`setTimeout\`, \`setInterval\` without fake timers)
-       - Platform-specific code (\`process.platform\`, \`__dirname\`, \`os.EOL\`)
+       - Time dependencies (\`Date.now()\`, \`new Date()\`) — should use dependency injection or stubbed time
+       - Randomness (\`Math.random()\`, \`crypto.randomBytes()\`, \`randomUUID()\`) — should use seeded random or injection
+       - Environment variables (\`process.env.VARIABLE\` without \`stubEnv\`) — should use \`stubEnv()\` or pass env as a parameter
+       - Filesystem operations (file reads/writes in unit tests) — should use in-memory filesystem or ensure cleanup
+       - Real timers (\`setTimeout\`, \`setInterval\` without fake timers) — should use \`vi.useFakeTimers()\`
+       - Platform-specific code (\`process.platform\`, \`__dirname\`, \`os.EOL\`) — should use dependency injection or normalize paths
 
     ## Analysis Steps
 
@@ -2331,11 +2320,8 @@ function testDeterminism(): string {
 
     2. **Analyze each test file**
        - Read the file content
-       - Use the test determinism detector from \`lib/audits/test-determinism-detector.ts\`:
-         \`\`\`typescript
-         import { detectDeterminismIssues } from './lib/audits/test-determinism-detector'
-         const issues = detectDeterminismIssues(fileContent, filePath)
-         \`\`\`
+       - Look for the patterns listed above
+       - Note: patterns used inside stub/mock setups (\`vi.fn()\`, \`vi.mock()\`, \`vi.spyOn()\`), function parameter type annotations, or \`stubEnv()\` calls are not issues — they represent proper test practices
 
     3. **Create ideas for issues found**
        - Group issues by test file
@@ -2381,7 +2367,7 @@ function testDeterminism(): string {
 
     - Searched for unit test files (\`*.test.ts\`, \`*.test.js\`, \`*.spec.ts\`, \`*.spec.js\`)
     - Excluded system test and exploratory test files
-    - Analyzed each unit test file using the test determinism detector
+    - Analyzed each unit test file for determinism issues
     - Created idea files for test files containing determinism issues
     - Each idea includes specific line numbers, patterns, and refactoring guidance
     - No changes to files outside \`.dust/\`
