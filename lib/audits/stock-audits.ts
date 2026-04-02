@@ -387,6 +387,82 @@ function deadCode(): string {
   `
 }
 
+function directoryHierarchy(): string {
+  return dedent`
+    # Directory Hierarchy
+
+    Review directory structure and create improvement ideas.
+
+    ${ideasHint}
+
+    ## Scope
+
+    Analyze the project's directory organization for these issues:
+
+    1. **Concern mixing** - Directories containing files that serve different purposes
+    2. **Missing grouping** - Related files scattered across multiple locations
+    3. **Depth inconsistency** - Similar directories at inconsistent depths
+    4. **Naming inconsistency** - Directory names that don't follow established patterns
+    5. **Singleton directories** - Directories with only a single file or subdirectory
+    6. **Orphaned files** - Files at inappropriate directory levels
+
+    ## Analysis Steps
+
+    1. **Build directory tree** - Create a \`DirectoryNode\` structure representing the project's file system (excluding \`node_modules\`, \`.git\`, build artifacts)
+    2. **Run analysis** - Import and call \`analyzeDirectoryHierarchy()\` from \`lib/audits/directory-hierarchy-analysis.ts\` with the directory tree
+    3. **Create ideas** - For each finding returned by the analysis, create an idea file in \`.dust/ideas/\` with:
+       - Descriptive filename based on the issue type and affected paths
+       - Current directory structure issue (specific paths from \`affectedPaths\`)
+       - Why the current structure is problematic (from \`description\`)
+       - Proposed reorganization (from \`suggestedReorganization\`)
+       - Migration impact and complexity (from \`migrationComplexity\`)
+
+    ## Implementation Notes
+
+    - Use Node.js \`fs\` APIs to read the directory structure recursively
+    - Filter out standard excluded directories (see \`EXCLUDED_DIRECTORIES\` in \`directory-hierarchy-analysis.ts\`)
+    - Each \`DirectoryNode\` should have: \`name\`, \`path\`, \`type\` ('file' or 'directory'), and \`children\` (for directories)
+    - The analysis function is pure - it takes a tree and returns findings
+    - Create one idea file per finding, with clear, actionable titles
+
+    ## Output Format
+
+    Each idea file should follow this structure:
+
+    \`\`\`markdown
+    # [Issue Type]: [Brief Description]
+
+    ## Current Structure
+
+    [List specific paths from affectedPaths]
+
+    ## Problem
+
+    [Description of why this is problematic]
+
+    ## Proposed Solution
+
+    [Suggested reorganization]
+
+    ## Migration Complexity
+
+    [Low/Medium/High with brief rationale]
+    \`\`\`
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - Built complete directory tree structure excluding standard directories
+    - Called \`analyzeDirectoryHierarchy()\` from \`lib/audits/directory-hierarchy-analysis.ts\`
+    - Created idea files for all findings in \`.dust/ideas/\`
+    - Each idea includes specific paths, problem description, proposed solution, and complexity
+    - No changes to files outside \`.dust/\`
+  `
+}
+
 function documentationDrift(): string {
   return dedent`
     # Documentation Drift
@@ -2655,6 +2731,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'data-access-review': dataAccessReview,
   'dead-code': deadCode,
   'design-patterns': designPatterns,
+  'directory-hierarchy': directoryHierarchy,
   'error-handling': errorHandling,
   'facts-verification': factsVerification,
   'feedback-loop-speed': feedbackLoopSpeed,

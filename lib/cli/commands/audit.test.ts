@@ -217,7 +217,7 @@ describe('audit command', () => {
   test('loadStockAudits loads audits from markdown files', () => {
     const audits = loadStockAudits()
     expect(audits).toBeInstanceOf(Array)
-    expect(audits.length).toBe(33)
+    expect(audits.length).toBe(34)
 
     const names = audits.map(a => a.name)
     expect(names).toContain('agent-developer-experience')
@@ -228,6 +228,8 @@ describe('audit command', () => {
     expect(names).toContain('data-access-review')
     expect(names).toContain('dead-code')
     expect(names).toContain('dependency-health')
+    expect(names).toContain('design-patterns')
+    expect(names).toContain('directory-hierarchy')
     expect(names).toContain('documentation-drift')
     expect(names).toContain('error-handling')
     expect(names).toContain('facts-verification')
