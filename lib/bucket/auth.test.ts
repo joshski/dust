@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import type { BucketConfig } from '../env-config'
 import {
+  createErrnoError,
   createFetchStub,
   createFileSystemEmulator,
 } from '../test-support/test-utilities'
@@ -60,8 +61,10 @@ describe('loadStoredToken', () => {
   })
 
   test('re-throws unexpected filesystem errors', async () => {
-    const permissionError = new Error('EACCES: permission denied')
-    ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+    const permissionError = createErrnoError(
+      'EACCES',
+      'EACCES: permission denied'
+    )
     const fileSystem = createFileSystemEmulator()
     fileSystem.readFile = async () => {
       throw permissionError
@@ -105,8 +108,7 @@ describe('clearToken', () => {
   })
 
   test('does not throw when writeFile throws ENOENT', async () => {
-    const enoentError = new Error('ENOENT: no such file')
-    ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
+    const enoentError = createErrnoError('ENOENT', 'ENOENT: no such file')
     const fileSystem = createFileSystemEmulator()
     fileSystem.writeFile = async () => {
       throw enoentError
@@ -115,8 +117,10 @@ describe('clearToken', () => {
   })
 
   test('re-throws unexpected filesystem errors', async () => {
-    const permissionError = new Error('EACCES: permission denied')
-    ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+    const permissionError = createErrnoError(
+      'EACCES',
+      'EACCES: permission denied'
+    )
     const fileSystem = createFileSystemEmulator()
     fileSystem.writeFile = async () => {
       throw permissionError

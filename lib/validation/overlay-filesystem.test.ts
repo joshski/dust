@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { createFileSystemEmulator } from '../filesystem/emulator'
+import { createErrnoError } from '../test-support/test-utilities'
 import { createOverlayFileSystem } from './overlay-filesystem'
 
 describe('createOverlayFileSystem', () => {
@@ -161,8 +162,10 @@ describe('createOverlayFileSystem', () => {
 
   describe('error handling', () => {
     test('readdir re-throws non-ENOENT errors from base', async () => {
-      const permissionError = new Error('EACCES: permission denied')
-      ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+      const permissionError = createErrnoError(
+        'EACCES',
+        'EACCES: permission denied'
+      )
       const base = createFileSystemEmulator({}, { '/a/existing.md': 'content' })
       base.readdir = async () => {
         throw permissionError
@@ -174,8 +177,7 @@ describe('createOverlayFileSystem', () => {
     })
 
     test('readdir handles ENOENT from base gracefully', async () => {
-      const enoentError = new Error('ENOENT: no such file')
-      ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
+      const enoentError = createErrnoError('ENOENT', 'ENOENT: no such file')
       const base = createFileSystemEmulator({})
       base.readdir = async () => {
         throw enoentError

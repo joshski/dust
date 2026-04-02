@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from 'vitest'
 import {
   createContextEmulator,
+  createErrnoError,
   createFileSystemEmulator,
   createTestRuntimeConfig,
   restoreEnv,
@@ -534,9 +535,7 @@ describe('init command', () => {
     const context = createContextEmulator()
     const fileSystem = createFileSystemEmulator()
     fileSystem.writeFile = async () => {
-      const error = new Error('EACCES: permission denied')
-      ;(error as NodeJS.ErrnoException).code = 'EACCES'
-      throw error
+      throw createErrnoError('EACCES', 'EACCES: permission denied')
     }
     const dependencies: CommandDependencies = {
       arguments: [],
@@ -562,9 +561,7 @@ describe('init command', () => {
         return originalWriteFile(path, content, options)
       }
       // Second write (settings.json) throws a permission error
-      const error = new Error('EACCES: permission denied')
-      ;(error as NodeJS.ErrnoException).code = 'EACCES'
-      throw error
+      throw createErrnoError('EACCES', 'EACCES: permission denied')
     }
     const dependencies: CommandDependencies = {
       arguments: [],
@@ -590,9 +587,7 @@ describe('init command', () => {
         return originalWriteFile(path, content, options)
       }
       // Third write (CLAUDE.md) throws a permission error
-      const error = new Error('EACCES: permission denied')
-      ;(error as NodeJS.ErrnoException).code = 'EACCES'
-      throw error
+      throw createErrnoError('EACCES', 'EACCES: permission denied')
     }
     const dependencies: CommandDependencies = {
       arguments: [],
@@ -618,9 +613,7 @@ describe('init command', () => {
         return originalWriteFile(path, content, options)
       }
       // Fourth write (AGENTS.md) throws a permission error
-      const error = new Error('EACCES: permission denied')
-      ;(error as NodeJS.ErrnoException).code = 'EACCES'
-      throw error
+      throw createErrnoError('EACCES', 'EACCES: permission denied')
     }
     const dependencies: CommandDependencies = {
       arguments: [],

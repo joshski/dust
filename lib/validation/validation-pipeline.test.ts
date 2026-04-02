@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { createFileSystemEmulator } from '../filesystem/emulator'
+import { createErrnoError } from '../test-support/test-utilities'
 import { parseArtifacts, validateArtifacts } from './validation-pipeline'
 
 describe('parseArtifacts', () => {
@@ -58,9 +59,7 @@ describe('parseArtifacts', () => {
     const originalReaddir = fileSystem.readdir.bind(fileSystem)
     fileSystem.readdir = async (path: string) => {
       if (path === dustPath) {
-        const error = new Error('ENOENT: no such file or directory')
-        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-        throw error
+        throw createErrnoError('ENOENT', 'ENOENT: no such file or directory')
       }
       return originalReaddir(path)
     }
@@ -75,9 +74,7 @@ describe('parseArtifacts', () => {
     const originalReaddir = fileSystem.readdir.bind(fileSystem)
     fileSystem.readdir = async (path: string) => {
       if (path === dustPath) {
-        const error = new Error('Permission denied')
-        ;(error as NodeJS.ErrnoException).code = 'EACCES'
-        throw error
+        throw createErrnoError('EACCES', 'Permission denied')
       }
       return originalReaddir(path)
     }
@@ -94,9 +91,7 @@ describe('parseArtifacts', () => {
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
     fileSystem.readFile = async (path: string) => {
       if (path === `${dustPath}/repository.md`) {
-        const error = new Error('ENOENT: file deleted')
-        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-        throw error
+        throw createErrnoError('ENOENT', 'ENOENT: file deleted')
       }
       return originalReadFile(path)
     }
@@ -112,9 +107,7 @@ describe('parseArtifacts', () => {
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
     fileSystem.readFile = async (path: string) => {
       if (path === `${dustPath}/repository.md`) {
-        const error = new Error('Permission denied')
-        ;(error as NodeJS.ErrnoException).code = 'EACCES'
-        throw error
+        throw createErrnoError('EACCES', 'Permission denied')
       }
       return originalReadFile(path)
     }
@@ -129,9 +122,7 @@ describe('parseArtifacts', () => {
     const originalReaddir = fileSystem.readdir.bind(fileSystem)
     fileSystem.readdir = async (path: string) => {
       if (path === `${dustPath}/ideas`) {
-        const error = new Error('ENOENT: directory deleted')
-        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-        throw error
+        throw createErrnoError('ENOENT', 'ENOENT: directory deleted')
       }
       return originalReaddir(path)
     }
@@ -145,9 +136,7 @@ describe('parseArtifacts', () => {
     const originalReaddir = fileSystem.readdir.bind(fileSystem)
     fileSystem.readdir = async (path: string) => {
       if (path === `${dustPath}/ideas`) {
-        const error = new Error('Permission denied')
-        ;(error as NodeJS.ErrnoException).code = 'EACCES'
-        throw error
+        throw createErrnoError('EACCES', 'Permission denied')
       }
       return originalReaddir(path)
     }
@@ -173,9 +162,7 @@ describe('parseArtifacts', () => {
     const originalReaddir = fileSystem.readdir.bind(fileSystem)
     fileSystem.readdir = async (path: string) => {
       if (path === `${dustPath}/config/audits`) {
-        const error = new Error('ENOENT: directory deleted')
-        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-        throw error
+        throw createErrnoError('ENOENT', 'ENOENT: directory deleted')
       }
       return originalReaddir(path)
     }
@@ -189,9 +176,7 @@ describe('parseArtifacts', () => {
     const originalReaddir = fileSystem.readdir.bind(fileSystem)
     fileSystem.readdir = async (path: string) => {
       if (path === `${dustPath}/config/audits`) {
-        const error = new Error('Permission denied')
-        ;(error as NodeJS.ErrnoException).code = 'EACCES'
-        throw error
+        throw createErrnoError('EACCES', 'Permission denied')
       }
       return originalReaddir(path)
     }
@@ -208,9 +193,7 @@ describe('parseArtifacts', () => {
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
     fileSystem.readFile = async (path: string) => {
       if (path === `${dustPath}/config/audits/my-audit.md`) {
-        const error = new Error('ENOENT: file deleted')
-        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-        throw error
+        throw createErrnoError('ENOENT', 'ENOENT: file deleted')
       }
       return originalReadFile(path)
     }
@@ -226,9 +209,7 @@ describe('parseArtifacts', () => {
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
     fileSystem.readFile = async (path: string) => {
       if (path === `${dustPath}/config/audits/my-audit.md`) {
-        const error = new Error('Permission denied')
-        ;(error as NodeJS.ErrnoException).code = 'EACCES'
-        throw error
+        throw createErrnoError('EACCES', 'Permission denied')
       }
       return originalReadFile(path)
     }

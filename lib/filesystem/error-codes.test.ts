@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { createErrnoError } from '../test-support/test-utilities'
 import { isErrnoException, isErrorCode } from './error-codes'
 
 describe('isErrnoException', () => {
@@ -8,8 +9,7 @@ describe('isErrnoException', () => {
   })
 
   it('returns true for Error with string code property', () => {
-    const error = new Error('File not found')
-    ;(error as NodeJS.ErrnoException).code = 'ENOENT'
+    const error = createErrnoError('ENOENT', 'File not found')
     expect(isErrnoException(error)).toBe(true)
   })
 
@@ -61,8 +61,7 @@ describe('isErrorCode', () => {
   })
 
   it('returns true for Error with matching code', () => {
-    const error = new Error('File not found')
-    ;(error as NodeJS.ErrnoException).code = 'ENOENT'
+    const error = createErrnoError('ENOENT', 'File not found')
     expect(isErrorCode(error, 'ENOENT')).toBe(true)
   })
 

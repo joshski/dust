@@ -36,6 +36,7 @@ import {
 } from '../../lint/validators/principle-hierarchy'
 import {
   createContextEmulator,
+  createErrnoError,
   createFileSystemEmulator,
   createTestRuntimeConfig,
   type FileSystemEmulator,
@@ -2166,9 +2167,7 @@ describe('validateDirectoryStructure', () => {
       project: {},
     })
     fileSystem.readdir = async () => {
-      const error = new Error('ENOENT: no such file or directory')
-      ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-      throw error
+      throw createErrnoError('ENOENT', 'ENOENT: no such file or directory')
     }
 
     const violations = await validateDirectoryStructure(
@@ -2208,9 +2207,7 @@ describe('validateDirectoryStructure', () => {
     const originalReaddir = fileSystem.readdir
     fileSystem.readdir = async path => {
       if (path === '/project/.dust/config') {
-        const error = new Error('ENOENT: no such file or directory')
-        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-        throw error
+        throw createErrnoError('ENOENT', 'ENOENT: no such file or directory')
       }
       return originalReaddir(path)
     }
@@ -2241,9 +2238,7 @@ describe('validateDirectoryStructure', () => {
     const originalReaddir = fileSystem.readdir
     fileSystem.readdir = async path => {
       if (path === '/project/.dust/config') {
-        const error = new Error('Permission denied')
-        ;(error as NodeJS.ErrnoException).code = 'EACCES'
-        throw error
+        throw createErrnoError('EACCES', 'Permission denied')
       }
       return originalReaddir(path)
     }
@@ -2757,9 +2752,7 @@ Other reasons.
         // 2. content validation
         // 3. idea-specific validation (open questions)
         if (ideaReadCount === 3) {
-          const error = new Error('ENOENT: file deleted')
-          ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-          throw error
+          throw createErrnoError('ENOENT', 'ENOENT: file deleted')
         }
       }
       return originalReadFile(path)
@@ -3723,9 +3716,7 @@ This is a principle.
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
     fileSystem.readFile = async (path: string) => {
       if (path.endsWith('.md') && path.includes('.dust')) {
-        const error = new Error('ENOENT: file deleted')
-        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-        throw error
+        throw createErrnoError('ENOENT', 'ENOENT: file deleted')
       }
       return originalReadFile(path)
     }
@@ -3772,9 +3763,7 @@ This is a principle.
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
     fileSystem.readFile = async (path: string) => {
       if (path.includes('/ideas/')) {
-        const error = new Error('ENOENT: file deleted')
-        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-        throw error
+        throw createErrnoError('ENOENT', 'ENOENT: file deleted')
       }
       return originalReadFile(path)
     }
@@ -3875,9 +3864,7 @@ Implement the task functionality.
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
     fileSystem.readFile = async (path: string) => {
       if (path.includes('/tasks/')) {
-        const error = new Error('ENOENT: file deleted')
-        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-        throw error
+        throw createErrnoError('ENOENT', 'ENOENT: file deleted')
       }
       return originalReadFile(path)
     }
@@ -3902,9 +3889,7 @@ Implement the task functionality.
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
     fileSystem.readFile = async (path: string) => {
       if (path.includes('/principles/')) {
-        const error = new Error('ENOENT: file deleted')
-        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-        throw error
+        throw createErrnoError('ENOENT', 'ENOENT: file deleted')
       }
       return originalReadFile(path)
     }
@@ -4191,9 +4176,7 @@ This is a principle.
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
     fileSystem.readFile = async (path: string) => {
       if (path.includes('settings.json')) {
-        const error = new Error('ENOENT: file deleted')
-        ;(error as NodeJS.ErrnoException).code = 'ENOENT'
-        throw error
+        throw createErrnoError('ENOENT', 'ENOENT: file deleted')
       }
       return originalReadFile(path)
     }

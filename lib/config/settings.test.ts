@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from 'vitest'
 import {
+  createErrnoError,
   createFileSystemEmulator,
   createTestRuntimeConfig,
   restoreEnv,
@@ -597,8 +598,10 @@ describe('loadSettings', () => {
   })
 
   test('re-throws unexpected filesystem errors', async () => {
-    const permissionError = new Error('EACCES: permission denied')
-    ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+    const permissionError = createErrnoError(
+      'EACCES',
+      'EACCES: permission denied'
+    )
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -620,8 +623,7 @@ describe('loadSettings', () => {
     const runtime = createTestRuntimeConfig({
       eventsUrl: 'https://env.example.com/events',
     })
-    const enoentError = new Error('ENOENT: no such file')
-    ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
+    const enoentError = createErrnoError('ENOENT', 'ENOENT: no such file')
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {
@@ -642,8 +644,7 @@ describe('loadSettings', () => {
 
   test('returns defaults without optional properties when ENOENT and no lockfile', async () => {
     // Test the false branches: no lockfile detected and no eventsUrl
-    const enoentError = new Error('ENOENT: no such file')
-    ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
+    const enoentError = createErrnoError('ENOENT', 'ENOENT: no such file')
     const fileSystem = createFileSystemEmulator({
       project: {
         '.dust': {

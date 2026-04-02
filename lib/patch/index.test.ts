@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { createFileSystemEmulator } from '../filesystem/emulator'
+import { createErrnoError } from '../test-support/test-utilities'
 import {
   buildArtifactPatch,
   buildPreviews,
@@ -404,8 +405,10 @@ describe('buildArtifactPatch', () => {
       'facts/deleted-fact.md': '# Deleted Fact\n\nGoing away.',
     })
     const originalReaddir = fileSystem.readdir.bind(fileSystem)
-    const permissionError = new Error('EACCES: permission denied')
-    ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+    const permissionError = createErrnoError(
+      'EACCES',
+      'EACCES: permission denied'
+    )
     fileSystem.readdir = async (path: string) => {
       if (path === `${dustPath}/ideas`) {
         throw permissionError
@@ -468,10 +471,10 @@ describe('buildArtifactPatch', () => {
 
     // Override readdir to throw ENOENT for ideas directory
     const originalReaddir = fileSystem.readdir.bind(fileSystem)
-    const enoentError = new Error(
+    const enoentError = createErrnoError(
+      'ENOENT',
       "ENOENT: no such file or directory, scandir '/project/.dust/ideas'"
     )
-    ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
     fileSystem.readdir = async (path: string) => {
       if (path === `${dustPath}/ideas`) {
         throw enoentError
@@ -1433,8 +1436,10 @@ describe('buildArtifactPatch with principles', () => {
 
   test('re-throws non-ENOENT errors from principles readdir', async () => {
     const fileSystem = makeFs()
-    const permissionError = new Error('EACCES: permission denied')
-    ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+    const permissionError = createErrnoError(
+      'EACCES',
+      'EACCES: permission denied'
+    )
     const originalReaddir = fileSystem.readdir.bind(fileSystem)
     fileSystem.readdir = async (path: string) => {
       if (path === `${dustPath}/principles`) {
@@ -1638,8 +1643,10 @@ describe('buildArtifactPatch with principles', () => {
     })
 
     const originalReaddir = fileSystem.readdir.bind(fileSystem)
-    const enoentError = new Error('ENOENT: no such file or directory')
-    ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
+    const enoentError = createErrnoError(
+      'ENOENT',
+      'ENOENT: no such file or directory'
+    )
     fileSystem.readdir = async (path: string) => {
       if (path === `${dustPath}/principles`) {
         throw enoentError
@@ -2330,8 +2337,10 @@ describe('buildArtifactPatch previews', () => {
 
   test('re-throws non-ENOENT errors when checking file existence', async () => {
     const fileSystem = makeFs()
-    const permissionError = new Error('EACCES: permission denied')
-    ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+    const permissionError = createErrnoError(
+      'EACCES',
+      'EACCES: permission denied'
+    )
     const originalReadFile = fileSystem.readFile.bind(fileSystem)
     fileSystem.readFile = async (path: string) => {
       if (path === `${dustPath}/facts/new-fact.md`) {

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { createFileSystemEmulator } from '../filesystem/emulator'
+import { createErrnoError } from '../test-support/test-utilities'
 import type { ArtifactPatch, ValidationResult } from './index'
 import { validatePatch } from './index'
 import { createOverlayFileSystem } from './overlay-filesystem'
@@ -481,8 +482,10 @@ describe('validatePatch', () => {
   })
 
   test('re-throws non-ENOENT errors when reading principles directory for cross-file validation', async () => {
-    const permissionError = new Error('EACCES: permission denied')
-    ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+    const permissionError = createErrnoError(
+      'EACCES',
+      'EACCES: permission denied'
+    )
     const fileSystem = makeFs({
       'principles/existing.md':
         '# Existing\n\nThis principle exists.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
@@ -512,8 +515,10 @@ describe('validatePatch', () => {
   })
 
   test('re-throws non-ENOENT errors when reading principle file during cross-file validation', async () => {
-    const permissionError = new Error('EACCES: permission denied')
-    ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+    const permissionError = createErrnoError(
+      'EACCES',
+      'EACCES: permission denied'
+    )
     const fileSystem = makeFs({
       'principles/existing.md':
         '# Existing\n\nThis principle exists.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
@@ -537,8 +542,7 @@ describe('validatePatch', () => {
   })
 
   test('handles ENOENT when reading principle file during cross-file validation', async () => {
-    const enoentError = new Error('ENOENT: no such file')
-    ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
+    const enoentError = createErrnoError('ENOENT', 'ENOENT: no such file')
     const fileSystem = makeFs({
       'principles/existing.md':
         '# Existing\n\nThis principle exists.\n\n## Parent Principle\n\nNone.\n\n## Sub-Principles\n\nNone.',
@@ -623,8 +627,10 @@ describe('createOverlayFileSystem', () => {
   })
 
   test('readdir re-throws non-ENOENT errors from base', async () => {
-    const permissionError = new Error('EACCES: permission denied')
-    ;(permissionError as NodeJS.ErrnoException).code = 'EACCES'
+    const permissionError = createErrnoError(
+      'EACCES',
+      'EACCES: permission denied'
+    )
     const base = createFileSystemEmulator({}, { '/a/existing.md': 'content' })
     base.readdir = async () => {
       throw permissionError
@@ -636,8 +642,7 @@ describe('createOverlayFileSystem', () => {
   })
 
   test('readdir handles ENOENT from base gracefully', async () => {
-    const enoentError = new Error('ENOENT: no such file')
-    ;(enoentError as NodeJS.ErrnoException).code = 'ENOENT'
+    const enoentError = createErrnoError('ENOENT', 'ENOENT: no such file')
     const base = createFileSystemEmulator({})
     base.readdir = async () => {
       throw enoentError
