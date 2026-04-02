@@ -30,7 +30,10 @@ import { createPostEvent } from './wire-events'
 
 const log = createLogger('dust:loop:iteration')
 
-export const DUST_QUICK_REFERENCE = `## Dust Quick Reference
+export function DUST_QUICK_REFERENCE(dustCommand: string): string {
+  return `## Dust Quick Reference
+
+Dust is a CLI tool for managing development workflows through markdown artifacts. In this environment, run dust commands using: \`${dustCommand}\` (this might be \`dust\`, \`bunx dust\`, \`npx dust\`, or another prefix depending on how dust is installed).
 
 Dust stores project context in \`.dust/\` as markdown artifacts. Use these commands to explore:
 
@@ -40,6 +43,7 @@ Dust stores project context in \`.dust/\` as markdown artifacts. Use these comma
 - \`dust help\` — see all available commands
 
 Use dust commands instead of manually searching \`.dust/\` directories.`
+}
 
 function getEnvironmentContext(cwd: string): {
   machineName: string
@@ -438,6 +442,7 @@ export async function runOneIteration(
     taskContent,
     instructions,
     toolsSection,
+    settings.dustCommand,
     options.branch
   )
 
@@ -530,6 +535,7 @@ export function buildTaskPrompt(
   taskContent: string,
   instructions: string,
   toolsSection: string,
+  dustCommand: string,
   branch?: string
 ): string {
   const suffix = toolsSection ? `\n${toolsSection}` : ''
@@ -542,7 +548,7 @@ export function buildTaskPrompt(
 ${taskContent}
 ----------
 
-${DUST_QUICK_REFERENCE}
+${DUST_QUICK_REFERENCE(dustCommand)}
 
 ## How to implement the task
 

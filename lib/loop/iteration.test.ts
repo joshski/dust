@@ -388,7 +388,7 @@ describe('runOneIteration', () => {
     const { onLoopEvent, onAgentEvent } = createStubCallbacks()
 
     await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent)
-    expect(capturedPrompt).not.toContain('install')
+    expect(capturedPrompt).not.toContain('install dependencies')
     expect(capturedPrompt).toContain('`dust check`')
   })
 
@@ -1378,7 +1378,8 @@ describe('buildTaskPrompt', () => {
       '.dust/tasks/task.md',
       '# Task\n\nDo something.',
       'Implementation instructions here.',
-      ''
+      '',
+      'dust'
     )
 
     expect(prompt).toContain('## Dust Quick Reference')
@@ -1396,7 +1397,8 @@ describe('buildTaskPrompt', () => {
       '.dust/tasks/task.md',
       '# Task\n\nDo something.',
       'Implementation instructions here.',
-      ''
+      '',
+      'dust'
     )
 
     const taskContentEnd = prompt.indexOf(
@@ -1421,7 +1423,8 @@ Upload a file.`
       '.dust/tasks/task.md',
       '# Task',
       'Instructions.',
-      toolsSection
+      toolsSection,
+      'dust'
     )
 
     const implStart = prompt.indexOf('## How to implement the task')
@@ -1435,7 +1438,8 @@ Upload a file.`
       '.dust/tasks/task.md',
       '# Task',
       'Instructions.',
-      ''
+      '',
+      'dust'
     )
 
     expect(prompt).not.toContain('## Available Tools')
@@ -1448,6 +1452,7 @@ Upload a file.`
       '# Task',
       'Instructions.',
       '',
+      'dust',
       'staging'
     )
 
@@ -1463,6 +1468,7 @@ Upload a file.`
       '# Task',
       'Instructions.',
       '',
+      'dust',
       undefined
     )
 
@@ -1475,7 +1481,8 @@ Upload a file.`
       '.dust/tasks/task.md',
       '# Task',
       'Instructions.',
-      ''
+      '',
+      'dust'
     )
 
     expect(prompt).not.toContain('You are working on')
@@ -1485,21 +1492,45 @@ Upload a file.`
 
 describe('DUST_QUICK_REFERENCE', () => {
   test('contains key dust commands', () => {
-    expect(DUST_QUICK_REFERENCE).toContain('dust ideas')
-    expect(DUST_QUICK_REFERENCE).toContain('dust principles')
-    expect(DUST_QUICK_REFERENCE).toContain('dust facts')
-    expect(DUST_QUICK_REFERENCE).toContain('dust help')
+    const reference = DUST_QUICK_REFERENCE('dust')
+    expect(reference).toContain('dust ideas')
+    expect(reference).toContain('dust principles')
+    expect(reference).toContain('dust facts')
+    expect(reference).toContain('dust help')
   })
 
   test('includes negative guidance about manual searching', () => {
-    expect(DUST_QUICK_REFERENCE).toContain(
+    const reference = DUST_QUICK_REFERENCE('dust')
+    expect(reference).toContain(
       'Use dust commands instead of manually searching `.dust/` directories'
     )
   })
 
   test('explains what dust is', () => {
-    expect(DUST_QUICK_REFERENCE).toContain(
+    const reference = DUST_QUICK_REFERENCE('dust')
+    expect(reference).toContain(
       'Dust stores project context in `.dust/` as markdown artifacts'
     )
+  })
+
+  test('includes CLI invocation explanation', () => {
+    const reference = DUST_QUICK_REFERENCE('dust')
+    expect(reference).toContain(
+      'Dust is a CLI tool for managing development workflows'
+    )
+  })
+
+  test('interpolates dustCommand parameter', () => {
+    const referenceWithBunx = DUST_QUICK_REFERENCE('bunx dust')
+    expect(referenceWithBunx).toContain('run dust commands using: `bunx dust`')
+
+    const referenceWithNpx = DUST_QUICK_REFERENCE('npx dust')
+    expect(referenceWithNpx).toContain('run dust commands using: `npx dust`')
+  })
+
+  test('mentions common invocation methods', () => {
+    const reference = DUST_QUICK_REFERENCE('dust')
+    expect(reference).toContain('bunx dust')
+    expect(reference).toContain('npx dust')
   })
 })
