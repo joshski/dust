@@ -290,6 +290,48 @@ describe('concern mixing detection', () => {
 })
 
 describe('missing groupings detection', () => {
+  test('handles files without children in traversal', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        { name: 'file.ts', path: '/root/file.ts', type: 'file' },
+        {
+          name: 'src',
+          path: '/root/src',
+          type: 'directory',
+          children: [
+            { name: 'a.test.ts', path: '/root/src/a.test.ts', type: 'file' },
+            { name: 'b.test.ts', path: '/root/src/b.test.ts', type: 'file' },
+            { name: 'c.test.ts', path: '/root/src/c.test.ts', type: 'file' },
+          ],
+        },
+        {
+          name: 'lib',
+          path: '/root/lib',
+          type: 'directory',
+          children: [
+            { name: 'd.test.ts', path: '/root/lib/d.test.ts', type: 'file' },
+          ],
+        },
+        {
+          name: 'utils',
+          path: '/root/utils',
+          type: 'directory',
+          children: [
+            { name: 'e.test.ts', path: '/root/utils/e.test.ts', type: 'file' },
+          ],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    const missingGrouping = findings.filter(f => f.type === 'missing-grouping')
+    expect(missingGrouping.length).toBeGreaterThan(0)
+  })
+
   test('detects test files scattered across multiple directories', () => {
     const root: DirectoryNode = {
       name: 'root',
@@ -449,6 +491,55 @@ describe('missing groupings detection', () => {
 })
 
 describe('depth inconsistency detection', () => {
+  test('handles directories without children in depth traversal', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'components',
+          path: '/root/components',
+          type: 'directory',
+        },
+        {
+          name: 'src',
+          path: '/root/src',
+          type: 'directory',
+          children: [
+            {
+              name: 'ui',
+              path: '/root/src/ui',
+              type: 'directory',
+              children: [
+                {
+                  name: 'shared',
+                  path: '/root/src/ui/shared',
+                  type: 'directory',
+                  children: [
+                    {
+                      name: 'components',
+                      path: '/root/src/ui/shared/components',
+                      type: 'directory',
+                      children: [],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    const depthInconsistency = findings.filter(
+      f => f.type === 'depth-inconsistency'
+    )
+    expect(depthInconsistency.length).toBeGreaterThan(0)
+  })
+
   test('detects inconsistent depth for same-purpose directories', () => {
     const root: DirectoryNode = {
       name: 'root',
@@ -591,6 +682,46 @@ describe('depth inconsistency detection', () => {
 })
 
 describe('naming consistency detection', () => {
+  test('handles directories without children in naming traversal', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'my-utils',
+          path: '/root/my-utils',
+          type: 'directory',
+        },
+        {
+          name: 'other-helpers',
+          path: '/root/other-helpers',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'more-tools',
+          path: '/root/more-tools',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'one_service',
+          path: '/root/one_service',
+          type: 'directory',
+          children: [],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    const namingInconsistency = findings.filter(
+      f => f.type === 'naming-consistency'
+    )
+    expect(namingInconsistency.length).toBeGreaterThan(0)
+  })
+
   test('detects naming style inconsistencies', () => {
     const root: DirectoryNode = {
       name: 'root',
@@ -748,6 +879,26 @@ describe('naming consistency detection', () => {
 })
 
 describe('singleton directory detection', () => {
+  test('handles directory without children', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'lonely',
+          path: '/root/lonely',
+          type: 'directory',
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    const singleton = findings.filter(f => f.type === 'singleton-directory')
+    expect(singleton.length).toBe(0)
+  })
+
   test('detects directory with only one file', () => {
     const root: DirectoryNode = {
       name: 'root',
@@ -1024,6 +1175,680 @@ describe('edge cases', () => {
     const findings = analyzeDirectoryHierarchy(root)
 
     expect(findings).toEqual([])
+  })
+
+  test('handles directory without children in missing groupings traversal', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'parent',
+          path: '/root/parent',
+          type: 'directory',
+        },
+        {
+          name: 'a',
+          path: '/root/a',
+          type: 'directory',
+          children: [
+            {
+              name: 'test1.test.ts',
+              path: '/root/a/test1.test.ts',
+              type: 'file',
+            },
+          ],
+        },
+        {
+          name: 'b',
+          path: '/root/b',
+          type: 'directory',
+          children: [
+            {
+              name: 'test2.test.ts',
+              path: '/root/b/test2.test.ts',
+              type: 'file',
+            },
+          ],
+        },
+        {
+          name: 'c',
+          path: '/root/c',
+          type: 'directory',
+          children: [
+            {
+              name: 'test3.test.ts',
+              path: '/root/c/test3.test.ts',
+              type: 'file',
+            },
+          ],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    // Should handle directory without children gracefully
+    expect(findings).toBeDefined()
+  })
+
+  test('handles directory without children in depth traversal', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'helpers',
+          path: '/root/helpers',
+          type: 'directory',
+        },
+        {
+          name: 'a',
+          path: '/root/a',
+          type: 'directory',
+          children: [
+            {
+              name: 'b',
+              path: '/root/a/b',
+              type: 'directory',
+              children: [
+                {
+                  name: 'c',
+                  path: '/root/a/b/c',
+                  type: 'directory',
+                  children: [
+                    {
+                      name: 'helpers',
+                      path: '/root/a/b/c/helpers',
+                      type: 'directory',
+                      children: [],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    // Should handle directory without children gracefully
+    expect(findings).toBeDefined()
+  })
+
+  test('handles directory without children in naming traversal', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'parent',
+          path: '/root/parent',
+          type: 'directory',
+        },
+        {
+          name: 'my-utils',
+          path: '/root/my-utils',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'other-helpers',
+          path: '/root/other-helpers',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'more-tools',
+          path: '/root/more-tools',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'one_service',
+          path: '/root/one_service',
+          type: 'directory',
+          children: [],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    // Should handle directory without children gracefully
+    expect(findings).toBeDefined()
+  })
+
+  test('handles file node in singleton directory traversal', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'wrapper',
+          path: '/root/wrapper',
+          type: 'directory',
+          children: [
+            {
+              name: 'inner',
+              path: '/root/wrapper/inner',
+              type: 'directory',
+              children: [
+                {
+                  name: 'file.ts',
+                  path: '/root/wrapper/inner/file.ts',
+                  type: 'file',
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    // Should traverse through and handle file nodes correctly
+    const singleton = findings.filter(f => f.type === 'singleton-directory')
+    expect(singleton.length).toBeGreaterThan(0)
+  })
+
+  test('categorizes files with helper in name', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'lib',
+          path: '/root/lib',
+          type: 'directory',
+          children: [
+            { name: 'helper.ts', path: '/root/lib/helper.ts', type: 'file' },
+            {
+              name: 'config.json',
+              path: '/root/lib/config.json',
+              type: 'file',
+            },
+          ],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    const concernMixing = findings.filter(f => f.type === 'concern-mixing')
+    expect(concernMixing.length).toBeGreaterThan(0)
+  })
+
+  test('categorizes files with service in name', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'lib',
+          path: '/root/lib',
+          type: 'directory',
+          children: [
+            { name: 'service.ts', path: '/root/lib/service.ts', type: 'file' },
+            {
+              name: 'config.json',
+              path: '/root/lib/config.json',
+              type: 'file',
+            },
+          ],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    const concernMixing = findings.filter(f => f.type === 'concern-mixing')
+    expect(concernMixing.length).toBeGreaterThan(0)
+  })
+
+  test('categorizes files with model in name', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'lib',
+          path: '/root/lib',
+          type: 'directory',
+          children: [
+            { name: 'model.ts', path: '/root/lib/model.ts', type: 'file' },
+            {
+              name: 'config.json',
+              path: '/root/lib/config.json',
+              type: 'file',
+            },
+          ],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    const concernMixing = findings.filter(f => f.type === 'concern-mixing')
+    expect(concernMixing.length).toBeGreaterThan(0)
+  })
+
+  test('categorizes files with component in name', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'lib',
+          path: '/root/lib',
+          type: 'directory',
+          children: [
+            {
+              name: 'component.ts',
+              path: '/root/lib/component.ts',
+              type: 'file',
+            },
+            {
+              name: 'config.json',
+              path: '/root/lib/config.json',
+              type: 'file',
+            },
+          ],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    const concernMixing = findings.filter(f => f.type === 'concern-mixing')
+    expect(concernMixing.length).toBeGreaterThan(0)
+  })
+
+  test('handles parent directory with no slash', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: 'root',
+      type: 'directory',
+      children: [
+        { name: 'a.test.ts', path: 'a.test.ts', type: 'file' },
+        { name: 'b.test.ts', path: 'b.test.ts', type: 'file' },
+        { name: 'c.test.ts', path: 'c.test.ts', type: 'file' },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    // Should handle files at root without errors
+    expect(findings).toBeDefined()
+  })
+
+  test('detects PascalCase naming style', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'MyComponent',
+          path: '/root/MyComponent',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'OtherComponent',
+          path: '/root/OtherComponent',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'ThirdComponent',
+          path: '/root/ThirdComponent',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'one-thing',
+          path: '/root/one-thing',
+          type: 'directory',
+          children: [],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    const namingInconsistency = findings.filter(
+      f => f.type === 'naming-consistency'
+    )
+    expect(namingInconsistency.length).toBeGreaterThan(0)
+  })
+
+  test('detects camelCase naming style', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'myComponent',
+          path: '/root/myComponent',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'otherComponent',
+          path: '/root/otherComponent',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'thirdComponent',
+          path: '/root/thirdComponent',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'one-thing',
+          path: '/root/one-thing',
+          type: 'directory',
+          children: [],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    const namingInconsistency = findings.filter(
+      f => f.type === 'naming-consistency'
+    )
+    expect(namingInconsistency.length).toBeGreaterThan(0)
+  })
+
+  test('detects mixed naming style', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'my-utils',
+          path: '/root/my-utils',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'other-helpers',
+          path: '/root/other-helpers',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'more-tools',
+          path: '/root/more-tools',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: '123abc',
+          path: '/root/123abc',
+          type: 'directory',
+          children: [],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    const namingInconsistency = findings.filter(
+      f => f.type === 'naming-consistency'
+    )
+    expect(namingInconsistency.length).toBeGreaterThan(0)
+  })
+
+  test('uses function pattern in directory categorization', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'components',
+          path: '/root/components',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'a',
+          path: '/root/a',
+          type: 'directory',
+          children: [
+            {
+              name: 'b',
+              path: '/root/a/b',
+              type: 'directory',
+              children: [
+                {
+                  name: 'c',
+                  path: '/root/a/b/c',
+                  type: 'directory',
+                  children: [
+                    {
+                      name: 'components',
+                      path: '/root/a/b/c/components',
+                      type: 'directory',
+                      children: [],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    const depthInconsistency = findings.filter(
+      f => f.type === 'depth-inconsistency'
+    )
+    expect(depthInconsistency.length).toBeGreaterThan(0)
+  })
+
+  test('handles directory nodes that are files in singleton traversal', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'wrapper',
+          path: '/root/wrapper',
+          type: 'directory',
+          children: [
+            { name: 'file.ts', path: '/root/wrapper/file.ts', type: 'file' },
+          ],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    const singleton = findings.filter(f => f.type === 'singleton-directory')
+    expect(singleton.length).toBeGreaterThan(0)
+  })
+
+  test('handles nested directories with children in missing groupings', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'parent',
+          path: '/root/parent',
+          type: 'directory',
+          children: [
+            {
+              name: 'child',
+              path: '/root/parent/child',
+              type: 'directory',
+              children: [
+                {
+                  name: 'a.test.ts',
+                  path: '/root/parent/child/a.test.ts',
+                  type: 'file',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          name: 'src',
+          path: '/root/src',
+          type: 'directory',
+          children: [
+            {
+              name: 'b.test.ts',
+              path: '/root/src/b.test.ts',
+              type: 'file',
+            },
+          ],
+        },
+        {
+          name: 'lib',
+          path: '/root/lib',
+          type: 'directory',
+          children: [
+            {
+              name: 'c.test.ts',
+              path: '/root/lib/c.test.ts',
+              type: 'file',
+            },
+          ],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    const missingGrouping = findings.filter(f => f.type === 'missing-grouping')
+    expect(missingGrouping.length).toBeGreaterThan(0)
+  })
+
+  test('handles nested directories in depth consistency check', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'helpers',
+          path: '/root/helpers',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'parent',
+          path: '/root/parent',
+          type: 'directory',
+          children: [
+            {
+              name: 'child',
+              path: '/root/parent/child',
+              type: 'directory',
+              children: [
+                {
+                  name: 'grandchild',
+                  path: '/root/parent/child/grandchild',
+                  type: 'directory',
+                  children: [
+                    {
+                      name: 'helpers',
+                      path: '/root/parent/child/grandchild/helpers',
+                      type: 'directory',
+                      children: [],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    const depthInconsistency = findings.filter(
+      f => f.type === 'depth-inconsistency'
+    )
+    expect(depthInconsistency.length).toBeGreaterThan(0)
+  })
+
+  test('handles nested directories in naming consistency check', () => {
+    const root: DirectoryNode = {
+      name: 'root',
+      path: '/root',
+      type: 'directory',
+      children: [
+        {
+          name: 'parent',
+          path: '/root/parent',
+          type: 'directory',
+          children: [
+            {
+              name: 'my-child',
+              path: '/root/parent/my-child',
+              type: 'directory',
+              children: [],
+            },
+          ],
+        },
+        {
+          name: 'my-utils',
+          path: '/root/my-utils',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'other-helpers',
+          path: '/root/other-helpers',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'more-tools',
+          path: '/root/more-tools',
+          type: 'directory',
+          children: [],
+        },
+        {
+          name: 'one_service',
+          path: '/root/one_service',
+          type: 'directory',
+          children: [],
+        },
+      ],
+    }
+
+    const findings = analyzeDirectoryHierarchy(root)
+
+    const namingInconsistency = findings.filter(
+      f => f.type === 'naming-consistency'
+    )
+    expect(namingInconsistency.length).toBeGreaterThan(0)
   })
 
   test('handles deeply nested excluded directories', () => {

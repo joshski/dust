@@ -181,8 +181,8 @@ function detectMissingGroupings(root: DirectoryNode): Finding[] {
         filesByCategory.set(category, [])
       }
       filesByCategory.get(category)?.push(node.path)
-    } else if (node.children) {
-      node.children.forEach(traverse)
+    } else {
+      node.children?.forEach(traverse)
     }
   }
 
@@ -229,9 +229,7 @@ function detectDepthInconsistencies(root: DirectoryNode): Finding[] {
       }
       directoriesByPurpose.get(purpose)?.push({ path: node.path, depth })
 
-      if (node.children) {
-        node.children.forEach(child => traverse(child, depth + 1))
-      }
+      node.children?.forEach(child => traverse(child, depth + 1))
     }
   }
 
@@ -282,9 +280,7 @@ function detectNamingInconsistencies(root: DirectoryNode): Finding[] {
         directoriesByStyle.get(style)?.push(node.path)
       }
 
-      if (node.children) {
-        node.children.forEach(traverse)
-      }
+      node.children?.forEach(traverse)
     }
   }
 
@@ -322,7 +318,11 @@ function detectSingletonDirectories(root: DirectoryNode): Finding[] {
   const findings: Finding[] = []
 
   function traverse(node: DirectoryNode): void {
-    if (node.type === 'file' || !node.children) {
+    if (
+      node.type !== 'directory' ||
+      !node.children ||
+      node.children.length === 0
+    ) {
       return
     }
 
@@ -501,9 +501,7 @@ function categorizeFile(filename: string, ext: string): string {
   return categorizeFileByName(filename) ?? categorizeFileByExtension(ext)
 }
 
-const DIRECTORY_CATEGORY_PATTERNS: Array<
-  [string | ((s: string) => boolean), string]
-> = [
+const DIRECTORY_CATEGORY_PATTERNS: Array<[(s: string) => boolean, string]> = [
   [(s: string) => s.includes('test') || s === '__tests__', 'test'],
   [(s: string) => s.includes('config'), 'config'],
   [(s: string) => s.includes('doc') || s === 'docs', 'documentation'],
@@ -526,9 +524,7 @@ function categorizeDirName(dirname: string): string {
   const lower = dirname.toLowerCase()
 
   for (const [pattern, category] of DIRECTORY_CATEGORY_PATTERNS) {
-    if (
-      typeof pattern === 'function' ? pattern(lower) : lower.includes(pattern)
-    ) {
+    if (pattern(lower)) {
       return category
     }
   }
