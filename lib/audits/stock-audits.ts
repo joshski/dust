@@ -1008,7 +1008,13 @@ function commitReview(): string {
 
     ## Scope
 
-    Analyze commits since the last commit-review audit (check \`.dust/done/\` for previous runs). Focus on these signals:
+    Determine which commits to analyze:
+
+    1. Check VCS history for a prior commit-review run: \`git log --grep="Audit: Commit Review" -1 --format=%H\`
+    2. If found, analyze commits since that commit
+    3. If not found, analyze the last 20 commits as a fallback
+
+    Focus on these signals:
 
     1. **File churn** - Files modified frequently across multiple commits may have unclear responsibilities or be accumulating technical debt
     2. **Size growth** - Files that have grown significantly may benefit from decomposition
