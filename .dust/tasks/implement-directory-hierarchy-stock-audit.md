@@ -38,7 +38,7 @@ implement
 
 ## Blocked By
 
-- [Implement Directory Hierarchy Analysis Core](./implement-directory-hierarchy-analysis-core.md)
+(none)
 
 ## Implementation Approach
 
