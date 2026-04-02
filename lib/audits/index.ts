@@ -23,6 +23,11 @@ export {
   type MigrationComplexity,
   type Finding,
 } from './directory-hierarchy-analysis'
+export {
+  detectDeterminismIssues,
+  type DeterminismIssue,
+  type IssueCategory,
+} from './test-determinism-detector'
 
 export interface Audit {
   name: string

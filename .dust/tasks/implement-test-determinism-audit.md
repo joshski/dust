@@ -109,7 +109,7 @@ implement
 
 ## Blocked By
 
-- [Implement Test Determinism Detector](implement-test-determinism-detector.md)
+(none)
 
 ## Definition of Done
 
