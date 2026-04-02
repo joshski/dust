@@ -730,7 +730,7 @@ function feedbackLoopSpeed(): string {
 
     ## Context
 
-    The [Fast Feedback Loops](../principles/fast-feedback-loops.md) principle emphasizes that the primary feedback loop—write code, run checks, see results—should be as fast as possible. Agents especially benefit because they operate in tight loops of change-and-verify; slow feedback wastes tokens and context window space on waiting rather than working.
+    The primary feedback loop—write code, run checks, see results—should be as fast as possible. Agents especially benefit because they operate in tight loops of change-and-verify; slow feedback wastes tokens and context window space on waiting rather than working.
 
     This audit focuses specifically on measuring the development feedback loop speed to help identify which checks consume the most time.
 
@@ -1823,7 +1823,7 @@ function testAssertions(): string {
 
     ## Background
 
-    The [Comprehensive Assertions](../principles/comprehensive-assertions.md) principle covers asserting whole objects rather than fragments. The [Self-Diagnosing Tests](../principles/self-diagnosing-tests.md) principle covers making failure messages informative. This audit addresses complementary assertion quality signals not covered by existing principles.
+    Comprehensive assertions (asserting the whole, not the parts) provide richer failure diagnostics. Self-diagnosing tests ensure that failures reveal enough context to guide a fix without re-running. This audit addresses complementary assertion quality signals not covered by those principles.
 
     ## Scope
 
@@ -1882,7 +1882,7 @@ function testAssertions(): string {
     - Require test updates for unrelated changes
     - Obscure what the test is actually verifying
 
-    This works in tension with [Comprehensive Assertions](../principles/comprehensive-assertions.md). Let context determine the balance:
+    This works in tension with comprehensive assertions (asserting the whole, not the parts). Let context determine the balance:
     - Public API contracts → comprehensive assertions
     - Internal implementation tests → precise assertions
     - Snapshot tests → consider \`toMatchSnapshot()\` with care
@@ -1909,7 +1909,7 @@ function testAssertions(): string {
 
     Tests should ideally verify one behavior or scenario. When a test has multiple unrelated assertions, a failure in the first masks all subsequent ones.
 
-    This does not mean "one \`expect\` call per test". A single logical assertion may require multiple \`expect\` calls to express (especially for complex state). The [Comprehensive Assertions](../principles/comprehensive-assertions.md) principle often allows collapsing multiple calls into one whole-object assertion.
+    This does not mean "one \`expect\` call per test". A single logical assertion may require multiple \`expect\` calls to express (especially for complex state). Comprehensive assertions (asserting the whole, not the parts) often allow collapsing multiple calls into one whole-object assertion.
 
     The anti-pattern to avoid:
     \`\`\`javascript
@@ -2542,7 +2542,7 @@ function ciDevelopmentParity(): string {
     2. **Wasted cycles** - Developers push code that passes locally only to have CI fail
     3. **Agent confusion** - AI agents rely on consistent feedback; discrepancies trigger incorrect debugging paths
 
-    The [Reproducible Checks](../principles/reproducible-checks.md) principle ensures the same checks run everywhere.
+    Every check must produce the same result regardless of who runs it, when, or on what machine.
 
     ## Scope
 
@@ -2632,7 +2632,7 @@ function ciDevelopmentParity(): string {
 
     - Developers may push code that passes locally but fails CI on other checks
     - CI provides no coverage for [check category]
-    - The [Stop the Line](../principles/stop-the-line.md) principle is violated - problems aren't caught before merge
+    - Problems aren't caught before merge—any worker should halt and fix a problem the moment they detect it
 
     ## Suggested Fix
 
@@ -2656,7 +2656,7 @@ function ciDevelopmentParity(): string {
     ## Impact
 
     - Developers don't get [check category] feedback until CI runs
-    - [Fast Feedback Loops](../principles/fast-feedback-loops.md) are broken - local checks give incomplete picture
+    - Fast feedback loops are broken—local checks give incomplete picture
     - Agents may make changes that pass local checks but fail CI
 
     ## Suggested Fix
@@ -2695,7 +2695,7 @@ function commitMessageQuality(): string {
 
     ## Context
 
-    The [Traceable Decisions](../principles/traceable-decisions.md) principle emphasizes that commit history should explain why changes were made. Good commit messages help agents understand project history and make better decisions. This audit evaluates commit message quality itself, not the code changes.
+    Commit history should explain why changes were made, not just what changed. Good commit messages help agents understand project history and make better decisions. This audit evaluates commit message quality itself, not the code changes.
 
     ## Scope
 
