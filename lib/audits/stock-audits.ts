@@ -1970,6 +1970,101 @@ function loggingAndTraceability(): string {
   `
 }
 
+function testDeterminism(): string {
+  return dedent`
+    # Test Determinism
+
+    Audit unit tests for non-deterministic patterns that cause tests to produce inconsistent results across different environments or executions.
+
+    ${ideasHint}
+
+    ## Context
+
+    Tests must produce the same result regardless of where they run. Non-deterministic tests undermine confidence in CI, make debugging harder, and waste developer time chasing phantom failures. This audit identifies patterns that introduce non-determinism: time dependencies, randomness, environment variable access, filesystem operations, real timers, and platform-specific behavior.
+
+    The audit uses the test determinism detector to find these issues systematically across unit test files.
+
+    ## Scope
+
+    Search for unit test files and analyze them for determinism issues:
+
+    1. **Unit test files** - Files matching \`*.test.ts\`, \`*.test.js\`, \`*.spec.ts\`, \`*.spec.js\`
+       - Exclude system test files (files containing 'system-test' or in 'system-tests/' directories)
+       - Exclude exploratory test files
+
+    2. **Issue categories to detect**:
+       - Time dependencies (\`Date.now()\`, \`new Date()\`)
+       - Randomness (\`Math.random()\`, \`crypto.randomBytes()\`, \`randomUUID()\`)
+       - Environment variables (\`process.env.VARIABLE\` without \`stubEnv\`)
+       - Filesystem operations (file reads/writes in unit tests)
+       - Real timers (\`setTimeout\`, \`setInterval\` without fake timers)
+       - Platform-specific code (\`process.platform\`, \`__dirname\`, \`os.EOL\`)
+
+    ## Analysis Steps
+
+    1. **Find unit test files**
+       - Search for \`**/*.test.ts\`, \`**/*.test.js\`, \`**/*.spec.ts\`, \`**/*.spec.js\`
+       - Filter out system test files and exploratory tests
+
+    2. **Analyze each test file**
+       - Read the file content
+       - Use the test determinism detector from \`lib/audits/test-determinism-detector.ts\`:
+         \`\`\`typescript
+         import { detectDeterminismIssues } from './lib/audits/test-determinism-detector'
+         const issues = detectDeterminismIssues(fileContent, filePath)
+         \`\`\`
+
+    3. **Create ideas for issues found**
+       - Group issues by test file
+       - For each file with issues, create an idea file documenting:
+         - Test file path
+         - List of issues with line numbers
+         - Issue categories
+         - Current problematic patterns
+         - Recommended refactoring approaches
+
+    ## Output Format
+
+    For each test file with determinism issues, create an idea file with:
+
+    ### Title
+    "Refactor [filename] for test determinism"
+
+    ### Content Structure
+    \`\`\`markdown
+    # Refactor [filename] for test determinism
+
+    The test file \`[path]\` contains non-deterministic patterns that should be refactored.
+
+    ## Issues Found
+
+    ### [Category Name] (line X)
+    - **Pattern**: \`[code snippet]\`
+    - **Issue**: [explanation of why this is non-deterministic]
+    - **Recommendation**: [specific refactoring guidance]
+
+    [Repeat for each issue]
+    \`\`\`
+
+    ## Applicability
+
+    This audit applies to codebases with unit tests. If the codebase has no unit test files (\`*.test.ts\`, \`*.spec.js\`, etc.), document that finding and skip the detailed analysis.
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - Searched for unit test files (\`*.test.ts\`, \`*.test.js\`, \`*.spec.ts\`, \`*.spec.js\`)
+    - Excluded system test and exploratory test files
+    - Analyzed each unit test file using the test determinism detector
+    - Created idea files for test files containing determinism issues
+    - Each idea includes specific line numbers, patterns, and refactoring guidance
+    - No changes to files outside \`.dust/\`
+  `
+}
+
 function testPyramid(): string {
   return dedent`
     # Test Pyramid
@@ -2749,6 +2844,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'stale-ideas': staleIdeas,
   'suggest-audits': suggestAudits,
   'test-assertions': testAssertions,
+  'test-determinism': testDeterminism,
   'test-pyramid': testPyramid,
   'ubiquitous-language': ubiquitousLanguage,
   'ux-audit': uxAudit,
