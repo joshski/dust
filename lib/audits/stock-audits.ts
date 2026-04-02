@@ -1179,6 +1179,224 @@ function ideasFromPrinciples(): string {
   `
 }
 
+function incidentalTestDetails(): string {
+  return dedent`
+    # Incidental Test Details
+
+    Identify tests with overly specific data and other incidental details that obscure test intent.
+
+    ${ideasHint}
+
+    ## Context
+
+    Test clarity suffers when tests include incidental complexity — details that aren't relevant to what's being tested. Overly specific data, unused properties, magic numbers, excessive mocking, and complex nested structures all make tests harder to understand and maintain. This audit identifies these patterns as candidates for simplification.
+
+    The audit flags patterns for review without making judgments about whether they're necessary in specific cases. Some tests legitimately need complex setup to verify specific behaviors; the goal is to surface candidates so agents can evaluate each case and simplify where appropriate.
+
+    ## Guidance
+
+    ### Readable Test Data
+
+    Test data setup should use natural structures that mirror what they represent.
+
+    When test data is easy to read, tests become self-documenting. A file system hierarchy expressed as a nested object immediately conveys structure, while a flat Map with path strings requires mental parsing to understand the relationships.
+
+    Prefer literal structures that visually match the domain:
+
+    \`\`\`javascript
+    // Avoid: flat paths that obscure hierarchy
+    const fs = createFileSystemEmulator({
+      files: new Map([['/project/.dust/principles/my-goal.md', '# My Goal']]),
+      existingPaths: new Set(['/project/.dust/ideas']),
+    })
+
+    // Prefer: nested object that mirrors file system structure
+    const fs = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          principles: {
+            'my-goal.md': '# My Goal'
+          },
+          ideas: {}
+        }
+      }
+    })
+    \`\`\`
+
+    The nested form:
+    - Shows parent-child relationships through indentation
+    - Makes empty directories explicit with empty objects
+    - Requires no mental path concatenation to understand structure
+
+    ### Comprehensive Assertions
+
+    Assert the whole, not the parts.
+
+    When you break a complex object into many small assertions, a failure tells you *one thing that's wrong*. When you assert against the whole expected value, the diff tells you *what actually happened versus what you expected* — the full picture, in one glance.
+
+    Small assertions are like yes/no questions to a witness. A whole-object assertion is like asking "tell me what you saw."
+
+    Collapse multiple partial assertions into one comprehensive assertion:
+
+    \`\`\`javascript
+    // Fragmented — each failure is a narrow keyhole
+    expect(result.name).toBe("Alice");
+    expect(result.age).toBe(30);
+    expect(result.role).toBe("admin");
+
+    // Whole — a failure diff tells the full story
+    expect(result).toEqual({
+      name: "Alice",
+      age: 30,
+      role: "admin",
+    });
+    \`\`\`
+
+    If \`role\` is \`"user"\` and \`age\` is \`29\`, the fragmented version stops at the first failure. The whole-object assertion shows both discrepancies at once, in context.
+
+    ### Self-Diagnosing Tests
+
+    When a big test fails, it should be self-evident how to diagnose and fix the failure.
+
+    The more moving parts a test has — end-to-end, system, integration — the more critical this becomes. A test that fails with \`expected true, received false\` forces the developer (or agent) to re-run, add logging, and guess. A test that fails with a rich diff showing the actual state versus the expected state turns diagnosis into reading.
+
+    Anti-patterns:
+
+    **Boolean flattening** — collapsing a rich value into true/false before asserting:
+    \`\`\`javascript
+    // Bad: "expected true, received false" — what events arrived?
+    expect(events.some(e => e.type === 'check-passed')).toBe(true)
+
+    // Good: shows the actual event types on failure
+    expect(events.map(e => e.type)).toContain('check-passed')
+    \`\`\`
+
+    **Length-only assertions** — checking count without showing contents:
+    \`\`\`javascript
+    // Bad: "expected 2, received 0" — what requests were captured?
+    expect(requests.length).toBe(2)
+
+    // Good: shows the actual requests on failure
+    expect(requests).toHaveLength(2)  // vitest shows the array
+    \`\`\`
+
+    **Silent guards** — using \`if\` where an assertion belongs:
+    \`\`\`javascript
+    // Bad: silently passes when settings is undefined
+    if (settings) {
+      expect(JSON.parse(settings).key).toBeDefined()
+    }
+
+    // Good: fails explicitly if settings is missing
+    expect(settings).toBeDefined()
+    const parsed = JSON.parse(settings!)
+    expect(parsed.key).toBeDefined()
+    \`\`\`
+
+    ### Functional Core, Imperative Shell
+
+    Separate code into a pure "functional core" and a thin "imperative shell." The core takes values in and returns values out, with no side effects. The shell handles I/O and wires things together.
+
+    Purely functional code makes some things easier to understand: because values don't change, you can call functions and know that only their return value matters—they don't change anything outside themselves.
+
+    The functional core contains business logic as pure functions that take values and return values. The imperative shell sits at the boundary, reading input, calling into the core, and performing side effects with the results. This keeps the majority of code easy to test (no mocks or stubs needed for pure functions) and makes the I/O surface area small and explicit.
+
+    ## Scope
+
+    Search for test files and analyze them for clarity issues:
+
+    1. **Test files** - Files matching \`*.test.ts\`, \`*.test.js\`, \`*.spec.ts\`, \`*.spec.js\`
+       - Include unit, integration, and system tests
+       - Exclude exploratory test files
+
+    2. **Patterns to identify**:
+       - Object literals with unused properties in test setup
+       - Magic numbers without semantic meaning
+       - Excessive mock/stub setup
+       - Complex nested structures where simpler ones would suffice
+       - Brittle string assertions coupled to formatting
+       - Boolean flattening (testing \`.toBe(true)\` instead of showing actual values)
+       - Length-only assertions (testing \`.length\` instead of \`.toHaveLength()\`)
+       - Silent guards (using \`if\` where assertions belong)
+
+    ## Analysis Steps
+
+    1. **Find test files**
+       - Search for \`**/*.test.ts\`, \`**/*.test.js\`, \`**/*.spec.ts\`, \`**/*.spec.js\`
+       - Filter out exploratory tests
+
+    2. **Analyze each test file**
+       - Look for object literals in test setup with properties that aren't used in assertions
+       - Identify numeric literals that lack semantic meaning (e.g., \`42\`, \`123\` without explaining what they represent)
+       - Count mock/stub setup lines relative to actual test logic
+       - Check for deeply nested test data structures (3+ levels)
+       - Find string assertions that compare exact formatting (spaces, newlines, etc.) rather than semantic content
+       - Detect boolean flattening patterns (\`.some()\`, \`.every()\`, \`.includes()\` followed by \`.toBe(true/false)\`)
+       - Find length checks using \`.length\` property instead of \`.toHaveLength()\`
+       - Locate conditional logic in tests (\`if\` statements) that should be assertions
+
+    3. **Create ideas for issues found**
+       - Group issues by test file
+       - For each file with issues, create an idea file documenting:
+         - Test file path
+         - List of patterns found with line numbers
+         - Pattern categories
+         - Current problematic patterns
+         - Recommended refactoring approaches
+
+    ## Output Format
+
+    For each test file with clarity issues, create an idea file with:
+
+    ### Title
+    "Simplify test data in [filename]"
+
+    ### Content Structure
+    \`\`\`markdown
+    # Simplify test data in [filename]
+
+    The test file \`[path]\` contains incidental details that obscure test intent.
+
+    ## Issues Found
+
+    ### [Pattern Name] (line X)
+    - **Current**: \`[code snippet]\`
+    - **Issue**: [explanation of how this obscures intent]
+    - **Recommendation**: [specific simplification guidance]
+
+    [Repeat for each issue]
+    \`\`\`
+
+    ## Applicability
+
+    This audit applies to codebases with test files. If the codebase has no test files (\`*.test.ts\`, \`*.spec.js\`, etc.), document that finding and skip the detailed analysis.
+
+    ## Focus
+
+    This audit focuses purely on test clarity — whether tests clearly communicate intent. It does not evaluate test performance or execution speed.
+
+    ## Blocked By
+
+    (none)
+
+    ## Definition of Done
+
+    - Searched for all test files in the codebase
+    - Analyzed test files for incidental complexity patterns
+    - Identified tests with unused properties in setup data
+    - Found magic numbers lacking semantic meaning
+    - Flagged excessive mock/stub setup
+    - Located complex nested structures
+    - Detected brittle string assertions
+    - Found boolean flattening patterns
+    - Located length-only assertions
+    - Identified silent guards (if statements in tests)
+    - Created idea files for each test file with findings
+    - Each idea includes: file path, issues with line numbers, pattern categories, current patterns, recommendations
+    - No changes to files outside \`.dust/\`
+  `
+}
+
 function commitReview(): string {
   return dedent`
     # Commit Review
@@ -2941,6 +3159,7 @@ const stockAuditFunctions: Record<string, () => string> = {
   'commit-review': commitReview,
   'ideas-from-principles': ideasFromPrinciples,
   'idiomatic-style': idiomaticStyle,
+  'incidental-test-details': incidentalTestDetails,
   'logging-and-traceability': loggingAndTraceability,
   'primitive-obsession': primitiveObsession,
   'repository-context': repositoryContext,
