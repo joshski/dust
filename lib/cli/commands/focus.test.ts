@@ -176,7 +176,7 @@ describe('buildImplementationInstructions', () => {
 
     expect(result).not.toContain('install dependencies')
     expect(result).not.toContain('Run `dust check` to verify')
-    expect(result).toContain('1. Implement the task')
+    expect(result).toContain('2. Implement the task')
     expect(result).toContain('check` passed before this session started')
   })
 
@@ -207,6 +207,6 @@ describe('buildImplementationInstructions', () => {
     expect(result).not.toContain('Run `dust check` to verify')
     expect(result).not.toContain('`dust check` before committing')
     expect(result).toContain('check` passed before this session started')
-    expect(result).toContain('1. Implement the task')
+    expect(result).toContain('2. Implement the task')
   })
 })

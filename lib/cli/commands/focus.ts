@@ -47,6 +47,11 @@ export function buildImplementationInstructions(
     step++
   }
 
+  steps.push(
+    `${step}. If the task file contains Principles and Guidance sections, read and follow them before implementing changes`
+  )
+  step++
+
   steps.push(`${step}. Implement the task`)
   step++
 
