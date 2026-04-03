@@ -7,6 +7,7 @@ import { describe, expect, test } from 'vitest'
 
 const currentDir = dirname(fileURLToPath(import.meta.url))
 const projectRoot = resolvePath(currentDir, '../../..')
+const oxlintBin = join(projectRoot, 'node_modules/.bin/oxlint')
 
 async function lint(code: string, filename: string): Promise<string> {
   const dir = join(tmpdir(), `oxlint-test-${Date.now()}-${Math.random()}`)
@@ -45,15 +46,54 @@ async function lint(code: string, filename: string): Promise<string> {
   await writeFile(join(dir, filename), code)
 
   return new Promise((onResolve, onReject) => {
-    const proc = spawn('bunx', ['oxlint', filename], { cwd: dir })
+    const proc = spawn(oxlintBin, [filename], { cwd: dir })
     let output = ''
-    proc.stdout.on('data', data => (output += data))
-    proc.stderr.on('data', data => (output += data))
-    proc.on('close', async () => {
-      await rm(dir, { recursive: true })
-      onResolve(output)
+    let resolved = false
+
+    const finalize = async (
+      result:
+        | { success: true; output: string }
+        | { success: false; error: Error }
+    ) => {
+      if (resolved) return
+      resolved = true
+
+      clearTimeout(timeout)
+
+      try {
+        proc.kill()
+      } catch {
+        // Ignore errors when killing process
+      }
+
+      try {
+        await rm(dir, { recursive: true })
+      } catch {
+        // Ignore cleanup errors
+      }
+
+      if (result.success) {
+        onResolve(result.output)
+      } else {
+        onReject(result.error)
+      }
+    }
+
+    // oxlint-disable-next-line dust/no-fixed-sleep-in-tests -- timeout needed to prevent hanging tests
+    const timeout = setTimeout(() => {
+      finalize({ success: false, error: new Error('oxlint process timed out') })
+    }, 10000)
+
+    proc.stdout?.on('data', data => (output += data))
+    proc.stderr?.on('data', data => (output += data))
+
+    proc.on('close', () => {
+      finalize({ success: true, output })
     })
-    proc.on('error', onReject)
+
+    proc.on('error', error => {
+      finalize({ success: false, error })
+    })
   })
 }
 
