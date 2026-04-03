@@ -47,3 +47,7 @@ Details live in the [.dust/facts](./.dust/facts) directory:
 - [Directory Structure](./.dust/facts/dust-directory-structure.md) — how `.dust/` is organized
 - [Configuration](./.dust/facts/configuration-system.md) — settings and quality checks
 - [CLI Commands](./.dust/facts/unified-cli.md) — full command reference
+
+## Dust Bucket Worker
+
+The `dust bucket worker` command runs a background worker that syncs agent sessions to [dustbucket.com](https://dustbucket.com). This requires a dustbucket.com account (currently in private alpha, invite only).
