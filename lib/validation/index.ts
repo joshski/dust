@@ -148,7 +148,10 @@ export async function validatePatch(
 ): Promise<ValidationResult> {
   const cwd = options.cwd ?? process.cwd()
   const resolvedDustPath = resolve(dustPath)
-  const { absolutePatchFiles, deletedPaths } = parsePatchFiles(resolvedDustPath, patch)
+  const { absolutePatchFiles, deletedPaths } = parsePatchFiles(
+    resolvedDustPath,
+    patch
+  )
   const overlayFs = createOverlayFileSystem(
     fileSystem,
     absolutePatchFiles,
@@ -158,7 +161,9 @@ export async function validatePatch(
   const violations: Violation[] = []
 
   // Validate patch root entries (check for unexpected directories/files)
-  violations.push(...validatePatchRootEntries(fileSystem, resolvedDustPath, patch))
+  violations.push(
+    ...validatePatchRootEntries(fileSystem, resolvedDustPath, patch)
+  )
 
   // Phase 1: Parse all artifacts using the overlay filesystem
   const { context, violations: parseViolations } = await parseArtifacts(
