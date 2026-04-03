@@ -568,6 +568,52 @@ describe('validatePatch', () => {
   })
 })
 
+describe('validatePatch with relative dustPath', () => {
+  function makeFs(files: Record<string, string> = {}) {
+    return createFileSystemEmulator({}, files)
+  }
+
+  test('validates links between sibling patch files with relative dustPath', async () => {
+    const fileSystem = makeFs()
+    const result = await validatePatch(fileSystem, '.dust', {
+      files: {
+        'facts/fact-a.md': '# Fact A\n\nThis links to [Fact B](fact-b.md).',
+        'facts/fact-b.md': '# Fact B\n\nThis is fact B.',
+      },
+    })
+    expect(result.valid).toBe(true)
+    expect(result.violations).toEqual([])
+  })
+
+  test('validates blockedBy links between tasks created in same patch with relative dustPath', async () => {
+    const fileSystem = makeFs()
+    const result = await validatePatch(fileSystem, '.dust', {
+      files: {
+        'tasks/first-task.md':
+          '# First Task\n\nDo the first thing.\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+        'tasks/second-task.md':
+          '# Second Task\n\nDo the second thing.\n\n## Task Type\n\nimplement\n\n## Blocked By\n\n- [First Task](first-task.md)\n\n## Definition of Done\n\n- Done',
+      },
+    })
+    expect(result.valid).toBe(true)
+    expect(result.violations).toEqual([])
+  })
+
+  test('still detects broken links with relative dustPath', async () => {
+    const fileSystem = makeFs()
+    const result = await validatePatch(fileSystem, '.dust', {
+      files: {
+        'facts/my-fact.md':
+          '# My Fact\n\nThis links to [missing](nonexistent.md).',
+      },
+    })
+    expect(result.valid).toBe(false)
+    expect(result.violations.some(v => v.message.includes('Broken link'))).toBe(
+      true
+    )
+  })
+})
+
 describe('createOverlayFileSystem', () => {
   test('deleted paths are hidden from exists', () => {
     const base = createFileSystemEmulator({}, { '/a/b.md': 'content' })

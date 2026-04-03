@@ -5,7 +5,7 @@
  * using the same validators as `dust lint`.
  */
 
-import { relative } from 'node:path'
+import { relative, resolve } from 'node:path'
 import type { ReadableFileSystem } from '../filesystem/types'
 import type { Violation } from '../lint/validators/types'
 import { createOverlayFileSystem } from './overlay-filesystem'
@@ -147,7 +147,8 @@ export async function validatePatch(
   options: ValidatePatchOptions = {}
 ): Promise<ValidationResult> {
   const cwd = options.cwd ?? process.cwd()
-  const { absolutePatchFiles, deletedPaths } = parsePatchFiles(dustPath, patch)
+  const resolvedDustPath = resolve(dustPath)
+  const { absolutePatchFiles, deletedPaths } = parsePatchFiles(resolvedDustPath, patch)
   const overlayFs = createOverlayFileSystem(
     fileSystem,
     absolutePatchFiles,
@@ -157,12 +158,12 @@ export async function validatePatch(
   const violations: Violation[] = []
 
   // Validate patch root entries (check for unexpected directories/files)
-  violations.push(...validatePatchRootEntries(fileSystem, dustPath, patch))
+  violations.push(...validatePatchRootEntries(fileSystem, resolvedDustPath, patch))
 
   // Phase 1: Parse all artifacts using the overlay filesystem
   const { context, violations: parseViolations } = await parseArtifacts(
     overlayFs,
-    dustPath
+    resolvedDustPath
   )
   violations.push(...parseViolations)
 
