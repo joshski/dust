@@ -42,6 +42,10 @@ import {
   type TaskType,
   type WorkflowTaskMatch,
 } from './workflow-tasks'
+import {
+  type RepositoryPrincipleNode,
+  getRepositoryPrincipleHierarchy as getRepositoryPrincipleHierarchyImpl,
+} from './repository-principle-hierarchy'
 
 // Re-export types
 export type {
@@ -59,6 +63,7 @@ export type {
   ParsedMarkdownLink,
   ParsedSection,
   Principle,
+  RepositoryPrincipleNode,
   Task,
   TaskType,
   WorkflowTaskMatch,
@@ -144,6 +149,7 @@ export interface ReadOnlyArtifactsRepository {
     taskSlug: string
   }): Promise<ParsedCaptureIdeaTask | null>
   buildTaskGraph(): Promise<TaskGraph>
+  getRepositoryPrincipleHierarchy(): Promise<RepositoryPrincipleNode[]>
 }
 
 export interface ArtifactsRepository extends ReadOnlyArtifactsRepository {
@@ -284,6 +290,12 @@ function buildReadOperations(
       }
 
       return { nodes, edges }
+    },
+
+    async getRepositoryPrincipleHierarchy(): Promise<
+      RepositoryPrincipleNode[]
+    > {
+      return getRepositoryPrincipleHierarchyImpl(this)
     },
   }
 }

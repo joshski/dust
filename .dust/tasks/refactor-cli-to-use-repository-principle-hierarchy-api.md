@@ -56,7 +56,7 @@ The CLI rendering code is in `lib/cli/commands/list.ts` around lines 448-463 whe
 
 ## Blocked By
 
-- [Implement getRepositoryPrincipleHierarchy API](implement-getrepositoryprinciplehierarchy-api.md)
+(none)
 
 ## Decomposes Idea
 

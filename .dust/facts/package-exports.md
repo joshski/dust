@@ -43,6 +43,7 @@ import { buildArtifactsRepository, buildReadOnlyArtifactsRepository } from "@jos
 const repository = buildReadOnlyArtifactsRepository(fileSystem, dustPath);
 const principles = await repository.listPrinciples();
 const idea = await repository.parseIdea({ slug: 'my-idea' });
+const hierarchy = await repository.getRepositoryPrincipleHierarchy();
 ```
 
 ### @joshski/dust/audits
