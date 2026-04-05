@@ -191,7 +191,113 @@ Update CLI tests in `lib/cli/commands/list.test.ts` to ensure `dust principles -
 - **Reasonably DRY**: Share tree-building logic between core and repository APIs where practical
 - **Context Window Efficiency**: Small, focused API surface
 
+## Research Findings
+
+### Current Implementation Analysis
+
+**Core Principles Tree Building** (`lib/artifacts/core-principles.ts:84-126`):
+- `getCorePrincipleTree()` is a pure function that filters and builds hierarchy
+- Algorithm: create node map → wire parent-child → find roots → sort recursively
+- Returns `CorePrincipleNode[]` with `{ slug, title, children }` shape
+- Filtering excludes Internal principles and user-specified exclusions
+
+**Repository Principle Parsing** (`lib/artifacts/index.ts:202-215`):
+- `repository.listPrinciples()` reads `.dust/principles/` directory
+- `repository.parsePrinciple({ slug })` returns full `Principle` object
+- `Principle` type includes `parentPrinciple`, `subPrinciples`, `title`, `slug`, `content`
+
+**CLI Implementation** (`lib/cli/commands/list.ts:179-231`):
+- `buildPrincipleHierarchy()` is CLI-specific, uses file paths instead of slugs
+- Returns `PrincipleNode[]` with `{ filePath, title, children }` shape
+- Not exported, not suitable for library consumers
+- Uses `extractPrincipleRelationships()` from validation module
+
+**Key Insight**: The core tree-building logic in `getCorePrincipleTree()` is generic enough to be reused. The main difference is data source (bundled vs filesystem) and identifier type (slugs vs file paths).
+
+### Alignment with Principles
+
+**Decoupled Code**: New API keeps repository operations separate from CLI rendering
+
+**Reasonably DRY**: Consider extracting shared tree-building logic rather than duplicating
+
+**Design for Testability**: Pure function taking repository interface is easily testable
+
+**Context Window Efficiency**: Small, focused API surface minimizes cognitive load
+
+**Progressive Disclosure**: Returns minimal node structure; consumers request full content if needed
+
+### Design Decision: Combined vs Separate API
+
+The related task "Refine Idea: Expose repository principle hierarchy API" states: "We want downstream repositories to see the same data (programmatically) as they see when running `dust principles` in a single call to the API - that is a hierarchical summary of 1) the principles in the repository itself and 2) the dust core principles."
+
+This suggests a **combined API** that returns both core and repository principles together, whereas the current idea proposes a **separate API** for repository principles only (mirroring `getCorePrincipleHierarchy()`).
+
+**Implications**:
+- Combined API would need to merge two hierarchies with potentially different roots
+- CLI currently renders core and local separately (lines 448-463 in list.ts)
+- No obvious way to merge two separate trees without creating an artificial root
+- Alternatively: return `{ core: CorePrincipleNode[], local: RepositoryPrincipleNode[] }`
+
+This is captured as a key open question below.
+
 ## Open Questions
+
+### Should the API return combined or separate hierarchies?
+
+#### Option: Combined hierarchy in a single array
+
+```typescript
+export async function getPrincipleHierarchy(
+  repository: ReadOnlyArtifactsRepository,
+  config?: CorePrinciplesConfig
+): Promise<PrincipleNode[]>
+```
+
+Returns a merged tree combining core and repository principles. This matches the task description's requirement for "seeing the same data as `dust principles` in a single call."
+
+**Challenges**:
+- Core and repository principles have separate root nodes
+- No natural way to merge without creating an artificial container
+- Would require deciding precedence when core and local principles have same slug
+
+#### Option: Separate hierarchies in structured response
+
+```typescript
+export interface CombinedPrincipleHierarchy {
+  core: CorePrincipleNode[]
+  local: RepositoryPrincipleNode[]
+}
+
+export async function getPrincipleHierarchy(
+  repository: ReadOnlyArtifactsRepository,
+  config?: CorePrinciplesConfig
+): Promise<CombinedPrincipleHierarchy>
+```
+
+Returns both hierarchies in a structured object. This matches how the CLI renders them (separately) and avoids merging complexity.
+
+**Benefits**:
+- Clear separation between core and local principles
+- Matches current CLI rendering behavior
+- No ambiguity about which principle comes from where
+- Consumers can choose to merge or keep separate
+
+#### Option: Repository-only API (original proposal)
+
+```typescript
+export async function getRepositoryPrincipleHierarchy(
+  repository: ReadOnlyArtifactsRepository
+): Promise<RepositoryPrincipleNode[]>
+```
+
+Returns only repository principles. Consumers wanting both would call `getCorePrincipleHierarchy()` and `getRepositoryPrincipleHierarchy()` separately.
+
+**Benefits**:
+- Simpler, more focused API
+- Mirrors existing `getCorePrincipleHierarchy()` pattern
+- No merging complexity
+
+**Drawback**: Doesn't meet the task description's requirement for "a single call"
 
 ### Should this support filtering like `getCorePrincipleHierarchy()` does?
 
