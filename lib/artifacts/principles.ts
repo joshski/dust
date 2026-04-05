@@ -80,10 +80,7 @@ export async function parsePrinciple(
   }
 
   const content = await fileSystem.readFile(principlePath)
-  const title = extractTitle(content)
-  if (!title) {
-    throw new Error(`Principle file has no title: ${principlePath}`)
-  }
+  const title = extractTitle(content) || slug
 
   const parentPrinciple = extractSingleLinkFromSection(
     content,

@@ -88,17 +88,26 @@ Description here.
     ).rejects.toThrow('Principle not found: "nonexistent"')
   })
 
-  test('throws when principle file has no title', async () => {
+  test('uses slug as fallback title when principle file has no title', async () => {
     const fileSystem = createFileSystemEmulator(
       {},
       {
-        '.dust/principles/no-title.md': 'No title here, just content.',
+        '.dust/principles/no-title.md': `No title here, just content.
+
+## Parent Principle
+
+- (none)
+
+## Sub-Principles
+
+- (none)
+`,
       }
     )
 
-    await expect(
-      parsePrinciple(fileSystem, '.dust', 'no-title')
-    ).rejects.toThrow('Principle file has no title')
+    const principle = await parsePrinciple(fileSystem, '.dust', 'no-title')
+    expect(principle.title).toBe('no-title')
+    expect(principle.slug).toBe('no-title')
   })
 
   test('stops extracting links at next heading', async () => {

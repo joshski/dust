@@ -2,8 +2,12 @@
  * dust [type] - List tasks, ideas, principles, or facts (e.g., dust tasks, dust principles)
  */
 
-import { basename } from 'node:path'
-import { ARTIFACT_TYPES, type TaskType } from '../../artifacts/index'
+import {
+  ARTIFACT_TYPES,
+  type TaskType,
+  buildReadOnlyArtifactsRepository,
+  type RepositoryPrincipleNode,
+} from '../../artifacts/index'
 import {
   getCorePrincipleHierarchy,
   readAllCorePrinciples,
@@ -11,9 +15,6 @@ import {
   type Principle,
 } from '../../core-principles'
 import { isInternalPrinciple } from '../../artifacts/core-principles'
-import { parseArtifact } from '../../artifacts/parsed-artifact'
-import { extractPrincipleRelationships } from '../../lint/validators/principle-hierarchy'
-import type { PrincipleRelationships } from '../../lint/validators/types'
 import { findAllWorkflowTasks } from '../../artifacts/workflow-tasks'
 import {
   extractOpeningSentence,
@@ -165,76 +166,10 @@ export function formatPrinciplesSection(
 }
 
 /**
- * Node in the local principle hierarchy tree
+ * Render a repository principle hierarchy with tree connectors
  */
-interface PrincipleNode {
-  filePath: string
-  title: string
-  children: PrincipleNode[]
-}
-
-/**
- * Build hierarchy tree for local principles
- */
-async function buildPrincipleHierarchy(
-  principlesPath: string,
-  fileSystem: ReadableFileSystem
-): Promise<PrincipleNode[]> {
-  const files = await fileSystem.readdir(principlesPath)
-  const mdFiles = files.filter(f => f.endsWith('.md'))
-
-  // Build relationships for all principles
-  const relationships: PrincipleRelationships[] = []
-  const titleMap = new Map<string, string>()
-
-  for (const file of mdFiles) {
-    const filePath = `${principlesPath}/${file}`
-    const content = await fileSystem.readFile(filePath)
-    const artifact = parseArtifact(filePath, content)
-    relationships.push(extractPrincipleRelationships(artifact))
-    const title = extractTitle(content) || basename(file, '.md')
-    titleMap.set(filePath, title)
-  }
-
-  // Build a map of filePath -> PrincipleRelationships
-  const relMap = new Map<string, PrincipleRelationships>()
-  for (const rel of relationships) {
-    relMap.set(rel.filePath, rel)
-  }
-
-  // Find root principles (those with no parent or "(none)" parent)
-  const rootPrinciples = relationships.filter(
-    rel => rel.parentPrinciples.length === 0
-  )
-
-  // Recursively build the tree
-  function buildNode(filePath: string): PrincipleNode {
-    const rel = relMap.get(filePath)
-    const children: PrincipleNode[] = []
-
-    /* istanbul ignore next @preserve -- defensive: rel always exists for valid child paths */
-    if (rel) {
-      for (const childPath of rel.subPrinciples) {
-        children.push(buildNode(childPath))
-      }
-    }
-
-    return {
-      filePath,
-      /* istanbul ignore next @preserve -- defensive: titleMap always has entry for valid paths */
-      title: titleMap.get(filePath) || basename(filePath, '.md'),
-      children,
-    }
-  }
-
-  return rootPrinciples.map(rel => buildNode(rel.filePath))
-}
-
-/**
- * Render a local principle hierarchy with tree connectors
- */
-function renderHierarchy(
-  nodes: PrincipleNode[],
+function renderRepositoryPrincipleHierarchy(
+  nodes: RepositoryPrincipleNode[],
   output: (line: string) => void,
   prefix = ''
 ): void {
@@ -247,7 +182,11 @@ function renderHierarchy(
     output(`${prefix}${connector}${node.title}`)
 
     if (node.children.length > 0) {
-      renderHierarchy(node.children, output, prefix + childPrefix)
+      renderRepositoryPrincipleHierarchy(
+        node.children,
+        output,
+        prefix + childPrefix
+      )
     }
   }
 }
@@ -454,12 +393,10 @@ async function processPrinciplesList(
     }
 
     if (hasLocalPrinciples) {
-      const localHierarchy = await buildPrincipleHierarchy(
-        localDirPath,
-        fileSystem
-      )
+      const repository = buildReadOnlyArtifactsRepository(fileSystem, dustPath)
+      const localHierarchy = await repository.getRepositoryPrincipleHierarchy()
       stdout(`${colors.bold}Local${colors.reset}`)
-      renderHierarchy(localHierarchy, line => stdout(line))
+      renderRepositoryPrincipleHierarchy(localHierarchy, line => stdout(line))
       stdout('')
 
       // Collect items for event emission

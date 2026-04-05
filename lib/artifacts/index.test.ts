@@ -449,21 +449,30 @@ describe('buildArtifactsRepository', () => {
       expect(principle.subPrinciples).toEqual(['small-units'])
     })
 
-    test('throws when principle has no title', async () => {
+    test('uses slug as fallback title when principle has no title', async () => {
       const fileSystem = createFileSystemEmulator({
         project: {
           '.dust': {
             principles: {
-              'no-title.md': 'This principle has no heading.',
+              'no-title.md': `This principle has no heading.
+
+## Parent Principle
+
+- (none)
+
+## Sub-Principles
+
+- (none)
+`,
             },
           },
         },
       })
       const repository = buildArtifactsRepository(fileSystem, '/project/.dust')
 
-      await expect(
-        repository.parsePrinciple({ slug: 'no-title' })
-      ).rejects.toThrow('Principle file has no title')
+      const principle = await repository.parsePrinciple({ slug: 'no-title' })
+      expect(principle.title).toBe('no-title')
+      expect(principle.slug).toBe('no-title')
     })
   })
 
