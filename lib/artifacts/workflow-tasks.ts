@@ -7,7 +7,12 @@ import type {
   WorkflowTaskMatch,
 } from './types'
 
-export type { OpenQuestionResponse, ParsedCaptureIdeaTask, TaskType, WorkflowTaskMatch }
+export type {
+  OpenQuestionResponse,
+  ParsedCaptureIdeaTask,
+  TaskType,
+  WorkflowTaskMatch,
+}
 
 export const IDEA_TRANSITION_PREFIXES = [
   'Refine Idea: ',
@@ -23,7 +28,6 @@ export interface IdeaInProgress {
   taskSlug: string
   ideaTitle: string
 }
-
 
 /**
  * Converts a markdown title to the expected filename using deterministic rules:
@@ -106,7 +110,6 @@ async function readWorkflowHint(
   }
   return fileSystem.readFile(hintPath)
 }
-
 
 const WORKFLOW_SECTION_HEADINGS: { type: TaskType; heading: string }[] = [
   { type: 'refine', heading: 'Refines Idea' },
@@ -324,7 +327,6 @@ function findWorkflowMatch(
 export interface CreateIdeaTransitionTaskResult {
   filePath: string
 }
-
 
 export interface DecomposeIdeaOptions {
   ideaSlug: string

@@ -1,4 +1,9 @@
-export type TaskType = 'implement' | 'capture' | 'refine' | 'decompose' | 'shelve'
+export type TaskType =
+  | 'implement'
+  | 'capture'
+  | 'refine'
+  | 'decompose'
+  | 'shelve'
 
 export interface Fact {
   slug: string
