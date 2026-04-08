@@ -23,7 +23,7 @@ import { getReposDir } from './paths'
 import {
   createAuthFileSystem,
   type BucketDependencies,
-} from '../cli/commands/bucket-worker'
+} from './bucket-dependencies'
 import {
   buildConnectionInitPayload,
   type ConnectionInitMessage,
