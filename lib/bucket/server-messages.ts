@@ -2,7 +2,6 @@
  * Typed server-to-client WebSocket messages for the bucket protocol.
  */
 
-import type { Repository } from './repository'
 import type { AgentCapability } from './agent-capabilities'
 
 export interface RepositoryListMessage {
@@ -10,7 +9,14 @@ export interface RepositoryListMessage {
   repositories: RepositoryListItem[]
 }
 
-export interface RepositoryListItem extends Repository {
+export interface RepositoryListItem {
+  name: string
+  gitUrl: string
+  gitSshUrl: string
+  url: string
+  id: number
+  agentProvider?: string
+  branch?: string
   hasTask: boolean
 }
 
