@@ -3,24 +3,9 @@ import {
   extractOpeningSentence,
   extractTitle,
 } from '../markdown/markdown-utilities'
+import type { Idea, IdeaOpenQuestion, IdeaOption } from './types'
 
-export interface IdeaOption {
-  name: string
-  description: string
-}
-
-export interface IdeaOpenQuestion {
-  question: string
-  options: IdeaOption[]
-}
-
-export interface Idea {
-  slug: string
-  title: string
-  openingSentence: string | null
-  content: string
-  openQuestions: IdeaOpenQuestion[]
-}
+export type { Idea, IdeaOpenQuestion, IdeaOption }
 
 export interface ParsedIdeaContent {
   title: string | null

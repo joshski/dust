@@ -1,12 +1,63 @@
-import type { Fact } from './facts'
-import type { Idea } from './ideas'
-import type { Principle } from './principles'
-import type { Task } from './tasks'
-import type {
-  ParsedCaptureIdeaTask,
-  TaskType,
-  WorkflowTaskMatch,
-} from './workflow-tasks'
+export type TaskType = 'implement' | 'capture' | 'refine' | 'decompose' | 'shelve'
+
+export interface Fact {
+  slug: string
+  title: string
+  content: string
+}
+
+export interface IdeaOption {
+  name: string
+  description: string
+}
+
+export interface IdeaOpenQuestion {
+  question: string
+  options: IdeaOption[]
+}
+
+export interface Idea {
+  slug: string
+  title: string
+  openingSentence: string | null
+  content: string
+  openQuestions: IdeaOpenQuestion[]
+}
+
+export interface Principle {
+  slug: string
+  title: string
+  content: string
+  parentPrinciple: string | null
+  subPrinciples: string[]
+}
+
+export interface Task {
+  slug: string
+  title: string
+  content: string
+  principles: string[]
+  blockedBy: string[]
+  definitionOfDone: string[]
+}
+
+export interface OpenQuestionResponse {
+  question: string
+  chosenOption: string
+}
+
+export interface WorkflowTaskMatch {
+  type: TaskType
+  ideaSlug: string
+  taskSlug: string
+  resolvedQuestions: OpenQuestionResponse[]
+}
+
+export interface ParsedCaptureIdeaTask {
+  ideaTitle: string
+  ideaDescription: string
+  expedite: boolean
+}
 
 export type ArtifactType = 'ideas' | 'tasks' | 'principles' | 'facts'
 

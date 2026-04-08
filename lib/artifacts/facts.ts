@@ -1,11 +1,8 @@
 import type { FileReader } from '../filesystem/types'
 import { extractTitle } from '../markdown/markdown-utilities'
+import type { Fact } from './types'
 
-export interface Fact {
-  slug: string
-  title: string
-  content: string
-}
+export type { Fact }
 
 /**
  * Parses a fact markdown file into a structured Fact object.

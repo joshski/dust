@@ -3,14 +3,9 @@ import {
   extractTitle,
   MARKDOWN_LINK_PATTERN,
 } from '../markdown/markdown-utilities'
+import type { Principle } from './types'
 
-export interface Principle {
-  slug: string
-  title: string
-  content: string
-  parentPrinciple: string | null
-  subPrinciples: string[]
-}
+export type { Principle }
 
 /**
  * Extracts link targets from a section of markdown.

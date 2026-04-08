@@ -1,5 +1,13 @@
 import type { FileSystem, ReadableFileSystem } from '../filesystem/types'
 import { MARKDOWN_LINK_PATTERN } from '../markdown/markdown-utilities'
+import type {
+  OpenQuestionResponse,
+  ParsedCaptureIdeaTask,
+  TaskType,
+  WorkflowTaskMatch,
+} from './types'
+
+export type { OpenQuestionResponse, ParsedCaptureIdeaTask, TaskType, WorkflowTaskMatch }
 
 export const IDEA_TRANSITION_PREFIXES = [
   'Refine Idea: ',
@@ -16,11 +24,6 @@ export interface IdeaInProgress {
   ideaTitle: string
 }
 
-export interface ParsedCaptureIdeaTask {
-  ideaTitle: string
-  ideaDescription: string
-  expedite: boolean
-}
 
 /**
  * Converts a markdown title to the expected filename using deterministic rules:
@@ -48,8 +51,6 @@ export const VALID_TASK_TYPES = [
   'decompose',
   'shelve',
 ] as const
-
-export type TaskType = (typeof VALID_TASK_TYPES)[number]
 
 /**
  * Extracts and validates the task type from the ## Task Type section.
@@ -106,12 +107,6 @@ async function readWorkflowHint(
   return fileSystem.readFile(hintPath)
 }
 
-export interface WorkflowTaskMatch {
-  type: TaskType
-  ideaSlug: string
-  taskSlug: string
-  resolvedQuestions: OpenQuestionResponse[]
-}
 
 const WORKFLOW_SECTION_HEADINGS: { type: TaskType; heading: string }[] = [
   { type: 'refine', heading: 'Refines Idea' },
@@ -330,10 +325,6 @@ export interface CreateIdeaTransitionTaskResult {
   filePath: string
 }
 
-export interface OpenQuestionResponse {
-  question: string
-  chosenOption: string
-}
 
 export interface DecomposeIdeaOptions {
   ideaSlug: string

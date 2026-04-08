@@ -3,15 +3,9 @@ import {
   extractTitle,
   MARKDOWN_LINK_PATTERN,
 } from '../markdown/markdown-utilities'
+import type { Task } from './types'
 
-export interface Task {
-  slug: string
-  title: string
-  content: string
-  principles: string[]
-  blockedBy: string[]
-  definitionOfDone: string[]
-}
+export type { Task }
 
 /**
  * Extracts link targets from a section of markdown.
