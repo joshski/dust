@@ -10,18 +10,8 @@ import { homedir } from 'node:os'
 import { dirname } from 'node:path'
 import { run as claudeRun } from '../claude/run'
 import type { CommandDependencies, FileSystem } from '../cli/types'
-import type { DockerDependencies } from '../docker/docker-agent'
-import {
-  readEnvConfig,
-  type AuthConfig,
-  type RuntimeConfig,
-  type SessionConfig,
-} from '../env-config'
+import { readEnvConfig } from '../env-config'
 import { createLogger } from '../logging'
-import type {
-  ToolExecutionRequest,
-  ToolExecutionResult,
-} from './command-events-proxy'
 import {
   type BucketEmitFn,
   type BucketErrorEvent,
@@ -36,10 +26,7 @@ import {
   createLogLine,
   type LogBuffer,
 } from './log-buffer'
-import {
-  transition,
-  type RepositoryLifecycleState,
-} from './repository-lifecycle'
+import { transition } from './repository-lifecycle'
 import { getReposDir } from './paths'
 import {
   cloneRepository,
@@ -47,7 +34,11 @@ import {
   removeRepository,
 } from './repository-git'
 import { runRepositoryLoop } from './repository-loop'
-import type { ToolDefinition } from './server-messages'
+import type {
+  Repository,
+  RepositoryDependencies,
+  RepositoryState,
+} from './repository-types'
 
 export {
   cloneRepository,
@@ -55,29 +46,13 @@ export {
   removeRepository,
 } from './repository-git'
 export { runRepositoryLoop } from './repository-loop'
-export type { RepositoryLifecycleState } from './repository-lifecycle'
+export type {
+  Repository,
+  RepositoryDependencies,
+  RepositoryState,
+} from './repository-types'
 
 const log = createLogger('dust:bucket:repository')
-
-export interface Repository {
-  name: string
-  gitUrl: string
-  gitSshUrl: string
-  url: string
-  id: number
-  agentProvider?: string
-  branch?: string
-}
-
-export interface RepositoryState {
-  repository: Repository
-  path: string
-  logBuffer: LogBuffer
-  lifecycle: RepositoryLifecycleState
-  agentStatus: 'idle' | 'busy'
-  wakeUp?: () => void
-  taskAvailablePending?: boolean
-}
 
 /**
  * Interface for the subset of bucket state needed by repository management.
@@ -89,35 +64,6 @@ export interface RepositoryManager {
   emit: BucketEmitFn
   sendEvent: SendEventFn
   sessionId: string
-}
-
-export interface RepositoryDependencies {
-  spawn: typeof nodeSpawn
-  run: typeof claudeRun
-  fileSystem: FileSystem
-  sleep: (ms: number) => Promise<void>
-  getReposDir: () => string
-  session: SessionConfig
-  runtime: RuntimeConfig
-  auth: AuthConfig
-  /** Optional overrides for Docker dependency functions (for testing) */
-  dockerDeps?: Partial<DockerDependencies>
-  /** Function to get current tool definitions */
-  getTools?: () => ToolDefinition[]
-  /** Function to get revealed tool families (for progressive disclosure) */
-  getRevealedFamilies?: () => Set<string>
-  /** Forward tool execution requests to the bucket server */
-  forwardToolExecution?: (
-    request: ToolExecutionRequest
-  ) => Promise<ToolExecutionResult>
-  /** Mark a tool family as revealed (for progressive disclosure) */
-  revealFamily?: (familyName: string) => void
-  /** Shell runner for pre-flight commands (install, check) */
-  shellRunner?: import('../cli/process-runner').ShellRunner
-  /** Force Docker mode using bundled default Dockerfile */
-  forceDocker?: boolean
-  /** Force Apple Container mode using bundled default Dockerfile */
-  forceAppleContainer?: boolean
 }
 
 /**

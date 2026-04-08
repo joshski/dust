@@ -43,7 +43,10 @@ import { createGitCredentialProxyServer } from '../proxy/git-credential-proxy'
 import { startCommandEventsProxy } from './command-events-proxy'
 import type { SendEventFn } from './events'
 import { appendLogLine, createLogLine, type LogBuffer } from './log-buffer'
-import type { RepositoryDependencies, RepositoryState } from './repository'
+import type {
+  RepositoryDependencies,
+  RepositoryState,
+} from './repository-types'
 import { formatToolsSection } from './tool-prompt'
 
 const log = createLogger('dust:bucket:repository-loop')
