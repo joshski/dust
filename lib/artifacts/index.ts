@@ -42,12 +42,25 @@ import {
   type TaskType,
   type WorkflowTaskMatch,
 } from './workflow-tasks'
-import {
-  type RepositoryPrincipleNode,
-  getRepositoryPrincipleHierarchy as getRepositoryPrincipleHierarchyImpl,
-} from './repository-principle-hierarchy'
+import { getRepositoryPrincipleHierarchy as getRepositoryPrincipleHierarchyImpl } from './repository-principle-hierarchy'
+import type {
+  ArtifactType,
+  ReadOnlyArtifactsRepository,
+  RepositoryPrincipleNode,
+  TaskGraph,
+  TaskGraphNode,
+} from './types'
 
-// Re-export types
+// Re-export types from ./types
+export type {
+  ArtifactType,
+  ReadOnlyArtifactsRepository,
+  RepositoryPrincipleNode,
+  TaskGraph,
+  TaskGraphNode,
+} from './types'
+
+// Re-export types from other modules
 export type {
   AllWorkflowTasks,
   CreateIdeaTransitionTaskResult,
@@ -63,20 +76,9 @@ export type {
   ParsedMarkdownLink,
   ParsedSection,
   Principle,
-  RepositoryPrincipleNode,
   Task,
   TaskType,
   WorkflowTaskMatch,
-}
-
-export interface TaskGraphNode {
-  task: Task
-  workflowType: TaskType | null
-}
-
-export interface TaskGraph {
-  nodes: TaskGraphNode[]
-  edges: Array<{ from: string; to: string }>
 }
 
 // Re-export constants and standalone functions
@@ -91,8 +93,6 @@ export {
   parseResolvedQuestions,
 }
 export type { IdeaInProgress }
-
-export type ArtifactType = 'ideas' | 'tasks' | 'principles' | 'facts'
 
 export const ARTIFACT_TYPES: ArtifactType[] = [
   'facts',
@@ -130,26 +130,6 @@ export function parseArtifactPath(
   const slug = filename.slice(0, -3) // Remove .md
 
   return { type: type as ArtifactType, slug }
-}
-
-export interface ReadOnlyArtifactsRepository {
-  artifactPath(type: ArtifactType, slug: string): string
-  parseIdea(options: { slug: string }): Promise<Idea>
-  listIdeas(): Promise<string[]>
-  parsePrinciple(options: { slug: string }): Promise<Principle>
-  listPrinciples(): Promise<string[]>
-  parseFact(options: { slug: string }): Promise<Fact>
-  listFacts(): Promise<string[]>
-  parseTask(options: { slug: string }): Promise<Task>
-  listTasks(): Promise<string[]>
-  findWorkflowTaskForIdea(options: {
-    ideaSlug: string
-  }): Promise<WorkflowTaskMatch | null>
-  parseCaptureIdeaTask(options: {
-    taskSlug: string
-  }): Promise<ParsedCaptureIdeaTask | null>
-  buildTaskGraph(): Promise<TaskGraph>
-  getRepositoryPrincipleHierarchy(): Promise<RepositoryPrincipleNode[]>
 }
 
 export interface ArtifactsRepository extends ReadOnlyArtifactsRepository {

@@ -5,7 +5,10 @@
  * from a repository's .dust/principles/ directory.
  */
 
-import type { ReadOnlyArtifactsRepository } from './index'
+import type {
+  ReadOnlyArtifactsRepository,
+  RepositoryPrincipleNode,
+} from './types'
 
 /**
  * Recursively sorts principle nodes alphabetically by title.
@@ -15,15 +18,6 @@ function sortNodes(nodes: RepositoryPrincipleNode[]): void {
   for (const node of nodes) {
     sortNodes(node.children)
   }
-}
-
-/**
- * Node in the principle hierarchy tree
- */
-export interface RepositoryPrincipleNode {
-  slug: string
-  title: string
-  children: RepositoryPrincipleNode[]
 }
 
 /**
