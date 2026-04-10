@@ -19,26 +19,54 @@ Step 3 is the inconsistency. `runPreflightChecks` uses a `ShellRunner` that alwa
 
 The `DockerSpawnConfig` already carries everything needed to run a command inside the container: `imageTag`, `repoPath`, `homeDir`, `runCommand`, `gitProxyUrl`. The `ContainerRuntime` interface in `lib/container/runtime.ts` exposes `buildRunArgs(config: RunConfig)` which generates the full argument list for `docker run` or `container run`.
 
+## Implementation Notes
+
+`runOneIteration` (lines 332–502 in `lib/loop/iteration.ts`) currently selects its `ShellRunner` at line 405:
+
+```ts
+const shellRunner = loopDependencies.shellRunner ?? defaultShellRunner
+```
+
+The container-aware shell runner would be created here when `docker` and `containerRuntime` are both set in `options`. It wraps each command as:
+
+```
+<runCommand> run --rm -v <repoPath>:/workspace -w /workspace [envs] <imageTag> sh -c "<command>"
+```
+
+The repo is volume-mounted, so files written by the install step (e.g. `node_modules`) persist on the host filesystem and are visible to the subsequent `dust check` container invocation. Non-docker iterations remain unchanged.
+
+`loop.ts` already holds `containerRuntime` (selected by `selectContainerRuntime`) alongside `dockerConfig` (lines 164, 229). Threading `containerRuntime` through `IterationOptions` mirrors how `docker` is already threaded there.
+
 ## Proposed Change
 
-When `docker` is set in `IterationOptions`, `runPreflightChecks` should use a container-aware shell runner instead of `defaultShellRunner`. This runner would wrap each command as a `docker run --rm` (or `container run --rm`) invocation using the same image and mounts as the agent, rather than spawning the command directly on the host.
-
-The install command and `dust check` would both run inside the container. Failure reporting and event emission remain the same — only the execution context changes. Non-docker iterations continue using the current host `ShellRunner` unchanged.
+When `docker` and `containerRuntime` are set in `IterationOptions`, `runOneIteration` builds a container-aware `ShellRunner` using `containerRuntime.buildRunArgs` and the fields from `docker`. This runner is passed to `runPreflightChecks` in place of the host runner. Failure reporting and event emission remain the same — only the execution context changes.
 
 ## Open Questions
 
-### How does `runOneIteration` access the `ContainerRuntime` to build the container shell runner?
+### Should `gitProxyUrl` be passed to container pre-flight?
 
-#### Add `containerRuntime?: ContainerRuntime` to `IterationOptions`
+The git credential proxy is already started before iterations begin and is available in `docker.gitProxyUrl`. Pre-flight runs the install command and `dust check`. If the install command fetches packages from private git repositories (e.g. git URLs in `package.json`), the proxy enables authentication inside the container.
 
-`runOneIteration` receives `docker?: DockerSpawnConfig` via `IterationOptions`, but `ContainerRuntime` is selected in `loop.ts` and never threaded through.
+#### Pass `gitProxyUrl` to the container shell runner
 
-`loop.ts` already holds `containerRuntime` alongside `dockerConfig` and passes both into `iterationOptions`. Inside `runOneIteration`, the runtime and docker config are used together to construct the container shell runner before calling `runPreflightChecks`. This mirrors how `docker` is already threaded through `IterationOptions` for the agent spawn path.
+Pre-flight containers receive the same `GIT_PROXY_URL` environment variable as the agent container. This is consistent with the agent environment and supports private git dependencies during install. The proxy is already running and the cost of passing it is low.
 
-#### Add `containerRuntime?: ContainerRuntime` to `LoopDependencies`
+#### Omit `gitProxyUrl` from the container shell runner
 
-The runtime is treated as a dependency like `spawn` or `run`, and injected via `LoopDependencies` rather than per-iteration options. This is a good fit if the runtime is considered a stable dependency for a loop session. However, `LoopDependencies` currently has no container-specific fields, and the runtime is only needed when `docker` is set — coupling all loop dependencies to container types may feel excessive.
+Pre-flight containers use only `imageTag`, `repoPath`, and `homeDir`. Most package registries (npm, bun) don't use the git credential proxy, so this covers the common case with a simpler RunConfig. Private git package installs would fail — but that's an edge case and can be addressed later.
 
-#### Construct the container shell runner from `DockerSpawnConfig` alone, without `ContainerRuntime`
+### Should `settings.dustCommand` be used as-is for container pre-flight?
 
-`DockerSpawnConfig` carries `runCommand` ('docker' or 'container'), `imageTag`, `repoPath`, and all mounts. A factory function could build the `ShellRunner` directly from this, branching on `runCommand` to produce the correct flags — avoiding the need to thread `ContainerRuntime` anywhere. The downside is replicating the arg-building logic already in `buildDockerRunArgs` / `buildAppleContainerRunArgs`.
+`runPreflightChecks` runs `` `${dustCommand} check` `` inside the container. `settings.dustCommand` is configured for the host (e.g. `bunx dust`, `npx @joshski/dust`, or a local `bin/dust`). Inside the container, dust may be available under a different command.
+
+#### Reuse `settings.dustCommand` unchanged
+
+The simplest approach. Works correctly when the container Dockerfile installs dust under the same command as the host. Users who control the Dockerfile can ensure consistency. No new configuration surface.
+
+#### Add a `containerDustCommand` setting
+
+Allows explicit control when the container and host use different dust invocations. More configuration surface area, but solves the problem cleanly when they differ.
+
+#### Hard-code `dust check` for container pre-flight
+
+Assumes `dust` is on `$PATH` inside the container. Avoids any setting but is the least flexible and could break when dust is only available as a local dependency.
