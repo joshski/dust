@@ -9,12 +9,10 @@ import type { CommandContext, CommandDependencies } from '../types'
 import { findUnblockedTasks, next } from './next'
 
 const reverseSorter = async (_dir: string, files: string[]) =>
-  files
-    .toReversed()
-    .map((file, i) => ({
-      file,
-      lastCommittedAt: new Date(i * 1000).toISOString(),
-    }))
+  files.toReversed().map((file, i) => ({
+    file,
+    lastCommittedAt: new Date(i * 1000).toISOString(),
+  }))
 
 function createDependencies(
   context: CommandContext,
