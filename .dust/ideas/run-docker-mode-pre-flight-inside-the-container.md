@@ -1,6 +1,6 @@
 # Run docker-mode pre-flight inside the container
 
-When docker mode is enabled, the pre-flight phase (install and `dust check`) should execute inside the same container environment used for the coding agent, not on the host.
+When docker mode is enabled, the pre-flight phase (install and `dust check`) should execute inside the container. Today it runs on the host, making docker mode inconsistent.
 
 ## Context
 
