@@ -48,35 +48,27 @@ This allows running multiple agent sessions (steps 3-4, or even 3 followed by mu
 
 **Differs from branch-based review** — The [Loop Review Process](loop-review-process.md) idea proposes creating branches for each task and reviewing on a separate branch. This idea keeps all work on the same branch but inserts a review session before pushing. The two ideas could be combined (branch-based workflow with pre-push review sessions), but they solve different problems: branch-based review provides isolation and PR-like workflow, while pre-push review provides a quality gate without branching overhead.
 
-## Open Questions
+## Resolved Questions
 
 ### Where should the review session occur in the loop iteration?
 
-#### Immediately after implementation, before moving to next task
+**Decision:** Immediately after implementation, before moving to next task.
 
-Each task implementation is followed by a review session in the same loop iteration. The sequence becomes: pull → check → implement → review → push → next iteration. This keeps the review close to the implementation and ensures that only reviewed work is pushed. The downside is that it doubles the number of agent sessions per task, increasing cost and latency. A failed review also blocks the loop from picking up new tasks until the issue is resolved.
-
-#### After multiple implementations, before push
-
-The loop batches multiple task implementations and runs a single review session that examines all pending commits before pushing. This amortizes the cost of review across multiple tasks and reduces latency for simple changes. However, if the review finds issues, it's harder to identify which task introduced the problem, and fixing requires the agent to understand multiple changes at once.
-
-#### As a separate task type in the queue
-
-Reviews become tasks themselves, generated automatically after implementation tasks complete. This makes reviews explicitly visible in the task queue and allows prioritizing review tasks independently. The cost is additional complexity in task generation and lifecycle management, plus potential for review tasks to accumulate if the loop can't keep up.
+Review of 8 dustbucket commits showed that per-commit DoD non-compliance was the dominant failure mode (missing tests, missing rationale, incomplete acceptance criteria). Reviewing each implementation before moving on catches these issues early and prevents compounding — e.g., two consecutive commits implementing the same feature with divergent patterns, where the inconsistency would have been caught on the second review.
 
 ### How should the loop handle review failures?
 
-#### Reset to previous commit and retry the task
+**Decision:** Keep the commit and spawn a fix session that commits with `--amend`.
 
-If the review rejects the implementation, the loop runs `git reset --hard HEAD~1` to discard the commit and puts the task back in the queue. A fresh implementation session picks up the task later. This is clean and simple but loses all work from the failed attempt — sometimes the implementation was 90% correct and only needed a small fix.
+Most issues observed in practice were small gaps (missing test, wrong import style, incomplete DoD item) rather than fundamental design failures — a reset-and-retry would discard 90% correct work. The fix session amends the original commit so the history stays clean: one commit per task, not a trail of fixups.
 
-#### Keep the commit and spawn a fix session
+### Should review be mandatory for all tasks, or configurable?
 
-The review agent writes feedback, and the loop spawns a new agent session to fix the identified issues. The fix session has access to both the original task and the review feedback. This preserves the original work and allows incremental fixes, but risks retry loops if the fix session makes the same mistakes as the original implementation.
+**Decision:** Review applies to implementation tasks only, by default.
 
-#### Mark the task as failed and move on
+Workflow-only commits (those touching only `.dust/` artifacts) were consistently clean across the reviewed history. Implementation commits showed issues in 7 of 8 cases. Reviewing workflow tasks would add cost and latency with little return.
 
-The loop abandons the task after a review failure, marking it with a special status or moving it to a "failed" queue for human review. This prevents infinite loops and keeps the autonomous loop moving, but accumulates unresolved work that requires human intervention.
+## Open Questions
 
 ### Should checks run before or after the review session?
 
@@ -106,16 +98,3 @@ The review session examines all commits since the last push (which could be mult
 
 The review agent compares the current working tree to the remote branch (e.g., `origin/main`) and judges whether the overall change is acceptable, regardless of how many commits are involved. This is simple and matches how a human reviewer would think, but loses the per-task traceability that individual commit reviews provide.
 
-### Should review be mandatory for all tasks, or configurable?
-
-#### Mandatory for all tasks
-
-Every task implementation is followed by a review session before pushing. This provides consistent quality control but increases cost and latency for all work, even trivial changes. Simple tasks like fixing typos or updating documentation would still require a full review session.
-
-#### Configurable per task type
-
-Some task types (e.g., workflow tasks that only modify `.dust/` artifacts) skip review, while implementation tasks require it. This reduces overhead for low-risk changes but requires a mechanism for classifying tasks and deciding which ones need review. Task metadata would need to carry this classification.
-
-#### Configurable per repository
-
-Repositories opt into review sessions via `.dust/config/settings.json`. Teams that want full autonomy can disable reviews, while teams that prioritize quality can enable them. This provides flexibility but means the loop's behavior varies by repository, complicating documentation and testing.
