@@ -9,7 +9,9 @@ import type { CommandContext, CommandDependencies } from '../types'
 import { findUnblockedTasks, next } from './next'
 
 const reverseSorter = async (_dir: string, files: string[]) =>
-  files.toReversed()
+  files
+    .toReversed()
+    .map((file, i) => ({ file, lastCommittedAt: new Date(i * 1000).toISOString() }))
 
 function createDependencies(
   context: CommandContext,
@@ -284,6 +286,33 @@ describe('next command', () => {
     expect(output).not.toContain('.dust/tasks/multi-blocked.md')
     // still-exists should appear (no blockers)
     expect(output).toContain('.dust/tasks/still-exists.md')
+  })
+
+  test('handles blocked-by links with ./ prefix', async () => {
+    const context = createContextEmulator()
+    const fileSystem = createFileSystemEmulator({
+      project: {
+        '.dust': {
+          tasks: {
+            'blocked-task.md': createTaskContent({
+              title: 'Blocked Task',
+              blockedBy: '- [Blocker](./blocker-task.md)',
+            }),
+            'blocker-task.md': createTaskContent({
+              title: 'Blocker Task',
+              description: 'Do first.',
+            }),
+          },
+        },
+      },
+    })
+
+    const result = await next(createDependencies(context, fileSystem))
+
+    expect(result.exitCode).toBe(0)
+    const output = context.stdoutLines.join('\n')
+    expect(output).toContain('.dust/tasks/blocker-task.md')
+    expect(output).not.toContain('.dust/tasks/blocked-task.md')
   })
 
   test('getFileCreationTime returns 0 for unknown paths', () => {

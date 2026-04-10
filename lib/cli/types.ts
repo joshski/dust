@@ -41,10 +41,15 @@ export interface DustSettings {
   extraDirectories?: string[]
 }
 
+export interface FileWithTimestamp {
+  file: string
+  lastCommittedAt: string | null
+}
+
 export type DirectoryFileSorter = (
   dir: string,
   files: string[]
-) => Promise<string[]>
+) => Promise<FileWithTimestamp[]>
 
 /**
  * Dependencies passed to all CLI commands

@@ -41,6 +41,10 @@ const bundles: { entrypoint: string; outfile: string; shebang?: boolean }[] = [
     entrypoint: 'lib/core-principles.ts',
     outfile: 'dist/core-principles.js',
   },
+  {
+    entrypoint: 'lib/execution-order.ts',
+    outfile: 'dist/execution-order.js',
+  },
 ]
 
 for (const { entrypoint, outfile, shebang } of bundles) {

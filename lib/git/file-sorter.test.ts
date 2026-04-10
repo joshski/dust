@@ -26,10 +26,21 @@ describe('createGitDirectoryFileSorter', () => {
     )
 
     const result = await sorter('/dir', ['a.md', 'b.md', 'c.md'])
-    expect(result).toEqual(['c.md', 'b.md', 'a.md'])
+    expect(result.map(r => r.file)).toEqual(['c.md', 'b.md', 'a.md'])
   })
 
-  test('files with no git history sort last', async () => {
+  test('returns lastCommittedAt as ISO strings', async () => {
+    const sorter = createGitDirectoryFileSorter(
+      createMockGitRunner({
+        'a.md': 1000,
+      })
+    )
+
+    const result = await sorter('/dir', ['a.md'])
+    expect(result[0]?.lastCommittedAt).toBe('1970-01-01T00:16:40.000Z')
+  })
+
+  test('files with no git history sort last with null lastCommittedAt', async () => {
     const sorter = createGitDirectoryFileSorter(
       createMockGitRunner({
         'tracked.md': 100,
@@ -37,7 +48,9 @@ describe('createGitDirectoryFileSorter', () => {
     )
 
     const result = await sorter('/dir', ['untracked.md', 'tracked.md'])
-    expect(result).toEqual(['tracked.md', 'untracked.md'])
+    expect(result.map(r => r.file)).toEqual(['tracked.md', 'untracked.md'])
+    expect(result[0]?.lastCommittedAt).toBe('1970-01-01T00:01:40.000Z')
+    expect(result[1]?.lastCommittedAt).toBeNull()
   })
 
   test('handles git runner failure gracefully', async () => {
@@ -46,6 +59,8 @@ describe('createGitDirectoryFileSorter', () => {
     })
 
     const result = await sorter('/dir', ['a.md', 'b.md'])
-    expect(result).toEqual(['a.md', 'b.md'])
+    expect(result.map(r => r.file)).toEqual(['a.md', 'b.md'])
+    expect(result[0]?.lastCommittedAt).toBeNull()
+    expect(result[1]?.lastCommittedAt).toBeNull()
   })
 })

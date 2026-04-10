@@ -6,6 +6,7 @@
  */
 
 import { parseArtifact } from '../../artifacts/parsed-artifact'
+import { computeExecutionOrder } from '../../execution-order'
 import { validateTaskHeadings } from '../../lint/validators/content-validator'
 import {
   extractOpeningSentence,
@@ -32,7 +33,7 @@ function hasRequiredHeadings(content: string): boolean {
   )
 }
 
-function extractBlockedBy(content: string): string[] {
+function extractBlockedBySlugs(content: string): string[] {
   // Find the "## Blocked By" section
   const blockedByMatch = content.match(
     /^## Blocked By\s*\n([\s\S]*?)(?=\n## |\n*$)/m
@@ -46,17 +47,18 @@ function extractBlockedBy(content: string): string[] {
     return []
   }
 
-  // Extract markdown links: [text](file.md)
+  // Extract markdown links and normalize to slugs
   const linkPattern = /\[.*?\]\(([^)]+\.md)\)/g
-  const blockers: string[] = []
+  const slugs: string[] = []
   let match: RegExpExecArray | null = linkPattern.exec(section)
 
   while (match !== null) {
-    blockers.push(match[1])
+    const slugMatch = match[1].match(/([^/]+)\.md$/)
+    if (slugMatch) slugs.push(slugMatch[1])
     match = linkPattern.exec(section)
   }
 
-  return blockers
+  return slugs
 }
 
 export interface UnblockedTask {
@@ -96,20 +98,24 @@ export async function findUnblockedTasks(
   }
 
   const files = await fileSystem.readdir(tasksPath)
-  let mdFiles = files.filter(f => f.endsWith('.md'))
-
-  if (directoryFileSorter) {
-    mdFiles = await directoryFileSorter(tasksPath, mdFiles)
-  } else {
-    mdFiles.sort((a, b) => {
-      const aTime = fileSystem.getFileCreationTime(`${tasksPath}/${a}`)
-      const bTime = fileSystem.getFileCreationTime(`${tasksPath}/${b}`)
-      return aTime - bTime
-    })
-  }
+  const mdFiles = files.filter(f => f.endsWith('.md'))
 
   if (mdFiles.length === 0) {
     return { tasks: [], invalidTasks: [] }
+  }
+
+  // Get timestamps: use directoryFileSorter or fall back to file creation times
+  let timestamps: Map<string, string | null>
+  if (directoryFileSorter) {
+    const results = await directoryFileSorter(tasksPath, mdFiles)
+    timestamps = new Map(results.map(r => [r.file, r.lastCommittedAt]))
+  } else {
+    timestamps = new Map(
+      mdFiles.map(f => {
+        const ms = fileSystem.getFileCreationTime(`${tasksPath}/${f}`)
+        return [f, ms > 0 ? new Date(ms).toISOString() : null]
+      })
+    )
   }
 
   const taskFiles: TaskFile[] = []
@@ -135,24 +141,31 @@ export async function findUnblockedTasks(
     }
   }
 
-  // Only valid task files participate in blocker evaluation.
-  const existingTasks = new Set(validTaskFiles.map(t => t.file))
+  // Build task nodes for topological sort
+  const taskNodes = validTaskFiles.map(({ file, content }) => ({
+    slug: file.replace(/\.md$/, ''),
+    file,
+    content,
+    blockedBy: extractBlockedBySlugs(content),
+    lastCommittedAt: timestamps.get(file) ?? null,
+  }))
 
+  // Compute execution order (dependencies trump sort keys)
+  const ordered = computeExecutionOrder(taskNodes)
+
+  // Filter to unblocked tasks (all blockers absent from the task set)
+  const existingSlugs = new Set(taskNodes.map(t => t.slug))
   const tasks: UnblockedTask[] = []
 
-  for (const { file, content } of validTaskFiles) {
-    const blockers = extractBlockedBy(content)
-
-    // Check if any blockers still exist (are incomplete)
-    const hasIncompleteBlocker = blockers.some(blocker =>
-      existingTasks.has(blocker)
+  for (const { node } of ordered) {
+    const hasIncompleteBlocker = node.blockedBy.some(slug =>
+      existingSlugs.has(slug)
     )
 
     if (!hasIncompleteBlocker) {
-      const title = extractTitle(content)
-      const openingSentence = extractOpeningSentence(content)
-      const relativePath = `.dust/tasks/${file}`
-      tasks.push({ path: relativePath, title, openingSentence })
+      const title = extractTitle(node.content)
+      const openingSentence = extractOpeningSentence(node.content)
+      tasks.push({ path: `.dust/tasks/${node.file}`, title, openingSentence })
     }
   }
 

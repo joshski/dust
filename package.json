@@ -49,6 +49,10 @@
     "./core-principles": {
       "import": "./dist/core-principles.js",
       "types": "./dist/core-principles.d.ts"
+    },
+    "./execution-order": {
+      "import": "./dist/execution-order.js",
+      "types": "./dist/execution-order.d.ts"
     }
   },
   "files": [
