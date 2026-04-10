@@ -20,7 +20,8 @@
     "scripts/end-to-end/claude-oauth-apikey-helper-poc.ts",
     "scripts/lint/policy-checks.ts",
     "scripts/lint/check-package-json-format.ts",
-    "lib/oxlint/plugins/dust.js"
+    "lib/oxlint/plugins/dust.js",
+    "lib/execution-order.ts"
   ],
   "ignoreDependencies": ["oxfmt", "oxlint"]
 }

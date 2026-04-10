@@ -54,6 +54,7 @@ function extractBlockedBySlugs(content: string): string[] {
 
   while (match !== null) {
     const slugMatch = match[1].match(/([^/]+)\.md$/)
+    /* istanbul ignore next @preserve -- linkPattern already requires .md */
     if (slugMatch) slugs.push(slugMatch[1])
     match = linkPattern.exec(section)
   }

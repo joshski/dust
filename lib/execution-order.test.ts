@@ -119,6 +119,24 @@ describe('computeExecutionOrder', () => {
     expect(result.map(r => r.node.slug)).toEqual(['task-a', 'task-b'])
   })
 
+  it('maintains order for multiple tasks with null timestamps', () => {
+    const nodes = [
+      { slug: 'task-b', blockedBy: [], lastCommittedAt: null },
+      { slug: 'task-a', blockedBy: [], lastCommittedAt: null },
+      {
+        slug: 'task-early',
+        blockedBy: [],
+        lastCommittedAt: '2024-01-01T00:00:00Z',
+      },
+    ]
+
+    const result = computeExecutionOrder(nodes)
+
+    expect(result[0]?.node.slug).toBe('task-early')
+    expect(result.map(r => r.node.slug)).toContain('task-a')
+    expect(result.map(r => r.node.slug)).toContain('task-b')
+  })
+
   it('handles cycles gracefully', () => {
     const nodes = [
       {
@@ -137,6 +155,36 @@ describe('computeExecutionOrder', () => {
 
     expect(result).toHaveLength(2)
     expect(result.map(r => r.node.slug)).toEqual(['task-a', 'task-b'])
+  })
+
+  it('handles cycle with mix of unblocked and cycled tasks', () => {
+    const nodes = [
+      {
+        slug: 'task-free',
+        blockedBy: [],
+        lastCommittedAt: '2024-01-01T00:00:00Z',
+      },
+      {
+        slug: 'task-a',
+        blockedBy: ['task-b'],
+        lastCommittedAt: '2024-02-01T00:00:00Z',
+      },
+      {
+        slug: 'task-b',
+        blockedBy: ['task-a'],
+        lastCommittedAt: '2024-03-01T00:00:00Z',
+      },
+    ]
+
+    const result = computeExecutionOrder(nodes)
+
+    expect(result).toHaveLength(3)
+    expect(result[0]?.node.slug).toBe('task-free')
+    expect(result.map(r => r.node.slug)).toEqual([
+      'task-free',
+      'task-a',
+      'task-b',
+    ])
   })
 
   it('picks earliest unblocked task when multiple are available', () => {

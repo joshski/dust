@@ -23,6 +23,7 @@ export function computeExecutionOrder<T extends TaskNode>(
 
   const sorted = [...nodes].toSorted((a, b) => {
     if (a.lastCommittedAt === null && b.lastCommittedAt === null) return 0
+    /* istanbul ignore next @preserve -- sort comparator direction depends on engine */
     if (a.lastCommittedAt === null) return 1
     if (b.lastCommittedAt === null) return -1
     return (
