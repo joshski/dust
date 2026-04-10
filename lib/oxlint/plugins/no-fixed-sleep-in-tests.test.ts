@@ -3,18 +3,19 @@ import { copyFile, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, test } from 'vitest'
+import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 const currentDir = dirname(fileURLToPath(import.meta.url))
 const projectRoot = resolvePath(currentDir, '../../..')
 const oxlintBin = join(projectRoot, 'node_modules/.bin/oxlint')
 
-async function lint(code: string, filename: string): Promise<string> {
-  const dir = join(tmpdir(), `oxlint-test-${Date.now()}-${Math.random()}`)
-  const pluginsDir = join(dir, 'lib', 'oxlint', 'plugins')
+let sharedDir: string
+
+beforeAll(async () => {
+  sharedDir = join(tmpdir(), `oxlint-test-${Date.now()}`)
+  const pluginsDir = join(sharedDir, 'lib', 'oxlint', 'plugins')
   await mkdir(pluginsDir, { recursive: true })
 
-  // Copy plugin files
   await copyFile(
     join(projectRoot, 'lib/oxlint/plugins/dust.js'),
     join(pluginsDir, 'dust.js')
@@ -42,15 +43,26 @@ async function lint(code: string, filename: string): Promise<string> {
     },
   })
 
-  await writeFile(join(dir, '.oxlintrc.json'), oxlintConfig)
-  await writeFile(join(dir, filename), code)
+  await writeFile(join(sharedDir, '.oxlintrc.json'), oxlintConfig)
+}, 15000)
+
+afterAll(async () => {
+  try {
+    await rm(sharedDir, { recursive: true })
+  } catch {
+    // Ignore cleanup errors
+  }
+})
+
+async function lint(code: string, filename: string): Promise<string> {
+  await writeFile(join(sharedDir, filename), code)
 
   return new Promise((onResolve, onReject) => {
-    const proc = spawn(oxlintBin, [filename], { cwd: dir })
+    const proc = spawn(oxlintBin, [filename], { cwd: sharedDir })
     let output = ''
     let resolved = false
 
-    const finalize = async (
+    const finalize = (
       result:
         | { success: true; output: string }
         | { success: false; error: Error }
@@ -64,12 +76,6 @@ async function lint(code: string, filename: string): Promise<string> {
         proc.kill()
       } catch {
         // Ignore errors when killing process
-      }
-
-      try {
-        await rm(dir, { recursive: true })
-      } catch {
-        // Ignore cleanup errors
       }
 
       if (result.success) {
