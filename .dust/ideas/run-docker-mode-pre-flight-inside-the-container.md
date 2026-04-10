@@ -27,44 +27,18 @@ The install command and `dust check` would both run inside the container. Failur
 
 ## Open Questions
 
-### How should the container shell runner be constructed?
+### How does `runOneIteration` access the `ContainerRuntime` to build the container shell runner?
 
-#### Inject a pre-built container ShellRunner into runPreflightChecks
+`runOneIteration` receives `docker?: DockerSpawnConfig` via `IterationOptions`, but `ContainerRuntime` is selected in `loop.ts` and never threaded through. To call `runtime.buildRunArgs(config)` and obtain `runtime.runCommand`, the iteration code needs access to the runtime object.
 
-`runOneIteration` detects docker mode and builds a container-aware `ShellRunner` before calling `runPreflightChecks`. The shell runner wraps each command in `docker run --rm` with the appropriate image, mounts, and working directory. `runPreflightChecks` stays agnostic — it receives a `ShellRunner` and doesn't know whether it's running on the host or in a container.
+#### Add `containerRuntime?: ContainerRuntime` to `IterationOptions`
 
-This keeps `runPreflightChecks` pure and makes it easy to test both paths independently.
+`loop.ts` already holds `containerRuntime` alongside `dockerConfig` and passes both into `iterationOptions`. Inside `runOneIteration`, the runtime and docker config are used together to construct the container shell runner before calling `runPreflightChecks`. This mirrors how `docker` is already threaded through `IterationOptions` for the agent spawn path.
 
-#### Add a docker option to runPreflightChecks and let it branch internally
+#### Add `containerRuntime?: ContainerRuntime` to `LoopDependencies`
 
-`runPreflightChecks` receives the `DockerSpawnConfig` alongside the `ShellRunner` and decides internally whether to use container execution. This co-locates the branching logic with the pre-flight logic but couples `runPreflightChecks` to container-specific types.
+The runtime is treated as a dependency like `spawn` or `run`, and injected via `LoopDependencies` rather than per-iteration options. This is a good fit if the runtime is considered a stable dependency for a loop session. However, `LoopDependencies` currently has no container-specific fields, and the runtime is only needed when `docker` is set — coupling all loop dependencies to container types may feel excessive.
 
-### Should the container shell runner reuse the full RunConfig (including credential mounts) or use a minimal subset?
+#### Construct the container shell runner from `DockerSpawnConfig` alone, without `ContainerRuntime`
 
-#### Full RunConfig — same mounts as the agent invocation
-
-The pre-flight container gets the same volume mounts, git proxy, and environment as the agent container. This maximises fidelity: if the agent can install and check, so can pre-flight. The downside is that pre-flight now depends on proxy servers being started before it runs, which is currently not the case (proxies are set up after `prepareContainerConfig` in `loop.ts` but before `runOneIteration`).
-
-#### Minimal RunConfig — repo mount and working directory only, no credential mounts
-
-Pre-flight uses a stripped-down run config: just the image, the repo mount, and the working directory. No git proxy, no Claude API proxy, no credential files. This is simpler and avoids the proxy dependency, but means the install command won't work if it needs network access through the proxy (e.g. `npm install` via a corporate registry reachable only through the git proxy).
-
-### Where should the container shell runner live?
-
-#### New module: lib/container/container-shell-runner.ts
-
-A dedicated module creates a `ShellRunner` backed by the container runtime. The runner takes a `ContainerRuntime`, `DockerSpawnConfig`, and `spawn` function and produces a `ShellRunner`. This follows the existing pattern of thin adapters in `lib/container/`.
-
-#### Inline in lib/loop/iteration.ts
-
-The container shell runner is built inline inside `runOneIteration` without a new module. Simpler for now, but mixes container orchestration concerns into the iteration module.
-
-### Should pre-flight failures in docker mode suggest container-specific troubleshooting?
-
-#### Yes — actionable error messages distinguish host vs container failures
-
-When pre-flight fails in docker mode, the error output includes a note that the failure occurred inside the container (e.g. "Install failed inside the Docker container"). This follows the [actionable-errors](../principles/actionable-errors.md) principle and helps users understand why the same command might behave differently than on the host.
-
-#### No — the raw output is sufficient
-
-The container's command output already contains the failure details. Adding extra framing risks being redundant or confusing. Users who understand docker mode will infer the context from the surrounding log output.
+`DockerSpawnConfig` carries `runCommand` ('docker' or 'container'), `imageTag`, `repoPath`, and all mounts. A factory function could build the `ShellRunner` directly from this, branching on `runCommand` to produce the correct flags — avoiding the need to thread `ContainerRuntime` anywhere. The downside is replicating the arg-building logic already in `buildDockerRunArgs` / `buildAppleContainerRunArgs`.
