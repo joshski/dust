@@ -10,6 +10,7 @@ const projectRoot = resolvePath(currentDir, '../../..')
 const oxlintBin = join(projectRoot, 'node_modules/.bin/oxlint')
 
 let sharedDir: string
+let testCounter = 0
 
 beforeAll(async () => {
   sharedDir = join(tmpdir(), `oxlint-test-${Date.now()}`)
@@ -54,7 +55,9 @@ afterAll(async () => {
   }
 })
 
-async function lint(code: string, filename: string): Promise<string> {
+async function lint(code: string, ext: 'ts' | 'test.ts'): Promise<string> {
+  const id = testCounter++
+  const filename = `example-${id}.${ext}`
   await writeFile(join(sharedDir, filename), code)
 
   return new Promise((onResolve, onReject) => {
@@ -105,69 +108,66 @@ async function lint(code: string, filename: string): Promise<string> {
 
 describe('no-fixed-sleep-in-tests', () => {
   describe('setTimeout', () => {
-    test('flags setTimeout with non-zero numeric delay', async () => {
-      const output = await lint(`setTimeout(() => {}, 100)`, 'example.test.ts')
+    test.concurrent('flags setTimeout with non-zero numeric delay', async () => {
+      const output = await lint(`setTimeout(() => {}, 100)`, 'test.ts')
       expect(output).toContain('no-fixed-sleep-in-tests')
     }, 15000)
 
-    test('flags setTimeout with variable delay', async () => {
+    test.concurrent('flags setTimeout with variable delay', async () => {
       const output = await lint(
         `const delay = 100; setTimeout(() => {}, delay)`,
-        'example.test.ts'
+        'test.ts'
       )
       expect(output).toContain('no-fixed-sleep-in-tests')
     }, 15000)
 
-    test('allows setTimeout with zero delay', async () => {
-      const output = await lint(`setTimeout(() => {}, 0)`, 'example.test.ts')
+    test.concurrent('allows setTimeout with zero delay', async () => {
+      const output = await lint(`setTimeout(() => {}, 0)`, 'test.ts')
       expect(output).not.toContain('no-fixed-sleep-in-tests')
     }, 15000)
 
-    test('flags globalThis.setTimeout with non-zero delay', async () => {
+    test.concurrent('flags globalThis.setTimeout with non-zero delay', async () => {
       const output = await lint(
         `globalThis.setTimeout(() => {}, 10)`,
-        'example.test.ts'
+        'test.ts'
       )
       expect(output).toContain('no-fixed-sleep-in-tests')
     }, 15000)
 
-    test('allows globalThis.setTimeout with zero delay', async () => {
-      const output = await lint(
-        `globalThis.setTimeout(() => {}, 0)`,
-        'example.test.ts'
-      )
+    test.concurrent('allows globalThis.setTimeout with zero delay', async () => {
+      const output = await lint(`globalThis.setTimeout(() => {}, 0)`, 'test.ts')
       expect(output).not.toContain('no-fixed-sleep-in-tests')
     }, 15000)
   })
 
   describe('sleep', () => {
-    test('flags sleep with non-zero numeric delay', async () => {
-      const output = await lint(`await sleep(100)`, 'example.test.ts')
+    test.concurrent('flags sleep with non-zero numeric delay', async () => {
+      const output = await lint(`await sleep(100)`, 'test.ts')
       expect(output).toContain('no-fixed-sleep-in-tests')
     }, 15000)
 
-    test('flags sleep with variable delay', async () => {
+    test.concurrent('flags sleep with variable delay', async () => {
       const output = await lint(
         `const delay = 100; await sleep(delay)`,
-        'example.test.ts'
+        'test.ts'
       )
       expect(output).toContain('no-fixed-sleep-in-tests')
     }, 15000)
 
-    test('allows sleep with zero delay', async () => {
-      const output = await lint(`await sleep(0)`, 'example.test.ts')
+    test.concurrent('allows sleep with zero delay', async () => {
+      const output = await lint(`await sleep(0)`, 'test.ts')
       expect(output).not.toContain('no-fixed-sleep-in-tests')
     }, 15000)
   })
 
   describe('file filtering', () => {
-    test('ignores non-test files', async () => {
-      const output = await lint(`setTimeout(() => {}, 100)`, 'example.ts')
+    test.concurrent('ignores non-test files', async () => {
+      const output = await lint(`setTimeout(() => {}, 100)`, 'ts')
       expect(output).not.toContain('no-fixed-sleep-in-tests')
     }, 15000)
 
-    test('applies to .test.ts files', async () => {
-      const output = await lint(`setTimeout(() => {}, 100)`, 'example.test.ts')
+    test.concurrent('applies to .test.ts files', async () => {
+      const output = await lint(`setTimeout(() => {}, 100)`, 'test.ts')
       expect(output).toContain('no-fixed-sleep-in-tests')
     }, 15000)
   })
