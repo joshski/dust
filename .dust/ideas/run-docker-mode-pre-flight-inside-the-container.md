@@ -45,11 +45,9 @@ When `docker` and `containerRuntime` are set in `IterationOptions`, `runOneItera
 
 ### Should `gitProxyUrl` be passed to container pre-flight?
 
-The git credential proxy is already started before iterations begin and is available in `docker.gitProxyUrl`. Pre-flight runs the install command and `dust check`. If the install command fetches packages from private git repositories (e.g. git URLs in `package.json`), the proxy enables authentication inside the container.
-
 #### Pass `gitProxyUrl` to the container shell runner
 
-Pre-flight containers receive the same `GIT_PROXY_URL` environment variable as the agent container. This is consistent with the agent environment and supports private git dependencies during install. The proxy is already running and the cost of passing it is low.
+The git credential proxy is already started before iterations begin and is available in `docker.gitProxyUrl`. Pre-flight containers receive the same `GIT_PROXY_URL` environment variable as the agent container. This is consistent with the agent environment and supports private git dependencies during install (e.g. git URLs in `package.json`). The proxy is already running and the cost of passing it is low.
 
 #### Omit `gitProxyUrl` from the container shell runner
 
@@ -57,15 +55,13 @@ Pre-flight containers use only `imageTag`, `repoPath`, and `homeDir`. Most packa
 
 ### Should `settings.dustCommand` be used as-is for container pre-flight?
 
-`runPreflightChecks` runs `` `${dustCommand} check` `` inside the container. `settings.dustCommand` is configured for the host (e.g. `bunx dust`, `npx @joshski/dust`, or a local `bin/dust`). Inside the container, dust may be available under a different command.
-
 #### Reuse `settings.dustCommand` unchanged
 
-The simplest approach. Works correctly when the container Dockerfile installs dust under the same command as the host. Users who control the Dockerfile can ensure consistency. No new configuration surface.
+`runPreflightChecks` runs `` `${dustCommand} check` `` inside the container. `settings.dustCommand` is configured for the host (e.g. `bunx dust`, `npx @joshski/dust`, or a local `bin/dust`). Works correctly when the container Dockerfile installs dust under the same command as the host. No new configuration surface.
 
 #### Add a `containerDustCommand` setting
 
-Allows explicit control when the container and host use different dust invocations. More configuration surface area, but solves the problem cleanly when they differ.
+Allows explicit control when the container and host use different dust invocations. Solves the problem cleanly when the Dockerfile installs dust differently from the host, but adds more configuration surface area.
 
 #### Hard-code `dust check` for container pre-flight
 
