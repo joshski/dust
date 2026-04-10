@@ -29,9 +29,9 @@ The install command and `dust check` would both run inside the container. Failur
 
 ### How does `runOneIteration` access the `ContainerRuntime` to build the container shell runner?
 
-`runOneIteration` receives `docker?: DockerSpawnConfig` via `IterationOptions`, but `ContainerRuntime` is selected in `loop.ts` and never threaded through. To call `runtime.buildRunArgs(config)` and obtain `runtime.runCommand`, the iteration code needs access to the runtime object.
-
 #### Add `containerRuntime?: ContainerRuntime` to `IterationOptions`
+
+`runOneIteration` receives `docker?: DockerSpawnConfig` via `IterationOptions`, but `ContainerRuntime` is selected in `loop.ts` and never threaded through.
 
 `loop.ts` already holds `containerRuntime` alongside `dockerConfig` and passes both into `iterationOptions`. Inside `runOneIteration`, the runtime and docker config are used together to construct the container shell runner before calling `runPreflightChecks`. This mirrors how `docker` is already threaded through `IterationOptions` for the agent spawn path.
 
