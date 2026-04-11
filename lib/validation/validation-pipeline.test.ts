@@ -275,6 +275,17 @@ describe('validateArtifacts', () => {
     expect(violations.some(v => v.message.includes('Broken link'))).toBe(true)
   })
 
+  test('validates content files with front matter', async () => {
+    const fileSystem = makeFs({
+      'facts/my-fact.md':
+        '---\ntitle: My Fact\n---\n# My Fact\n\nThis is a fact.',
+    })
+    const { context } = await parseArtifacts(fileSystem, dustPath)
+    const violations = validateArtifacts(context)
+
+    expect(violations.some(v => v.message.includes('front matter'))).toBe(true)
+  })
+
   test('validates content files', async () => {
     const fileSystem = makeFs({
       'facts/wrong-name.md': '# Different Title\n\nThis is a fact.',

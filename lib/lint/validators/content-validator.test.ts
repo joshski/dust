@@ -3,6 +3,7 @@ import type { ParsedArtifact } from '../../artifacts/parsed-artifact'
 import { parseArtifact } from '../../artifacts/parsed-artifact'
 import {
   validateImperativeOpeningSentence,
+  validateNoFrontMatter,
   validateOpeningSentence,
   validateOpeningSentenceLength,
   validateTaskType,
@@ -23,6 +24,41 @@ function createArtifact(overrides: Partial<ParsedArtifact>): ParsedArtifact {
 }
 
 describe('content-validator', () => {
+  describe('validateNoFrontMatter', () => {
+    test('returns violation when file starts with front matter', () => {
+      const content = `---
+title: My Artifact
+---
+# My Title
+
+Some content.
+`
+      const artifact = parseArtifact('/test.md', content)
+      const violation = validateNoFrontMatter(artifact)
+      expect(violation).not.toBeNull()
+      expect(violation!.line).toBe(1)
+      expect(violation!.message).toContain('front matter')
+    })
+
+    test('returns null when file starts with H1 title', () => {
+      const content = `# My Title
+
+Some content.
+`
+      const artifact = parseArtifact('/test.md', content)
+      const violation = validateNoFrontMatter(artifact)
+      expect(violation).toBeNull()
+    })
+
+    test('returns null for normal content without front matter', () => {
+      const artifact = createArtifact({
+        rawContent: '# Title\n\nSome content.',
+      })
+      const violation = validateNoFrontMatter(artifact)
+      expect(violation).toBeNull()
+    })
+  })
+
   describe('validateOpeningSentence', () => {
     test('returns violation when no opening sentence and no title', () => {
       // File without an H1 title - titleLine will be null

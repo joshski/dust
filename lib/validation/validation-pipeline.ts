@@ -18,6 +18,7 @@ import type { ReadableFileSystem } from '../filesystem/types'
 import { validateAuditHeadings } from '../lint/validators/audit-validator'
 import {
   validateImperativeOpeningSentence,
+  validateNoFrontMatter,
   validateOpeningSentence,
   validateOpeningSentenceLength,
   validateTaskHeadings,
@@ -214,6 +215,9 @@ export function validateArtifacts(context: ValidationContext): Violation[] {
   // Validate all content files (opening sentence, title-filename match)
   for (const artifacts of Object.values(byType)) {
     for (const artifact of artifacts) {
+      const frontMatterViolation = validateNoFrontMatter(artifact)
+      if (frontMatterViolation) violations.push(frontMatterViolation)
+
       const openingSentenceViolation = validateOpeningSentence(artifact)
       if (openingSentenceViolation) violations.push(openingSentenceViolation)
 

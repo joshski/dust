@@ -6,6 +6,8 @@ import type { ParsedArtifact } from '../../artifacts/parsed-artifact'
 import { VALID_TASK_TYPES } from '../../artifacts/workflow-tasks'
 import type { Violation } from './types'
 
+const FRONT_MATTER_DELIMITER = '---'
+
 const REQUIRED_TASK_HEADINGS = ['Task Type', 'Blocked By', 'Definition of Done']
 
 const ALLOWED_TASK_TYPES: Set<string> = new Set(VALID_TASK_TYPES)
@@ -26,6 +28,21 @@ const NON_IMPERATIVE_STARTERS = new Set([
   'you',
   'i',
 ])
+
+export function validateNoFrontMatter(
+  artifact: ParsedArtifact
+): Violation | null {
+  const firstLine = artifact.rawContent.split('\n')[0]
+  if (firstLine.trim() === FRONT_MATTER_DELIMITER) {
+    return {
+      file: artifact.filePath,
+      line: 1,
+      message:
+        'Artifact must not contain front matter. The title must be the first line.',
+    }
+  }
+  return null
+}
 
 export function validateOpeningSentence(
   artifact: ParsedArtifact
