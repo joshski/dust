@@ -1,6 +1,6 @@
 # Implement Container Pre-flight for Docker Loop Mode
 
-When `docker` and `containerRuntime` are set in `IterationOptions`, `runOneIteration` should build a container-aware `ShellRunner` and pass it to `runPreflightChecks`. This ensures the install command and `dust check` run inside the container, matching the environment used by the agent.
+When `docker` and `containerRuntime` are set in `IterationOptions`, `runOneIteration` should build a container-aware `ShellRunner` and pass it to `runPreflightChecks`. This ensures install and `dust check` run inside the container, matching the agent's environment.
 
 ## Context
 
