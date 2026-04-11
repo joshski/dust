@@ -68,33 +68,45 @@ Most issues observed in practice were small gaps (missing test, wrong import sty
 
 Workflow-only commits (those touching only `.dust/` artifacts) were consistently clean across the reviewed history. Implementation commits showed issues in 7 of 8 cases. Reviewing workflow tasks would add cost and latency with little return.
 
-## Open Questions
-
 ### Should checks run before or after the review session?
 
-#### Before review (current behavior)
+**Decision:** Before review (current behavior)
 
-Checks run before the implementation session (pre-flight) and the agent is responsible for ensuring checks still pass after implementation. The review session assumes checks have passed. This matches the current loop behavior and keeps fast feedback during implementation, but means the review agent might review code that fails checks (if the implementation agent made a mistake).
-
-#### After implementation, before review
-
-Checks run after the implementation session commits but before the review session starts. If checks fail, the loop spawns a fix session before review. This ensures the review agent never sees failing code, but adds latency — the implementation agent doesn't get immediate feedback on check failures.
-
-#### After review, before push
-
-Checks run only after the review session approves the change, just before pushing. This minimizes check runs (one per push rather than one per task) but means both the implementation and review sessions might miss check failures until the very end.
+Checks run before the implementation session (pre-flight) and the agent is responsible for ensuring checks still pass after implementation. The review session assumes checks have passed. This matches the current loop behavior and aligns with the [Fast Feedback Loops](../principles/fast-feedback-loops.md) principle — the implementation agent needs immediate feedback on check failures while the code context is fresh.
 
 ### What should the review session's scope be?
 
-#### Only review the most recent commit
+**Decision:** Review the working tree state against the remote
 
-The review agent examines the single commit created by the implementation session and decides whether it satisfies the task requirements. This is focused and fast but ignores the broader context — the commit might be correct in isolation but conflict with recent changes or introduce regressions that only appear when considered alongside earlier commits.
+The review agent compares the current working tree to the remote branch (e.g., `origin/main`) and judges whether the overall change is acceptable. This is simple and matches how a human reviewer would think about the change.
 
-#### Review all unpushed commits together
+## Open Questions
 
-The review session examines all commits since the last push (which could be multiple tasks if batching is enabled). This provides a holistic view and can catch integration issues, but makes attribution harder — if the review finds a problem, which task is responsible? It also increases the review session's complexity and cost.
+### How should the review session signal its verdict to the loop?
 
-#### Review the working tree state against the remote
+#### Structured marker in agent output
 
-The review agent compares the current working tree to the remote branch (e.g., `origin/main`) and judges whether the overall change is acceptable, regardless of how many commits are involved. This is simple and matches how a human reviewer would think, but loses the per-task traceability that individual commit reviews provide.
+The review agent outputs a machine-readable marker (e.g., `DUST_REVIEW_RESULT: pass` or `DUST_REVIEW_RESULT: fail`) that the loop parses. This is deterministic and explicit but brittle if the model omits or misformats the marker.
+
+#### Git state heuristics
+
+The loop infers the outcome from repository state: if the review agent made no additional commits or amendments, the review passed; if the working tree or HEAD changed, the review flagged issues and made fixes. This requires no output contract but is ambiguous — a review agent that identifies problems without committing fixes would appear to have passed.
+
+#### Review report file
+
+The review agent writes a structured file (e.g., `.dust/state/review-report.md`) with pass/fail status and findings, and the loop reads that file. This is explicit and inspectable but introduces a state file that needs lifecycle management and cleanup.
+
+### How many fix-review cycles should be allowed per task?
+
+#### No explicit limit
+
+Each fix-then-review cycle counts as one loop iteration. The existing loop iteration limit provides an indirect cap. Simple to implement but may exhaust all iterations on a single stuck task.
+
+#### Fixed limit of one retry
+
+Allow exactly one fix attempt per task. If the second review also fails, push the commit anyway (or skip and move on). Eliminates unbounded loops with minimal configuration.
+
+#### Configurable limit per repo
+
+A new settings key (e.g., `reviewRetries: 2`) controls the maximum fix cycles. Explicit and user-controllable but expands the configuration surface.
 
