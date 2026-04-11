@@ -56,10 +56,6 @@ A new loop configuration option (e.g. `"slowChecks": "pre-push"` or `"slowChecks
 
 When checks fail, the loop spawns a check-fix agent that currently runs `${dustCommand} check` to verify its fix (`lib/loop/iteration.ts:504–516`). With `dust check` fast-only, the agent verifies fast checks only. If a slow check originally failed, the loop re-encounters the failure on the next pre-flight. Simple — no special-casing in the fix prompt.
 
-#### Option A: Check-fix agent uses `dust check` (fast only)
-
-The agent fixes and verifies fast checks only. If a slow check originally failed, the loop will re-encounter the failure on the next iteration's pre-flight. Simple — no special-casing in the fix prompt.
-
 #### Option B: Check-fix agent uses `dust check all`
 
 The fix prompt instructs the agent to run `dust check all`. The agent verifies both fast and slow checks, fully resolving the failure before the next loop iteration. Slower fix cycle but fewer surprise failures.

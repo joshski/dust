@@ -56,6 +56,8 @@ export function validateIdeaOpenQuestions(
 
   let inOpenQuestions = false
   let currentQuestionLine: number | null = null
+  let currentQuestionText: string | null = null
+  let currentQuestionOptionNames = new Set<string>()
   let inOption = false
   let inCodeBlock = false
 
@@ -91,6 +93,8 @@ export function validateIdeaOpenQuestions(
       )
       inOpenQuestions = line === '## Open Questions'
       currentQuestionLine = null
+      currentQuestionText = null
+      currentQuestionOptionNames = new Set<string>()
       inOption = false
       inCodeBlock = false
       continue
@@ -109,6 +113,7 @@ export function validateIdeaOpenQuestions(
         })
       }
 
+      currentQuestionOptionNames = new Set<string>()
       if (!trimmedLine.endsWith('?')) {
         violations.push({
           file: filePath,
@@ -117,14 +122,26 @@ export function validateIdeaOpenQuestions(
           line: i + 1,
         })
         currentQuestionLine = null
+        currentQuestionText = null
       } else {
         currentQuestionLine = i + 1
+        currentQuestionText = trimmedLine.slice(4)
       }
       continue
     }
 
     // h4 heading: an option (satisfies the current question)
     if (line.startsWith('#### ')) {
+      const optionName = trimmedLine.slice(5)
+      if (currentQuestionOptionNames.has(optionName)) {
+        violations.push({
+          file: filePath,
+          message: `Duplicate option "${optionName}" under question "${currentQuestionText}" — each option must have a unique name`,
+          line: i + 1,
+        })
+      } else {
+        currentQuestionOptionNames.add(optionName)
+      }
       currentQuestionLine = null
       inOption = true
       continue
