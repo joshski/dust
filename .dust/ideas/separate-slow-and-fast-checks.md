@@ -12,7 +12,7 @@ The [Keep Unit Tests Pure](../principles/keep-unit-tests-pure.md) principle alre
 
 ## Proposal
 
-Add a `speed` field to the `CheckConfig` type:
+Add a `speed` field (`"fast"` | `"slow"`) to the `CheckConfig` type in `lib/cli/types.ts`. Checks without a `speed` field are treated as fast.
 
 ```json
 {
@@ -26,69 +26,44 @@ Add a `speed` field to the `CheckConfig` type:
 }
 ```
 
-Dust could then expose something like `dust check --fast` to run only fast checks during tight implementation loops, while `dust check` (or `dust check --all`) continues to run everything.
+`dust check` runs fast and uncategorised checks only. `dust check all` runs everything. This means:
 
-## Relevant Context
+- Existing configs (no `speed` fields) continue to work: all checks are treated as fast, so `dust check` runs them all as before.
+- Users who want to exclude slow checks from the tight loop mark them as `"slow"` and rely on `dust check all` for comprehensive validation.
+- The loop's existing `${dustCommand} check` call (in `lib/loop/iteration.ts:222`) automatically becomes fast-only without any loop code changes.
 
-- Current `CheckConfig` type is defined in `lib/cli/types.ts` and validated in `lib/config/settings.ts`
-- The loop pre-flight runs `${dustCommand} check` as a shell command (`lib/loop/iteration.ts:222`)
-- `dust check` prints per-check status lines progressively in deterministic order (parallel execution by default)
-- The loop already has a check-fix agent that spawns when checks fail — the speed distinction would affect how that agent is triggered
+The built-in `lint .dust directory` check (prepended in `lib/cli/commands/check.ts`) is always fast and always runs — it is not affected by the speed distinction.
 
 ## Open Questions
 
-### How should uncategorised checks be treated?
+### Should the loop run slow checks at any point during automated iteration?
 
-#### Option A: Uncategorised checks are treated as fast
+#### Option A: Never in the loop — user responsibility
 
-Existing configurations work without changes. Any check without a `speed` field runs in fast mode. Users only need to explicitly mark checks they want to exclude from fast runs.
+With `dust check` now fast-only, slow checks are never run automatically by the loop. Users run `dust check all` at their own cadence (e.g. before push). Simple, no loop changes required.
 
-#### Option B: Uncategorised checks are treated as slow
+#### Option B: Before each push milestone
 
-Forces users to explicitly opt in to fast mode for each check. Safer default (no check is accidentally excluded from slow runs), but requires migration effort and is a breaking change for existing configs.
+The loop detects when an iteration includes a `git push` and runs `dust check all` before it. Slow checks run at the natural outer loop boundary without paying the cost on every iteration.
 
-#### Option C: Uncategorised checks run in both modes
+#### Option C: Configurable in loop settings
 
-Checks without a `speed` field always run, regardless of which mode is requested. This makes `--fast` strictly additive — fast mode runs uncategorised checks plus fast checks, slow mode runs everything. Simple mental model but may defeat the purpose if many checks are uncategorised.
+A new loop configuration option (e.g. `"slowChecks": "pre-push"` or `"slowChecks": "every-n-iterations"`) allows users to tune when slow checks run. More flexible but adds configuration complexity.
 
-### What should the `dust check` command name be for fast-only checks?
+### Should the check-fix agent verify with fast or all checks?
 
-#### Option A: `dust check --fast` flag
+#### Option A: Check-fix agent uses `dust check` (fast only)
 
-Runs only fast checks. `dust check` with no flags runs all checks. Fits the existing CLI pattern (`dust check` is already documented in `dust help`).
+When checks fail, the loop spawns a check-fix agent that currently runs `${dustCommand} check` to verify its fix (`lib/loop/iteration.ts:504–516`). With `dust check` fast-only, the agent verifies fast checks only. If a slow check originally failed, the loop re-encounters the failure on the next pre-flight. Simple — no special-casing in the fix prompt.
 
-#### Option B: `dust check fast` subcommand
+#### Option A: Check-fix agent uses `dust check` (fast only)
 
-Treats speed as a positional argument. Feels more command-like but is unusual for dust's verb-noun CLI pattern.
+The agent fixes and verifies fast checks only. If a slow check originally failed, the loop will re-encounter the failure on the next iteration's pre-flight. Simple — no special-casing in the fix prompt.
 
-#### Option C: Two separate commands: `dust check` (fast) and `dust check all`
+#### Option B: Check-fix agent uses `dust check all`
 
-Inverts the default — `dust check` runs only fast checks, and users must explicitly opt in to run everything. Optimises for the most common case (tight loop) but is a breaking change for existing integrations.
+The fix prompt instructs the agent to run `dust check all`. The agent verifies both fast and slow checks, fully resolving the failure before the next loop iteration. Slower fix cycle but fewer surprise failures.
 
-### Should the loop use fast checks by default?
+#### Option C: Check-fix agent uses the same command that revealed the failure
 
-#### Option A: Loop always runs fast checks only
-
-The loop orchestration layer automatically runs `dust check --fast` before each agent session. Full checks (`dust check`) run only at explicit milestones (e.g. before push). This maximises loop speed but risks accumulating slow-check failures across many iterations.
-
-#### Option B: Loop runs all checks, but users can configure it
-
-The loop continues to run `dust check` (all checks) by default. A new loop configuration option (e.g. `preflight: "fast"`) allows users to opt in to fast-only pre-flight checks.
-
-#### Option C: Loop configures checks per phase
-
-The loop runs fast checks before each implementation session and all checks before each push (or at a configurable milestone). This matches the natural distinction between the inner loop (implement → commit) and the outer loop (push → review).
-
-### Should the `speed` field support more than two values?
-
-#### Option A: Binary: `"fast"` | `"slow"`
-
-Simple, covers the primary use case. Most projects only need two tiers.
-
-#### Option B: Numeric priority or time budget
-
-Users specify an expected duration or tier number. More flexible but adds complexity and requires users to know how long their checks take.
-
-#### Option C: Named groups (arbitrary string labels)
-
-`speed` becomes a tag or group name (e.g. `"pre-commit"`, `"pre-push"`, `"ci-only"`). More flexible than binary, allows `dust check --group pre-commit`. Aligns with how some CI systems model check stages.
+If `dust check` (fast) reported the failure, use `dust check`. If `dust check all` reported the failure, use `dust check all`. Matches the context but requires the loop to thread this information into the fix prompt.
