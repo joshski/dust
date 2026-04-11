@@ -10,6 +10,7 @@ import type {
   SpawnOptions,
 } from '../claude/types'
 import type { DockerDependencies } from '../docker/docker-agent'
+import type { ContainerRuntime } from '../container/runtime'
 import { readEnvConfig, type SessionConfig } from '../env-config'
 import { createLogger } from '../logging'
 import { type ShellRunner, defaultShellRunner } from '../cli/process-runner'
@@ -114,6 +115,8 @@ export interface IterationOptions {
   branch?: string
   /** Trace ID for correlating events across processes */
   traceId?: string
+  /** Container runtime to use for container-aware pre-flight checks */
+  containerRuntime?: ContainerRuntime | null
 }
 
 export async function findAvailableTasks(
@@ -329,6 +332,55 @@ async function executeTask(
   }
 }
 
+function selectShellRunner(
+  spawnFn: typeof nodeSpawn,
+  options: IterationOptions,
+  loopDeps: LoopDependencies
+): ShellRunner {
+  if (options.docker && options.containerRuntime) {
+    return buildContainerShellRunner(
+      spawnFn,
+      options.containerRuntime,
+      options.docker
+    )
+  }
+  return loopDeps.shellRunner ?? defaultShellRunner
+}
+
+export function buildContainerShellRunner(
+  spawnFn: typeof nodeSpawn,
+  containerRuntime: ContainerRuntime,
+  docker: DockerSpawnConfig
+): ShellRunner {
+  const runConfig = {
+    imageTag: docker.imageTag,
+    repoPath: docker.repoPath,
+    homeDir: docker.homeDir,
+    gitProxyUrl: docker.gitProxyUrl,
+  }
+  const baseArgs = containerRuntime.buildRunArgs(runConfig)
+  return {
+    run: (command, _cwd) =>
+      new Promise(resolve => {
+        const proc = spawnFn(containerRuntime.runCommand, [
+          ...baseArgs,
+          'sh',
+          '-c',
+          command,
+        ])
+        const chunks: string[] = []
+        proc.stdout?.on('data', (data: Buffer) => chunks.push(data.toString()))
+        proc.stderr?.on('data', (data: Buffer) => chunks.push(data.toString()))
+        proc.on('close', code => {
+          resolve({ exitCode: code ?? 1, output: chunks.join('') })
+        })
+        proc.on('error', error => {
+          resolve({ exitCode: 1, output: error.message })
+        })
+      }),
+  }
+}
+
 export async function runOneIteration(
   dependencies: CommandDependencies,
   loopDependencies: LoopDependencies,
@@ -402,7 +454,7 @@ export async function runOneIteration(
   onLoopEvent({ type: 'loop.tasks_found' })
 
   // Step 3: Run pre-flight install and checks
-  const shellRunner = loopDependencies.shellRunner ?? defaultShellRunner
+  const shellRunner = selectShellRunner(spawn, options, loopDependencies)
   const preflightResult = await runPreflightChecks(
     context.cwd,
     settings.dustCommand,

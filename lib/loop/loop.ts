@@ -243,6 +243,7 @@ export async function runLoop(
   const iterationOptions: IterationOptions = {
     hooksInstalled,
     docker: dockerConfig,
+    containerRuntime,
   }
   if (eventsUrl) {
     iterationOptions.onRawEvent = createHeartbeatThrottler(

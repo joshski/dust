@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events'
 import { describe, expect, test } from 'vitest'
 import type { AgentSessionEvent } from '../agent-events'
 import {
@@ -9,9 +10,11 @@ import {
   createTestSessionConfig,
 } from '../test-support/test-utilities'
 import type { CommandDependencies } from '../cli/types'
+import type { ContainerRuntime } from '../container/runtime'
 import type { LoopEmitFn } from './events'
 import type { LoopEvent } from './events'
 import {
+  buildContainerShellRunner,
   buildTaskPrompt,
   createDefaultDependencies,
   DUST_QUICK_REFERENCE,
@@ -1342,6 +1345,130 @@ Usage: \`dust bucket tool asset-upload <file>\``
     expect(context.stderrLines.join('\n')).toContain('Codex exited with error')
   })
 
+  test('uses container shell runner for pre-flight when docker and containerRuntime are set', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+          },
+        },
+      },
+    })
+    const { spawn, getSpawnedProcesses } = createSpawnEmulator({
+      autoResolve: true,
+    })
+    const loopDeps = createLoopDeps({
+      spawn: asTestType<LoopDependencies['spawn']>(spawn),
+      run: async () => {},
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    const docker = {
+      imageTag: 'test-image',
+      repoPath: '/project',
+      homeDir: '/home/user',
+      gitProxyUrl: 'http://proxy:3001',
+    }
+    const containerRuntime: ContainerRuntime = {
+      name: 'docker',
+      isAvailable: async () => true,
+      buildImage: async () => ({ success: true }),
+      runCommand: 'docker',
+      hostAddress: 'host.docker.internal',
+      buildRunArgs: config => [
+        'run',
+        '--rm',
+        '-v',
+        `${config.repoPath}:/workspace`,
+        '-w',
+        '/workspace',
+        '-e',
+        `GIT_PROXY_URL=${config.gitProxyUrl}`,
+        config.imageTag,
+      ],
+    }
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent, {
+      docker,
+      containerRuntime,
+    })
+
+    const spawned = getSpawnedProcesses()
+    const dockerSpawn = spawned.find(p => p.command === 'docker')
+    expect(dockerSpawn).toBeDefined()
+    expect(dockerSpawn?.arguments).toContain('run')
+    expect(dockerSpawn?.arguments).toContain('sh')
+    expect(dockerSpawn?.arguments).toContain('-c')
+    expect(dockerSpawn?.arguments).toContain('dust check')
+    expect(dockerSpawn?.arguments).toContain('test-image')
+    expect(dockerSpawn?.arguments).toContain('GIT_PROXY_URL=http://proxy:3001')
+  })
+
+  test('falls back to host shell runner when docker is set but containerRuntime is not', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+          },
+        },
+      },
+    })
+    const commandsRun: string[] = []
+    const loopDeps = createLoopDeps({
+      run: async () => {},
+      shellRunner: {
+        run: async command => {
+          commandsRun.push(command)
+          return { exitCode: 0, output: '' }
+        },
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent, {
+      docker: {
+        imageTag: 'test-image',
+        repoPath: '/project',
+        homeDir: '/home/user',
+      },
+      // No containerRuntime
+    })
+
+    expect(commandsRun).toContain('dust check')
+  })
+
+  test('uses host shell runner when neither docker nor containerRuntime are set', async () => {
+    const dependencies = createDependencies({
+      project: {
+        '.dust': {
+          tasks: {
+            'task.md':
+              '# Task\n\n## Blocked By\n\n(none)\n\n## Definition of Done\n\n- Done',
+          },
+        },
+      },
+    })
+    const commandsRun: string[] = []
+    const loopDeps = createLoopDeps({
+      run: async () => {},
+      shellRunner: {
+        run: async command => {
+          commandsRun.push(command)
+          return { exitCode: 0, output: '' }
+        },
+      },
+    })
+    const { onLoopEvent, onAgentEvent } = createStubCallbacks()
+
+    await runOneIteration(dependencies, loopDeps, onLoopEvent, onAgentEvent, {})
+
+    expect(commandsRun).toContain('dust check')
+  })
+
   test('uses defaultShellRunner when shellRunner is not provided', async () => {
     const dependencies = createDependencies({
       project: {
@@ -1532,5 +1659,182 @@ describe('DUST_QUICK_REFERENCE', () => {
     const reference = DUST_QUICK_REFERENCE('dust')
     expect(reference).toContain('bunx dust')
     expect(reference).toContain('npx dust')
+  })
+})
+
+describe('buildContainerShellRunner', () => {
+  function makeProc() {
+    const proc = new EventEmitter() as EventEmitter & {
+      stdout: EventEmitter
+      stderr: EventEmitter
+    }
+    proc.stdout = new EventEmitter()
+    proc.stderr = new EventEmitter()
+    return proc
+  }
+
+  test('resolves with exitCode and combined output on close', async () => {
+    const proc = makeProc()
+    const spawnFn = asTestType<LoopDependencies['spawn']>(
+      (_command: string, _spawnArguments: string[]) =>
+        proc as ReturnType<LoopDependencies['spawn']>
+    )
+    const containerRuntime: ContainerRuntime = {
+      name: 'docker',
+      isAvailable: async () => true,
+      buildImage: async () => ({ success: true }),
+      runCommand: 'docker',
+      hostAddress: 'host.docker.internal',
+      buildRunArgs: () => ['run', '--rm', 'test-image'],
+    }
+    const docker = {
+      imageTag: 'test-image',
+      repoPath: '/project',
+      homeDir: '/home',
+    }
+    const runner = buildContainerShellRunner(spawnFn, containerRuntime, docker)
+
+    const resultPromise = runner.run('dust check', '/project')
+    proc.stdout.emit('data', Buffer.from('stdout output'))
+    proc.stderr.emit('data', Buffer.from('stderr output'))
+    proc.emit('close', 0)
+
+    const result = await resultPromise
+    expect(result.exitCode).toBe(0)
+    expect(result.output).toContain('stdout output')
+    expect(result.output).toContain('stderr output')
+  })
+
+  test('resolves with exitCode 1 when close code is null', async () => {
+    const proc = makeProc()
+    const spawnFn = asTestType<LoopDependencies['spawn']>(
+      (_command: string, _spawnArguments: string[]) =>
+        proc as ReturnType<LoopDependencies['spawn']>
+    )
+    const containerRuntime: ContainerRuntime = {
+      name: 'docker',
+      isAvailable: async () => true,
+      buildImage: async () => ({ success: true }),
+      runCommand: 'docker',
+      hostAddress: 'host.docker.internal',
+      buildRunArgs: () => ['run', '--rm', 'test-image'],
+    }
+    const docker = {
+      imageTag: 'test-image',
+      repoPath: '/project',
+      homeDir: '/home',
+    }
+    const runner = buildContainerShellRunner(spawnFn, containerRuntime, docker)
+
+    const resultPromise = runner.run('dust check', '/project')
+    proc.emit('close', null)
+
+    const result = await resultPromise
+    expect(result.exitCode).toBe(1)
+  })
+
+  test('resolves with exitCode 1 and error message on spawn error', async () => {
+    const proc = makeProc()
+    const spawnFn = asTestType<LoopDependencies['spawn']>(
+      (_command: string, _spawnArguments: string[]) =>
+        proc as ReturnType<LoopDependencies['spawn']>
+    )
+    const containerRuntime: ContainerRuntime = {
+      name: 'docker',
+      isAvailable: async () => true,
+      buildImage: async () => ({ success: true }),
+      runCommand: 'docker',
+      hostAddress: 'host.docker.internal',
+      buildRunArgs: () => ['run', '--rm', 'test-image'],
+    }
+    const docker = {
+      imageTag: 'test-image',
+      repoPath: '/project',
+      homeDir: '/home',
+    }
+    const runner = buildContainerShellRunner(spawnFn, containerRuntime, docker)
+
+    const resultPromise = runner.run('dust check', '/project')
+    proc.emit('error', new Error('spawn failed'))
+
+    const result = await resultPromise
+    expect(result.exitCode).toBe(1)
+    expect(result.output).toBe('spawn failed')
+  })
+
+  test('calls buildRunArgs with gitProxyUrl from docker config', () => {
+    const buildRunArgsCalls: {
+      imageTag: string
+      repoPath: string
+      homeDir: string
+      gitProxyUrl?: string
+    }[] = []
+    const proc = makeProc()
+    const spawnFn = asTestType<LoopDependencies['spawn']>(
+      (_command: string, _spawnArguments: string[]) =>
+        proc as ReturnType<LoopDependencies['spawn']>
+    )
+    const containerRuntime: ContainerRuntime = {
+      name: 'docker',
+      isAvailable: async () => true,
+      buildImage: async () => ({ success: true }),
+      runCommand: 'docker',
+      hostAddress: 'host.docker.internal',
+      buildRunArgs: config => {
+        buildRunArgsCalls.push(config)
+        return ['run', '--rm', config.imageTag]
+      },
+    }
+    const docker = {
+      imageTag: 'my-image',
+      repoPath: '/workspace',
+      homeDir: '/home/user',
+      gitProxyUrl: 'http://proxy:3001',
+    }
+    buildContainerShellRunner(spawnFn, containerRuntime, docker)
+
+    expect(buildRunArgsCalls).toHaveLength(1)
+    expect(buildRunArgsCalls[0].imageTag).toBe('my-image')
+    expect(buildRunArgsCalls[0].repoPath).toBe('/workspace')
+    expect(buildRunArgsCalls[0].homeDir).toBe('/home/user')
+    expect(buildRunArgsCalls[0].gitProxyUrl).toBe('http://proxy:3001')
+  })
+
+  test('spawns runCommand with buildRunArgs output and sh -c command', () => {
+    const spawnCalls: { command: string; spawnArguments: string[] }[] = []
+    const proc = makeProc()
+    const spawnFn = asTestType<LoopDependencies['spawn']>(
+      (command: string, spawnArguments: string[]) => {
+        spawnCalls.push({ command, spawnArguments })
+        return proc as ReturnType<LoopDependencies['spawn']>
+      }
+    )
+    const containerRuntime: ContainerRuntime = {
+      name: 'docker',
+      isAvailable: async () => true,
+      buildImage: async () => ({ success: true }),
+      runCommand: 'docker',
+      hostAddress: 'host.docker.internal',
+      buildRunArgs: () => ['run', '--rm', 'test-image'],
+    }
+    const docker = {
+      imageTag: 'test-image',
+      repoPath: '/project',
+      homeDir: '/home',
+    }
+    const runner = buildContainerShellRunner(spawnFn, containerRuntime, docker)
+
+    runner.run('dust check', '/project')
+
+    expect(spawnCalls).toHaveLength(1)
+    expect(spawnCalls[0].command).toBe('docker')
+    expect(spawnCalls[0].spawnArguments).toEqual([
+      'run',
+      '--rm',
+      'test-image',
+      'sh',
+      '-c',
+      'dust check',
+    ])
   })
 })

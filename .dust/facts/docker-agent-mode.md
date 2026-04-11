@@ -52,6 +52,7 @@ Key functions:
 - `getDefaultDockerfilePath()` returns the path to the bundled default Dockerfile at `lib/docker/default.Dockerfile`
 - `dockerRuntime.buildImage()` builds the image with a tag derived from the repo path
 - `prepareDockerConfig()` accepts a `forceDocker` option that uses the bundled default when no custom Dockerfile exists
+- Pre-flight checks (`install` and `dust check`) run inside the container when `containerRuntime` is threaded through `IterationOptions`, matching the agent's environment
 - Agent sessions are spawned with `docker run`, mounting the repo at `/workspace`
 - When using the Claude API proxy, `~/.claude` and `~/.claude.json` are NOT mounted (credentials stay on host)
 - Both `dust loop` and `dust bucket worker` support Docker mode
