@@ -30,12 +30,10 @@ The simplest fix is to use the literal strings `claude` and `codex` in these out
 
 ### Should the example commands ever use a non-`claude`/`codex` prefix?
 
-In some environments, users might invoke `claude` via `npx claude` or `bunx claude`. The current approach of using `runner` was likely an attempt to infer the right prefix from context.
-
 #### Option: Always use bare `claude` and `codex`
 
-Use `claude` and `codex` as literal strings in the output. These are well-known CLIs and most users have them installed globally. Simpler and correct in the common case.
+Use `claude` and `codex` as literal strings in the output. These are well-known CLIs and most users have them installed globally. Simpler and correct in the common case. The current approach of extracting `runner` from `dustCommand` was incorrect — it conflates the dust runtime with agent CLI tools.
 
 #### Option: Detect the agent command separately from the dust command
 
-Introduce a separate detection mechanism (analogous to `detectDustCommand`) for agent CLIs. This could check for local installations and suggest `npx claude` or `bunx claude` when appropriate. More accurate but adds complexity.
+Introduce a separate detection mechanism (analogous to `detectDustCommand`) for agent CLIs. This could check for local installations and suggest `npx claude` or `bunx claude` when appropriate. More accurate for edge cases, but adds complexity.
