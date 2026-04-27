@@ -468,67 +468,31 @@ describe('init command', () => {
     expect(output).toContain('principles and facts')
   })
 
-  test('suggestions use npx runner when package-lock.json exists', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: { 'package-lock.json': '' },
-    })
-    const dependencies: CommandDependencies = {
-      arguments: [],
-      context,
-      fileSystem,
-      globScanner: fileSystem,
-      runtime: createTestRuntimeConfig(),
-      settings: { dustCommand: 'dust' },
+  test('suggestions invoke claude and codex without a package runner prefix', async () => {
+    const lockfiles = ['package-lock.json', 'bun.lockb', 'pnpm-lock.yaml']
+
+    for (const lockfile of lockfiles) {
+      const context = createContextEmulator()
+      const fileSystem = createFileSystemEmulator({
+        project: { [lockfile]: '' },
+      })
+      const dependencies: CommandDependencies = {
+        arguments: [],
+        context,
+        fileSystem,
+        globScanner: fileSystem,
+        runtime: createTestRuntimeConfig(),
+        settings: { dustCommand: 'dust' },
+      }
+
+      await init(dependencies)
+
+      const output = stripAnsi(context.stdoutLines.join('\n'))
+      expect(output).toContain('> claude ')
+      expect(output).toContain('> codex ')
+      expect(output).not.toMatch(/> \w+x claude/)
+      expect(output).not.toMatch(/> \w+x codex/)
     }
-
-    await init(dependencies)
-
-    const output = stripAnsi(context.stdoutLines.join('\n'))
-    expect(output).toContain('> npx claude')
-    expect(output).toContain('> npx codex')
-  })
-
-  test('suggestions use bunx runner when bun.lockb exists', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: { 'bun.lockb': '' },
-    })
-    const dependencies: CommandDependencies = {
-      arguments: [],
-      context,
-      fileSystem,
-      globScanner: fileSystem,
-      runtime: createTestRuntimeConfig(),
-      settings: { dustCommand: 'dust' },
-    }
-
-    await init(dependencies)
-
-    const output = stripAnsi(context.stdoutLines.join('\n'))
-    expect(output).toContain('> bunx claude')
-    expect(output).toContain('> bunx codex')
-  })
-
-  test('suggestions use pnpx runner when pnpm-lock.yaml exists', async () => {
-    const context = createContextEmulator()
-    const fileSystem = createFileSystemEmulator({
-      project: { 'pnpm-lock.yaml': '' },
-    })
-    const dependencies: CommandDependencies = {
-      arguments: [],
-      context,
-      fileSystem,
-      globScanner: fileSystem,
-      runtime: createTestRuntimeConfig(),
-      settings: { dustCommand: 'dust' },
-    }
-
-    await init(dependencies)
-
-    const output = stripAnsi(context.stdoutLines.join('\n'))
-    expect(output).toContain('> pnpx claude')
-    expect(output).toContain('> pnpx codex')
   })
 
   test('rethrows non-EEXIST errors when writing fact file', async () => {

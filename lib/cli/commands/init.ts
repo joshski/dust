@@ -171,7 +171,6 @@ export async function init(
   }
 
   // Show helpful suggestions for next steps
-  const runner = dustCommand.split(' ')[0]
   context.stdout('')
   context.stdout(
     `${colors.bold}🚀 Next steps:${colors.reset} Commit the changes if you are happy, then get planning!`
@@ -181,17 +180,17 @@ export async function init(
     `${colors.dim}If this is a new repository, you can start adding ideas or tasks right away:${colors.reset}`
   )
   context.stdout(
-    `   ${colors.cyan}>${colors.reset} ${runner} claude "Idea: friendly UI for non-technical users"`
+    `   ${colors.cyan}>${colors.reset} claude "Idea: friendly UI for non-technical users"`
   )
   context.stdout(
-    `   ${colors.cyan}>${colors.reset} ${runner} codex "Task: set up code coverage"`
+    `   ${colors.cyan}>${colors.reset} codex "Task: set up code coverage"`
   )
   context.stdout('')
   context.stdout(
     `${colors.dim}If this is an existing codebase, you might want to backfill principles and facts:${colors.reset}`
   )
   context.stdout(
-    `   ${colors.cyan}>${colors.reset} ${runner} claude "Add principles and facts based on the code in this repository"`
+    `   ${colors.cyan}>${colors.reset} claude "Add principles and facts based on the code in this repository"`
   )
 
   return { exitCode: 0 }
