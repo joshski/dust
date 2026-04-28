@@ -21,6 +21,10 @@ import { audit } from './commands/audit'
 import { bucketWorker } from './commands/bucket-worker'
 import { bucketTool } from './commands/bucket-tool'
 import { check as checkCommand } from './commands/check'
+import {
+  codexHook as codexHookCommand,
+  defaultCodexHookDependencies,
+} from './commands/codex-hook'
 import { corePrinciple } from './commands/core-principle'
 import { focus } from './commands/focus'
 import { generateHelpText, help } from './commands/help'
@@ -63,6 +67,11 @@ function runLoopCodex(commandDependencies: CommandDependencies) {
   return loopCodexCommand(commandDependencies, createCodexDependencies())
 }
 
+/* istanbul ignore next @preserve -- runtime binding, delegates to tested codexHook */
+function runCodexHook(commandDependencies: CommandDependencies) {
+  return codexHookCommand(commandDependencies, defaultCodexHookDependencies)
+}
+
 /**
  * Command registry maps command names to their handler functions.
  * Adding a new command only requires adding an entry here.
@@ -93,6 +102,7 @@ const commandRegistry = {
   audit,
   'bucket worker': bucketWorker,
   'bucket tool': bucketTool,
+  'codex hook': runCodexHook,
   'core principle': corePrinciple,
   focus,
   'new task': newTask,

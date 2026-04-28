@@ -40,6 +40,23 @@ npx dust loop claude
 
 This runs Claude Code in a [ralph loop](https://ghuntley.com/loop/), picking up tasks until they are all done.
 
+## Codex Hook (Optional)
+
+For [Codex](https://github.com/openai/codex) 0.125.0 or newer, you can replace the `AGENTS.md` instruction with a `SessionStart` hook that loads dust's instructions directly into the model's context — once per session, with no extra agent commands. Add this to `~/.codex/config.toml` (or your project's Codex config):
+
+```toml
+[features]
+codex_hooks = true
+
+[[hooks.SessionStart]]
+matcher = "^startup$"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = "bunx dust codex hook"
+statusMessage = "Loading dust agent instructions"
+```
+
 ## Learn More
 
 Details live in the [.dust/facts](./.dust/facts) directory:
