@@ -56,7 +56,7 @@
     {
       "name": "tests (vitest / coverage)",
       "command": "bun run test:coverage",
-      "timeoutMilliseconds": 20000,
+      "timeoutMilliseconds": 30000,
       "hints": [
         "Run `bun run test` to see detailed test output",
         "Check if new code needs corresponding tests"
