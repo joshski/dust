@@ -1,0 +1,10 @@
+[features]
+codex_hooks = true
+
+[[hooks.SessionStart]]
+matcher = "^startup$"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = "bin/dust codex hook"
+statusMessage = "Loading dust agent instructions"
